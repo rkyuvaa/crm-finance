@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import SupportCard from './SupportCard';
 import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
@@ -234,8 +233,6 @@ export default function Sidebar({
           </div>
         ))}
       </nav>
-
-      {!collapsed && <SupportCard />}
 
       <div
         style={{
