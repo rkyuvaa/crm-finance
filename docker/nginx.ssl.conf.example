@@ -1,0 +1,46 @@
+# Reference HTTPS server block for the `web` service.
+# Phase 1 serves plain HTTP on localhost. To activate HTTPS:
+#   1. Set DOMAIN=your.domain and ENABLE_SSL=true in .env
+#   2. Uncomment the certbot profile in docker-compose.yml
+#   3. Mount this file into the web container (see README "Enabling HTTPS")
+#
+# The certbot webroot volume must be mounted at /var/www/certbot in the web service.
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location /docs/ {
+        proxy_pass http://api:8000;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

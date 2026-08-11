@@ -1,0 +1,156 @@
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+from app.models.enums import (
+    ApplicationStatus,
+    DeliveryStatus,
+    DisbursementStatus,
+    DocStatus,
+    FinanceStatus,
+    VerificationStatus,
+)
+
+if TYPE_CHECKING:
+    from app.models.finance_company import FinanceCompany
+    from app.models.user import User
+
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    app_no: Mapped[str] = mapped_column(String(16), unique=True, index=True, nullable=False)
+    customer_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    customer_phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    vehicle: Mapped[str] = mapped_column(String(120), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
+    status: Mapped[ApplicationStatus] = mapped_column(
+        Enum(ApplicationStatus, name="application_status"),
+        default=ApplicationStatus.LEAD,
+        index=True,
+        nullable=False,
+    )
+    finance_company_id: Mapped[int | None] = mapped_column(
+        ForeignKey("finance_companies.id"), nullable=True
+    )
+    assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True
+    )
+
+    finance_company: Mapped["FinanceCompany | None"] = relationship(lazy="joined")
+    assigned_user: Mapped["User | None"] = relationship(lazy="joined")
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+    verifications: Mapped[list["Verification"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+    finance_submissions: Mapped[list["FinanceSubmission"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+    sanctions: Mapped[list["Sanction"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+    deliveries: Mapped[list["Delivery"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+    disbursements: Mapped[list["Disbursement"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    doc_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[DocStatus] = mapped_column(
+        Enum(DocStatus, name="doc_status"), default=DocStatus.PENDING, index=True
+    )
+    file_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    application: Mapped["Application"] = relationship(back_populates="documents")
+
+
+class Verification(Base):
+    __tablename__ = "verifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    status: Mapped[VerificationStatus] = mapped_column(
+        Enum(VerificationStatus, name="verification_status"), default=VerificationStatus.PENDING
+    )
+    verified_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    application: Mapped["Application"] = relationship(back_populates="verifications")
+
+
+class FinanceSubmission(Base):
+    __tablename__ = "finance_submissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("finance_companies.id"), index=True)
+    status: Mapped[FinanceStatus] = mapped_column(
+        Enum(FinanceStatus, name="finance_status"), default=FinanceStatus.PROCESSING
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    query_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    application: Mapped["Application"] = relationship(back_populates="finance_submissions")
+    company: Mapped["FinanceCompany"] = relationship(lazy="joined")
+
+
+class Sanction(Base):
+    __tablename__ = "sanctions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="SANCTIONED")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sanctioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    application: Mapped["Application"] = relationship(back_populates="sanctions")
+
+
+class Delivery(Base):
+    __tablename__ = "deliveries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    status: Mapped[DeliveryStatus] = mapped_column(
+        Enum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.PENDING
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    application: Mapped["Application"] = relationship(back_populates="deliveries")
+
+
+class Disbursement(Base):
+    __tablename__ = "disbursements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    status: Mapped[DisbursementStatus] = mapped_column(
+        Enum(DisbursementStatus, name="disbursement_status"), default=DisbursementStatus.PENDING_UTR
+    )
+    utr_no: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    application: Mapped["Application"] = relationship(back_populates="disbursements")
