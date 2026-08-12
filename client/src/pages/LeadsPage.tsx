@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Avatar, Button, Paper } from '@mui/material';
+import { Plus } from 'lucide-react';
 
 import { useApplicationsQuery } from '@/api/applicationsApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
+import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
 import { LoadingRows } from '@/components/ui/PageState';
 import { formatAmount, formatDate, initialsOf } from '@/utils/format';
 
@@ -12,6 +15,7 @@ export default function LeadsPage() {
     page_size: 10,
     status: 'LEAD',
   });
+  const [createOpen, setCreateOpen] = useState(false);
 
   const rows = data?.items ?? [];
 
@@ -24,6 +28,9 @@ export default function LeadsPage() {
             New leads captured from the dealership funnel.
           </div>
         </div>
+        <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
+          New Lead
+        </Button>
       </div>
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
@@ -102,6 +109,8 @@ export default function LeadsPage() {
           )}
         </div>
       </Paper>
+
+      <NewApplicationDialog title="New Lead" open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }
