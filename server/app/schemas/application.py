@@ -12,6 +12,9 @@ class ApplicationBase(BaseModel):
     amount: float = Field(gt=0)
     status: ApplicationStatus = ApplicationStatus.LEAD
     finance_company_id: int | None = None
+    vehicle_model_id: int | None = None
+    vehicle_price: float | None = Field(default=None, gt=0)
+    down_payment: float | None = Field(default=None, ge=0)
 
 
 class ApplicationCreate(ApplicationBase):
@@ -25,6 +28,9 @@ class ApplicationUpdate(BaseModel):
     amount: float | None = Field(default=None, gt=0)
     status: ApplicationStatus | None = None
     finance_company_id: int | None = None
+    vehicle_model_id: int | None = None
+    vehicle_price: float | None = Field(default=None, gt=0)
+    down_payment: float | None = Field(default=None, ge=0)
 
 
 class ApplicationOut(BaseModel):
@@ -37,6 +43,9 @@ class ApplicationOut(BaseModel):
     status: ApplicationStatus
     finance_company_id: int | None
     finance_company_name: str | None
+    vehicle_model_id: int | None
+    vehicle_price: float | None
+    down_payment: float | None
     assigned_to: int | None
     assigned_to_name: str | None
     created_at: datetime

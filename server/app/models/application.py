@@ -17,6 +17,7 @@ from app.models.enums import (
 if TYPE_CHECKING:
     from app.models.finance_company import FinanceCompany
     from app.models.user import User
+    from app.models.vehicle_model import VehicleModel
 
 
 class Application(Base):
@@ -28,6 +29,11 @@ class Application(Base):
     customer_phone: Mapped[str] = mapped_column(String(20), nullable=False)
     vehicle: Mapped[str] = mapped_column(String(120), nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
+    vehicle_model_id: Mapped[int | None] = mapped_column(
+        ForeignKey("vehicle_models.id"), nullable=True, index=True
+    )
+    vehicle_price: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
+    down_payment: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
     status: Mapped[ApplicationStatus] = mapped_column(
         Enum(ApplicationStatus, name="application_status"),
         default=ApplicationStatus.LEAD,
@@ -44,6 +50,7 @@ class Application(Base):
     )
 
     finance_company: Mapped["FinanceCompany | None"] = relationship(lazy="joined")
+    vehicle_model: Mapped["VehicleModel | None"] = relationship(lazy="joined")
     assigned_user: Mapped["User | None"] = relationship(lazy="joined")
     documents: Mapped[list["Document"]] = relationship(
         back_populates="application", cascade="all, delete-orphan"

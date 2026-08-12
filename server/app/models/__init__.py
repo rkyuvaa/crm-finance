@@ -19,6 +19,7 @@ from app.models.enums import (
 from app.models.finance_company import FinanceCompany
 from app.models.notification import Activity, Notification
 from app.models.user import User
+from app.models.vehicle_model import VehicleModel
 
 __all__ = [
     "Activity",
@@ -37,6 +38,7 @@ __all__ = [
     "Sanction",
     "User",
     "UserRole",
+    "VehicleModel",
     "Verification",
     "VerificationStatus",
 ]

@@ -13,6 +13,7 @@ const GenericStagePage = lazy(() => import('@/pages/GenericStagePage'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const VehicleModelsPage = lazy(() => import('@/pages/VehicleModelsPage'));
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
 
 function RouteFallback() {
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/masters/vehicle-models" element={<VehicleModelsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

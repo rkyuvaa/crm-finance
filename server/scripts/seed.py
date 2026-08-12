@@ -28,6 +28,7 @@ from app.models import (
     Sanction,
     User,
     UserRole,
+    VehicleModel,
     Verification,
     VerificationStatus,
 )
@@ -46,10 +47,6 @@ PHONE_BASE = ["9812000000", "9823000000", "9834000000", "9845000000", "985600000
               "9977800000", "9988900000", "9710000000", "9721100000", "9732200000",
               "9743300000", "9754400000", "9765500000", "9776600000", "9787700000",
               "9798800000", "9620000000", "9631100000", "9642200000", "9653300000"]
-VEHICLES = ["Konwert EV Auto", "Konwert EV Auto", "Konwert EV Auto", "Konwert EV Auto",
-            "Konwert EV Auto", "Konwert EV Auto", "Konwert EV Auto", "Konwert EV Auto",
-            "Konwert EV Auto", "Konwert EV Auto"]
-
 # (app_no, name, phone, amount, status, updated_ago, extra)
 FEATURED = [
     ("APP-125", "Ramesh Kumar", "9876543210", 450000, ApplicationStatus.QUERY, timedelta(hours=60)),
@@ -125,6 +122,13 @@ COMPANIES = [
     ("PQR Finance", 22, 18, 2, 2.1),
 ]
 
+# (name, vehicle_price, down_payment, loan_amount, finance_company)
+VEHICLE_MODELS = [
+    ("Konwert EV Auto", 550000, 55000, 495000, "ABC Finance"),
+    ("Konwert EV Lite", 420000, 42000, 378000, "XYZ Finance"),
+    ("Konwert EV Max", 680000, 68000, 612000, "PQR Finance"),
+]
+
 NOTIFICATIONS = [
     "Finance query raised on APP-118",
     "Document pending for APP-116",
@@ -142,21 +146,57 @@ ACTIVITIES = [
 ]
 
 
-def _gen_filler(status: ApplicationStatus, idx: int, app_no: str) -> Application:
+def _gen_filler(status: ApplicationStatus, idx: int, app_no: str, models: list[VehicleModel]) -> Application:
     name = NAME_POOL[idx % len(NAME_POOL)]
+    model = models[idx % len(models)]
     return Application(
         app_no=app_no,
         customer_name=name,
         customer_phone=PHONE_BASE[idx % len(PHONE_BASE)],
-        vehicle=VEHICLES[idx % len(VEHICLES)],
-        amount=round(random.uniform(300000, 800000), -3),
+        vehicle=model.name,
+        vehicle_model_id=model.id,
+        vehicle_price=model.vehicle_price,
+        down_payment=model.down_payment,
+        amount=model.loan_amount,
         status=status,
     )
+
+
+def _ensure_masters(db) -> dict[str, FinanceCompany]:
+    companies: dict[str, FinanceCompany] = {}
+    for name, total, approved, rejected, avg in COMPANIES:
+        c = db.query(FinanceCompany).filter_by(name=name).first()
+        if not c:
+            c = FinanceCompany(
+                name=name, total_apps=total, approved=approved,
+                rejected=rejected, avg_time_days=avg,
+            )
+            db.add(c)
+        companies[name] = c
+    db.flush()
+
+    for name, price, down, loan, company in VEHICLE_MODELS:
+        existing = db.query(VehicleModel).filter_by(name=name).first()
+        if existing:
+            existing.vehicle_price = price
+            existing.down_payment = down
+            existing.loan_amount = loan
+            existing.finance_company_id = companies[company].id
+        else:
+            db.add(VehicleModel(
+                name=name, vehicle_price=price, down_payment=down,
+                loan_amount=loan, finance_company_id=companies[company].id,
+            ))
+    db.flush()
+    return companies
 
 
 def seed() -> None:
     db = SessionLocal()
     try:
+        company_map = _ensure_masters(db)
+        models = db.query(VehicleModel).order_by(VehicleModel.id).all()
+
         if db.query(User).count() > 0:
             print("[seed] database already seeded — skipping")
             return
@@ -182,22 +222,18 @@ def seed() -> None:
         db.add_all([sales, finance, delivery, admin])
         db.flush()
 
-        companies: dict[str, FinanceCompany] = {}
-        for name, total, approved, rejected, avg in COMPANIES:
-            c = FinanceCompany(
-                name=name, total_apps=total, approved=approved,
-                rejected=rejected, avg_time_days=avg,
-            )
-            db.add(c)
-            companies[name] = c
-        db.flush()
+        companies = company_map
 
         featured_apps: dict[str, Application] = {}
+        konwert = next((m for m in models if m.name == "Konwert EV Auto"), models[0] if models else None)
         for offset, (app_no, name, phone, amount, status, updated_ago) in enumerate(FEATURED):
             created = now - timedelta(days=40) - timedelta(hours=offset * 2)
             app = Application(
                 app_no=app_no, customer_name=name, customer_phone=phone,
                 vehicle="Konwert EV Auto", amount=amount, status=status,
+                vehicle_model_id=konwert.id if konwert else None,
+                vehicle_price=konwert.vehicle_price if konwert else None,
+                down_payment=konwert.down_payment if konwert else None,
                 created_at=created, updated_at=now - updated_ago,
                 assigned_to=sales.id if app_no in SALES_ASSIGNED else None,
             )
@@ -217,7 +253,7 @@ def seed() -> None:
         for i in range(STATUS_COUNTS[ApplicationStatus.LEAD]):
             app_no = f"APP-{next_number}"
             next_number += 1
-            app = _gen_filler(ApplicationStatus.LEAD, i, app_no)
+            app = _gen_filler(ApplicationStatus.LEAD, i, app_no, models)
             created = lead_created_times[i]
             if i >= len(lead_created_times) - TODAY_LEADS:
                 created = min(max(now - timedelta(hours=5), today_start + timedelta(minutes=10)), latest)
@@ -233,7 +269,7 @@ def seed() -> None:
             for i in range(count):
                 app_no = f"APP-{next_number}"
                 next_number += 1
-                app = _gen_filler(status, i, app_no)
+                app = _gen_filler(status, i, app_no, models)
                 created = now - timedelta(days=random.uniform(60, 150))
                 app.created_at = created
                 app.updated_at = created + timedelta(hours=random.uniform(2, 30))

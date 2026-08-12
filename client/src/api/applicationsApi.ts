@@ -20,6 +20,10 @@ export interface NewApplication {
   vehicle: string;
   amount: number;
   status?: string;
+  vehicle_model_id?: number | null;
+  vehicle_price?: number;
+  down_payment?: number;
+  finance_company_id?: number | null;
 }
 
 export const applicationsApi = baseApi.injectEndpoints({

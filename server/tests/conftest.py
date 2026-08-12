@@ -61,7 +61,8 @@ def client(db):
 def seeded_client(db, client):
     sales = make_user("sales@kim.com", UserRole.SALES_EXECUTIVE, "Ramesh")
     finance = make_user("finance@kim.com", UserRole.FINANCE_OFFICER, "Sneha K")
-    db.add_all([sales, finance])
+    admin = make_user("admin@kim.com", UserRole.ADMIN, "Admin")
+    db.add_all([sales, finance, admin])
     db.add_all(
         [
             FinanceCompany(name="ABC Finance", total_apps=48, approved=39, rejected=4, avg_time_days=1.4),

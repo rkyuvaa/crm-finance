@@ -42,6 +42,9 @@ def _to_out(app: Application) -> ApplicationOut:
         status=app.status,
         finance_company_id=app.finance_company_id,
         finance_company_name=app.finance_company.name if app.finance_company else None,
+        vehicle_model_id=app.vehicle_model_id,
+        vehicle_price=float(app.vehicle_price) if app.vehicle_price is not None else None,
+        down_payment=float(app.down_payment) if app.down_payment is not None else None,
         assigned_to=app.assigned_to,
         assigned_to_name=app.assigned_user.full_name if app.assigned_user else None,
         created_at=app.created_at,
@@ -194,6 +197,9 @@ def create_application(
         amount=payload.amount,
         status=payload.status,
         finance_company_id=payload.finance_company_id,
+        vehicle_model_id=payload.vehicle_model_id,
+        vehicle_price=payload.vehicle_price,
+        down_payment=payload.down_payment,
         assigned_to=user.id,
     )
     db.add(app)

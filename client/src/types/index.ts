@@ -98,6 +98,31 @@ export interface FinanceCompany {
   bar_pct: number;
 }
 
+export interface FinanceCompanyOption {
+  id: number;
+  name: string;
+}
+
+export interface VehicleModel {
+  id: number;
+  name: string;
+  vehicle_price: number;
+  down_payment: number;
+  loan_amount: number;
+  finance_company_id: number | null;
+  finance_company_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleModelInput {
+  name: string;
+  vehicle_price: number;
+  down_payment: number;
+  loan_amount: number;
+  finance_company_id: number | null;
+}
+
 export interface Activity {
   id: number;
   app_no: string | null;
@@ -148,6 +173,9 @@ export interface ApplicationItem {
   status: ApplicationStatus;
   finance_company_id: number | null;
   finance_company_name: string | null;
+  vehicle_model_id: number | null;
+  vehicle_price: number | null;
+  down_payment: number | null;
   assigned_to: number | null;
   assigned_to_name: string | null;
   created_at: string;
