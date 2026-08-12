@@ -1,6 +1,13 @@
+import { useState } from 'react';
+import { Box, Tab, Tabs } from '@mui/material';
+
+import FinanciersPanel from '@/features/configuration/FinanciersPanel';
+import StagesPanel from '@/features/configuration/StagesPanel';
 import VehicleModelsPanel from '@/features/configuration/VehicleModelsPanel';
 
 export default function ConfigurationPage() {
+  const [tab, setTab] = useState(0);
+
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
@@ -12,7 +19,25 @@ export default function ConfigurationPage() {
         </div>
       </div>
 
-      <VehicleModelsPanel />
+      <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 2 }}>
+        <Tabs
+          value={tab}
+          onChange={(_, next) => setTab(next)}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 600 },
+          }}
+        >
+          <Tab label="Vehicle Models" />
+          <Tab label="Financiers" />
+          <Tab label="Stages" />
+        </Tabs>
+      </Box>
+
+      {tab === 0 && <VehicleModelsPanel />}
+      {tab === 1 && <FinanciersPanel />}
+      {tab === 2 && <StagesPanel />}
     </div>
   );
 }

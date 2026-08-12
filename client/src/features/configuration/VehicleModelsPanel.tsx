@@ -6,9 +6,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
   Paper,
-  Select,
   TextField,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
@@ -20,10 +18,9 @@ import { useAppSelector } from '@/app/hooks';
 import {
   useCreateVehicleModelMutation,
   useDeleteVehicleModelMutation,
-  useFinanceCompaniesQuery,
   useUpdateVehicleModelMutation,
   useVehicleModelsQuery,
-} from '@/api/vehicleModelsApi';
+} from '@/api/mastersApi';
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
@@ -37,7 +34,6 @@ const formSchema = z.object({
     .number({ invalid_type_error: 'Required' })
     .nonnegative('Cannot be negative'),
   loan_amount: z.coerce.number({ invalid_type_error: 'Required' }).positive('Must be positive'),
-  finance_company_id: z.string().min(1, 'Select a finance company'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,7 +47,6 @@ function ModelFormDialog({
   editing: VehicleModel | null;
   onClose: () => void;
 }) {
-  const { data: companies = [] } = useFinanceCompaniesQuery();
   const [createModel, { isLoading: creating }] = useCreateVehicleModelMutation();
   const [updateModel, { isLoading: updating }] = useUpdateVehicleModelMutation();
   const { showToast } = useToast();
@@ -69,7 +64,6 @@ function ModelFormDialog({
       vehicle_price: 0,
       down_payment: 0,
       loan_amount: 0,
-      finance_company_id: '',
     },
   });
 
@@ -85,7 +79,6 @@ function ModelFormDialog({
       vehicle_price: editing?.vehicle_price ?? 0,
       down_payment: editing?.down_payment ?? 0,
       loan_amount: editing?.loan_amount ?? 0,
-      finance_company_id: editing?.finance_company_id ? String(editing.finance_company_id) : '',
     });
     window.setTimeout(() => {
       skipAutoCalc.current = false;
@@ -106,7 +99,6 @@ function ModelFormDialog({
       vehicle_price: values.vehicle_price,
       down_payment: values.down_payment,
       loan_amount: values.loan_amount,
-      finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
     };
     try {
       if (editing) {
@@ -166,26 +158,6 @@ function ModelFormDialog({
             error={Boolean(errors.loan_amount)}
             {...register('loan_amount')}
           />
-          <Select
-            fullWidth
-            displayEmpty
-            size="small"
-            value={watch('finance_company_id')}
-            onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
-            error={Boolean(errors.finance_company_id)}
-            sx={{ mt: 1, mb: 0.5 }}
-            renderValue={(value) =>
-              value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company'
-            }
-            inputProps={{ 'aria-label': 'Finance company' }}
-          >
-            <MenuItem value="">Select finance company</MenuItem>
-            {companies.map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose}>Cancel</Button>

@@ -25,6 +25,7 @@ from app.models import (
     FinanceStatus,
     FinanceSubmission,
     Notification,
+    PipelineStage,
     Sanction,
     User,
     UserRole,
@@ -122,11 +123,24 @@ COMPANIES = [
     ("PQR Finance", 22, 18, 2, 2.1),
 ]
 
-# (name, vehicle_price, down_payment, loan_amount, finance_company)
+# (name, vehicle_price, down_payment, loan_amount)
 VEHICLE_MODELS = [
-    ("Konwert EV Auto", 550000, 55000, 495000, "ABC Finance"),
-    ("Konwert EV Lite", 420000, 42000, 378000, "XYZ Finance"),
-    ("Konwert EV Max", 680000, 68000, 612000, "PQR Finance"),
+    ("Konwert EV Auto", 550000, 55000, 495000),
+    ("Konwert EV Lite", 420000, 42000, 378000),
+    ("Konwert EV Max", 680000, 68000, 612000),
+]
+
+# (key, label, status, order_index)
+PIPELINE_STAGES = [
+    ("leads", "Leads", ApplicationStatus.LEAD, 0),
+    ("applications", "Applications", ApplicationStatus.APPLICATION, 1),
+    ("verification", "Verification", ApplicationStatus.VERIFICATION, 2),
+    ("finance", "Finance", ApplicationStatus.FINANCE, 3),
+    ("query", "Query", ApplicationStatus.QUERY, 4),
+    ("sanctioned", "Sanctioned", ApplicationStatus.SANCTIONED, 5),
+    ("delivery", "Delivery", ApplicationStatus.DELIVERY, 6),
+    ("disburse", "Disburse", ApplicationStatus.DISBURSEMENT, 7),
+    ("completed", "Completed", ApplicationStatus.COMPLETED, 8),
 ]
 
 NOTIFICATIONS = [
@@ -175,17 +189,28 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
         companies[name] = c
     db.flush()
 
-    for name, price, down, loan, company in VEHICLE_MODELS:
+    for name, price, down, loan in VEHICLE_MODELS:
         existing = db.query(VehicleModel).filter_by(name=name).first()
         if existing:
             existing.vehicle_price = price
             existing.down_payment = down
             existing.loan_amount = loan
-            existing.finance_company_id = companies[company].id
         else:
             db.add(VehicleModel(
-                name=name, vehicle_price=price, down_payment=down,
-                loan_amount=loan, finance_company_id=companies[company].id,
+                name=name, vehicle_price=price, down_payment=down, loan_amount=loan,
+            ))
+    db.flush()
+
+    for key, label, status, order in PIPELINE_STAGES:
+        existing = db.query(PipelineStage).filter_by(key=key).first()
+        if existing:
+            existing.label = label
+            existing.status = status
+            existing.order_index = order
+            existing.enabled = True
+        else:
+            db.add(PipelineStage(
+                key=key, label=label, status=status, order_index=order, enabled=True,
             ))
     db.flush()
     return companies

@@ -21,6 +21,9 @@ from app.models import (
     Verification,
     VerificationStatus,
 )
+from app.models import (
+    PipelineStage as PipelineStageModel,
+)
 from app.schemas.dashboard import (
     ActivityOut,
     AttentionItem,
@@ -53,6 +56,8 @@ PIPELINE = [
     (ApplicationStatus.COMPLETED, "completed", "Completed", "{n} fully completed this quarter"),
 ]
 
+DEFAULT_TIPS = {key: tpl for _status, key, _label, tpl in PIPELINE}
+
 RECENT_WINDOW = 50
 RECENT_PAGE_SIZE = 6
 
@@ -64,6 +69,28 @@ def _status_counts(db: Session) -> dict[ApplicationStatus, int]:
         .all()
     )
     return {status: count for status, count in rows}
+
+
+def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[PipelineStage]:
+    configured = (
+        db.query(PipelineStageModel)
+        .filter(PipelineStageModel.enabled.is_(True))
+        .order_by(PipelineStageModel.order_index.asc(), PipelineStageModel.id.asc())
+        .all()
+    )
+    if configured:
+        base = [(s.status, s.key, s.label) for s in configured]
+    else:
+        base = [(status, key, label) for status, key, label, _tip in PIPELINE]
+
+    stages = []
+    for status, key, label in base:
+        count = counts.get(status, 0)
+        tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
+        stages.append(
+            PipelineStage(key=key, status=status, count=count, tip=tip, label=label)
+        )
+    return stages
 
 
 def _build_kpis(db: Session, counts: dict[ApplicationStatus, int]) -> dict:
@@ -94,22 +121,6 @@ def _build_kpis(db: Session, counts: dict[ApplicationStatus, int]) -> dict:
             value=counts.get(ApplicationStatus.DISBURSEMENT, 0), sub="Pending UTR"
         ),
     }
-
-
-def _build_pipeline(counts: dict[ApplicationStatus, int]) -> list[PipelineStage]:
-    stages = []
-    for status, key, label, tip_tpl in PIPELINE:
-        count = counts.get(status, 0)
-        stages.append(
-            PipelineStage(
-                key=key,
-                status=status,
-                count=count,
-                tip=tip_tpl.format(n=count),
-                label=label,
-            )
-        )
-    return stages
 
 
 def _attention_candidates(db: Session) -> list[dict]:
@@ -358,7 +369,7 @@ def get_dashboard(db: Session, user: User) -> dict:
 
     return {
         "kpis": _build_kpis(db, counts),
-        "pipeline": _build_pipeline(counts),
+        "pipeline": _build_pipeline(db, counts),
         "recent_applications": [
             RecentApplication(
                 id=a.id,

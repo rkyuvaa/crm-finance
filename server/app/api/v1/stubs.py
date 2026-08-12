@@ -76,7 +76,7 @@ def list_disbursements(db: Session = Depends(get_db), user: User = Depends(get_c
 def reports_summary(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     counts = _status_counts(db)
     return {
-        "pipeline": _build_pipeline(counts),
+        "pipeline": _build_pipeline(db, counts),
         "finance_companies": _build_finance_companies(db),
         "monthly": _monthly_totals(db),
     }

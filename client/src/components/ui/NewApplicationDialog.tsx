@@ -14,10 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { useCreateApplicationMutation } from '@/api/applicationsApi';
-import {
-  useFinanceCompaniesQuery,
-  useVehicleModelsQuery,
-} from '@/api/vehicleModelsApi';
+import { useFinanceCompaniesQuery, useVehicleModelsQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 export const createSchema = z.object({
@@ -85,10 +82,6 @@ export default function NewApplicationDialog({
       setValue('vehicle_price', model.vehicle_price);
       setValue('down_payment', model.down_payment);
       setValue('amount', model.loan_amount);
-      setValue(
-        'finance_company_id',
-        model.finance_company_id ? String(model.finance_company_id) : '',
-      );
     }
   };
 

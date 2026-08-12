@@ -120,7 +120,25 @@ export interface VehicleModelInput {
   vehicle_price: number;
   down_payment: number;
   loan_amount: number;
-  finance_company_id: number | null;
+}
+
+export interface StageConfig {
+  id: number;
+  key: string;
+  label: string;
+  status: ApplicationStatus;
+  order_index: number;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageInput {
+  key: string;
+  label: string;
+  status: ApplicationStatus;
+  order_index: number;
+  enabled: boolean;
 }
 
 export interface Activity {
