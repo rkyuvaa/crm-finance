@@ -149,7 +149,7 @@ export default function NewApplicationDialog({
           >
             {loadingModels && <MenuItem disabled>Loading models…</MenuItem>}
             {!loadingModels && models.length === 0 && (
-              <MenuItem disabled>No models configured — add them in Vehicle Models</MenuItem>
+              <MenuItem disabled>No models configured — add them in Configuration</MenuItem>
             )}
             {models.map((m) => (
               <MenuItem key={m.id} value={String(m.id)}>

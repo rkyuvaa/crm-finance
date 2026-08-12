@@ -65,11 +65,11 @@ function ModelFormDialog({
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: editing?.name ?? '',
-      vehicle_price: editing?.vehicle_price ?? 0,
-      down_payment: editing?.down_payment ?? 0,
-      loan_amount: editing?.loan_amount ?? 0,
-      finance_company_id: editing?.finance_company_id ? String(editing.finance_company_id) : '',
+      name: '',
+      vehicle_price: 0,
+      down_payment: 0,
+      loan_amount: 0,
+      finance_company_id: '',
     },
   });
 
@@ -198,7 +198,7 @@ function ModelFormDialog({
   );
 }
 
-export default function VehicleModelsPage() {
+export default function VehicleModelsPanel() {
   const user = useAppSelector((state) => state.auth.user);
   const isAdmin = user?.role === 'ADMIN';
   const { data, isFetching, isError, refetch } = useVehicleModelsQuery();
@@ -233,22 +233,26 @@ export default function VehicleModelsPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Vehicle Models</div>
-          <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-            Master configuration — model, price, down payment, loan amount and finance company.
-          </div>
-        </div>
-        {isAdmin && (
-          <Button variant="contained" startIcon={<Plus size={16} />} onClick={openCreate}>
-            Add Model
-          </Button>
-        )}
-      </div>
-
+    <>
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+            padding: '13px 16px',
+            borderBottom: '1px solid #E4EBE1',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>Vehicle Models</span>
+          {isAdmin && (
+            <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={openCreate}>
+              Add Model
+            </Button>
+          )}
+        </div>
         <div style={{ overflowX: 'auto' }}>
           {isFetching && !data ? (
             <LoadingRows rows={6} />
@@ -340,6 +344,6 @@ export default function VehicleModelsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </>
   );
 }

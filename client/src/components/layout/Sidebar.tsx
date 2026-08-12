@@ -5,12 +5,12 @@ import {
   BarChart3,
   Bell,
   Building2,
-  Car,
   CircleCheck,
   FileText,
   FolderOpen,
   LayoutDashboard,
   Settings,
+  Settings2,
   ShieldCheck,
   Truck,
   UserPlus,
@@ -61,12 +61,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
       { key: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell, badge: 'notifications' },
       { key: 'settings', label: 'Settings', path: '/settings', icon: Settings, badge: null },
-    ],
-  },
-  {
-    label: 'Masters',
-    items: [
-      { key: 'vehicle-models', label: 'Vehicle Models', path: '/masters/vehicle-models', icon: Car, badge: null },
+      { key: 'configuration', label: 'Configuration', path: '/configuration', icon: Settings2, badge: null },
     ],
   },
 ];
