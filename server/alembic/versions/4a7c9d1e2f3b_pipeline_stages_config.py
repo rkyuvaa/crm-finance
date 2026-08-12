@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = '4a7c9d1e2f3b'
@@ -22,7 +23,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('key', sa.String(length=40), nullable=False),
     sa.Column('label', sa.String(length=60), nullable=False),
-    sa.Column('status', sa.Enum('LEAD', 'APPLICATION', 'VERIFICATION', 'FINANCE', 'QUERY', 'SANCTIONED', 'DELIVERY', 'DISBURSEMENT', 'COMPLETED', 'REJECTED', name='application_status'), nullable=False),
+    sa.Column('status', postgresql.ENUM('LEAD', 'APPLICATION', 'VERIFICATION', 'FINANCE', 'QUERY', 'SANCTIONED', 'DELIVERY', 'DISBURSEMENT', 'COMPLETED', 'REJECTED', name='application_status', create_type=False), nullable=False),
     sa.Column('order_index', sa.Integer(), nullable=False),
     sa.Column('enabled', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
