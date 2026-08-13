@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Avatar, Button, IconButton, Menu, MenuItem, Paper } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
-import { useApplicationsQuery, useCreateApplicationMutation, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
+import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
