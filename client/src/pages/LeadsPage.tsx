@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Avatar, Button, IconButton, Menu, MenuItem, Paper, Tooltip } from '@mui/material';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import React, { useState } from 'react';
+import { Avatar, Button, IconButton, Menu, MenuItem, Paper } from '@mui/material';
+import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
 import { useApplicationsQuery, useCreateApplicationMutation, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
@@ -12,6 +11,7 @@ import Pipeline from '@/components/ui/Pipeline';
 import { LoadingRows } from '@/components/ui/PageState';
 import { formatAmount, formatDate, initialsOf } from '@/utils/format';
 import { useToast } from '@/components/ui/ToastHost';
+import type { ApplicationItem } from '@/types';
 
 export default function LeadsPage() {
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
@@ -29,16 +29,22 @@ export default function LeadsPage() {
 
   const rows = data?.items ?? [];
 
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Leads</div>
+          <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
+            New leads captured from the dealership funnel.
+          </div>
+        </div>
+        <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
+          New Lead
+        </Button>
+      </div>
+
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden', mb: 2 }}>
-        <div
-          style={{
-            padding: '13px 16px 0',
-            fontSize: 14,
-            fontWeight: 700,
-            color: '#16231B',
-            borderBottom: '1px solid #E4EBE1',
-          }}
-        >
+        <div style={{ padding: '13px 16px 0', fontSize: 14, fontWeight: 700, color: '#16231B', borderBottom: '1px solid #E4EBE1' }}>
           Pipeline Stages
         </div>
         <Pipeline stages={dashboard?.pipeline ?? []} />
@@ -60,7 +66,7 @@ export default function LeadsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
               <thead>
                 <tr>
-                  {['App ID', 'Customer', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created'].map((h) => (
+                  {['App ID', 'Customer', 'Phone', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created', 'Actions'].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -113,152 +119,15 @@ export default function LeadsPage() {
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
                       {formatDate(app.created_at)}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </Paper>
-
-      {data && (
-    <Menu
-      anchorEl={menuAnchor}
-      open={Boolean(menuAnchor)}
-      onClose={() => {
-        setMenuAnchor(null);
-        setMenuFor(null);
-      }}
-    >
-      <MenuItem
-        onClick={async () => {
-          if (!menuFor) return;
-          try {
-            await deleteApplicationMutation(menuFor.id).unwrap();
-            showToast(`Lead ${menuFor.app_no} deleted`, 'success');
-          } catch {
-            showToast('Could not delete the lead', 'error');
-          }
-          setMenuAnchor(null);
-          setMenuFor(null);
-        }}
-        sx={{ color: '#DC2626' }}
-      >
-        <Trash2 size={15} style={{ marginRight: 9 }} /> Delete
-      </MenuItem>
-      <MenuItem
-        onClick={async () => {
-          if (!menuFor) return;
-          try {
-            await updateApplicationMutation(menuFor.id, {
-              customer_name: 'Updated Customer',
-              customer_phone: '9876543210',
-              vehicle: 'Updated Vehicle',
-              amount: 500000,
-              status: 'LEAD',
-            }).unwrap();
-            showToast(`Lead ${menuFor.app_no} updated`, 'success');
-          } catch {
-            showToast('Could not update the lead', 'error');
-          }
-          setMenuAnchor(null);
-          setMenuFor(null);
-        }}
-        sx={{ color: '#1976D2' }}
-      >
-        <Edit size={15} style={{ marginRight: 9 }} /> Edit
-      </MenuItem>
-    </Menu>
-  )}
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Leads</div>
-          <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-            New leads captured from the dealership funnel.
-          </div>
-        </div>
-        <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
-          New Lead
-        </Button>
-      </div>
-
-      <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {isFetching && !data ? (
-            <LoadingRows rows={8} />
-          ) : isError ? (
-            <div style={{ padding: 24, textAlign: 'center' }}>
-              <Button variant="outlined" onClick={refetch}>
-                Retry loading leads
-              </Button>
-            </div>
-          ) : !data || data.items.length === 0 ? (
-            <EmptyState title="No leads yet" hint="Leads will appear here as they are captured." />
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-              <thead>
-                <tr>
-                  {['App ID', 'Customer', 'Phone', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        background: '#F2FAF0',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#7A8B80',
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.6,
-                        textAlign: 'left',
-                        padding: '10px 16px',
-                        borderBottom: '1px solid #E4EBE1',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((app) => (
-                  <tr key={app.id}>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <span className="app-id">{app.app_no}</span>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar
-                          sx={{ width: 30, height: 30, bgcolor: '#EAF6E8', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
-                        >
-                          {initialsOf(app.customer_name)}
-                        </Avatar>
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#16231B', fontSize: 13 }}>{app.customer_name}</div>
-                          <div style={{ fontSize: 11, color: '#7A8B80' }}>{app.customer_phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C' }}>{app.vehicle}</td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 700 }}>
-                      {formatAmount(app.amount)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <StatusBadge status={app.status} />
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
-                      {app.aging_label}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
-                      {formatDate(app.created_at)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <IconButton onClick={(e) => {
-                        setMenuFor(app);
-                        setMenuAnchor(e.currentTarget);
-                      }}>
+                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>
+                      <IconButton
+                        size="small"
+                        aria-label={`More actions for ${app.app_no}`}
+                        onClick={(e) => {
+                          setMenuFor(app);
+                          setMenuAnchor(e.currentTarget);
+                        }}
+                      >
                         <MoreVertical size={16} />
                       </IconButton>
                     </td>
@@ -269,6 +138,57 @@ export default function LeadsPage() {
           )}
         </div>
       </Paper>
+
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => {
+          setMenuAnchor(null);
+          setMenuFor(null);
+        }}
+      >
+        <MenuItem
+          onClick={async () => {
+            if (!menuFor) return;
+            try {
+              await deleteApplication(menuFor.id).unwrap();
+              showToast(`Lead ${menuFor.app_no} deleted`, 'success');
+            } catch {
+              showToast('Could not delete the lead', 'error');
+            }
+            setMenuAnchor(null);
+            setMenuFor(null);
+          }}
+          sx={{ color: '#DC2626' }}
+        >
+          <Trash2 size={15} style={{ marginRight: 9 }} /> Delete
+        </MenuItem>
+        <MenuItem
+          onClick={async () => {
+            if (!menuFor) return;
+            try {
+              await updateApplication({
+                id: menuFor.id,
+                body: {
+                  customer_name: 'Updated Customer',
+                  customer_phone: '9876543210',
+                  vehicle: 'Updated Vehicle',
+                  amount: 500000,
+                  status: 'LEAD',
+                },
+              }).unwrap();
+              showToast(`Lead ${menuFor.app_no} updated`, 'success');
+            } catch {
+              showToast('Could not update the lead', 'error');
+            }
+            setMenuAnchor(null);
+            setMenuFor(null);
+          }}
+          sx={{ color: '#1976D2' }}
+        >
+          <Edit size={15} style={{ marginRight: 9 }} /> Edit
+        </MenuItem>
+      </Menu>
 
       <NewApplicationDialog title="New Lead" open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
