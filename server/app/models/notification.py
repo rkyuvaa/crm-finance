@@ -32,7 +32,7 @@ class Activity(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     application_id: Mapped[int | None] = mapped_column(
-        ForeignKey("applications.id"), nullable=True, index=True
+        ForeignKey("applications.id", ondelete="CASCADE"), nullable=True, index=True
     )
     actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(255), nullable=False)

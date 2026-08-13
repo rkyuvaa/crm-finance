@@ -76,7 +76,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     doc_type: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[DocStatus] = mapped_column(
         Enum(DocStatus, name="doc_status"), default=DocStatus.PENDING, index=True
@@ -92,7 +92,7 @@ class Verification(Base):
     __tablename__ = "verifications"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     status: Mapped[VerificationStatus] = mapped_column(
         Enum(VerificationStatus, name="verification_status"), default=VerificationStatus.PENDING
     )
@@ -108,7 +108,7 @@ class FinanceSubmission(Base):
     __tablename__ = "finance_submissions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("finance_companies.id"), index=True)
     status: Mapped[FinanceStatus] = mapped_column(
         Enum(FinanceStatus, name="finance_status"), default=FinanceStatus.PROCESSING
@@ -125,7 +125,7 @@ class Sanction(Base):
     __tablename__ = "sanctions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     status: Mapped[str] = mapped_column(String(40), default="SANCTIONED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sanctioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -137,7 +137,7 @@ class Delivery(Base):
     __tablename__ = "deliveries"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     status: Mapped[DeliveryStatus] = mapped_column(
         Enum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.PENDING
     )
@@ -151,7 +151,7 @@ class Disbursement(Base):
     __tablename__ = "disbursements"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"), index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     status: Mapped[DisbursementStatus] = mapped_column(
         Enum(DisbursementStatus, name="disbursement_status"), default=DisbursementStatus.PENDING_UTR
     )
