@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Avatar, Button, IconButton, Menu, MenuItem, Paper } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
-import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
+import { useApplicationsQuery, useDeleteApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
+import EditLeadDialog from '@/components/ui/EditLeadDialog';
 import Pipeline from '@/components/ui/Pipeline';
 import { LoadingRows } from '@/components/ui/PageState';
 import { formatAmount, formatDate, initialsOf } from '@/utils/format';
@@ -21,10 +22,11 @@ export default function LeadsPage() {
   });
   const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editLead, setEditLead] = useState<ApplicationItem | null>(null);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
-  const [updateApplication] = useUpdateApplicationMutation();
   const { showToast } = useToast();
 
   const rows = data?.items ?? [];
@@ -164,23 +166,9 @@ export default function LeadsPage() {
           <Trash2 size={15} style={{ marginRight: 9 }} /> Delete
         </MenuItem>
         <MenuItem
-          onClick={async () => {
-            if (!menuFor) return;
-            try {
-              await updateApplication({
-                id: menuFor.id,
-                body: {
-                  customer_name: 'Updated Customer',
-                  customer_phone: '9876543210',
-                  vehicle: 'Updated Vehicle',
-                  amount: 500000,
-                  status: 'LEAD',
-                },
-              }).unwrap();
-              showToast(`Lead ${menuFor.app_no} updated`, 'success');
-            } catch {
-              showToast('Could not update the lead', 'error');
-            }
+          onClick={() => {
+            setEditLead(menuFor);
+            setEditOpen(true);
             setMenuAnchor(null);
             setMenuFor(null);
           }}
@@ -191,6 +179,7 @@ export default function LeadsPage() {
       </Menu>
 
       <NewApplicationDialog title="New Lead" open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EditLeadDialog open={editOpen} onClose={() => { setEditOpen(false); setEditLead(null); }} lead={editLead} />
     </div>
   );
 }
