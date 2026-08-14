@@ -40,22 +40,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'Processing',
-    items: [
-      { key: 'documents', label: 'Documents', path: '/documents', icon: FolderOpen, badge: 'documents' },
-      { key: 'verification', label: 'Verification', path: '/verification', icon: ShieldCheck, badge: 'verification' },
-      { key: 'finance', label: 'Finance', path: '/finance', icon: Building2, badge: 'finance' },
-    ],
-  },
-  {
-    label: 'Fulfilment',
-    items: [
-      { key: 'sanction', label: 'Sanction', path: '/sanction', icon: CircleCheck, badge: null },
-      { key: 'delivery', label: 'Delivery', path: '/delivery', icon: Truck, badge: 'delivery' },
-      { key: 'disbursement', label: 'Disbursement', path: '/disbursement', icon: Banknote, badge: 'disbursement' },
-    ],
-  },
-  {
     label: 'Other',
     items: [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
