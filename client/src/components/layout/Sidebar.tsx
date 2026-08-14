@@ -1,18 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { useMemo } from 'react';
 import {
-  Banknote,
   BarChart3,
   Bell,
-  Building2,
-  CircleCheck,
   FileText,
-  FolderOpen,
   LayoutDashboard,
   Settings,
   Settings2,
-  ShieldCheck,
-  Truck,
   UserPlus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
