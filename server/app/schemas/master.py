@@ -51,7 +51,6 @@ class FinanceCompanyUpdate(BaseModel):
 class StageCreate(BaseModel):
     key: str = Field(min_length=2, max_length=40)
     label: str = Field(min_length=2, max_length=60)
-    status: ApplicationStatus
     order_index: int = Field(default=0, ge=0)
     enabled: bool = True
 
