@@ -30,7 +30,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
-      { key: 'applications', label: 'Applications', path: '/applications', icon: FileText, badge: 'applications' },
     ],
   },
   {
