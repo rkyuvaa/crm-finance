@@ -58,7 +58,6 @@ class StageCreate(BaseModel):
 class StageUpdate(BaseModel):
     key: str | None = Field(default=None, min_length=2, max_length=40)
     label: str | None = Field(default=None, min_length=2, max_length=60)
-    status: ApplicationStatus | None = None
     order_index: int | None = Field(default=None, ge=0)
     enabled: bool | None = None
 
@@ -67,7 +66,7 @@ class StageOut(BaseModel):
     id: int
     key: str
     label: str
-    status: ApplicationStatus
+    status: ApplicationStatus | None = None
     order_index: int
     enabled: bool
     created_at: datetime
