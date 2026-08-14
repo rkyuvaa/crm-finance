@@ -126,7 +126,6 @@ export interface StageConfig {
   id: number;
   key: string;
   label: string;
-  status: ApplicationStatus;
   order_index: number;
   enabled: boolean;
   created_at: string;
@@ -136,7 +135,6 @@ export interface StageConfig {
 export interface StageInput {
   key: string;
   label: string;
-  status: ApplicationStatus;
   order_index: number;
   enabled: boolean;
 }

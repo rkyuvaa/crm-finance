@@ -8,9 +8,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Paper,
-  Select,
   Switch,
   TextField,
 } from '@mui/material';
@@ -29,20 +27,7 @@ import {
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
-import type { ApplicationStatus, StageConfig } from '@/types';
-
-const STATUS_OPTIONS: ApplicationStatus[] = [
-  'LEAD',
-  'APPLICATION',
-  'VERIFICATION',
-  'FINANCE',
-  'QUERY',
-  'SANCTIONED',
-  'DELIVERY',
-  'DISBURSEMENT',
-  'COMPLETED',
-  'REJECTED',
-];
+import type { StageConfig } from '@/types';
 
 const formSchema = z.object({
   key: z
@@ -50,7 +35,6 @@ const formSchema = z.object({
     .min(2, 'Key is required')
     .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, _ or -'),
   label: z.string().min(2, 'Label is required'),
-  status: z.string().min(1, 'Select a status'),
   order_index: z.coerce.number({ invalid_type_error: 'Required' }).int('Must be a whole number').nonnegative(),
   enabled: z.boolean(),
 });
@@ -78,7 +62,7 @@ function StageFormDialog({
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { key: '', label: '', status: '', order_index: 0, enabled: true },
+    defaultValues: { key: '', label: '', order_index: 0, enabled: true },
   });
 
   useEffect(() => {
@@ -86,7 +70,6 @@ function StageFormDialog({
     reset({
       key: editing?.key ?? '',
       label: editing?.label ?? '',
-      status: editing?.status ?? '',
       order_index: editing?.order_index ?? 0,
       enabled: editing?.enabled ?? true,
     });
@@ -96,7 +79,6 @@ function StageFormDialog({
     const body = {
       key: values.key,
       label: values.label,
-      status: values.status as ApplicationStatus,
       order_index: values.order_index,
       enabled: values.enabled,
     };
@@ -139,24 +121,6 @@ function StageFormDialog({
             helperText={errors.label?.message}
             {...register('label')}
           />
-          <Select
-            fullWidth
-            displayEmpty
-            size="small"
-            value={watch('status')}
-            onChange={(e) => setValue('status', String(e.target.value), { shouldValidate: true })}
-            error={Boolean(errors.status)}
-            sx={{ mt: 1, mb: 0.5 }}
-            renderValue={(value) => (value ? String(value) : 'Select status')}
-            inputProps={{ 'aria-label': 'Status' }}
-          >
-            <MenuItem value="">Select status</MenuItem>
-            {STATUS_OPTIONS.map((s) => (
-              <MenuItem key={s} value={s}>
-                {s}
-              </MenuItem>
-            ))}
-          </Select>
           <TextField
             fullWidth
             label="Order"
@@ -262,13 +226,13 @@ export default function StagesPanel() {
           ) : stages.length === 0 ? (
             <EmptyState
               title="No stages configured"
-              hint={isAdmin ? 'Add stages to control which statuses appear in the pipeline.' : 'Contact an admin to configure stages.'}
+              slice: { hints } = isAdmin ? { hint: '', hint: 'Add / edit stages to control pipeline visibility.' } : {}
             />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead>
                 <tr>
-                  {['Order', 'Key', 'Label', 'Status', 'Show', ...(isAdmin ? ['Actions'] : [])].map((h) => (
+                  {['Order', 'Key', 'Label', 'Show', ...(isAdmin ? ['Actions'] : [])].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -300,9 +264,6 @@ export default function StagesPanel() {
                     </td>
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 600, color: '#16231B' }}>
                       {s.label}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
-                      {s.status}
                     </td>
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
                       <Switch
