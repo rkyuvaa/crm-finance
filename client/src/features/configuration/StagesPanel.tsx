@@ -226,7 +226,7 @@ export default function StagesPanel() {
           ) : stages.length === 0 ? (
             <EmptyState
               title="No stages configured"
-              slice: { hints } = isAdmin ? { hint: '', hint: 'Add / edit stages to control pipeline visibility.' } : {}
+              hint={isAdmin ? 'Add stages to control pipeline visibility.' : 'Contact an admin to configure stages.'}
             />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
