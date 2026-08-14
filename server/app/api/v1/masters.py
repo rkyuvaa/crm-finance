@@ -204,7 +204,6 @@ def create_stage(
     stage = PipelineStage(
         key=payload.key,
         label=payload.label,
-        status=payload.status,
         order_index=payload.order_index,
         enabled=payload.enabled,
     )

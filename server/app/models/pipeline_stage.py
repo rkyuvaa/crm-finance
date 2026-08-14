@@ -13,8 +13,8 @@ class PipelineStage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     key: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
     label: Mapped[str] = mapped_column(String(60), nullable=False)
-    status: Mapped[ApplicationStatus] = mapped_column(
-        Enum(ApplicationStatus, name="application_status"), nullable=False
+    status: Mapped[ApplicationStatus | None] = mapped_column(
+        Enum(ApplicationStatus, name="application_status"), nullable=True
     )
     order_index: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
