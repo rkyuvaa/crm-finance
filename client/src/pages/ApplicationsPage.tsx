@@ -16,7 +16,6 @@ import {
 
 import { useAppSelector } from '@/app/hooks';
 import { useApplicationsQuery, useCreateApplicationMutation, useDeleteApplicationMutation } from '@/api/applicationsApi';
-import { useDashboardQuery } from '@/api/dashboardApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
@@ -43,7 +42,6 @@ const STATUS_OPTIONS: { value: ApplicationStatus | ''; label: string }[] = [
 export default function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
-  const { data: dashboard } = useDashboardQuery();
   const selectedStageKey = useAppSelector((state) => state.stageFilter.selectedStageKey);
 
   const tab = (searchParams.get('tab') ?? 'all') as 'all' | 'mine' | 'pending';
@@ -51,7 +49,7 @@ export default function ApplicationsPage() {
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [status, setStatus] = useState('');
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [menuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
   const [createApplication] = useCreateApplicationMutation();
 
