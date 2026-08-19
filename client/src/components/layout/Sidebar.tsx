@@ -3,10 +3,14 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bell,
+  CheckCircle,
+  FileCheck,
   FileText,
   LayoutDashboard,
   Settings,
   Settings2,
+  Truck,
+  Upload,
   UserPlus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -30,6 +34,18 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
+    ],
+  },
+  {
+    label: 'Pipeline',
+    items: [
+      { key: 'document_upload', label: 'Document Upload', path: '/documents', icon: Upload, badge: 'documents' },
+      { key: 'document_verification', label: 'Document Verification', path: '/verification', icon: FileCheck, badge: 'verification' },
+      { key: 'final_submission', label: 'Final Submission', path: '/finance', icon: FileText, badge: 'finance' },
+      { key: 'finance_approval', label: 'Finance Approval', path: '/finance', icon: FileCheck, badge: 'finance' },
+      { key: 'loan_sanctioned', label: 'Loan Sanctioned', path: '/sanction', icon: CheckCircle, badge: null },
+      { key: 'disbursement', label: 'Disbursement', path: '/disbursement', icon: Truck, badge: 'disbursement' },
+      { key: 'completed', label: 'Completed', path: '/delivery', icon: CheckCircle, badge: null },
     ],
   },
   {
