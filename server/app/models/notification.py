@@ -40,3 +40,20 @@ class Activity(Base):
 
     actor: Mapped["User | None"] = relationship(lazy="joined")
     application: Mapped["Application | None"] = relationship(lazy="joined")
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    field_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    actor: Mapped["User | None"] = relationship(lazy="joined")
+    application: Mapped["Application"] = relationship(lazy="joined")

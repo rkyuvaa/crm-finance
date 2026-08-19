@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, Button, IconButton, Menu, MenuItem, Paper } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
@@ -7,7 +8,6 @@ import { useDashboardQuery } from '@/api/dashboardApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
-import EditLeadDialog from '@/components/ui/EditLeadDialog';
 import Pipeline from '@/components/ui/Pipeline';
 import { LoadingRows } from '@/components/ui/PageState';
 import { formatAmount, formatDate, initialsOf } from '@/utils/format';
@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/ToastHost';
 import type { ApplicationItem } from '@/types';
 
 export default function LeadsPage() {
+  const navigate = useNavigate();
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
     page: 1,
     page_size: 10,
@@ -22,8 +23,6 @@ export default function LeadsPage() {
   });
   const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editLead, setEditLead] = useState<ApplicationItem | null>(null);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
@@ -91,7 +90,11 @@ export default function LeadsPage() {
               </thead>
               <tbody>
                 {rows.map((app) => (
-                  <tr key={app.id}>
+                  <tr
+                    key={app.id}
+                    onClick={() => navigate(`/leads/${app.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
                       <span className="app-id">{app.app_no}</span>
                     </td>
@@ -126,6 +129,7 @@ export default function LeadsPage() {
                         size="small"
                         aria-label={`More actions for ${app.app_no}`}
                         onClick={(e) => {
+                          e.stopPropagation();
                           setMenuFor(app);
                           setMenuAnchor(e.currentTarget);
                         }}
@@ -167,8 +171,9 @@ export default function LeadsPage() {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            setEditLead(menuFor);
-            setEditOpen(true);
+            if (menuFor) {
+              navigate(`/leads/${menuFor.id}`);
+            }
             setMenuAnchor(null);
             setMenuFor(null);
           }}
@@ -179,7 +184,6 @@ export default function LeadsPage() {
       </Menu>
 
       <NewApplicationDialog title="New Lead" open={createOpen} onClose={() => setCreateOpen(false)} />
-      <EditLeadDialog open={editOpen} onClose={() => { setEditOpen(false); setEditLead(null); }} lead={editLead} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models import (
     Activity,
+    ActivityLog,
     Application,
     ApplicationStatus,
     Disbursement,
@@ -23,6 +24,7 @@ from app.schemas.application import (
     ApplicationUpdate,
     TabCounts,
 )
+from app.schemas.notifications import ActivityLogOut
 from app.services.aging import aging_tone, duration_between, format_aging
 from app.services.auth import next_app_no, touch_application
 
@@ -183,6 +185,36 @@ def get_application(app_id: int, db: Session = Depends(get_db), user: User = Dep
     return _to_out(app)
 
 
+@router.get("/{app_id}/activity", response_model=list[ActivityLogOut])
+def get_application_activity(
+    app_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    app = db.get(Application, app_id)
+    if not app:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    logs = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.application_id == app_id)
+        .order_by(ActivityLog.created_at.desc())
+        .all()
+    )
+    return [
+        ActivityLogOut(
+            id=log.id,
+            application_id=log.application_id,
+            actor_id=log.actor_id,
+            actor_name=log.actor.full_name if log.actor else None,
+            field_name=log.field_name,
+            old_value=log.old_value,
+            new_value=log.new_value,
+            created_at=log.created_at,
+        )
+        for log in logs
+    ]
+
+
 @router.post("", response_model=ApplicationOut, status_code=status.HTTP_201_CREATED)
 def create_application(
     payload: ApplicationCreate,
@@ -227,8 +259,60 @@ def update_application(
     if not app:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     data = payload.model_dump(exclude_unset=True)
+    
+    # Track field changes for activity log
+    field_mapping = {
+        'customer_name': 'Customer Name',
+        'customer_phone': 'Customer Phone',
+        'vehicle': 'Vehicle',
+        'amount': 'Loan Amount',
+        'status': 'Status',
+        'finance_company_id': 'Finance Company',
+        'vehicle_model_id': 'Vehicle Model',
+        'vehicle_price': 'Vehicle Price',
+        'down_payment': 'Down Payment',
+    }
+    
     for field, value in data.items():
+        old_value = getattr(app, field)
+        if old_value != value:
+            # Get display values for relationships
+            old_display = str(old_value) if old_value is not None else None
+            new_display = str(value) if value is not None else None
+            
+            # Special handling for IDs to show names
+            if field == 'finance_company_id' and value:
+                from app.models.finance_company import FinanceCompany
+                fc = db.get(FinanceCompany, value)
+                new_display = fc.name if fc else str(value)
+            if field == 'finance_company_id' and old_value:
+                from app.models.finance_company import FinanceCompany
+                fc = db.get(FinanceCompany, old_value)
+                old_display = fc.name if fc else str(old_value)
+            if field == 'vehicle_model_id' and value:
+                from app.models.vehicle_model import VehicleModel
+                vm = db.get(VehicleModel, value)
+                new_display = vm.name if vm else str(value)
+            if field == 'vehicle_model_id' and old_value:
+                from app.models.vehicle_model import VehicleModel
+                vm = db.get(VehicleModel, old_value)
+                old_display = vm.name if vm else str(old_value)
+            if field == 'status' and value:
+                new_display = str(value)
+            if field == 'status' and old_value:
+                old_display = str(old_value)
+            
+            db.add(
+                ActivityLog(
+                    application_id=app.id,
+                    actor_id=user.id,
+                    field_name=field_mapping.get(field, field),
+                    old_value=old_display,
+                    new_value=new_display,
+                )
+            )
         setattr(app, field, value)
+    
     touch_application(db, app)
     db.add(
         Activity(

@@ -1,6 +1,6 @@
 import { baseApi } from './baseApi';
 
-import type { ApplicationItem, ApplicationListResponse } from '@/types';
+import type { ActivityLogEntry, ApplicationItem, ApplicationListResponse } from '@/types';
 
 export interface ApplicationFilters {
   page?: number;
@@ -44,6 +44,10 @@ export const applicationsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/applications/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Applications', 'Dashboard'],
     }),
+    applicationActivity: build.query<ActivityLogEntry[], number>({
+      query: (id) => ({ url: `/applications/${id}/activity` }),
+      providesTags: (_result, _err, id) => [{ type: 'Applications', id }],
+    }),
   }),
 });
 
@@ -52,4 +56,5 @@ export const {
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
+  useApplicationActivityQuery,
 } = applicationsApi;

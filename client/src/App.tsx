@@ -8,6 +8,7 @@ import RequireAuth from '@/auth/RequireAuth';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const LeadsPage = lazy(() => import('@/pages/LeadsPage'));
+const LeadDetailPage = lazy(() => import('@/pages/LeadDetailPage'));
 const GenericStagePage = lazy(() => import('@/pages/GenericStagePage'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
@@ -39,6 +40,7 @@ export default function App() {
             >
               <Route path="/" element={<DashboardPage />} />
               <Route path="/leads" element={<LeadsPage />} />
+              <Route path="/leads/:id" element={<LeadDetailPage />} />
               
               <Route path="/documents" element={<GenericStagePage section="documents" />} />
               <Route path="/verification" element={<GenericStagePage section="verification" />} />

@@ -147,6 +147,17 @@ export interface Activity {
   created_at: string;
 }
 
+export interface ActivityLogEntry {
+  id: number;
+  application_id: number;
+  actor_id: number | null;
+  actor_name: string | null;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+}
+
 export interface NavCounts {
   leads: number;
   applications: number;

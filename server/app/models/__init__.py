@@ -17,13 +17,14 @@ from app.models.enums import (
     VerificationStatus,
 )
 from app.models.finance_company import FinanceCompany
-from app.models.notification import Activity, Notification
+from app.models.notification import Activity, ActivityLog, Notification
 from app.models.pipeline_stage import PipelineStage
 from app.models.user import User
 from app.models.vehicle_model import VehicleModel
 
 __all__ = [
     "Activity",
+    "ActivityLog",
     "Application",
     "ApplicationStatus",
     "Delivery",
