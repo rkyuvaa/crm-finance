@@ -167,6 +167,7 @@ export interface NavCounts {
   delivery: number;
   disbursement: number;
   notifications: number;
+  stages: Record<string, number>;
 }
 
 export interface TabCounts {

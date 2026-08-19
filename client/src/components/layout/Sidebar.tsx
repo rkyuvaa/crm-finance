@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { useAppSelector } from '@/app/hooks';
-import { useAppDispatch } from '@/app/hooks';
+import { useAppSelector, useAppDispatch } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import { setSelectedStageKey } from '@/app/stageSlice';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
@@ -27,7 +26,7 @@ interface NavItem {
   label: string;
   path: string;
   icon: LucideIcon;
-  badge: keyof NavCounts | null;
+  badge: (keyof NavCounts | 'stages') | null;
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -52,7 +51,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: 'Stages',
-    items: (\n      const { pipeline = [] } = useAppSelector((state) => state.stageFilter);\n      return pipeline.filter(s => s.count > 0).map(s => (\n        { key: s.key, label: s.label, path: `/stage/${s.key}`, icon: StageIcon, badge: null },\n      ))\n    ),
+    items: [],
   },
   {
     label: 'Other',
@@ -66,7 +65,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 ];
 
 const StageIcon = CheckCircle;
-
 
 export default function Sidebar({
   collapsed,
@@ -83,9 +81,15 @@ export default function Sidebar({
   const stages = dashboard?.pipeline ?? [];
   const stageCounts = counts?.stages ?? {};
 
-  const handleStageSelect = (key: string | null) => {
-    dispatch(setSelectedStageKey(key));
-  };
+  const stageItems = stages
+    .filter((s) => s.count > 0 || true)
+    .map((s) => ({
+      key: s.key,
+      label: s.label,
+      path: `/stage/${s.key}`,
+      icon: StageIcon,
+      badge: 'stages' as keyof NavCounts | null,
+    }));
 
   const navItemStyle = useMemo(
     () => ({
@@ -177,73 +181,85 @@ export default function Sidebar({
       </div>
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <div
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  letterSpacing: 1.2,
-                  color: '#9BA99F',
-                  textTransform: 'uppercase',
-                  padding: '14px 10px 6px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {group.label}
-              </div>
-            )}
-            {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-            {group.items.map((item) => {
-              const Icon = item.icon;
-              const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-              return (
-                <NavLink
-                  key={item.key}
-                  to={item.path}
-                  end={item.path === '/'}
-                  onClick={onNavigate}
-                  className="nav-item"
-                  style={({ isActive }) => ({
-                    ...navItemStyle,
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    padding: collapsed ? '10px 0' : '8.5px 10px',
-                    background: isActive ? '#EAF6E8' : 'transparent',
-                    color: isActive ? '#04552B' : '#44584C',
-                    fontWeight: isActive ? 600 : 500,
-                  })}
+        {NAV_GROUPS.map((group) => {
+          const items = group.label === 'Stages' ? stageItems : group.items;
+          return (
+            <div key={group.label}>
+              {!collapsed && (
+                <div
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    letterSpacing: 1.2,
+                    color: '#9BA99F',
+                    textTransform: 'uppercase',
+                    padding: '14px 10px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  {({ isActive }) => (
-                    <>
-                      <span style={{ position: 'relative', display: 'flex' }}>
-                        <Icon size={17} color={isActive ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
-                      </span>
-                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                      {!collapsed && badgeCount !== null && badgeCount > 0 && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            background: '#EAF6E8',
-                            color: '#04552B',
-                            padding: '2px 7px',
-                            borderRadius: 20,
-                            minWidth: 20,
-                            textAlign: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {badgeCount}
+                  {group.label}
+                </div>
+              )}
+              {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
+              {items.map((item) => {
+                const Icon = item.icon;
+                const badgeCount = item.badge === 'stages'
+                  ? (stageCounts[item.key as string] ?? 0)
+                  : item.badge ? (counts?.[item.badge] ?? 0) : null;
+                const isActiveStage = item.key === selectedStageKey;
+                const handleClick = () => {
+                  if (item.badge === 'stages') {
+                    dispatch(setSelectedStageKey(item.key));
+                  }
+                  onNavigate?.();
+                };
+                return (
+                  <NavLink
+                    key={item.key}
+                    to={item.path}
+                    end={item.path === '/'}
+                    onClick={handleClick}
+                    className="nav-item"
+                    style={({ isActive }) => ({
+                      ...navItemStyle,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      padding: collapsed ? '10px 0' : '8.5px 10px',
+                      background: (isActive || isActiveStage) ? '#EAF6E8' : 'transparent',
+                      color: (isActive || isActiveStage) ? '#04552B' : '#44584C',
+                      fontWeight: (isActive || isActiveStage) ? 600 : 500,
+                    })}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span style={{ position: 'relative', display: 'flex' }}>
+                          <Icon size={17} color={(isActive || isActiveStage) ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
                         </span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        ))}
+                        {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                        {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              background: '#EAF6E8',
+                              color: '#04552B',
+                              padding: '2px 7px',
+                              borderRadius: 20,
+                              minWidth: 20,
+                              textAlign: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {badgeCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
       <div
