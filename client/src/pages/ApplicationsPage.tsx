@@ -22,7 +22,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
-import { agingColor, formatAmount, formatDate, initialsOf } from '@/utils/format';
+import { formatAmount, formatDate, initialsOf } from '@/utils/format';
 import type { ApplicationItem, ApplicationStatus } from '@/types';
 
 const PAGE_SIZE = 10;
@@ -51,7 +51,6 @@ export default function ApplicationsPage() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [status, setStatus] = useState('');
-  const [financeId, setFinanceId] = useState('');
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
@@ -65,7 +64,6 @@ export default function ApplicationsPage() {
     tab,
     q: q || undefined,
     status: status || undefined,
-    finance_company_id: financeId ? Number(financeId) : undefined,
     stage_key: stageKey,
   });
 
@@ -92,11 +90,6 @@ export default function ApplicationsPage() {
     if (q.trim()) nextParams.set('q', q.trim());
     else nextParams.delete('q');
     setSearchParams(nextParams, { replace: true });
-  };
-
-  const onFilterChange = (setter: (v: string) => void) => (e: SelectChangeEvent<string>) => {
-    setter(e.target.value);
-    setPage(1);
   };
 
   const quickCreate = async () => {
@@ -200,7 +193,7 @@ export default function ApplicationsPage() {
         </div>
 
         {isFetching ? (
-          <LoadingRows count={PAGE_SIZE} />
+          <LoadingRows rows={PAGE_SIZE} />
         ) : isError ? (
           <div style={{ padding: 24, textAlign: 'center', color: '#D9534F' }}>
             Could not load applications. Try again.
@@ -253,7 +246,7 @@ export default function ApplicationsPage() {
               </table>
             </div>
 
-            {data?.items?.length === 0 && <EmptyState title="No applications found" actionLabel="Create one" onAction={quickCreate} />}
+            {data?.items?.length === 0 && <EmptyState title="No applications found" hint="Adjust filters or create a new application." />}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #ECF0ED' }}>
               <div style={{ fontSize: 13, color: '#7A8B80' }}>
