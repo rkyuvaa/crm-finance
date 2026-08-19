@@ -16,6 +16,7 @@ class PipelineStage(Base):
     status: Mapped[ApplicationStatus | None] = mapped_column(
         Enum(ApplicationStatus, name="application_status"), nullable=True
     )
+
     order_index: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
