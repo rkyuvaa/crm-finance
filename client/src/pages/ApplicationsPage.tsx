@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Avatar, Button, IconButton, InputAdornment, Menu, MenuItem, Paper, Select, TextField } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
 import {
   Building2,
   ChevronLeft,
