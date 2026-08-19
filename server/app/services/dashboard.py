@@ -283,7 +283,7 @@ def _build_activities(db: Session, limit: int = 5) -> list[ActivityOut]:
     return out
 
 
-def _build_nav_counts(db: Session, user: User) -> NavCounts:
+def _build_nav_counts(db: Session, user: User, counts: dict[ApplicationStatus, int]) -> NavCounts:
     thirty_days = db_now() - timedelta(days=30)
     configured = (
         db.query(PipelineStageModel)
@@ -405,5 +405,5 @@ def get_dashboard(db: Session, user: User) -> dict:
         "waiting_on_total": len(waiting),
         "finance_companies": _build_finance_companies(db),
         "activities": _build_activities(db),
-        "nav_counts": _build_nav_counts(db, user),
+        "nav_counts": _build_nav_counts(db, user, counts),
     }
