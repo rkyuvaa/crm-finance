@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useAppSelector } from '@/app/hooks';
 import { Avatar, Button, IconButton, InputAdornment, Menu, MenuItem, Paper, Select, TextField } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import {
@@ -44,6 +45,7 @@ export default function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
   const { data: dashboard } = useDashboardQuery();
+  const selectedStageKey = useAppSelector((state) => state.stageFilter.selectedStageKey);
 
   const tab = (searchParams.get('tab') ?? 'all') as 'all' | 'mine' | 'pending';
   const [page, setPage] = useState(1);
@@ -55,6 +57,9 @@ export default function ApplicationsPage() {
   const [deleteApplication] = useDeleteApplicationMutation();
   const [createApplication] = useCreateApplicationMutation();
 
+  const pipeline = dashboard?.pipeline ?? [];
+  const stageKey = tab === 'all' && selectedStageKey ? selectedStageKey : undefined;
+
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
     page,
     page_size: PAGE_SIZE,
@@ -62,6 +67,7 @@ export default function ApplicationsPage() {
     q: q || undefined,
     status: status || undefined,
     finance_company_id: financeId ? Number(financeId) : undefined,
+    stage_key: stageKey,
   });
 
   const total = data?.total ?? 0;
