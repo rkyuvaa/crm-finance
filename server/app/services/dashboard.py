@@ -285,6 +285,12 @@ def _build_activities(db: Session, limit: int = 5) -> list[ActivityOut]:
 
 def _build_nav_counts(db: Session, user: User) -> NavCounts:
     thirty_days = db_now() - timedelta(days=30)
+    configured = (
+        db.query(PipelineStageModel)
+        .filter(PipelineStageModel.enabled.is_(True))
+        .order_by(PipelineStageModel.order_index.asc(), PipelineStageModel.id.asc())
+        .all()
+    )
     lead_unassigned = (
         db.query(func.count(Application.id))
         .filter(
@@ -342,6 +348,7 @@ def _build_nav_counts(db: Session, user: User) -> NavCounts:
         delivery=delivery,
         disbursement=disbursement,
         notifications=notifications,
+        stages={s.key: counts.get(s.status, 0) for s in configured if s.status},
     )
 
 

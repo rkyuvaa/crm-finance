@@ -85,6 +85,7 @@ class NavCounts(BaseModel):
     delivery: int
     disbursement: int
     notifications: int
+    stages: dict[str, int] = {}
 
 
 class DashboardResponse(BaseModel):

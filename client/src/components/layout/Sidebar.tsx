@@ -16,7 +16,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
+import { useAppDispatch } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
+import { setSelectedStageKey } from '@/app/stageSlice';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
 import type { NavCounts } from '@/types';
 
@@ -49,6 +51,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: 'Stages',
+    items: (\n      const { pipeline = [] } = useAppSelector((state) => state.stageFilter);\n      return pipeline.filter(s => s.count > 0).map(s => (\n        { key: s.key, label: s.label, path: `/stage/${s.key}`, icon: StageIcon, badge: null },\n      ))\n    ),
+  },
+  {
     label: 'Other',
     items: [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
@@ -58,6 +64,9 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
 ];
+
+const StageIcon = CheckCircle;
+
 
 export default function Sidebar({
   collapsed,
@@ -69,6 +78,14 @@ export default function Sidebar({
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
   const counts = dashboard?.nav_counts;
+  const dispatch = useAppDispatch();
+  const selectedStageKey = useAppSelector((state) => state.stageFilter.selectedStageKey);
+  const stages = dashboard?.pipeline ?? [];
+  const stageCounts = counts?.stages ?? {};
+
+  const handleStageSelect = (key: string | null) => {
+    dispatch(setSelectedStageKey(key));
+  };
 
   const navItemStyle = useMemo(
     () => ({

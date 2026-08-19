@@ -12,6 +12,7 @@ export interface ApplicationFilters {
   finance_company_id?: number;
   date_from?: string;
   date_to?: string;
+  stage_key?: string;
 }
 
 export interface NewApplication {

@@ -115,6 +115,7 @@ def _filtered_query(
     finance_company_id: int | None,
     date_from: datetime | None,
     date_to: datetime | None,
+    stage_key: str | None = None,
 ):
     query = db.query(Application)
     if scope == "recent":
@@ -141,6 +142,11 @@ def _filtered_query(
             | Application.customer_phone.like(like)
             | func.lower(Application.vehicle).like(like.lower())
         )
+    if stage_key:
+        from app.models.pipeline_stage import PipelineStage as PipelineStageModel
+        stage = db.query(PipelineStageModel).filter(PipelineStageModel.key == stage_key).first()
+        if stage and stage.status:
+            query = query.filter(Application.status == stage.status)
     return query
 
 
@@ -155,11 +161,12 @@ def list_applications(
     finance_company_id: int | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    stage_key: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     query = _filtered_query(
-        db, user, scope, tab, q, status, finance_company_id, date_from, date_to
+        db, user, scope, tab, q, status, finance_company_id, date_from, date_to, stage_key
     )
     total = query.count()
     items = (
