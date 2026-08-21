@@ -16,10 +16,11 @@ import type { ApplicationItem } from '@/types';
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
     page: 1,
-    page_size: 10,
-    status: 'LEAD',
+    page_size: 100,
+    ...(selectedStageKey ? { stage_key: selectedStageKey } : {}),
   });
   const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
@@ -36,7 +37,7 @@ export default function LeadsPage() {
         <div>
           <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Leads</div>
           <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-            New leads captured from the dealership funnel.
+            Manage and track all leads across pipeline stages.
           </div>
         </div>
         <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
@@ -45,10 +46,22 @@ export default function LeadsPage() {
       </div>
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden', mb: 2 }}>
-        <div style={{ padding: '13px 16px 0', fontSize: 14, fontWeight: 700, color: '#16231B', borderBottom: '1px solid #E4EBE1' }}>
-          Pipeline Stages
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid #E4EBE1' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>
+            Pipeline Stages {selectedStageKey ? `(Filtered by ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label})` : '(All Stages)'}
+          </span>
+          {selectedStageKey && (
+            <Button size="small" variant="text" onClick={() => setSelectedStageKey(undefined)} sx={{ textTransform: 'none', fontSize: 12 }}>
+              Clear Filter (Show All Leads)
+            </Button>
+          )}
         </div>
-        <Pipeline stages={dashboard?.pipeline ?? []} />
+        <Pipeline
+          stages={dashboard?.pipeline ?? []}
+          onStageClick={(stage) => {
+            setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
+          }}
+        />
       </Paper>
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
