@@ -133,39 +133,66 @@ export default function LeadDetailPage() {
 
   const selectedModel = models.find((m) => String(m.id) === modelId);
 
-  // Active enabled stages in sequence
+  // Map known keys or custom stage keys to valid ApplicationStatus enum values
   const STAGE_STATUS_MAP: Record<string, ApplicationStatus> = {
     leads: 'LEAD',
+    lead: 'LEAD',
     applications: 'APPLICATION',
+    application: 'APPLICATION',
     verification: 'VERIFICATION',
     finance: 'FINANCE',
     query: 'QUERY',
     sanctioned: 'SANCTIONED',
     delivery: 'DELIVERY',
     disburse: 'DISBURSEMENT',
+    disbursement: 'DISBURSEMENT',
     completed: 'COMPLETED',
   };
 
+  const VALID_ENUM_STATUSES = new Set([
+    'LEAD',
+    'APPLICATION',
+    'VERIFICATION',
+    'FINANCE',
+    'QUERY',
+    'SANCTIONED',
+    'DELIVERY',
+    'DISBURSEMENT',
+    'COMPLETED',
+    'REJECTED',
+  ]);
+
   // Default pipeline sequence fallback in case masters stages have not loaded yet
   const DEFAULT_STAGES = [
-    { key: 'leads', label: 'Leads', status: 'LEAD' },
-    { key: 'applications', label: 'Applications', status: 'APPLICATION' },
-    { key: 'verification', label: 'Verification', status: 'VERIFICATION' },
-    { key: 'finance', label: 'Finance', status: 'FINANCE' },
-    { key: 'query', label: 'Query', status: 'QUERY' },
-    { key: 'sanctioned', label: 'Sanctioned', status: 'SANCTIONED' },
-    { key: 'delivery', label: 'Delivery', status: 'DELIVERY' },
-    { key: 'disburse', label: 'Disburse', status: 'DISBURSEMENT' },
-    { key: 'completed', label: 'Completed', status: 'COMPLETED' },
+    { key: 'leads', label: 'Leads', status: 'LEAD' as ApplicationStatus },
+    { key: 'applications', label: 'Applications', status: 'APPLICATION' as ApplicationStatus },
+    { key: 'verification', label: 'Verification', status: 'VERIFICATION' as ApplicationStatus },
+    { key: 'finance', label: 'Finance', status: 'FINANCE' as ApplicationStatus },
+    { key: 'query', label: 'Query', status: 'QUERY' as ApplicationStatus },
+    { key: 'sanctioned', label: 'Sanctioned', status: 'SANCTIONED' as ApplicationStatus },
+    { key: 'delivery', label: 'Delivery', status: 'DELIVERY' as ApplicationStatus },
+    { key: 'disburse', label: 'Disburse', status: 'DISBURSEMENT' as ApplicationStatus },
+    { key: 'completed', label: 'Completed', status: 'COMPLETED' as ApplicationStatus },
   ];
+
+  const getValidStatus = (key: string, rawStatus?: string | null): ApplicationStatus => {
+    if (rawStatus && VALID_ENUM_STATUSES.has(rawStatus.toUpperCase())) {
+      return rawStatus.toUpperCase() as ApplicationStatus;
+    }
+    if (STAGE_STATUS_MAP[key.toLowerCase()]) {
+      return STAGE_STATUS_MAP[key.toLowerCase()];
+    }
+    // Default fallback order if custom stage key is added without status binding
+    return 'APPLICATION';
+  };
 
   const activeStagesList = stagesData && stagesData.length > 0
     ? [...stagesData].filter((s) => s.enabled).sort((a, b) => a.order_index - b.order_index).map((s) => ({
         key: s.key,
         label: s.label,
-        status: (s.status || STAGE_STATUS_MAP[s.key] || s.key.toUpperCase()) as ApplicationStatus,
+        status: getValidStatus(s.key, s.status),
       }))
-    : DEFAULT_STAGES.map((s) => ({ ...s, status: s.status as ApplicationStatus }));
+    : DEFAULT_STAGES;
 
   const currentStatusUpper = (lead?.status || 'LEAD').toUpperCase();
   let currentStageIndex = activeStagesList.findIndex(
