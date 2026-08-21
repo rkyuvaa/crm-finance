@@ -1,6 +1,6 @@
 """Create a single admin user after database reset."""
-from app.core.security import hash_password
 from app.core.config import settings
+from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.user import User, UserRole
 

@@ -2,8 +2,10 @@
 
 Run via: python -m scripts.clear_data
 """
-from app.core.security import hash_password
+from datetime import datetime, timezone
+
 from app.core.config import settings
+from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import (
     Activity,
@@ -55,6 +57,7 @@ def clear_data():
                     password_hash=hash_password(password),
                     full_name="Admin",
                     role=UserRole.ADMIN,
+                    created_at=datetime.now(timezone.utc),
                 )
             )
             db.commit()
