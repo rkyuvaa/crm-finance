@@ -167,11 +167,16 @@ export default function LeadDetailPage() {
       }))
     : DEFAULT_STAGES.map((s) => ({ ...s, status: s.status as ApplicationStatus }));
 
-  const currentStageIndex = activeStagesList.findIndex((s) => s.status === lead?.status);
-  const isFinalStage = currentStageIndex !== -1 && currentStageIndex === activeStagesList.length - 1;
-  const nextStage = currentStageIndex !== -1 && currentStageIndex < activeStagesList.length - 1
-    ? activeStagesList[currentStageIndex + 1]
-    : null;
+  const currentStatusUpper = (lead?.status || 'LEAD').toUpperCase();
+  let currentStageIndex = activeStagesList.findIndex(
+    (s) => s.status.toUpperCase() === currentStatusUpper || STAGE_STATUS_MAP[s.key] === currentStatusUpper
+  );
+  if (currentStageIndex === -1) {
+    currentStageIndex = 0; // Default to first stage (Leads) if unmapped
+  }
+
+  const isFinalStage = currentStageIndex >= activeStagesList.length - 1;
+  const nextStage = !isFinalStage ? activeStagesList[currentStageIndex + 1] : null;
   const nextStatus = nextStage?.status ?? null;
 
   const handleMoveNextStage = async () => {
