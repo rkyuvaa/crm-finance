@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Tab, Tabs } from '@mui/material';
+import { Avatar, Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Tab, Tabs, TablePagination } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation } from '@/api/applicationsApi';
@@ -20,6 +20,8 @@ export default function LeadsPage() {
   const { data: crmTabs } = useTabsQuery();
   const [activeTabCode, setActiveTabCode] = useState<string>('all_leads');
   const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
 
   // Set default tab on load if configured
   useEffect(() => {
@@ -31,11 +33,13 @@ export default function LeadsPage() {
 
   const activeTabConfig = crmTabs?.find((t) => t.code === activeTabCode);
 
-  const { data, isFetching, isError, refetch } = useApplicationsQuery({
-    page: 1,
-    page_size: 100,
+  const queryParams = {
+    page: page + 1,
+    page_size: rowsPerPage,
     ...(selectedStageKey ? { stage_key: selectedStageKey } : {}),
-  });
+  };
+
+  const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
   const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
@@ -60,6 +64,15 @@ export default function LeadsPage() {
     }
     return true;
   });
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <div>
@@ -152,83 +165,97 @@ export default function LeadsPage() {
           ) : rows.length === 0 ? (
             <EmptyState title="No leads yet" hint="Leads will appear here as they are captured." />
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-              <thead>
-                <tr>
-                  {['App ID', 'Customer', 'Phone', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created', 'Actions'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        background: '#F2FAF0',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#7A8B80',
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.6,
-                        textAlign: 'left',
-                        padding: '10px 16px',
-                        borderBottom: '1px solid #E4EBE1',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((app) => (
-                  <tr
-                    key={app.id}
-                    onClick={() => navigate(`/leads/${app.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <span className="app-id">{app.app_no}</span>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar
-                          sx={{ width: 30, height: 30, bgcolor: '#EAF6E8', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
-                        >
-                          {initialsOf(app.customer_name)}
-                        </Avatar>
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#16231B', fontSize: 13 }}>{app.customer_name}</div>
-                          <div style={{ fontSize: 11, color: '#7A8B80' }}>{app.customer_phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C' }}>{app.vehicle}</td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 700 }}>
-                      {formatAmount(app.amount)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <StatusBadge status={app.status} />
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
-                      {app.aging_label}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
-                      {formatDate(app.created_at)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>
-                      <IconButton
-                        size="small"
-                        aria-label={`More actions for ${app.app_no}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMenuFor(app);
-                          setMenuAnchor(e.currentTarget);
+            <>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+                <thead>
+                  <tr>
+                    {['App ID', 'Customer', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created', 'Actions'].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          background: '#F2FAF0',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: '#7A8B80',
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.6,
+                          textAlign: 'left',
+                          padding: '10px 16px',
+                          borderBottom: '1px solid #E4EBE1',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        <MoreVertical size={16} />
-                      </IconButton>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((app) => (
+                    <tr
+                      key={app.id}
+                      onClick={() => navigate(`/leads/${app.id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <span className="app-id">{app.app_no}</span>
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar
+                            sx={{ width: 30, height: 30, bgcolor: '#EAF6E8', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
+                          >
+                            {initialsOf(app.customer_name)}
+                          </Avatar>
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#16231B', fontSize: 13 }}>{app.customer_name}</div>
+                            <div style={{ fontSize: 11, color: '#7A8B80' }}>{app.customer_phone}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C' }}>{app.vehicle}</td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 700 }}>
+                        {formatAmount(app.amount)}
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <StatusBadge status={app.status} />
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
+                        {app.aging_label}
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
+                        {formatDate(app.created_at)}
+                      </td>
+                      <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>
+                        <IconButton
+                          size="small"
+                          aria-label={`More actions for ${app.app_no}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuFor(app);
+                            setMenuAnchor(e.currentTarget);
+                          }}
+                        >
+                          <MoreVertical size={16} />
+                        </IconButton>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <TablePagination
+                rowsPerPageOptions={[10, 20, 50]}
+                component="div"
+                count={data?.total ?? 0}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelDisplayedRows={({ from, to, count }) => `${from}–${to} of ${count}`}
+                labelRowsPerPage="Rows per page:"
+                SelectProps={{ size: 'small' }}
+              />
+            </>
           )}
         </div>
       </Paper>

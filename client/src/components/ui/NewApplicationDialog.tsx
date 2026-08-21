@@ -101,8 +101,15 @@ export default function NewApplicationDialog({
       showToast(`Application ${app.app_no} created`, 'success');
       reset();
       onClose();
-    } catch {
-      showToast('Could not create the application', 'error');
+    } catch (err: unknown) {
+      const detail = (err as { data?: { detail?: unknown } })?.data?.detail;
+      const errorMsg =
+        typeof detail === 'string'
+          ? detail
+          : typeof detail === 'object' && detail !== null
+          ? JSON.stringify(detail)
+          : 'Could not create the application';
+      showToast(errorMsg, 'error');
     }
   };
 
