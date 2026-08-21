@@ -15,18 +15,19 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { useAppSelector, useAppDispatch } from '@/app/hooks';
+import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
-import { setSelectedStageKey } from '@/app/stageSlice';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
 import type { NavCounts } from '@/types';
+
+type NavBadgeKey = Exclude<keyof NavCounts, 'stages'>;
 
 interface NavItem {
   key: string;
   label: string;
   path: string;
   icon: LucideIcon;
-  badge: (keyof NavCounts | 'stages') | null;
+  badge: NavBadgeKey | null;
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -50,10 +51,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'Stages',
-    items: [],
-  },
-  {
     label: 'Other',
     items: [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
@@ -63,8 +60,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
 ];
-
-const StageIcon = CheckCircle;
 
 export default function Sidebar({
   collapsed,
@@ -76,20 +71,6 @@ export default function Sidebar({
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
   const counts = dashboard?.nav_counts;
-  const dispatch = useAppDispatch();
-  const selectedStageKey = useAppSelector((state) => state.stageFilter.selectedStageKey);
-  const stages = dashboard?.pipeline ?? [];
-  const stageCounts = counts?.stages ?? {};
-
-  const stageItems = stages
-    .filter((s) => s.count > 0 || true)
-    .map((s) => ({
-      key: s.key,
-      label: s.label,
-      path: `/stage/${s.key}`,
-      icon: StageIcon,
-      badge: 'stages' as keyof NavCounts | null,
-    }));
 
   const navItemStyle = useMemo(
     () => ({
@@ -182,7 +163,6 @@ export default function Sidebar({
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
         {NAV_GROUPS.map((group) => {
-          const items = group.label === 'Stages' ? stageItems : group.items;
           return (
             <div key={group.label}>
               {!collapsed && (
@@ -201,16 +181,10 @@ export default function Sidebar({
                 </div>
               )}
               {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-              {items.map((item) => {
+              {group.items.map((item) => {
                 const Icon = item.icon;
-                const badgeCount = item.badge === 'stages'
-                  ? (stageCounts[item.key as string] ?? 0)
-                  : item.badge ? (counts?.[item.badge] ?? 0) : null;
-                const isActiveStage = item.key === selectedStageKey;
+                const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
                 const handleClick = () => {
-                  if (item.badge === 'stages') {
-                    dispatch(setSelectedStageKey(item.key));
-                  }
                   onNavigate?.();
                 };
                 return (
@@ -224,15 +198,15 @@ export default function Sidebar({
                       ...navItemStyle,
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       padding: collapsed ? '10px 0' : '8.5px 10px',
-                      background: (isActive || isActiveStage) ? '#EAF6E8' : 'transparent',
-                      color: (isActive || isActiveStage) ? '#04552B' : '#44584C',
-                      fontWeight: (isActive || isActiveStage) ? 600 : 500,
+                      background: isActive ? '#EAF6E8' : 'transparent',
+                      color: isActive ? '#04552B' : '#44584C',
+                      fontWeight: isActive ? 600 : 500,
                     })}
                   >
                     {({ isActive }) => (
                       <>
                         <span style={{ position: 'relative', display: 'flex' }}>
-                          <Icon size={17} color={(isActive || isActiveStage) ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
+                          <Icon size={17} color={isActive ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
                         </span>
                         {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
                         {!collapsed && badgeCount !== null && badgeCount > 0 && (
