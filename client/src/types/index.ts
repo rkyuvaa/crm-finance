@@ -126,6 +126,7 @@ export interface StageConfig {
   id: number;
   key: string;
   label: string;
+  status?: ApplicationStatus | null;
   order_index: number;
   enabled: boolean;
   created_at: string;

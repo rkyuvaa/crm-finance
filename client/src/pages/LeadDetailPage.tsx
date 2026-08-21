@@ -17,13 +17,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowLeft, CheckCircle2, Clock, Plus, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Plus, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import {
-  useApplicationsQuery,
+  useGetApplicationQuery,
   useUpdateApplicationMutation,
   useApplicationActivityQuery,
   usePlannedActivitiesQuery,
@@ -33,11 +33,13 @@ import {
 import {
   useActivityTypesQuery,
   useFinanceCompaniesQuery,
+  useStagesQuery,
   useVehicleModelsQuery,
 } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { formatDate } from '@/utils/format';
+import type { ApplicationStatus } from '@/types';
 
 const editSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
@@ -72,17 +74,13 @@ export default function LeadDetailPage() {
   const { showToast } = useToast();
   const appId = Number(id);
 
-  const { data: applicationsData, isFetching } = useApplicationsQuery({
-    page: 1,
-    page_size: 100,
-    status: 'LEAD',
-  });
-  const lead = applicationsData?.items?.find((item) => item.id === appId) ?? null;
+  const { data: lead, isFetching } = useGetApplicationQuery(appId, { skip: !appId });
+  const { data: stagesData = [] } = useStagesQuery();
 
   const { data: activityLogs = [] } = useApplicationActivityQuery(appId, { skip: !appId });
   const { data: plannedActivities = [] } = usePlannedActivitiesQuery(appId, { skip: !appId });
   const { data: activityTypes = [] } = useActivityTypesQuery();
-  const [updateApplication, { isLoading }] = useUpdateApplicationMutation();
+  const [updateApplication, { isLoading: isUpdating }] = useUpdateApplicationMutation();
   const [createPlannedActivity, { isLoading: creatingPlanned }] = useCreatePlannedActivityMutation();
   const [updatePlannedActivity] = useUpdatePlannedActivityMutation();
 
@@ -91,6 +89,7 @@ export default function LeadDetailPage() {
 
   const [sideTab, setSideTab] = useState(0);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [movingStage, setMovingStage] = useState(false);
 
   const {
     register,
@@ -98,6 +97,7 @@ export default function LeadDetailPage() {
     reset,
     setValue,
     watch,
+    trigger,
     formState: { errors },
   } = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -132,6 +132,77 @@ export default function LeadDetailPage() {
   }, [lead, reset]);
 
   const selectedModel = models.find((m) => String(m.id) === modelId);
+
+  // Active enabled stages in sequence
+  const STAGE_STATUS_MAP: Record<string, ApplicationStatus> = {
+    leads: 'LEAD',
+    applications: 'APPLICATION',
+    verification: 'VERIFICATION',
+    finance: 'FINANCE',
+    query: 'QUERY',
+    sanctioned: 'SANCTIONED',
+    delivery: 'DELIVERY',
+    disburse: 'DISBURSEMENT',
+    completed: 'COMPLETED',
+  };
+
+  const enabledStages = stagesData.filter((s) => s.enabled);
+  const currentStageIndex = enabledStages.findIndex(
+    (s) => (s.status || STAGE_STATUS_MAP[s.key]) === lead?.status
+  );
+  const isFinalStage = currentStageIndex !== -1 && currentStageIndex === enabledStages.length - 1;
+  const nextStage = currentStageIndex !== -1 && currentStageIndex < enabledStages.length - 1
+    ? enabledStages[currentStageIndex + 1]
+    : null;
+  const nextStatus = nextStage ? (nextStage.status || STAGE_STATUS_MAP[nextStage.key]) : null;
+
+  const handleMoveNextStage = async () => {
+    if (!lead || !nextStage || !nextStatus) return;
+
+    setMovingStage(true);
+
+    // Step 1: Validate required fields before stage transition
+    const isValid = await trigger();
+
+    let missingDetails: string[] = [];
+    const values = watch();
+    if (!values.vehicle_model_id) missingDetails.push('Vehicle Model');
+    if (!values.finance_company_id) missingDetails.push('Finance Company');
+
+    if (!isValid || missingDetails.length > 0) {
+      setMovingStage(false);
+      showToast(
+        'Please complete all required fields before moving this Lead to the next stage.',
+        'error'
+      );
+      return;
+    }
+
+    try {
+      // Step 2: Save and update status to next stage
+      await updateApplication({
+        id: lead.id,
+        body: {
+          customer_name: values.customer_name,
+          customer_phone: values.customer_phone,
+          vehicle: selectedModel?.name ?? lead.vehicle,
+          amount: values.amount,
+          status: nextStatus,
+          vehicle_model_id: values.vehicle_model_id ? Number(values.vehicle_model_id) : null,
+          vehicle_price: values.vehicle_price,
+          down_payment: values.down_payment,
+          finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
+        },
+      }).unwrap();
+
+      showToast('Lead successfully moved to the next stage.', 'success');
+    } catch (err) {
+      const detail = (err as { data?: { detail?: string } })?.data?.detail;
+      showToast(detail ?? 'Could not move lead to next stage', 'error');
+    } finally {
+      setMovingStage(false);
+    }
+  };
 
   const onSubmit = async (values: EditForm) => {
     if (!lead) return;
@@ -213,7 +284,7 @@ export default function LeadDetailPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
         <Button
           startIcon={<ArrowLeft size={16} />}
           onClick={() => navigate('/leads')}
@@ -221,6 +292,32 @@ export default function LeadDetailPage() {
         >
           Back to Leads
         </Button>
+
+        {/* Prominent Move Next Stage Button in Top-Right Corner */}
+        {nextStage && !isFinalStage && (
+          <Button
+            variant="contained"
+            color="success"
+            endIcon={<ChevronRight size={18} />}
+            disabled={movingStage || isUpdating}
+            onClick={handleMoveNextStage}
+            sx={{
+              fontWeight: 700,
+              px: 3,
+              py: 1,
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontSize: 14,
+              boxShadow: '0 4px 12px rgba(8, 122, 61, 0.25)',
+              background: '#087A3D',
+              '&:hover': {
+                background: '#04552B',
+              },
+            }}
+          >
+            {movingStage ? 'Validating & Saving...' : `Move Next Stage (${nextStage.label})`}
+          </Button>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 20, alignItems: 'start' }}>
@@ -241,7 +338,7 @@ export default function LeadDetailPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <TextField
                 fullWidth
-                label="Customer name"
+                label="Customer name *"
                 margin="dense"
                 error={Boolean(errors.customer_name)}
                 helperText={errors.customer_name?.message}
@@ -249,7 +346,7 @@ export default function LeadDetailPage() {
               />
               <TextField
                 fullWidth
-                label="Mobile number"
+                label="Mobile number *"
                 margin="dense"
                 error={Boolean(errors.customer_phone)}
                 helperText={errors.customer_phone?.message}
@@ -263,10 +360,10 @@ export default function LeadDetailPage() {
               size="small"
               value={modelId}
               onChange={(e) => setValue('vehicle_model_id', String(e.target.value), { shouldValidate: true })}
-              error={Boolean(errors.vehicle_model_id)}
+              error={Boolean(errors.vehicle_model_id || (!watch('vehicle_model_id') && movingStage))}
               sx={{ mt: 1, mb: 0.5 }}
               renderValue={(value) =>
-                value ? models.find((m) => String(m.id) === value)?.name ?? value : 'Select vehicle model'
+                value ? models.find((m) => String(m.id) === value)?.name ?? value : 'Select vehicle model *'
               }
               inputProps={{ 'aria-label': 'Vehicle model' }}
             >
@@ -290,7 +387,7 @@ export default function LeadDetailPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <TextField
                 fullWidth
-                label="Vehicle price"
+                label="Vehicle price *"
                 type="number"
                 margin="dense"
                 error={Boolean(errors.vehicle_price)}
@@ -302,7 +399,7 @@ export default function LeadDetailPage() {
               />
               <TextField
                 fullWidth
-                label="Down payment"
+                label="Down payment *"
                 type="number"
                 margin="dense"
                 error={Boolean(errors.down_payment)}
@@ -316,7 +413,7 @@ export default function LeadDetailPage() {
 
             <TextField
               fullWidth
-              label="Loan amount"
+              label="Loan amount *"
               type="number"
               margin="dense"
               error={Boolean(errors.amount)}
@@ -333,10 +430,10 @@ export default function LeadDetailPage() {
               size="small"
               value={watch('finance_company_id')}
               onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
-              error={Boolean(errors.finance_company_id)}
+              error={Boolean(errors.finance_company_id || (!watch('finance_company_id') && movingStage))}
               sx={{ mt: 1, mb: 0.5 }}
               renderValue={(value) =>
-                value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company'
+                value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company *'
               }
               inputProps={{ 'aria-label': 'Finance company' }}
             >
@@ -358,7 +455,7 @@ export default function LeadDetailPage() {
                 type="submit"
                 variant="contained"
                 startIcon={<Save size={16} />}
-                disabled={isLoading}
+                disabled={isUpdating}
               >
                 Save Changes
               </Button>

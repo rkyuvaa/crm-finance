@@ -39,6 +39,10 @@ export const applicationsApi = baseApi.injectEndpoints({
       query: (filters) => ({ url: '/applications', params: filters }),
       providesTags: ['Applications'],
     }),
+    getApplication: build.query<ApplicationItem, number>({
+      query: (id) => ({ url: `/applications/${id}` }),
+      providesTags: (_res, _err, id) => [{ type: 'Applications', id }],
+    }),
     createApplication: build.mutation<ApplicationItem, NewApplication>({
       query: (body) => ({ url: '/applications', method: 'POST', body }),
       invalidatesTags: ['Applications', 'Dashboard'],
@@ -89,6 +93,7 @@ export const applicationsApi = baseApi.injectEndpoints({
 
 export const {
   useApplicationsQuery,
+  useGetApplicationQuery,
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
