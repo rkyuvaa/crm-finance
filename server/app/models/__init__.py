@@ -1,5 +1,6 @@
 from app.models.application import (
     Application,
+    ApplicationSequence,
     Delivery,
     Disbursement,
     Document,
@@ -7,6 +8,7 @@ from app.models.application import (
     Sanction,
     Verification,
 )
+from app.models.crm_tab import CrmTab, CrmTabFilter, CrmTabStageMapping
 from app.models.enums import (
     ApplicationStatus,
     DeliveryStatus,
@@ -27,7 +29,11 @@ __all__ = [
     "ActivityLog",
     "ActivityType",
     "Application",
+    "ApplicationSequence",
     "ApplicationStatus",
+    "CrmTab",
+    "CrmTabFilter",
+    "CrmTabStageMapping",
     "Delivery",
     "DeliveryStatus",
     "Disbursement",

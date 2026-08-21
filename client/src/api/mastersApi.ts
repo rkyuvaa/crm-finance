@@ -3,6 +3,8 @@ import { baseApi } from './baseApi';
 import type {
   ActivityType,
   ActivityTypeInput,
+  CrmTabConfig,
+  CrmTabInput,
   FinanceCompanyOption,
   StageConfig,
   StageInput,
@@ -50,15 +52,15 @@ export const mastersApi = baseApi.injectEndpoints({
     }),
     createStage: build.mutation<StageConfig, StageInput>({
       query: (body) => ({ url: '/masters/stages', method: 'POST', body }),
-      invalidatesTags: ['Stages', 'Dashboard'],
+      invalidatesTags: ['Stages'],
     }),
     updateStage: build.mutation<StageConfig, { id: number; body: Partial<StageInput> }>({
       query: ({ id, body }) => ({ url: `/masters/stages/${id}`, method: 'PATCH', body }),
-      invalidatesTags: ['Stages', 'Dashboard'],
+      invalidatesTags: ['Stages'],
     }),
     deleteStage: build.mutation<void, number>({
       query: (id) => ({ url: `/masters/stages/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Stages', 'Dashboard'],
+      invalidatesTags: ['Stages'],
     }),
     activityTypes: build.query<ActivityType[], void>({
       query: () => ({ url: '/masters/activity-types' }),
@@ -75,6 +77,22 @@ export const mastersApi = baseApi.injectEndpoints({
     deleteActivityType: build.mutation<void, number>({
       query: (id) => ({ url: `/masters/activity-types/${id}`, method: 'DELETE' }),
       invalidatesTags: ['ActivityTypes'],
+    }),
+    tabs: build.query<CrmTabConfig[], void>({
+      query: () => ({ url: '/masters/tabs' }),
+      providesTags: ['Tabs'],
+    }),
+    createTab: build.mutation<CrmTabConfig, CrmTabInput>({
+      query: (body) => ({ url: '/masters/tabs', method: 'POST', body }),
+      invalidatesTags: ['Tabs'],
+    }),
+    updateTab: build.mutation<CrmTabConfig, { id: number; body: Partial<CrmTabInput> }>({
+      query: ({ id, body }) => ({ url: `/masters/tabs/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Tabs'],
+    }),
+    deleteTab: build.mutation<void, number>({
+      query: (id) => ({ url: `/masters/tabs/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Tabs'],
     }),
   }),
 });
@@ -96,4 +114,8 @@ export const {
   useCreateActivityTypeMutation,
   useUpdateActivityTypeMutation,
   useDeleteActivityTypeMutation,
+  useTabsQuery,
+  useCreateTabMutation,
+  useUpdateTabMutation,
+  useDeleteTabMutation,
 } = mastersApi;

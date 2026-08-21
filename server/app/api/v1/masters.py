@@ -10,6 +10,9 @@ from app.models import (
     ActivityType,
     Application,
     ApplicationStatus,
+    CrmTab,
+    CrmTabFilter,
+    CrmTabStageMapping,
     FinanceCompany,
     PipelineStage,
     User,
@@ -20,6 +23,10 @@ from app.schemas.master import (
     ActivityTypeCreate,
     ActivityTypeOut,
     ActivityTypeUpdate,
+    CrmTabCreate,
+    CrmTabFilterOut,
+    CrmTabOut,
+    CrmTabUpdate,
     FinanceCompanyBrief,
     FinanceCompanyCreate,
     FinanceCompanyUpdate,
@@ -352,6 +359,187 @@ def delete_activity_type(
     if not act_type:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity type not found")
     db.delete(act_type)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Dynamic CRM Tabs
+# ---------------------------------------------------------------------------
+
+
+def _build_tab_out(db: Session, tab: CrmTab, user: User) -> CrmTabOut:
+    stage_ids = [m.stage_id for m in tab.stage_mappings]
+    stage_names = [m.stage.label for m in tab.stage_mappings if m.stage]
+    
+    # Calculate count based on stage mapping and visibility
+    app_query = db.query(Application)
+    if stage_ids:
+        app_query = app_query.filter(Application.vehicle_model_id.in_(stage_ids) | Application.id.isnot(None))
+        # Filter applications based on stage status values of mapped stages
+        mapped_statuses = [m.stage.status for m in tab.stage_mappings if m.stage and m.stage.status]
+        if mapped_statuses:
+            app_query = app_query.filter(Application.status.in_(mapped_statuses))
+    
+    # Filter by user role if tab restricts visibility
+    if tab.visibility_type == "ROLES" and tab.allowed_roles:
+        allowed = [r.strip() for r in tab.allowed_roles.split(",") if r.strip()]
+        if user.role.value not in allowed and user.role != UserRole.ADMIN:
+            count = 0
+        else:
+            count = app_query.count()
+    else:
+        count = app_query.count()
+
+    filters_out = [
+        CrmTabFilterOut(
+            id=f.id,
+            field=f.field,
+            operator=f.operator,
+            value=f.value,
+            logical_operator=f.logical_operator,
+        )
+        for f in tab.filter_rules
+    ]
+
+    now = datetime.now(timezone.utc)
+    return CrmTabOut(
+        id=tab.id,
+        module_id=tab.module_id,
+        name=tab.name,
+        code=tab.code,
+        description=tab.description,
+        icon=tab.icon or "Layers",
+        display_order=tab.display_order,
+        is_active=tab.is_active,
+        is_default=tab.is_default,
+        visibility_type=tab.visibility_type,
+        allowed_roles=tab.allowed_roles,
+        stage_ids=stage_ids,
+        stage_names=stage_names,
+        filters=filters_out,
+        count=count,
+        created_at=tab.created_at or now,
+        updated_at=tab.updated_at or now,
+    )
+
+
+@router.get("/tabs", response_model=list[CrmTabOut])
+def list_tabs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    tabs = db.query(CrmTab).order_by(CrmTab.display_order.asc(), CrmTab.id.asc()).all()
+    filtered_tabs = []
+    for tab in tabs:
+        if not tab.is_active:
+            continue
+        if tab.visibility_type == "ROLES" and tab.allowed_roles:
+            allowed = [r.strip() for r in tab.allowed_roles.split(",") if r.strip()]
+            if user.role.value not in allowed and user.role != UserRole.ADMIN:
+                continue
+        filtered_tabs.append(_build_tab_out(db, tab, user))
+    return filtered_tabs
+
+
+@router.post("/tabs", response_model=CrmTabOut, status_code=status.HTTP_201_CREATED)
+def create_tab(
+    payload: CrmTabCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    _ensure_unique(db, CrmTab, CrmTab.code, payload.code)
+    
+    if payload.is_default:
+        db.query(CrmTab).update({CrmTab.is_default: False})
+        
+    tab = CrmTab(
+        name=payload.name,
+        code=payload.code,
+        description=payload.description,
+        icon=payload.icon or "Layers",
+        display_order=payload.display_order,
+        is_active=payload.is_active,
+        is_default=payload.is_default,
+        visibility_type=payload.visibility_type,
+        allowed_roles=payload.allowed_roles,
+    )
+    db.add(tab)
+    db.flush()
+
+    for stage_id in payload.stage_ids:
+        db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=stage_id))
+
+    for flt in payload.filters:
+        db.add(
+            CrmTabFilter(
+                tab_id=tab.id,
+                field=flt.field,
+                operator=flt.operator,
+                value=flt.value,
+                logical_operator=flt.logical_operator,
+            )
+        )
+
+    db.commit()
+    db.refresh(tab)
+    return _build_tab_out(db, tab, user)
+
+
+@router.patch("/tabs/{tab_id}", response_model=CrmTabOut)
+def update_tab(
+    tab_id: int,
+    payload: CrmTabUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    stage_ids = data.pop("stage_ids", None)
+    filters = data.pop("filters", None)
+
+    if data.get("code") is not None:
+        _ensure_unique(db, CrmTab, CrmTab.code, data["code"], exclude_id=tab_id)
+
+    if data.get("is_default") is True:
+        db.query(CrmTab).filter(CrmTab.id != tab_id).update({CrmTab.is_default: False})
+
+    for field, value in data.items():
+        setattr(tab, field, value)
+
+    if stage_ids is not None:
+        db.query(CrmTabStageMapping).filter(CrmTabStageMapping.tab_id == tab_id).delete()
+        for sid in stage_ids:
+            db.add(CrmTabStageMapping(tab_id=tab_id, stage_id=sid))
+
+    if filters is not None:
+        db.query(CrmTabFilter).filter(CrmTabFilter.tab_id == tab_id).delete()
+        for flt in filters:
+            db.add(
+                CrmTabFilter(
+                    tab_id=tab_id,
+                    field=flt["field"] if isinstance(flt, dict) else flt.field,
+                    operator=flt["operator"] if isinstance(flt, dict) else flt.operator,
+                    value=flt["value"] if isinstance(flt, dict) else flt.value,
+                    logical_operator=flt.get("logical_operator", "AND") if isinstance(flt, dict) else flt.logical_operator,
+                )
+            )
+
+    db.commit()
+    db.refresh(tab)
+    return _build_tab_out(db, tab, user)
+
+
+@router.delete("/tabs/{tab_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tab(
+    tab_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+    db.delete(tab)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -96,3 +96,70 @@ class ActivityTypeOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CrmTabFilterCreate(BaseModel):
+    field: str
+    operator: str
+    value: str
+    logical_operator: str = "AND"
+
+
+class CrmTabFilterOut(BaseModel):
+    id: int
+    field: str
+    operator: str
+    value: str
+    logical_operator: str
+
+    model_config = {"from_attributes": True}
+
+
+class CrmTabCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    code: str = Field(min_length=2, max_length=40)
+    description: str | None = None
+    icon: str | None = "Layers"
+    display_order: int = 0
+    is_active: bool = True
+    is_default: bool = False
+    visibility_type: str = "EVERYONE"
+    allowed_roles: str | None = None
+    stage_ids: list[int] = []
+    filters: list[CrmTabFilterCreate] = []
+
+
+class CrmTabUpdate(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    description: str | None = None
+    icon: str | None = None
+    display_order: int | None = None
+    is_active: bool | None = None
+    is_default: bool | None = None
+    visibility_type: str | None = None
+    allowed_roles: str | None = None
+    stage_ids: list[int] | None = None
+    filters: list[CrmTabFilterCreate] | None = None
+
+
+class CrmTabOut(BaseModel):
+    id: int
+    module_id: str
+    name: str
+    code: str
+    description: str | None = None
+    icon: str | None = "Layers"
+    display_order: int
+    is_active: bool
+    is_default: bool
+    visibility_type: str
+    allowed_roles: str | None = None
+    stage_ids: list[int] = []
+    stage_names: list[str] = []
+    filters: list[CrmTabFilterOut] = []
+    count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

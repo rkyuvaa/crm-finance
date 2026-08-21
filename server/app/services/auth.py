@@ -1,7 +1,10 @@
 from fastapi import HTTPException, status
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.core.security import verify_password
-from app.models import User
+from app.db.session import get_db
+from app.models import User, ApplicationSequence
 from app.schemas.auth import LoginRequest
 from app.services.aging import utcnow
 
@@ -20,17 +23,22 @@ def mark_user_activity(db, user: User) -> None:
     db.add(user)
 
 
-def next_app_no(db) -> str:
-    from app.models import Application
+def next_app_no(db: Session) -> str:
+    """
+    Generate the next application number using a database sequence table.
+    This avoids race conditions by using row-level locking.
+    """
+    # Try to get existing sequence row, or create it
+    seq = db.query(ApplicationSequence).first()
+    if seq is None:
+        seq = ApplicationSequence(last_number=0)
+        db.add(seq)
+        db.flush()
 
-    rows = db.query(Application.app_no).all()
-    numbers = []
-    for (app_no,) in rows:
-        try:
-            numbers.append(int(app_no.removeprefix("APP-")))
-        except ValueError:
-            continue
-    return f"APP-{max(numbers, default=0) + 1}"
+    # Increment and return
+    seq.last_number += 1
+    db.flush()
+    return f"APP-{seq.last_number}"
 
 
 def touch_application(db, app) -> None:

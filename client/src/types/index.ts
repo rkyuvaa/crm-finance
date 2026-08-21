@@ -140,6 +140,48 @@ export interface StageInput {
   enabled: boolean;
 }
 
+export interface CrmTabFilter {
+  id?: number;
+  field: string;
+  operator: string;
+  value: string;
+  logical_operator: string;
+}
+
+export interface CrmTabConfig {
+  id: number;
+  module_id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  icon?: string | null;
+  display_order: number;
+  is_active: boolean;
+  is_default: boolean;
+  visibility_type: 'EVERYONE' | 'ROLES' | 'USERS';
+  allowed_roles?: string | null;
+  stage_ids: number[];
+  stage_names?: string[];
+  filters?: CrmTabFilter[];
+  count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrmTabInput {
+  name: string;
+  code: string;
+  description?: string;
+  icon?: string;
+  display_order: number;
+  is_active: boolean;
+  is_default: boolean;
+  visibility_type: string;
+  allowed_roles?: string;
+  stage_ids: number[];
+  filters?: Omit<CrmTabFilter, 'id'>[];
+}
+
 export interface Activity {
   id: number;
   app_no: string | null;

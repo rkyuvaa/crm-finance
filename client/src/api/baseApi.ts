@@ -56,6 +56,7 @@ export const baseApi = createApi({
     'Stages',
     'ActivityTypes',
     'PlannedActivities',
+    'Tabs',
   ],
   endpoints: () => ({}),
 });

@@ -16,6 +16,8 @@ from app.models import (
     ActivityType,
     Application,
     ApplicationStatus,
+    CrmTab,
+    CrmTabStageMapping,
     Delivery,
     DeliveryStatus,
     Disbursement,
@@ -235,6 +237,30 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
                 name=name, description=desc, icon="Calendar",
                 created_at=now, updated_at=now,
             ))
+    db.flush()
+
+    DEFAULT_TABS = [
+        ("All Leads", "all_leads", "All captured leads across pipeline", "Layers", 0, True, "EVERYONE", []),
+        ("New Leads", "new_leads", "Unassigned and new leads", "UserPlus", 1, False, "EVERYONE", ["leads"]),
+        ("Qualification", "qualification", "Contacted and qualified leads", "CheckCircle2", 2, False, "EVERYONE", ["applications", "verification"]),
+        ("Finance", "finance", "Finance applications under review", "Building2", 3, False, "EVERYONE", ["finance", "query", "sanctioned"]),
+        ("Delivery & Closed", "closed", "Completed and delivered deals", "Truck", 4, False, "EVERYONE", ["delivery", "disburse", "completed"]),
+    ]
+
+    for name, code, desc, icon, order, is_def, vis, stage_keys in DEFAULT_TABS:
+        tab = db.query(CrmTab).filter_by(code=code).first()
+        if not tab:
+            tab = CrmTab(
+                name=name, code=code, description=desc, icon=icon,
+                display_order=order, is_default=is_def, visibility_type=vis,
+                created_at=now, updated_at=now,
+            )
+            db.add(tab)
+            db.flush()
+            for s_key in stage_keys:
+                st = db.query(PipelineStage).filter_by(key=s_key).first()
+                if st:
+                    db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=st.id))
     db.flush()
 
     return companies

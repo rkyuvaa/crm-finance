@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, IconButton, Menu, MenuItem, Paper } from '@mui/material';
+import { Avatar, Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Tab, Tabs } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
+import { useStagesQuery, useTabsQuery } from '@/api/mastersApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
@@ -16,7 +17,20 @@ import type { ApplicationItem } from '@/types';
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const { data: crmTabs } = useTabsQuery();
+  const [activeTabCode, setActiveTabCode] = useState<string>('all_leads');
   const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
+
+  // Set default tab on load if configured
+  useEffect(() => {
+    if (crmTabs && crmTabs.length > 0 && !activeTabCode) {
+      const def = crmTabs.find((t) => t.is_default && t.is_active) ?? crmTabs[0];
+      if (def) setActiveTabCode(def.code);
+    }
+  }, [crmTabs, activeTabCode]);
+
+  const activeTabConfig = crmTabs?.find((t) => t.code === activeTabCode);
+
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
     page: 1,
     page_size: 100,
@@ -29,7 +43,23 @@ export default function LeadsPage() {
   const [deleteApplication] = useDeleteApplicationMutation();
   const { showToast } = useToast();
 
-  const rows = data?.items ?? [];
+  const { data: masterStages } = useStagesQuery();
+
+  // Filter rows based on active dynamic tab configuration
+  const allRows = data?.items ?? [];
+  const rows = allRows.filter((app) => {
+    if (!activeTabConfig || activeTabConfig.code === 'all_leads') return true;
+    if (activeTabConfig.stage_ids && activeTabConfig.stage_ids.length > 0 && masterStages) {
+      const mappedStatuses = masterStages
+        .filter((s) => activeTabConfig.stage_ids.includes(s.id))
+        .map((s) => s.status)
+        .filter(Boolean);
+      if (mappedStatuses.length > 0) {
+        return mappedStatuses.includes(app.status);
+      }
+    }
+    return true;
+  });
 
   return (
     <div>
@@ -44,6 +74,51 @@ export default function LeadsPage() {
           New Lead
         </Button>
       </div>
+
+      {/* Dynamic Dynamic Tabs Bar */}
+      {crmTabs && crmTabs.length > 0 && (
+        <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 2 }}>
+          <Tabs
+            value={activeTabCode}
+            onChange={(_, val) => {
+              setActiveTabCode(val);
+              setSelectedStageKey(undefined);
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 600, minHeight: 44 },
+            }}
+          >
+            {crmTabs
+              .filter((t) => t.is_active)
+              .map((t) => (
+                <Tab
+                  key={t.code}
+                  value={t.code}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>{t.name}</span>
+                      <Chip
+                        label={t.count}
+                        size="small"
+                        sx={{
+                          height: 18,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          backgroundColor: activeTabCode === t.code ? '#023020' : '#E4EBE1',
+                          color: activeTabCode === t.code ? '#FFFFFF' : '#16231B',
+                        }}
+                      />
+                    </Box>
+                  }
+                />
+              ))}
+          </Tabs>
+        </Box>
+      )}
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden', mb: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid #E4EBE1' }}>

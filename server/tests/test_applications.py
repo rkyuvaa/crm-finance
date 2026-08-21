@@ -54,13 +54,15 @@ def test_create_application(seeded_client, db):
 
 
 def test_update_application(seeded_client, db):
+    sales_user = db.query(User).filter_by(email="sales@kim.com").first()
     app = Application(
-        app_no="APP-50",
-        customer_name="Old Name",
+        app_no="APP-48",
+        customer_name="To Update",
         customer_phone="9876543210",
         vehicle="Konwert EV Auto",
         amount=400000,
         status=ApplicationStatus.LEAD,
+        assigned_to=sales_user.id if sales_user else None,
         created_at=datetime.now(UTC) - timedelta(days=1),
     )
     db.add(app)
@@ -77,6 +79,7 @@ def test_update_application(seeded_client, db):
 
 
 def test_delete_application(seeded_client, db):
+    sales_user = db.query(User).filter_by(email="sales@kim.com").first()
     app = Application(
         app_no="APP-49",
         customer_name="To Delete",
@@ -84,6 +87,7 @@ def test_delete_application(seeded_client, db):
         vehicle="Konwert EV Auto",
         amount=400000,
         status=ApplicationStatus.LEAD,
+        assigned_to=sales_user.id if sales_user else None,
         created_at=datetime.now(UTC) - timedelta(days=1),
     )
     db.add(app)
@@ -99,6 +103,7 @@ def test_delete_application(seeded_client, db):
 
 def test_search_filter(seeded_client, db):
     now = datetime.now(UTC)
+    sales_user = db.query(User).filter_by(email="sales@kim.com").first()
     db.add(
         Application(
             app_no="APP-20",
@@ -107,6 +112,7 @@ def test_search_filter(seeded_client, db):
             vehicle="Konwert EV Auto",
             amount=400000,
             status=ApplicationStatus.APPLICATION,
+            assigned_to=sales_user.id if sales_user else None,
             created_at=now - timedelta(days=1),
             updated_at=now - timedelta(hours=2),
         )
@@ -119,6 +125,7 @@ def test_search_filter(seeded_client, db):
             vehicle="Konwert EV Auto",
             amount=400000,
             status=ApplicationStatus.SANCTIONED,
+            assigned_to=sales_user.id if sales_user else None,
             created_at=now - timedelta(days=1),
             updated_at=now - timedelta(hours=2),
         )

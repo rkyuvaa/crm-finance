@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -161,3 +161,11 @@ class Disbursement(Base):
     disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="disbursements")
+
+
+class ApplicationSequence(Base):
+    """Single-row table to track the last used application number."""
+    __tablename__ = "application_sequences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    last_number: Mapped[int] = mapped_column(Integer, default=0)

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import can_access_application, get_current_user, require_application_access
 from app.db.session import get_db
 from app.models import (
     Activity,
@@ -19,6 +19,7 @@ from app.models import (
     FinanceSubmission,
     PlannedActivity,
     User,
+    UserRole,
     VehicleModel,
 )
 from app.schemas.application import (
@@ -125,6 +126,29 @@ def _filtered_query(
     stage_key: str | None = None,
 ):
     query = db.query(Application)
+
+    # Apply role-based filtering
+    if user.role == UserRole.SALES_EXECUTIVE:
+        # Sales executives see their assigned applications + leads they created
+        query = query.filter(Application.assigned_to == user.id)
+    elif user.role == UserRole.FINANCE_OFFICER:
+        # Finance officers see applications in finance-related stages
+        finance_stages = [
+            ApplicationStatus.FINANCE,
+            ApplicationStatus.QUERY,
+            ApplicationStatus.SANCTIONED,
+        ]
+        query = query.filter(Application.status.in_(finance_stages))
+    elif user.role == UserRole.DELIVERY_TEAM:
+        # Delivery team sees applications in delivery/disbursement stages
+        delivery_stages = [
+            ApplicationStatus.DELIVERY,
+            ApplicationStatus.DISBURSEMENT,
+            ApplicationStatus.COMPLETED,
+        ]
+        query = query.filter(Application.status.in_(delivery_stages))
+    # ADMIN sees all - no additional filter needed
+
     if scope == "recent":
         recent_ids = _recent_ids(db)
         query = query.filter(Application.id.in_(recent_ids)) if recent_ids else query.filter(False)
@@ -192,25 +216,20 @@ def list_applications(
 
 
 @router.get("/{app_id}", response_model=ApplicationOut)
-def get_application(app_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+def get_application(
+    app: Application = Depends(require_application_access),
+):
     return _to_out(app)
 
 
 @router.get("/{app_id}/activity", response_model=list[ActivityLogOut])
 def get_application_activity(
-    app_id: int,
+    app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     logs = (
         db.query(ActivityLog)
-        .filter(ActivityLog.application_id == app_id)
+        .filter(ActivityLog.application_id == app.id)
         .order_by(ActivityLog.created_at.desc())
         .all()
     )
@@ -266,14 +285,12 @@ def create_application(
 def update_application(
     app_id: int,
     payload: ApplicationUpdate,
+    app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     data = payload.model_dump(exclude_unset=True)
-    
+
     # Track field changes for activity log
     field_mapping = {
         'customer_name': 'Customer Name',
@@ -286,14 +303,14 @@ def update_application(
         'vehicle_price': 'Vehicle Price',
         'down_payment': 'Down Payment',
     }
-    
+
     for field, value in data.items():
         old_value = getattr(app, field)
         if old_value != value:
             # Get display values for relationships
             old_display = str(old_value) if old_value is not None else None
             new_display = str(value) if value is not None else None
-            
+
             # Special handling for IDs / numbers / enums to show human-readable names
             if field == 'finance_company_id':
                 fc_new = db.get(FinanceCompany, value) if value else None
@@ -316,7 +333,7 @@ def update_application(
             else:
                 old_display = str(old_value) if old_value is not None else ""
                 new_display = str(value) if value is not None else ""
-            
+
             db.add(
                 ActivityLog(
                     application_id=app.id,
@@ -327,7 +344,7 @@ def update_application(
                 )
             )
         setattr(app, field, value)
-    
+
     touch_application(db, app)
     db.add(
         Activity(
@@ -342,10 +359,11 @@ def update_application(
 
 
 @router.delete("/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_application(app_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+def delete_application(
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     db.delete(app)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -357,13 +375,13 @@ def delete_application(app_id: int, db: Session = Depends(get_db), user: User = 
 
 
 @router.get("/{app_id}/planned-activities", response_model=list[PlannedActivityOut])
-def list_planned_activities(app_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+def list_planned_activities(
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+):
     planned = (
         db.query(PlannedActivity)
-        .filter(PlannedActivity.application_id == app_id)
+        .filter(PlannedActivity.application_id == app.id)
         .order_by(PlannedActivity.created_at.desc())
         .all()
     )
@@ -392,15 +410,12 @@ def list_planned_activities(app_id: int, db: Session = Depends(get_db), user: Us
 def create_planned_activity(
     app_id: int,
     payload: PlannedActivityCreate,
+    app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    app = db.get(Application, app_id)
-    if not app:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
-    
     act = PlannedActivity(
-        application_id=app_id,
+        application_id=app.id,
         activity_type_id=payload.activity_type_id,
         activity_type_name=payload.activity_type_name,
         subject=payload.subject,
@@ -448,23 +463,24 @@ def update_planned_activity(
     app_id: int,
     act_id: int,
     payload: PlannedActivityUpdate,
+    app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     act = db.get(PlannedActivity, act_id)
-    if not act or act.application_id != app_id:
+    if not act or act.application_id != app.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Planned activity not found")
 
     old_status = act.status
     data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(act, field, value)
-    
+
     if payload.status == "COMPLETED" and old_status != "COMPLETED":
         act.completed_at = datetime.now(timezone.utc)
         db.add(
             ActivityLog(
-                application_id=app_id,
+                application_id=app.id,
                 actor_id=user.id,
                 field_name="Activity Completed",
                 old_value=f"[{act.activity_type_name}] {act.subject}",

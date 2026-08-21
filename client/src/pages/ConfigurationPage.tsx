@@ -4,6 +4,7 @@ import { Box, Tab, Tabs } from '@mui/material';
 import ActivityTypesPanel from '@/features/configuration/ActivityTypesPanel';
 import FinanciersPanel from '@/features/configuration/FinanciersPanel';
 import StagesPanel from '@/features/configuration/StagesPanel';
+import TabsPanel from '@/features/configuration/TabsPanel';
 import VehicleModelsPanel from '@/features/configuration/VehicleModelsPanel';
 
 export default function ConfigurationPage() {
@@ -30,6 +31,7 @@ export default function ConfigurationPage() {
             '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 600 },
           }}
         >
+          <Tab label="Module Tabs" />
           <Tab label="Vehicle Models" />
           <Tab label="Financiers" />
           <Tab label="Stages" />
@@ -37,10 +39,11 @@ export default function ConfigurationPage() {
         </Tabs>
       </Box>
 
-      {tab === 0 && <VehicleModelsPanel />}
-      {tab === 1 && <FinanciersPanel />}
-      {tab === 2 && <StagesPanel />}
-      {tab === 3 && <ActivityTypesPanel />}
+      {tab === 0 && <TabsPanel />}
+      {tab === 1 && <VehicleModelsPanel />}
+      {tab === 2 && <FinanciersPanel />}
+      {tab === 3 && <StagesPanel />}
+      {tab === 4 && <ActivityTypesPanel />}
     </div>
   );
 }
