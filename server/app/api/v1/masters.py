@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -192,41 +194,49 @@ def delete_finance_company(
 
 @router.get("/stages", response_model=list[StageOut])
 def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    stages = (
-        db.query(PipelineStage)
-        .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
-        .all()
-    )
-    status_map = {
-        "leads": ApplicationStatus.LEAD,
-        "lead": ApplicationStatus.LEAD,
-        "applications": ApplicationStatus.APPLICATION,
-        "application": ApplicationStatus.APPLICATION,
-        "verification": ApplicationStatus.VERIFICATION,
-        "finance": ApplicationStatus.FINANCE,
-        "query": ApplicationStatus.QUERY,
-        "sanctioned": ApplicationStatus.SANCTIONED,
-        "delivery": ApplicationStatus.DELIVERY,
-        "disburse": ApplicationStatus.DISBURSEMENT,
-        "disbursement": ApplicationStatus.DISBURSEMENT,
-        "completed": ApplicationStatus.COMPLETED,
-    }
-    result = []
-    for s in stages:
-        st = s.status or status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
-        result.append(
-            StageOut(
-                id=s.id,
-                key=s.key,
-                label=s.label,
-                status=st,
-                order_index=s.order_index,
-                enabled=s.enabled,
-                created_at=s.created_at,
-                updated_at=s.updated_at,
-            )
+    try:
+        stages = (
+            db.query(PipelineStage)
+            .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
+            .all()
         )
-    return result
+        status_map = {
+            "leads": ApplicationStatus.LEAD,
+            "lead": ApplicationStatus.LEAD,
+            "applications": ApplicationStatus.APPLICATION,
+            "application": ApplicationStatus.APPLICATION,
+            "verification": ApplicationStatus.VERIFICATION,
+            "finance": ApplicationStatus.FINANCE,
+            "query": ApplicationStatus.QUERY,
+            "sanctioned": ApplicationStatus.SANCTIONED,
+            "delivery": ApplicationStatus.DELIVERY,
+            "disburse": ApplicationStatus.DISBURSEMENT,
+            "disbursement": ApplicationStatus.DISBURSEMENT,
+            "completed": ApplicationStatus.COMPLETED,
+        }
+        now = datetime.now(timezone.utc)
+        result = []
+        for s in stages:
+            st = s.status or status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
+            c_at = s.created_at or now
+            u_at = s.updated_at or now
+            result.append(
+                StageOut(
+                    id=s.id,
+                    key=s.key,
+                    label=s.label,
+                    status=st,
+                    order_index=s.order_index or 0,
+                    enabled=s.enabled if s.enabled is not None else True,
+                    created_at=c_at,
+                    updated_at=u_at,
+                )
+            )
+        return result
+    except Exception as err:
+        import logging
+        logging.error(f"Error in list_stages: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.post("/stages", response_model=StageOut, status_code=status.HTTP_201_CREATED)
