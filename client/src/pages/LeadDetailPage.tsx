@@ -1,15 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
+  Box,
   Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   InputAdornment,
   MenuItem,
   Paper,
   Select,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Plus, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,8 +26,15 @@ import {
   useApplicationsQuery,
   useUpdateApplicationMutation,
   useApplicationActivityQuery,
+  usePlannedActivitiesQuery,
+  useCreatePlannedActivityMutation,
+  useUpdatePlannedActivityMutation,
 } from '@/api/applicationsApi';
-import { useFinanceCompaniesQuery, useVehicleModelsQuery } from '@/api/mastersApi';
+import {
+  useActivityTypesQuery,
+  useFinanceCompaniesQuery,
+  useVehicleModelsQuery,
+} from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { formatDate } from '@/utils/format';
@@ -27,7 +42,7 @@ import { formatDate } from '@/utils/format';
 const editSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
   customer_phone: z.string().min(8, 'Valid phone number required').max(20),
-  vehicle_model_id: z.string().min(1, 'Select a vehicle model'),
+  vehicle_model_id: z.string().optional(),
   vehicle_price: z.coerce
     .number({ invalid_type_error: 'Vehicle price is required' })
     .positive('Vehicle price must be positive'),
@@ -37,10 +52,19 @@ const editSchema = z.object({
   amount: z.coerce
     .number({ invalid_type_error: 'Loan amount is required' })
     .positive('Loan amount must be positive'),
-  finance_company_id: z.string().min(1, 'Select a finance company'),
+  finance_company_id: z.string().optional(),
 });
 
 type EditForm = z.infer<typeof editSchema>;
+
+const planSchema = z.object({
+  activity_type_name: z.string().min(1, 'Select an activity type'),
+  subject: z.string().min(2, 'Activity subject/title is required'),
+  due_date: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type PlanForm = z.infer<typeof planSchema>;
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -56,9 +80,17 @@ export default function LeadDetailPage() {
   const lead = applicationsData?.items?.find((item) => item.id === appId) ?? null;
 
   const { data: activityLogs = [] } = useApplicationActivityQuery(appId, { skip: !appId });
+  const { data: plannedActivities = [] } = usePlannedActivitiesQuery(appId, { skip: !appId });
+  const { data: activityTypes = [] } = useActivityTypesQuery();
   const [updateApplication, { isLoading }] = useUpdateApplicationMutation();
+  const [createPlannedActivity, { isLoading: creatingPlanned }] = useCreatePlannedActivityMutation();
+  const [updatePlannedActivity] = useUpdatePlannedActivityMutation();
+
   const { data: models = [], isFetching: loadingModels } = useVehicleModelsQuery();
   const { data: companies = [] } = useFinanceCompaniesQuery();
+
+  const [sideTab, setSideTab] = useState(0);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
 
   const {
     register,
@@ -69,6 +101,18 @@ export default function LeadDetailPage() {
     formState: { errors },
   } = useForm<EditForm>({
     resolver: zodResolver(editSchema),
+  });
+
+  const {
+    register: registerPlan,
+    handleSubmit: handleSubmitPlan,
+    reset: resetPlan,
+    setValue: setPlanValue,
+    watch: watchPlan,
+    formState: { errors: planErrors },
+  } = useForm<PlanForm>({
+    resolver: zodResolver(planSchema),
+    defaultValues: { activity_type_name: '', subject: '', due_date: '', notes: '' },
   });
 
   const modelId = watch('vehicle_model_id');
@@ -107,8 +151,46 @@ export default function LeadDetailPage() {
         },
       }).unwrap();
       showToast(`Lead ${lead.app_no} updated`, 'success');
+    } catch (err) {
+      const detail = (err as { data?: { detail?: string } })?.data?.detail;
+      showToast(detail ?? 'Could not update the lead', 'error');
+    }
+  };
+
+  const onPlanSubmit = async (values: PlanForm) => {
+    if (!lead) return;
+    try {
+      const matchedType = activityTypes.find((t) => t.name === values.activity_type_name);
+      await createPlannedActivity({
+        appId: lead.id,
+        body: {
+          activity_type_id: matchedType?.id ?? null,
+          activity_type_name: values.activity_type_name,
+          subject: values.subject,
+          notes: values.notes,
+          due_date: values.due_date ? new Date(values.due_date).toISOString() : null,
+        },
+      }).unwrap();
+      showToast('Activity planned successfully', 'success');
+      resetPlan();
+      setPlanDialogOpen(false);
+    } catch (err) {
+      const detail = (err as { data?: { detail?: string } })?.data?.detail;
+      showToast(detail ?? 'Could not plan activity', 'error');
+    }
+  };
+
+  const markCompleted = async (actId: number) => {
+    if (!lead) return;
+    try {
+      await updatePlannedActivity({
+        appId: lead.id,
+        actId,
+        body: { status: 'COMPLETED' },
+      }).unwrap();
+      showToast('Activity marked as completed', 'success');
     } catch {
-      showToast('Could not update the lead', 'error');
+      showToast('Could not update activity status', 'error');
     }
   };
 
@@ -119,8 +201,12 @@ export default function LeadDetailPage() {
   if (!lead) {
     return (
       <div style={{ padding: 24 }}>
-        <Typography variant="h6" color="error">Lead not found</Typography>
-        <Button onClick={() => navigate('/leads')} sx={{ mt: 2 }}>Back to Leads</Button>
+        <Typography variant="h6" color="error">
+          Lead not found
+        </Typography>
+        <Button onClick={() => navigate('/leads')} sx={{ mt: 2 }}>
+          Back to Leads
+        </Button>
       </div>
     );
   }
@@ -137,7 +223,7 @@ export default function LeadDetailPage() {
         </Button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 20, alignItems: 'start' }}>
         <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
@@ -184,6 +270,7 @@ export default function LeadDetailPage() {
               }
               inputProps={{ 'aria-label': 'Vehicle model' }}
             >
+              <MenuItem value="">Select vehicle model</MenuItem>
               {loadingModels && <MenuItem disabled>Loading models...</MenuItem>}
               {!loadingModels && models.length === 0 && (
                 <MenuItem disabled>No models configured — add them in Configuration</MenuItem>
@@ -280,56 +367,217 @@ export default function LeadDetailPage() {
         </Paper>
 
         <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#023020', marginBottom: 16 }}>
-            Activity Log
-          </div>
+          <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 2 }}>
+            <Tabs
+              value={sideTab}
+              onChange={(_, next) => setSideTab(next)}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{
+                '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 600, minWidth: 100 },
+              }}
+            >
+              <Tab label={`Activities (${plannedActivities.length})`} />
+              <Tab label={`Change Log (${activityLogs.length})`} />
+            </Tabs>
+          </Box>
 
-          {activityLogs.length === 0 ? (
-            <div style={{ padding: '16px 0', textAlign: 'center', color: '#7A8B80', fontSize: 13 }}>
-              No changes recorded yet.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {activityLogs.map((log) => (
-                <div
-                  key={log.id}
-                  style={{
-                    padding: '10px 12px',
-                    background: '#F9FBF8',
-                    borderRadius: 8,
-                    border: '1px solid #E4EBE1',
-                  }}
+          {sideTab === 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#16231B' }}>Planned Lead Activities</span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Plus size={14} />}
+                  onClick={() => setPlanDialogOpen(true)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#16231B' }}>
-                      {log.field_name}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#9BA99F' }}>
-                      {formatDate(log.created_at)}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: '#44584C' }}>
-                    {log.old_value && (
-                      <span style={{ textDecoration: 'line-through', color: '#DC2626' }}>
-                        {log.old_value}
-                      </span>
-                    )}
-                    {log.old_value && log.new_value && <span style={{ margin: '0 6px' }}>&rarr;</span>}
-                    {log.new_value && (
-                      <span style={{ color: '#087A3D', fontWeight: 600 }}>{log.new_value}</span>
-                    )}
-                  </div>
-                  {log.actor_name && (
-                    <div style={{ fontSize: 10, color: '#9BA99F', marginTop: 4 }}>
-                      by {log.actor_name}
-                    </div>
-                  )}
+                  Plan Activity
+                </Button>
+              </div>
+
+              {plannedActivities.length === 0 ? (
+                <div style={{ padding: '20px 0', textAlign: 'center', color: '#7A8B80', fontSize: 13 }}>
+                  No planned activities yet. Click "Plan Activity" to schedule calls, follow-ups or meetings.
                 </div>
-              ))}
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {plannedActivities.map((act) => (
+                    <div
+                      key={act.id}
+                      style={{
+                        padding: '12px',
+                        background: act.status === 'COMPLETED' ? '#F4F9F2' : '#FFFFFF',
+                        borderRadius: 8,
+                        border: '1px solid #E4EBE1',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Chip
+                              label={act.activity_type_name}
+                              size="small"
+                              sx={{ height: 20, fontSize: 10, fontWeight: 700, background: '#EAF6E8', color: '#04552B' }}
+                            />
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#16231B' }}>{act.subject}</span>
+                          </div>
+                          {act.due_date && (
+                            <div style={{ fontSize: 11, color: '#7A8B80', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <Clock size={12} /> Due: {formatDate(act.due_date)}
+                            </div>
+                          )}
+                        </div>
+                        {act.status === 'COMPLETED' ? (
+                          <Chip label="Done" color="success" size="small" sx={{ height: 20, fontSize: 10 }} />
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={<CheckCircle2 size={14} color="#087A3D" />}
+                            onClick={() => markCompleted(act.id)}
+                            sx={{ textTransform: 'none', fontSize: 11, color: '#087A3D', p: 0 }}
+                          >
+                            Complete
+                          </Button>
+                        )}
+                      </div>
+
+                      {act.notes && (
+                        <div style={{ fontSize: 12, color: '#44584C', marginTop: 4, background: '#F8FAF8', padding: '6px 8px', borderRadius: 4 }}>
+                          {act.notes}
+                        </div>
+                      )}
+
+                      {act.creator_name && (
+                        <div style={{ fontSize: 10, color: '#9BA99F', marginTop: 6 }}>
+                          Planned by {act.creator_name} on {formatDate(act.created_at)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {sideTab === 1 && (
+            <div>
+              {activityLogs.length === 0 ? (
+                <div style={{ padding: '16px 0', textAlign: 'center', color: '#7A8B80', fontSize: 13 }}>
+                  No changes recorded yet.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {activityLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      style={{
+                        padding: '10px 12px',
+                        background: '#F9FBF8',
+                        borderRadius: 8,
+                        border: '1px solid #E4EBE1',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#16231B' }}>
+                          {log.field_name}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9BA99F' }}>
+                          {formatDate(log.created_at)}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#44584C' }}>
+                        {log.old_value && (
+                          <span style={{ textDecoration: 'line-through', color: '#DC2626' }}>
+                            {log.old_value}
+                          </span>
+                        )}
+                        {log.old_value && log.new_value && <span style={{ margin: '0 6px' }}>&rarr;</span>}
+                        {log.new_value && (
+                          <span style={{ color: '#087A3D', fontWeight: 600 }}>{log.new_value}</span>
+                        )}
+                      </div>
+                      {log.actor_name && (
+                        <div style={{ fontSize: 10, color: '#9BA99F', marginTop: 4 }}>
+                          by {log.actor_name}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </Paper>
       </div>
+
+      <Dialog open={planDialogOpen} onClose={() => setPlanDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Plan Lead Activity</DialogTitle>
+        <form onSubmit={handleSubmitPlan(onPlanSubmit)}>
+          <DialogContent>
+            <Select
+              fullWidth
+              displayEmpty
+              size="small"
+              value={watchPlan('activity_type_name')}
+              onChange={(e) => setPlanValue('activity_type_name', String(e.target.value), { shouldValidate: true })}
+              error={Boolean(planErrors.activity_type_name)}
+              sx={{ mb: 1.5 }}
+              renderValue={(val) => (val ? val : 'Select Activity Type')}
+            >
+              <MenuItem value="">Select Activity Type</MenuItem>
+              {activityTypes.length === 0 && (
+                <MenuItem disabled>No activity types configured (add in Configuration)</MenuItem>
+              )}
+              {activityTypes.map((t) => (
+                <MenuItem key={t.id} value={t.name}>
+                  {t.name}
+                </MenuItem>
+              ))}
+            </Select>
+            {planErrors.activity_type_name && (
+              <div style={{ fontSize: 11.5, color: '#d32f2f', margin: '-8px 14px 8px' }}>
+                {planErrors.activity_type_name.message}
+              </div>
+            )}
+
+            <TextField
+              fullWidth
+              label="Subject / Title"
+              margin="dense"
+              placeholder="e.g. Call customer for documents"
+              error={Boolean(planErrors.subject)}
+              helperText={planErrors.subject?.message}
+              {...registerPlan('subject')}
+            />
+
+            <TextField
+              fullWidth
+              label="Due Date & Time"
+              type="datetime-local"
+              margin="dense"
+              slotProps={{ inputLabel: { shrink: true } }}
+              {...registerPlan('due_date')}
+            />
+
+            <TextField
+              fullWidth
+              label="Notes / Instructions"
+              margin="dense"
+              multiline
+              rows={3}
+              {...registerPlan('notes')}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setPlanDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={creatingPlanned}>
+              Plan Activity
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     </div>
   );
 }

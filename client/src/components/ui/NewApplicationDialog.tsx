@@ -20,7 +20,7 @@ import { useToast } from '@/components/ui/ToastHost';
 export const createSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
   customer_phone: z.string().min(8, 'Valid phone number required').max(20),
-  vehicle_model_id: z.string().min(1, 'Select a vehicle model'),
+  vehicle_model_id: z.string().optional(),
   vehicle_price: z.coerce
     .number({ invalid_type_error: 'Vehicle price is required' })
     .positive('Vehicle price must be positive'),
@@ -30,7 +30,7 @@ export const createSchema = z.object({
   amount: z.coerce
     .number({ invalid_type_error: 'Loan amount is required' })
     .positive('Loan amount must be positive'),
-  finance_company_id: z.string().min(1, 'Select a finance company'),
+  finance_company_id: z.string().optional(),
 });
 
 export type CreateForm = z.infer<typeof createSchema>;

@@ -240,3 +240,44 @@ export interface ReportsSummary {
   finance_companies: FinanceCompany[];
   monthly: { month: string; count: number }[];
 }
+
+export interface ActivityType {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityTypeInput {
+  name: string;
+  description?: string;
+  icon?: string;
+}
+
+export interface PlannedActivityItem {
+  id: number;
+  application_id: number;
+  activity_type_id: number | null;
+  activity_type_name: string;
+  subject: string;
+  notes: string | null;
+  due_date: string | null;
+  status: string;
+  assigned_to: number | null;
+  assignee_name: string | null;
+  created_by: number | null;
+  creator_name: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface PlannedActivityInput {
+  activity_type_id?: number | null;
+  activity_type_name: string;
+  subject: string;
+  notes?: string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+}

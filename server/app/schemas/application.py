@@ -68,3 +68,39 @@ class ApplicationListResponse(BaseModel):
     page: int
     page_size: int
     tab_counts: TabCounts
+
+
+class PlannedActivityCreate(BaseModel):
+    activity_type_id: int | None = None
+    activity_type_name: str = Field(min_length=2, max_length=60)
+    subject: str = Field(min_length=2, max_length=120)
+    notes: str | None = None
+    due_date: datetime | None = None
+    assigned_to: int | None = None
+
+
+class PlannedActivityUpdate(BaseModel):
+    subject: str | None = Field(default=None, min_length=2, max_length=120)
+    notes: str | None = None
+    due_date: datetime | None = None
+    status: str | None = Field(default=None, max_length=20)
+    assigned_to: int | None = None
+
+
+class PlannedActivityOut(BaseModel):
+    id: int
+    application_id: int
+    activity_type_id: int | None
+    activity_type_name: str
+    subject: str
+    notes: str | None
+    due_date: datetime | None
+    status: str
+    assigned_to: int | None
+    assignee_name: str | None = None
+    created_by: int | None
+    creator_name: str | None = None
+    created_at: datetime
+    completed_at: datetime | None
+
+    model_config = {"from_attributes": True}

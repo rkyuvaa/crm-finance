@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Tab, Tabs } from '@mui/material';
 
+import ActivityTypesPanel from '@/features/configuration/ActivityTypesPanel';
 import FinanciersPanel from '@/features/configuration/FinanciersPanel';
 import StagesPanel from '@/features/configuration/StagesPanel';
 import VehicleModelsPanel from '@/features/configuration/VehicleModelsPanel';
@@ -32,12 +33,14 @@ export default function ConfigurationPage() {
           <Tab label="Vehicle Models" />
           <Tab label="Financiers" />
           <Tab label="Stages" />
+          <Tab label="Activity Types" />
         </Tabs>
       </Box>
 
       {tab === 0 && <VehicleModelsPanel />}
       {tab === 1 && <FinanciersPanel />}
       {tab === 2 && <StagesPanel />}
+      {tab === 3 && <ActivityTypesPanel />}
     </div>
   );
 }

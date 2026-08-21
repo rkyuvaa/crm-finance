@@ -73,3 +73,26 @@ class StageOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ActivityTypeCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    description: str | None = Field(default=None, max_length=255)
+    icon: str | None = Field(default="Calendar", max_length=40)
+
+
+class ActivityTypeUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=60)
+    description: str | None = Field(default=None, max_length=255)
+    icon: str | None = Field(default=None, max_length=40)
+
+
+class ActivityTypeOut(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    icon: str | None = "Calendar"
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

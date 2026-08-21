@@ -1,6 +1,12 @@
 import { baseApi } from './baseApi';
 
-import type { ActivityLogEntry, ApplicationItem, ApplicationListResponse } from '@/types';
+import type {
+  ActivityLogEntry,
+  ApplicationItem,
+  ApplicationListResponse,
+  PlannedActivityInput,
+  PlannedActivityItem,
+} from '@/types';
 
 export interface ApplicationFilters {
   page?: number;
@@ -39,7 +45,7 @@ export const applicationsApi = baseApi.injectEndpoints({
     }),
     updateApplication: build.mutation<ApplicationItem, { id: number; body: Partial<NewApplication> }>({
       query: ({ id, body }) => ({ url: `/applications/${id}`, method: 'PATCH', body }),
-      invalidatesTags: ['Applications', 'Dashboard'],
+      invalidatesTags: (_res, _err, { id }) => ['Applications', 'Dashboard', { type: 'Applications', id }],
     }),
     deleteApplication: build.mutation<void, number>({
       query: (id) => ({ url: `/applications/${id}`, method: 'DELETE' }),
@@ -48,6 +54,35 @@ export const applicationsApi = baseApi.injectEndpoints({
     applicationActivity: build.query<ActivityLogEntry[], number>({
       query: (id) => ({ url: `/applications/${id}/activity` }),
       providesTags: (_result, _err, id) => [{ type: 'Applications', id }],
+    }),
+    plannedActivities: build.query<PlannedActivityItem[], number>({
+      query: (appId) => ({ url: `/applications/${appId}/planned-activities` }),
+      providesTags: (_res, _err, appId) => [{ type: 'PlannedActivities', id: appId }],
+    }),
+    createPlannedActivity: build.mutation<PlannedActivityItem, { appId: number; body: PlannedActivityInput }>({
+      query: ({ appId, body }) => ({
+        url: `/applications/${appId}/planned-activities`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { appId }) => [
+        { type: 'PlannedActivities', id: appId },
+        { type: 'Applications', id: appId },
+      ],
+    }),
+    updatePlannedActivity: build.mutation<
+      PlannedActivityItem,
+      { appId: number; actId: number; body: Partial<PlannedActivityInput & { status?: string }> }
+    >({
+      query: ({ appId, actId, body }) => ({
+        url: `/applications/${appId}/planned-activities/${actId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { appId }) => [
+        { type: 'PlannedActivities', id: appId },
+        { type: 'Applications', id: appId },
+      ],
     }),
   }),
 });
@@ -58,4 +93,7 @@ export const {
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
   useApplicationActivityQuery,
+  usePlannedActivitiesQuery,
+  useCreatePlannedActivityMutation,
+  useUpdatePlannedActivityMutation,
 } = applicationsApi;

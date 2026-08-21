@@ -17,7 +17,7 @@ from app.models.enums import (
     VerificationStatus,
 )
 from app.models.finance_company import FinanceCompany
-from app.models.notification import Activity, ActivityLog, Notification
+from app.models.notification import Activity, ActivityLog, ActivityType, Notification, PlannedActivity
 from app.models.pipeline_stage import PipelineStage
 from app.models.user import User
 from app.models.vehicle_model import VehicleModel
@@ -25,6 +25,7 @@ from app.models.vehicle_model import VehicleModel
 __all__ = [
     "Activity",
     "ActivityLog",
+    "ActivityType",
     "Application",
     "ApplicationStatus",
     "Delivery",
@@ -38,6 +39,7 @@ __all__ = [
     "FinanceSubmission",
     "Notification",
     "PipelineStage",
+    "PlannedActivity",
     "Sanction",
     "User",
     "UserRole",

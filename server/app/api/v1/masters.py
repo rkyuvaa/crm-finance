@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, require_roles
 from app.db.session import get_db
 from app.models import (
+    ActivityType,
     Application,
     FinanceCompany,
     PipelineStage,
@@ -13,6 +14,9 @@ from app.models import (
     VehicleModel,
 )
 from app.schemas.master import (
+    ActivityTypeCreate,
+    ActivityTypeOut,
+    ActivityTypeUpdate,
     FinanceCompanyBrief,
     FinanceCompanyCreate,
     FinanceCompanyUpdate,
@@ -244,6 +248,69 @@ def delete_stage(
     if not stage:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stage not found")
     db.delete(stage)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Activity types
+# ---------------------------------------------------------------------------
+
+
+@router.get("/activity-types", response_model=list[ActivityTypeOut])
+def list_activity_types(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return db.query(ActivityType).order_by(ActivityType.name.asc()).all()
+
+
+@router.post("/activity-types", response_model=ActivityTypeOut, status_code=status.HTTP_201_CREATED)
+def create_activity_type(
+    payload: ActivityTypeCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    _ensure_unique(db, ActivityType, ActivityType.name, payload.name)
+    act_type = ActivityType(
+        name=payload.name,
+        description=payload.description,
+        icon=payload.icon or "Calendar",
+    )
+    db.add(act_type)
+    db.commit()
+    db.refresh(act_type)
+    return act_type
+
+
+@router.patch("/activity-types/{type_id}", response_model=ActivityTypeOut)
+def update_activity_type(
+    type_id: int,
+    payload: ActivityTypeUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    act_type = db.get(ActivityType, type_id)
+    if not act_type:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity type not found")
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name") is not None:
+        _ensure_unique(db, ActivityType, ActivityType.name, data["name"], exclude_id=type_id)
+    for field, value in data.items():
+        setattr(act_type, field, value)
+    db.add(act_type)
+    db.commit()
+    db.refresh(act_type)
+    return act_type
+
+
+@router.delete("/activity-types/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_activity_type(
+    type_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    act_type = db.get(ActivityType, type_id)
+    if not act_type:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity type not found")
+    db.delete(act_type)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

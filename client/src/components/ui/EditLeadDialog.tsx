@@ -22,7 +22,7 @@ import type { ApplicationItem } from '@/types';
 export const editSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
   customer_phone: z.string().min(8, 'Valid phone number required').max(20),
-  vehicle_model_id: z.string().min(1, 'Select a vehicle model'),
+  vehicle_model_id: z.string().optional(),
   vehicle_price: z.coerce
     .number({ invalid_type_error: 'Vehicle price is required' })
     .positive('Vehicle price must be positive'),
@@ -32,7 +32,7 @@ export const editSchema = z.object({
   amount: z.coerce
     .number({ invalid_type_error: 'Loan amount is required' })
     .positive('Loan amount must be positive'),
-  finance_company_id: z.string().min(1, 'Select a finance company'),
+  finance_company_id: z.string().optional(),
 });
 
 export type EditForm = z.infer<typeof editSchema>;
@@ -101,8 +101,9 @@ export default function EditLeadDialog({ open, onClose, lead }: EditLeadDialogPr
       showToast(`Lead ${lead.app_no} updated`, 'success');
       reset();
       onClose();
-    } catch {
-      showToast('Could not update the lead', 'error');
+    } catch (err) {
+      const detail = (err as { data?: { detail?: string } })?.data?.detail;
+      showToast(detail ?? 'Could not update the lead', 'error');
     }
   };
 

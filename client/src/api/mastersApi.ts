@@ -1,6 +1,8 @@
 import { baseApi } from './baseApi';
 
 import type {
+  ActivityType,
+  ActivityTypeInput,
   FinanceCompanyOption,
   StageConfig,
   StageInput,
@@ -58,6 +60,22 @@ export const mastersApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/masters/stages/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Stages', 'Dashboard'],
     }),
+    activityTypes: build.query<ActivityType[], void>({
+      query: () => ({ url: '/masters/activity-types' }),
+      providesTags: ['ActivityTypes'],
+    }),
+    createActivityType: build.mutation<ActivityType, ActivityTypeInput>({
+      query: (body) => ({ url: '/masters/activity-types', method: 'POST', body }),
+      invalidatesTags: ['ActivityTypes'],
+    }),
+    updateActivityType: build.mutation<ActivityType, { id: number; body: Partial<ActivityTypeInput> }>({
+      query: ({ id, body }) => ({ url: `/masters/activity-types/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['ActivityTypes'],
+    }),
+    deleteActivityType: build.mutation<void, number>({
+      query: (id) => ({ url: `/masters/activity-types/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['ActivityTypes'],
+    }),
   }),
 });
 
@@ -74,4 +92,8 @@ export const {
   useCreateStageMutation,
   useUpdateStageMutation,
   useDeleteStageMutation,
+  useActivityTypesQuery,
+  useCreateActivityTypeMutation,
+  useUpdateActivityTypeMutation,
+  useDeleteActivityTypeMutation,
 } = mastersApi;

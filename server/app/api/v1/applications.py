@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
@@ -9,19 +9,26 @@ from app.db.session import get_db
 from app.models import (
     Activity,
     ActivityLog,
+    ActivityType,
     Application,
     ApplicationStatus,
     Disbursement,
     DisbursementStatus,
+    FinanceCompany,
     FinanceStatus,
     FinanceSubmission,
+    PlannedActivity,
     User,
+    VehicleModel,
 )
 from app.schemas.application import (
     ApplicationCreate,
     ApplicationListResponse,
     ApplicationOut,
     ApplicationUpdate,
+    PlannedActivityCreate,
+    PlannedActivityOut,
+    PlannedActivityUpdate,
     TabCounts,
 )
 from app.schemas.notifications import ActivityLogOut
@@ -287,27 +294,28 @@ def update_application(
             old_display = str(old_value) if old_value is not None else None
             new_display = str(value) if value is not None else None
             
-            # Special handling for IDs to show names
-            if field == 'finance_company_id' and value:
-                from app.models.finance_company import FinanceCompany
-                fc = db.get(FinanceCompany, value)
-                new_display = fc.name if fc else str(value)
-            if field == 'finance_company_id' and old_value:
-                from app.models.finance_company import FinanceCompany
-                fc = db.get(FinanceCompany, old_value)
-                old_display = fc.name if fc else str(old_value)
-            if field == 'vehicle_model_id' and value:
-                from app.models.vehicle_model import VehicleModel
-                vm = db.get(VehicleModel, value)
-                new_display = vm.name if vm else str(value)
-            if field == 'vehicle_model_id' and old_value:
-                from app.models.vehicle_model import VehicleModel
-                vm = db.get(VehicleModel, old_value)
-                old_display = vm.name if vm else str(old_value)
-            if field == 'status' and value:
-                new_display = str(value)
-            if field == 'status' and old_value:
-                old_display = str(old_value)
+            # Special handling for IDs / numbers / enums to show human-readable names
+            if field == 'finance_company_id':
+                fc_new = db.get(FinanceCompany, value) if value else None
+                fc_old = db.get(FinanceCompany, old_value) if old_value else None
+                new_display = fc_new.name if fc_new else (str(value) if value else 'None')
+                old_display = fc_old.name if fc_old else (str(old_value) if old_value else 'None')
+            elif field == 'vehicle_model_id':
+                vm_new = db.get(VehicleModel, value) if value else None
+                vm_old = db.get(VehicleModel, old_value) if old_value else None
+                new_display = vm_new.name if vm_new else (str(value) if value else 'None')
+                old_display = vm_old.name if vm_old else (str(old_value) if old_value else 'None')
+            elif field in ('vehicle_price', 'down_payment', 'amount'):
+                old_num = float(old_value) if old_value is not None else None
+                new_num = float(value) if value is not None else None
+                if old_num == new_num:
+                    setattr(app, field, value)
+                    continue
+                old_display = f"₹{old_num:,.2f}" if old_num is not None else "₹0.00"
+                new_display = f"₹{new_num:,.2f}" if new_num is not None else "₹0.00"
+            else:
+                old_display = str(old_value) if old_value is not None else ""
+                new_display = str(value) if value is not None else ""
             
             db.add(
                 ActivityLog(
@@ -341,3 +349,145 @@ def delete_application(app_id: int, db: Session = Depends(get_db), user: User = 
     db.delete(app)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Planned activities endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{app_id}/planned-activities", response_model=list[PlannedActivityOut])
+def list_planned_activities(app_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    app = db.get(Application, app_id)
+    if not app:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    planned = (
+        db.query(PlannedActivity)
+        .filter(PlannedActivity.application_id == app_id)
+        .order_by(PlannedActivity.created_at.desc())
+        .all()
+    )
+    return [
+        PlannedActivityOut(
+            id=p.id,
+            application_id=p.application_id,
+            activity_type_id=p.activity_type_id,
+            activity_type_name=p.activity_type_name,
+            subject=p.subject,
+            notes=p.notes,
+            due_date=p.due_date,
+            status=p.status,
+            assigned_to=p.assigned_to,
+            assignee_name=p.assignee.full_name if p.assignee else None,
+            created_by=p.created_by,
+            creator_name=p.creator.full_name if p.creator else None,
+            created_at=p.created_at,
+            completed_at=p.completed_at,
+        )
+        for p in planned
+    ]
+
+
+@router.post("/{app_id}/planned-activities", response_model=PlannedActivityOut, status_code=status.HTTP_201_CREATED)
+def create_planned_activity(
+    app_id: int,
+    payload: PlannedActivityCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    app = db.get(Application, app_id)
+    if not app:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    
+    act = PlannedActivity(
+        application_id=app_id,
+        activity_type_id=payload.activity_type_id,
+        activity_type_name=payload.activity_type_name,
+        subject=payload.subject,
+        notes=payload.notes,
+        due_date=payload.due_date,
+        status="PLANNED",
+        assigned_to=payload.assigned_to or user.id,
+        created_by=user.id,
+    )
+    db.add(act)
+    db.flush()
+
+    # Log inside ActivityLog for the application
+    db.add(
+        ActivityLog(
+            application_id=app.id,
+            actor_id=user.id,
+            field_name="Activity Planned",
+            old_value=None,
+            new_value=f"[{payload.activity_type_name}] {payload.subject}",
+        )
+    )
+    db.commit()
+    db.refresh(act)
+    return PlannedActivityOut(
+        id=act.id,
+        application_id=act.application_id,
+        activity_type_id=act.activity_type_id,
+        activity_type_name=act.activity_type_name,
+        subject=act.subject,
+        notes=act.notes,
+        due_date=act.due_date,
+        status=act.status,
+        assigned_to=act.assigned_to,
+        assignee_name=act.assignee.full_name if act.assignee else None,
+        created_by=act.created_by,
+        creator_name=act.creator.full_name if act.creator else None,
+        created_at=act.created_at,
+        completed_at=act.completed_at,
+    )
+
+
+@router.patch("/{app_id}/planned-activities/{act_id}", response_model=PlannedActivityOut)
+def update_planned_activity(
+    app_id: int,
+    act_id: int,
+    payload: PlannedActivityUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    act = db.get(PlannedActivity, act_id)
+    if not act or act.application_id != app_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Planned activity not found")
+
+    old_status = act.status
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(act, field, value)
+    
+    if payload.status == "COMPLETED" and old_status != "COMPLETED":
+        act.completed_at = datetime.now(timezone.utc)
+        db.add(
+            ActivityLog(
+                application_id=app_id,
+                actor_id=user.id,
+                field_name="Activity Completed",
+                old_value=f"[{act.activity_type_name}] {act.subject}",
+                new_value="COMPLETED",
+            )
+        )
+
+    db.add(act)
+    db.commit()
+    db.refresh(act)
+    return PlannedActivityOut(
+        id=act.id,
+        application_id=act.application_id,
+        activity_type_id=act.activity_type_id,
+        activity_type_name=act.activity_type_name,
+        subject=act.subject,
+        notes=act.notes,
+        due_date=act.due_date,
+        status=act.status,
+        assigned_to=act.assigned_to,
+        assignee_name=act.assignee.full_name if act.assignee else None,
+        created_by=act.created_by,
+        creator_name=act.creator.full_name if act.creator else None,
+        created_at=act.created_at,
+        completed_at=act.completed_at,
+    )
