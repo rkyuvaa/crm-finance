@@ -120,13 +120,13 @@ export default function LeadDetailPage() {
   useEffect(() => {
     if (lead) {
       reset({
-        customer_name: lead.customer_name,
-        customer_phone: lead.customer_phone,
-        vehicle_model_id: String(lead.vehicle_model_id ?? ''),
+        customer_name: lead.customer_name || '',
+        customer_phone: lead.customer_phone || '',
+        vehicle_model_id: lead.vehicle_model_id ? String(lead.vehicle_model_id) : '',
         vehicle_price: lead.vehicle_price ?? 0,
         down_payment: lead.down_payment ?? 0,
-        amount: lead.amount,
-        finance_company_id: String(lead.finance_company_id ?? ''),
+        amount: lead.amount ?? 0,
+        finance_company_id: lead.finance_company_id ? String(lead.finance_company_id) : '',
       });
     }
   }, [lead, reset]);
@@ -358,7 +358,7 @@ export default function LeadDetailPage() {
               fullWidth
               displayEmpty
               size="small"
-              value={modelId}
+              value={modelId || ''}
               onChange={(e) => setValue('vehicle_model_id', String(e.target.value), { shouldValidate: true })}
               error={Boolean(errors.vehicle_model_id || (!watch('vehicle_model_id') && movingStage))}
               sx={{ mt: 1, mb: 0.5 }}
@@ -428,7 +428,7 @@ export default function LeadDetailPage() {
               fullWidth
               displayEmpty
               size="small"
-              value={watch('finance_company_id')}
+              value={watch('finance_company_id') || ''}
               onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
               error={Boolean(errors.finance_company_id || (!watch('finance_company_id') && movingStage))}
               sx={{ mt: 1, mb: 0.5 }}
