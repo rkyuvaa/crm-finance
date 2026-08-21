@@ -220,8 +220,14 @@ export default function LeadDetailPage() {
 
       showToast('Lead successfully moved to the next stage.', 'success');
     } catch (err) {
-      const detail = (err as { data?: { detail?: string } })?.data?.detail;
-      showToast(detail ?? 'Could not move lead to next stage', 'error');
+      const errData = (err as { data?: { detail?: unknown } })?.data;
+      let detailMsg = 'Could not move lead to next stage';
+      if (typeof errData?.detail === 'string') {
+        detailMsg = errData.detail;
+      } else if (Array.isArray(errData?.detail)) {
+        detailMsg = errData.detail.map((d: { msg?: string }) => d.msg || 'Invalid field').join(', ');
+      }
+      showToast(detailMsg, 'error');
     } finally {
       setMovingStage(false);
     }
@@ -246,8 +252,14 @@ export default function LeadDetailPage() {
       }).unwrap();
       showToast(`Lead ${lead.app_no} updated`, 'success');
     } catch (err) {
-      const detail = (err as { data?: { detail?: string } })?.data?.detail;
-      showToast(detail ?? 'Could not update the lead', 'error');
+      const errData = (err as { data?: { detail?: unknown } })?.data;
+      let detailMsg = 'Could not update the lead';
+      if (typeof errData?.detail === 'string') {
+        detailMsg = errData.detail;
+      } else if (Array.isArray(errData?.detail)) {
+        detailMsg = errData.detail.map((d: { msg?: string }) => d.msg || 'Invalid field').join(', ');
+      }
+      showToast(detailMsg, 'error');
     }
   };
 
