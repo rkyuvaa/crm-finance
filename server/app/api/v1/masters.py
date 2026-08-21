@@ -191,11 +191,29 @@ def delete_finance_company(
 
 @router.get("/stages", response_model=list[StageOut])
 def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return (
+    stages = (
         db.query(PipelineStage)
         .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
         .all()
     )
+    status_map = {
+        "leads": ApplicationStatus.LEAD,
+        "lead": ApplicationStatus.LEAD,
+        "applications": ApplicationStatus.APPLICATION,
+        "application": ApplicationStatus.APPLICATION,
+        "verification": ApplicationStatus.VERIFICATION,
+        "finance": ApplicationStatus.FINANCE,
+        "query": ApplicationStatus.QUERY,
+        "sanctioned": ApplicationStatus.SANCTIONED,
+        "delivery": ApplicationStatus.DELIVERY,
+        "disburse": ApplicationStatus.DISBURSEMENT,
+        "disbursement": ApplicationStatus.DISBURSEMENT,
+        "completed": ApplicationStatus.COMPLETED,
+    }
+    for s in stages:
+        if not s.status:
+            s.status = status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
+    return stages
 
 
 @router.post("/stages", response_model=StageOut, status_code=status.HTTP_201_CREATED)
