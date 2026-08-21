@@ -9,6 +9,8 @@ from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import (
     Activity,
+    ActivityLog,
+    ActivityType,
     Application,
     Delivery,
     Disbursement,
@@ -17,6 +19,7 @@ from app.models import (
     FinanceSubmission,
     Notification,
     PipelineStage,
+    PlannedActivity,
     Sanction,
     User,
     UserRole,
@@ -25,6 +28,8 @@ from app.models import (
 )
 
 TABLES_IN_ORDER = [
+    PlannedActivity,
+    ActivityLog,
     Activity,
     Delivery,
     Disbursement,
@@ -37,6 +42,7 @@ TABLES_IN_ORDER = [
     FinanceCompany,
     VehicleModel,
     PipelineStage,
+    ActivityType,
     User,
 ]
 

@@ -13,6 +13,7 @@ from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import (
     Activity,
+    ActivityType,
     Application,
     ApplicationStatus,
     Delivery,
@@ -143,6 +144,14 @@ PIPELINE_STAGES = [
     ("completed", "Completed", ApplicationStatus.COMPLETED, 8),
 ]
 
+DEFAULT_ACTIVITY_TYPES = [
+    ("Phone Call", "Customer phone discussion / inquiry"),
+    ("Follow-up", "Lead status or document follow-up"),
+    ("Site Visit", "Customer location or dealership visit"),
+    ("Document Collection", "Collecting physical KYC or financial proofs"),
+    ("Meeting", "In-person or virtual meeting"),
+]
+
 NOTIFICATIONS = [
     "Finance query raised on APP-118",
     "Document pending for APP-116",
@@ -189,15 +198,18 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
         companies[name] = c
     db.flush()
 
+    now = utcnow()
     for name, price, down, loan in VEHICLE_MODELS:
         existing = db.query(VehicleModel).filter_by(name=name).first()
         if existing:
             existing.vehicle_price = price
             existing.down_payment = down
             existing.loan_amount = loan
+            existing.updated_at = now
         else:
             db.add(VehicleModel(
                 name=name, vehicle_price=price, down_payment=down, loan_amount=loan,
+                created_at=now, updated_at=now,
             ))
     db.flush()
 
@@ -208,11 +220,23 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
             existing.status = status
             existing.order_index = order
             existing.enabled = True
+            existing.updated_at = now
         else:
             db.add(PipelineStage(
                 key=key, label=label, status=status, order_index=order, enabled=True,
+                created_at=now, updated_at=now,
             ))
     db.flush()
+
+    for name, desc in DEFAULT_ACTIVITY_TYPES:
+        existing = db.query(ActivityType).filter_by(name=name).first()
+        if not existing:
+            db.add(ActivityType(
+                name=name, description=desc, icon="Calendar",
+                created_at=now, updated_at=now,
+            ))
+    db.flush()
+
     return companies
 
 
