@@ -254,31 +254,38 @@ def create_application(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    app = Application(
-        app_no=next_app_no(db),
-        customer_name=payload.customer_name,
-        customer_phone=payload.customer_phone,
-        vehicle=payload.vehicle,
-        amount=payload.amount,
-        status=payload.status,
-        finance_company_id=payload.finance_company_id,
-        vehicle_model_id=payload.vehicle_model_id,
-        vehicle_price=payload.vehicle_price,
-        down_payment=payload.down_payment,
-        assigned_to=user.id,
-    )
-    db.add(app)
-    db.flush()
-    db.add(
-        Activity(
-            application_id=app.id,
-            actor_id=user.id,
-            action=f"Created application {app.app_no}",
+    try:
+        app_number = next_app_no(db)
+        app = Application(
+            app_no=app_number,
+            customer_name=payload.customer_name,
+            customer_phone=payload.customer_phone,
+            vehicle=payload.vehicle,
+            amount=payload.amount,
+            status=payload.status or ApplicationStatus.LEAD,
+            finance_company_id=payload.finance_company_id,
+            vehicle_model_id=payload.vehicle_model_id,
+            vehicle_price=payload.vehicle_price,
+            down_payment=payload.down_payment,
+            assigned_to=user.id,
         )
-    )
-    db.commit()
-    db.refresh(app)
-    return _to_out(app)
+        db.add(app)
+        db.flush()
+        db.add(
+            Activity(
+                application_id=app.id,
+                actor_id=user.id,
+                action=f"Created application {app.app_no}",
+            )
+        )
+        db.commit()
+        db.refresh(app)
+        return _to_out(app)
+    except Exception as err:
+        db.rollback()
+        import logging
+        logging.error(f"Error creating application: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Could not create application: {str(err)}")
 
 
 @router.patch("/{app_id}", response_model=ApplicationOut)

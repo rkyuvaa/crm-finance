@@ -26,19 +26,29 @@ def mark_user_activity(db, user: User) -> None:
 def next_app_no(db: Session) -> str:
     """
     Generate the next application number using a database sequence table.
-    This avoids race conditions by using row-level locking.
+    This avoids race conditions and duplicate key errors by syncing with existing records.
     """
-    # Try to get existing sequence row, or create it
+    from app.models import Application
+
     seq = db.query(ApplicationSequence).first()
     if seq is None:
         seq = ApplicationSequence(last_number=0)
         db.add(seq)
         db.flush()
 
-    # Increment and return
-    seq.last_number += 1
-    db.flush()
-    return f"APP-{seq.last_number}"
+    # Find highest existing number in applications table
+    max_id = db.query(func.max(Application.id)).scalar() or 0
+    if seq.last_number < max_id:
+        seq.last_number = max_id
+
+    # Increment until unique
+    while True:
+        seq.last_number += 1
+        candidate = f"APP-{seq.last_number}"
+        exists = db.query(Application).filter(Application.app_no == candidate).first()
+        if not exists:
+            db.flush()
+            return candidate
 
 
 def touch_application(db, app) -> None:
