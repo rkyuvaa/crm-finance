@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models import (
     ActivityType,
     Application,
+    ApplicationStatus,
     FinanceCompany,
     PipelineStage,
     User,
@@ -210,10 +211,22 @@ def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_
         "disbursement": ApplicationStatus.DISBURSEMENT,
         "completed": ApplicationStatus.COMPLETED,
     }
+    result = []
     for s in stages:
-        if not s.status:
-            s.status = status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
-    return stages
+        st = s.status or status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
+        result.append(
+            StageOut(
+                id=s.id,
+                key=s.key,
+                label=s.label,
+                status=st,
+                order_index=s.order_index,
+                enabled=s.enabled,
+                created_at=s.created_at,
+                updated_at=s.updated_at,
+            )
+        )
+    return result
 
 
 @router.post("/stages", response_model=StageOut, status_code=status.HTTP_201_CREATED)
