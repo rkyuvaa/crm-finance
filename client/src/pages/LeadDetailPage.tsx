@@ -146,15 +146,33 @@ export default function LeadDetailPage() {
     completed: 'COMPLETED',
   };
 
-  const enabledStages = stagesData.filter((s) => s.enabled);
-  const currentStageIndex = enabledStages.findIndex(
-    (s) => (s.status || STAGE_STATUS_MAP[s.key]) === lead?.status
-  );
-  const isFinalStage = currentStageIndex !== -1 && currentStageIndex === enabledStages.length - 1;
-  const nextStage = currentStageIndex !== -1 && currentStageIndex < enabledStages.length - 1
-    ? enabledStages[currentStageIndex + 1]
+  // Default pipeline sequence fallback in case masters stages have not loaded yet
+  const DEFAULT_STAGES = [
+    { key: 'leads', label: 'Leads', status: 'LEAD' },
+    { key: 'applications', label: 'Applications', status: 'APPLICATION' },
+    { key: 'verification', label: 'Verification', status: 'VERIFICATION' },
+    { key: 'finance', label: 'Finance', status: 'FINANCE' },
+    { key: 'query', label: 'Query', status: 'QUERY' },
+    { key: 'sanctioned', label: 'Sanctioned', status: 'SANCTIONED' },
+    { key: 'delivery', label: 'Delivery', status: 'DELIVERY' },
+    { key: 'disburse', label: 'Disburse', status: 'DISBURSEMENT' },
+    { key: 'completed', label: 'Completed', status: 'COMPLETED' },
+  ];
+
+  const activeStagesList = stagesData && stagesData.length > 0
+    ? [...stagesData].filter((s) => s.enabled).sort((a, b) => a.order_index - b.order_index).map((s) => ({
+        key: s.key,
+        label: s.label,
+        status: (s.status || STAGE_STATUS_MAP[s.key] || s.key.toUpperCase()) as ApplicationStatus,
+      }))
+    : DEFAULT_STAGES.map((s) => ({ ...s, status: s.status as ApplicationStatus }));
+
+  const currentStageIndex = activeStagesList.findIndex((s) => s.status === lead?.status);
+  const isFinalStage = currentStageIndex !== -1 && currentStageIndex === activeStagesList.length - 1;
+  const nextStage = currentStageIndex !== -1 && currentStageIndex < activeStagesList.length - 1
+    ? activeStagesList[currentStageIndex + 1]
     : null;
-  const nextStatus = nextStage ? (nextStage.status || STAGE_STATUS_MAP[nextStage.key]) : null;
+  const nextStatus = nextStage?.status ?? null;
 
   const handleMoveNextStage = async () => {
     if (!lead || !nextStage || !nextStatus) return;
