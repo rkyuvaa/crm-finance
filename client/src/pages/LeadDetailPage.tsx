@@ -34,6 +34,7 @@ import {
   useActivityTypesQuery,
   useFinanceCompaniesQuery,
   useStagesQuery,
+  useTabsQuery,
   useVehicleModelsQuery,
 } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -86,7 +87,9 @@ export default function LeadDetailPage() {
 
   const { data: models = [], isFetching: loadingModels } = useVehicleModelsQuery();
   const { data: companies = [] } = useFinanceCompaniesQuery();
+  const { data: crmTabs = [] } = useTabsQuery();
 
+  const [activeLeadTabCode, setActiveLeadTabCode] = useState<string>('general');
   const [sideTab, setSideTab] = useState(0);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [movingStage, setMovingStage] = useState(false);
@@ -396,133 +399,198 @@ export default function LeadDetailPage() {
             <StatusBadge status={lead.status} />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <TextField
-                fullWidth
-                label="Customer name *"
-                margin="dense"
-                error={Boolean(errors.customer_name)}
-                helperText={errors.customer_name?.message}
-                {...register('customer_name')}
-              />
-              <TextField
-                fullWidth
-                label="Mobile number *"
-                margin="dense"
-                error={Boolean(errors.customer_phone)}
-                helperText={errors.customer_phone?.message}
-                {...register('customer_phone')}
-              />
-            </div>
-
-            <Select
-              fullWidth
-              displayEmpty
-              size="small"
-              value={modelId || ''}
-              onChange={(e) => setValue('vehicle_model_id', String(e.target.value), { shouldValidate: true })}
-              error={Boolean(errors.vehicle_model_id || (!watch('vehicle_model_id') && movingStage))}
-              sx={{ mt: 1, mb: 0.5 }}
-              renderValue={(value) =>
-                value ? models.find((m) => String(m.id) === value)?.name ?? value : 'Select vehicle model *'
-              }
-              inputProps={{ 'aria-label': 'Vehicle model' }}
-            >
-              <MenuItem value="">Select vehicle model</MenuItem>
-              {loadingModels && <MenuItem disabled>Loading models...</MenuItem>}
-              {!loadingModels && models.length === 0 && (
-                <MenuItem disabled>No models configured — add them in Configuration</MenuItem>
-              )}
-              {models.map((m) => (
-                <MenuItem key={m.id} value={String(m.id)}>
-                  {m.name}
-                </MenuItem>
-              ))}
-            </Select>
-            {errors.vehicle_model_id && (
-              <div style={{ fontSize: 11.5, color: '#d32f2f', margin: '2px 14px 0' }}>
-                {errors.vehicle_model_id.message}
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <TextField
-                fullWidth
-                label="Vehicle price *"
-                type="number"
-                margin="dense"
-                error={Boolean(errors.vehicle_price)}
-                helperText={errors.vehicle_price?.message}
-                slotProps={{
-                  input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> },
-                }}
-                {...register('vehicle_price')}
-              />
-              <TextField
-                fullWidth
-                label="Down payment *"
-                type="number"
-                margin="dense"
-                error={Boolean(errors.down_payment)}
-                helperText={errors.down_payment?.message}
-                slotProps={{
-                  input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> },
-                }}
-                {...register('down_payment')}
-              />
-            </div>
-
-            <TextField
-              fullWidth
-              label="Loan amount *"
-              type="number"
-              margin="dense"
-              error={Boolean(errors.amount)}
-              helperText={errors.amount?.message}
-              slotProps={{
-                input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> },
+          {/* Dynamic Module Tabs for this Lead */}
+          <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 3 }}>
+            <Tabs
+              value={activeLeadTabCode}
+              onChange={(_, val) => setActiveLeadTabCode(val)}
+              textColor="primary"
+              indicatorColor="primary"
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 700, minHeight: 42 },
               }}
-              {...register('amount')}
-            />
-
-            <Select
-              fullWidth
-              displayEmpty
-              size="small"
-              value={watch('finance_company_id') || ''}
-              onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
-              error={Boolean(errors.finance_company_id || (!watch('finance_company_id') && movingStage))}
-              sx={{ mt: 1, mb: 0.5 }}
-              renderValue={(value) =>
-                value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company *'
-              }
-              inputProps={{ 'aria-label': 'Finance company' }}
             >
-              <MenuItem value="">Select finance company</MenuItem>
-              {companies.map((c) => (
-                <MenuItem key={c.id} value={String(c.id)}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </Select>
-            {errors.finance_company_id && (
-              <div style={{ fontSize: 11.5, color: '#d32f2f', margin: '2px 14px 0' }}>
-                {errors.finance_company_id.message}
-              </div>
-            )}
+              <Tab value="general" label="Lead Details" />
+              {crmTabs
+                .filter((t) => t.is_active)
+                .map((t) => (
+                  <Tab key={t.code} value={t.code} label={t.name} />
+                ))}
+            </Tabs>
+          </Box>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                startIcon={<Save size={16} />}
-                disabled={isUpdating}
+          {activeLeadTabCode === 'general' ? (
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <TextField
+                  fullWidth
+                  label="Customer name *"
+                  margin="dense"
+                  error={Boolean(errors.customer_name)}
+                  helperText={errors.customer_name?.message}
+                  {...register('customer_name')}
+                />
+                <TextField
+                  fullWidth
+                  label="Mobile number *"
+                  margin="dense"
+                  error={Boolean(errors.customer_phone)}
+                  helperText={errors.customer_phone?.message}
+                  {...register('customer_phone')}
+                />
+              </div>
+
+              <Select
+                fullWidth
+                displayEmpty
+                size="small"
+                value={modelId || ''}
+                onChange={(e) => setValue('vehicle_model_id', String(e.target.value), { shouldValidate: true })}
+                error={Boolean(errors.vehicle_model_id || (!watch('vehicle_model_id') && movingStage))}
+                sx={{ mt: 1, mb: 0.5 }}
+                renderValue={(value) =>
+                  value ? models.find((m) => String(m.id) === value)?.name ?? value : 'Select vehicle model *'
+                }
+                inputProps={{ 'aria-label': 'Vehicle model' }}
               >
-                Save Changes
-              </Button>
+                <MenuItem value="">Select vehicle model</MenuItem>
+                {loadingModels && <MenuItem disabled>Loading models...</MenuItem>}
+                {!loadingModels && models.length === 0 && (
+                  <MenuItem disabled>No models configured — add them in Configuration</MenuItem>
+                )}
+                {models.map((m) => (
+                  <MenuItem key={m.id} value={String(m.id)}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.vehicle_model_id && (
+                <div style={{ fontSize: 11.5, color: '#d32f2f', margin: '2px 14px 0' }}>
+                  {errors.vehicle_model_id.message}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <TextField
+                  fullWidth
+                  label="Vehicle price *"
+                  margin="dense"
+                  type="number"
+                  InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+                  error={Boolean(errors.vehicle_price)}
+                  helperText={errors.vehicle_price?.message}
+                  {...register('vehicle_price')}
+                />
+                <TextField
+                  fullWidth
+                  label="Down payment *"
+                  margin="dense"
+                  type="number"
+                  InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+                  error={Boolean(errors.down_payment)}
+                  helperText={errors.down_payment?.message}
+                  {...register('down_payment')}
+                />
+              </div>
+
+              <TextField
+                fullWidth
+                label="Loan amount *"
+                margin="dense"
+                type="number"
+                InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+                error={Boolean(errors.amount)}
+                helperText={errors.amount?.message}
+                {...register('amount')}
+              />
+
+              <Select
+                fullWidth
+                displayEmpty
+                size="small"
+                value={watch('finance_company_id') || ''}
+                onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
+                error={Boolean(errors.finance_company_id || (!watch('finance_company_id') && movingStage))}
+                sx={{ mt: 1, mb: 0.5 }}
+                renderValue={(value) =>
+                  value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company *'
+                }
+                inputProps={{ 'aria-label': 'Finance company' }}
+              >
+                <MenuItem value="">Select finance company</MenuItem>
+                {companies.map((c) => (
+                  <MenuItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.finance_company_id && (
+                <div style={{ fontSize: 11.5, color: '#d32f2f', margin: '2px 14px 0' }}>
+                  {errors.finance_company_id.message}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  startIcon={<Save size={16} />}
+                  disabled={isUpdating}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#16231B', marginBottom: 6 }}>
+                {crmTabs.find((t) => t.code === activeLeadTabCode)?.name ?? 'Tab Details'}
+              </div>
+              <div style={{ fontSize: 13, color: '#7A8B80', marginBottom: 16 }}>
+                {crmTabs.find((t) => t.code === activeLeadTabCode)?.description ||
+                  `Fields & documents for lead ${lead.app_no} under ${activeLeadTabCode.replace('_', ' ')}`}
+              </div>
+
+              {/* Tab Content Section (e.g. Document Upload) */}
+              <Box sx={{ border: '1px dashed #C9E0C6', borderRadius: '12px', p: 3, background: '#F8FAF8', textAlign: 'center', mb: 2 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#04552B', marginBottom: 6 }}>
+                  Upload & Manage Documents for {lead.customer_name}
+                </div>
+                <div style={{ fontSize: 12.5, color: '#667085', marginBottom: 16 }}>
+                  Upload KYC, Aadhaar, PAN Card, Bank Statements, or Income Proofs required for this application.
+                </div>
+                <Button variant="outlined" color="primary" onClick={() => showToast('Document file uploader opened', 'info')}>
+                  + Select & Upload Document
+                </Button>
+              </Box>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>Aadhaar Card / ID Proof</div>
+                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Required for KYC verification</div>
+                  </div>
+                  <Chip label="Verified" color="success" size="small" />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>PAN Card</div>
+                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Required for CIBIL check & finance approval</div>
+                  </div>
+                  <Chip label="Verified" color="success" size="small" />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>Income Proof / Bank Statement</div>
+                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Last 6 months bank statement</div>
+                  </div>
+                  <Chip label="Pending Upload" color="warning" size="small" />
+                </div>
+              </div>
             </div>
-          </form>
+          )}
         </Paper>
 
         <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
