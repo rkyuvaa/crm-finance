@@ -11,13 +11,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Save, Upload, FileText, Download, Eye } from 'lucide-react';
+import { Save, Upload, FileText, Download, Eye, Camera } from 'lucide-react';
 
 import { useTabFieldsQuery } from '@/api/mastersApi';
 import { useCustomFieldValuesQuery, useSaveCustomFieldValuesMutation } from '@/api/applicationsApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useAppSelector } from '@/app/hooks';
 import DocumentPreviewDialog, { type PreviewFileMeta } from '@/components/ui/DocumentPreviewDialog';
+import { compressImageFile } from '@/utils/imageCompressor';
 import type { CrmTabFieldConfig } from '@/types';
 
 interface Props {
@@ -67,29 +68,26 @@ export default function DynamicFieldEngine({
     setFormState((prev) => ({ ...prev, [fieldId]: val }));
   };
 
-  const handleFileUploadSimulated = (field: CrmTabFieldConfig, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUploadSimulated = async (field: CrmTabFieldConfig, file: File | null) => {
     if (!file) return;
 
-    if (field.file_config?.max_size_mb && file.size > field.file_config.max_size_mb * 1024 * 1024) {
-      showToast(`File size exceeds maximum limit of ${field.file_config.max_size_mb}MB`, 'error');
-      return;
-    }
+    try {
+      showToast(`Processing & optimizing ${file.name}…`, 'info');
+      const { dataUrl, size } = await compressImageFile(file);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const dataUrl = evt.target?.result as string;
       const meta = {
         file_name: file.name,
         file_path: dataUrl,
-        file_size: file.size,
-        mime_type: file.type || 'application/octet-stream',
+        file_size: size,
+        mime_type: file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
       };
+
       setFileMetadataState((prev) => ({ ...prev, [field.id]: meta }));
       setFormState((prev) => ({ ...prev, [field.id]: file.name }));
       showToast(`Uploaded ${file.name}`, 'success');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      showToast('Failed to process uploaded file', 'error');
+    }
   };
 
   const handleRemoveFile = (fieldId: number) => {
@@ -340,21 +338,46 @@ export default function DynamicFieldEngine({
                       )}
                     </Paper>
                   ) : (
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      startIcon={<Upload size={16} />}
-                      disabled={isReadonly}
-                      sx={{ textTransform: 'none', fontSize: 13 }}
-                    >
-                      Upload {f.label}
-                      <input
-                        type="file"
-                        hidden
-                        onChange={(e) => handleFileUploadSimulated(f, e)}
-                        accept={f.file_config?.allowed_extensions?.join(',')}
-                      />
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        component="label"
+                        startIcon={<Camera size={16} />}
+                        disabled={isReadonly}
+                        sx={{ textTransform: 'none', fontSize: 12.5, fontWeight: 700 }}
+                      >
+                        Take Photo (Camera)
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          hidden
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            handleFileUploadSimulated(f, file);
+                          }}
+                        />
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        startIcon={<Upload size={16} />}
+                        disabled={isReadonly}
+                        sx={{ textTransform: 'none', fontSize: 12.5 }}
+                      >
+                        Choose File / PDF
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf,.pdf,.png,.jpg,.jpeg"
+                          hidden
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            handleFileUploadSimulated(f, file);
+                          }}
+                        />
+                      </Button>
+                    </Box>
                   )}
                 </Box>
               )}
