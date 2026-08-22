@@ -136,7 +136,7 @@ export default function LeadsPage() {
             </IconButton>
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="scroll-touch" style={{ overflowX: 'auto' }}>
           {isFetching && !data ? (
             <LoadingRows rows={8} />
           ) : isError ? (

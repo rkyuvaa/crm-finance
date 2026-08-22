@@ -105,7 +105,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
       </Paper>
 
       {/* Summary KPI Counters */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 1.5 }}>
         <Paper sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '10px' }}>
           <Typography variant="caption" sx={{ color: '#7A8B80', fontWeight: 600 }}>Total Synchronized Documents</Typography>
           <Typography variant="h5" sx={{ fontWeight: 800, color: '#16231B', mt: 0.5 }}>{totalCount}</Typography>
@@ -137,7 +137,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px' }}>
+        <TableContainer component={Paper} className="scroll-touch" sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto' }}>
           <Table>
             <TableHead sx={{ background: '#F8FAF8' }}>
               <TableRow>

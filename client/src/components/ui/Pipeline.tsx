@@ -53,8 +53,8 @@ export default function Pipeline({
   onStageClick?: (stage: PipelineStage) => void;
 }) {
   return (
-    <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'stretch', padding: 16, minWidth: 940 }}>
+    <div className="scroll-touch" style={{ overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px', minWidth: 780 }}>
         {stages.map((stage, i) => {
           const Icon = ICONS[stage.key] ?? FileText;
           const color = STAGE_COLORS[stage.key] ?? '#087A3D';
