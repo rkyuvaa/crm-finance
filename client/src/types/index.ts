@@ -91,6 +91,9 @@ export interface WaitingItem {
 export interface FinanceCompany {
   id: number;
   name: string;
+  email?: string | null;
+  contact_number?: string | null;
+  address?: string | null;
   total_apps: number;
   approved: number;
   rejected: number;
@@ -101,6 +104,9 @@ export interface FinanceCompany {
 export interface FinanceCompanyOption {
   id: number;
   name: string;
+  email?: string | null;
+  contact_number?: string | null;
+  address?: string | null;
 }
 
 export interface VehicleModel {

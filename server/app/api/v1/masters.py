@@ -146,12 +146,19 @@ def create_finance_company(
 ):
     _ensure_unique(db, FinanceCompany, FinanceCompany.name, payload.name)
     company = FinanceCompany(
-        name=payload.name, total_apps=0, approved=0, rejected=0, avg_time_days=0
+        name=payload.name,
+        email=payload.email,
+        contact_number=payload.contact_number,
+        address=payload.address,
+        total_apps=0,
+        approved=0,
+        rejected=0,
+        avg_time_days=0,
     )
     db.add(company)
     db.commit()
     db.refresh(company)
-    return FinanceCompanyBrief(id=company.id, name=company.name)
+    return company
 
 
 @router.patch("/finance-companies/{company_id}", response_model=FinanceCompanyBrief)
@@ -172,7 +179,7 @@ def update_finance_company(
     db.add(company)
     db.commit()
     db.refresh(company)
-    return FinanceCompanyBrief(id=company.id, name=company.name)
+    return company
 
 
 @router.delete("/finance-companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)

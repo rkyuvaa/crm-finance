@@ -36,11 +36,17 @@ export const mastersApi = baseApi.injectEndpoints({
       query: () => ({ url: '/masters/finance-companies' }),
       providesTags: ['FinanceCompanies'],
     }),
-    createFinanceCompany: build.mutation<FinanceCompanyOption, { name: string }>({
+    createFinanceCompany: build.mutation<
+      FinanceCompanyOption,
+      { name: string; email?: string; contact_number?: string; address?: string }
+    >({
       query: (body) => ({ url: '/masters/finance-companies', method: 'POST', body }),
       invalidatesTags: ['FinanceCompanies'],
     }),
-    updateFinanceCompany: build.mutation<FinanceCompanyOption, { id: number; body: { name: string } }>({
+    updateFinanceCompany: build.mutation<
+      FinanceCompanyOption,
+      { id: number; body: { name?: string; email?: string; contact_number?: string; address?: string } }
+    >({
       query: ({ id, body }) => ({ url: `/masters/finance-companies/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['FinanceCompanies'],
     }),

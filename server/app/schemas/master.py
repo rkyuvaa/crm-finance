@@ -36,16 +36,25 @@ class VehicleModelOut(BaseModel):
 class FinanceCompanyBrief(BaseModel):
     id: int
     name: str
+    email: str | None = None
+    contact_number: str | None = None
+    address: str | None = None
 
     model_config = {"from_attributes": True}
 
 
 class FinanceCompanyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
+    email: str | None = Field(default=None, max_length=120)
+    contact_number: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=255)
 
 
 class FinanceCompanyUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
+    email: str | None = Field(default=None, max_length=120)
+    contact_number: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=255)
 
 
 class StageCreate(BaseModel):
