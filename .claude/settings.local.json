@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(python -m uvicorn app.main:app --reload --port 8000)",
+      "Bash(python -m uvicorn app.main:app --port 8000)",
+      "Bash(curl -s http://localhost:8000/api/v1/dashboard)",
+      "Bash(pip install *)",
+      "Bash(curl -i -s http://localhost:8000/api/v1/dashboard)"
     ]
   }
 }
