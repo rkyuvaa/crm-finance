@@ -16,6 +16,7 @@ from app.models import (
     Application,
     ApplicationStatus,
     CrmLeadCustomFieldValue,
+    CrmTabField,
     Disbursement,
     DisbursementStatus,
     FinanceCompany,
@@ -32,9 +33,16 @@ from app.schemas.application import (
     ApplicationUpdate,
     TabCounts,
 )
+from app.schemas.master import (
+    CrmLeadCustomFieldValueOut,
+    CrmLeadCustomFieldValueSave,
+    ToggleVerificationInput,
+    VerificationDocumentOut,
+)
 from app.schemas.notifications import ActivityLogOut
 from app.services.aging import aging_tone, duration_between, format_aging
 from app.services.auth import next_app_no, touch_application
+from app.services.ocr_analyzer import analyze_document_quality
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -382,42 +390,10 @@ def delete_application(
 ):
     db.delete(app)
     db.commit()
-from app.models import (
-    Activity,
-    ActivityLog,
-    ActivityType,
-    Application,
-    ApplicationStatus,
-    CrmLeadCustomFieldValue,
-    CrmTabField,
-    Disbursement,
-    DisbursementStatus,
-    FinanceCompany,
-    FinanceStatus,
-    FinanceSubmission,
-    User,
-    UserRole,
-    VehicleModel,
-)
-from app.schemas.application import (
-    ApplicationCreate,
-    ApplicationListResponse,
-    ApplicationOut,
-    ApplicationUpdate,
-    TabCounts,
-)
-from app.schemas.master import (
-    CrmLeadCustomFieldValueOut,
-    CrmLeadCustomFieldValueSave,
-    ToggleVerificationInput,
-    VerificationDocumentOut,
-)
-from app.schemas.notifications import ActivityLogOut
-from app.services.aging import aging_tone, duration_between, format_aging
-from app.services.auth import next_app_no, touch_application
-from app.services.ocr_analyzer import analyze_document_quality
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-router = APIRouter(prefix="/applications", tags=["applications"])
+
+# --- Custom Field Values & Document Verification Endpoints ---
 
 
 @router.get("/{app_id}/custom-fields", response_model=list[CrmLeadCustomFieldValueOut])
