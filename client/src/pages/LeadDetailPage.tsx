@@ -40,6 +40,7 @@ import {
 import { useToast } from '@/components/ui/ToastHost';
 import StatusBadge from '@/components/ui/StatusBadge';
 import DynamicFieldEngine from '@/components/fields/DynamicFieldEngine';
+import DocumentVerificationPanel from '@/components/fields/DocumentVerificationPanel';
 import { formatDate } from '@/utils/format';
 import type { ApplicationStatus } from '@/types';
 
@@ -565,6 +566,8 @@ export default function LeadDetailPage() {
                 </Button>
               </div>
             </form>
+          ) : activeLeadTabCode === 'document_verification' || activeLeadTabCode === 'verification' || crmTabs.find((t) => t.code === activeLeadTabCode)?.name.toLowerCase().includes('verification') ? (
+            <DocumentVerificationPanel applicationId={lead.id} />
           ) : (
             <DynamicFieldEngine
               tabId={crmTabs.find((t) => t.code === activeLeadTabCode)?.id || 0}

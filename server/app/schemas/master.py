@@ -245,8 +245,38 @@ class CrmLeadCustomFieldValueOut(BaseModel):
     field_id: int
     value: str | None = None
     file_metadata: dict | None = None
+    quality_score: int | None = None
+    quality_analysis: dict | None = None
+    is_verified: bool = False
+    verified_by_id: int | None = None
+    verified_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ToggleVerificationInput(BaseModel):
+    is_verified: bool
+
+
+class VerificationDocumentOut(BaseModel):
+    id: int
+    application_id: int
+    field_id: int
+    field_name: str
+    field_label: str
+    file_name: str
+    file_path: str
+    file_size: int | None = None
+    mime_type: str | None = None
+    uploaded_at: datetime
+    quality_score: int | None = None
+    quality_analysis: dict | None = None
+    is_verified: bool = False
+    verified_by_id: int | None = None
+    verified_by_name: str | None = None
+    verified_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

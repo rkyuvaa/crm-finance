@@ -7,6 +7,7 @@ import type {
   CrmLeadCustomFieldValue,
   PlannedActivityInput,
   PlannedActivityItem,
+  VerificationDocument,
 } from '@/types';
 
 export interface ApplicationFilters {
@@ -104,6 +105,21 @@ export const applicationsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_res, _err, { appId }) => [{ type: 'Applications', id: appId }],
     }),
+    verificationDocuments: build.query<VerificationDocument[], number>({
+      query: (id) => ({ url: `/applications/${id}/verification-documents` }),
+      providesTags: (_res, _err, id) => [{ type: 'Applications', id }],
+    }),
+    toggleVerifyDocument: build.mutation<
+      VerificationDocument,
+      { appId: number; valId: number; isVerified: boolean }
+    >({
+      query: ({ appId, valId, isVerified }) => ({
+        url: `/applications/${appId}/verification-documents/${valId}/toggle-verify`,
+        method: 'POST',
+        body: { is_verified: isVerified },
+      }),
+      invalidatesTags: (_res, _err, { appId }) => [{ type: 'Applications', id: appId }],
+    }),
   }),
 });
 
@@ -119,4 +135,6 @@ export const {
   useUpdatePlannedActivityMutation,
   useCustomFieldValuesQuery,
   useSaveCustomFieldValuesMutation,
+  useVerificationDocumentsQuery,
+  useToggleVerifyDocumentMutation,
 } = applicationsApi;

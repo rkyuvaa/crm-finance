@@ -230,8 +230,40 @@ export interface CrmLeadCustomFieldValue {
     file_size: number;
     mime_type: string;
   } | null;
+  quality_score?: number | null;
+  quality_analysis?: Record<string, any> | null;
+  is_verified: boolean;
+  verified_by_id?: number | null;
+  verified_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface VerificationDocument {
+  id: number;
+  application_id: number;
+  field_id: number;
+  field_name: string;
+  field_label: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_at: string;
+  quality_score?: number | null;
+  quality_analysis?: {
+    overall_score: number;
+    clarity_score: number;
+    readability_score: number;
+    completeness_score: number;
+    orientation_score: number;
+    ocr_extracted_text?: string;
+    warning?: string | null;
+  } | null;
+  is_verified: boolean;
+  verified_by_id?: number | null;
+  verified_by_name?: string | null;
+  verified_at?: string | null;
 }
 
 export interface CrmTabInput {

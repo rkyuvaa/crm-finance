@@ -382,12 +382,42 @@ def delete_application(
 ):
     db.delete(app)
     db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+from app.models import (
+    Activity,
+    ActivityLog,
+    ActivityType,
+    Application,
+    ApplicationStatus,
+    CrmLeadCustomFieldValue,
+    CrmTabField,
+    Disbursement,
+    DisbursementStatus,
+    FinanceCompany,
+    FinanceStatus,
+    FinanceSubmission,
+    User,
+    UserRole,
+    VehicleModel,
+)
+from app.schemas.application import (
+    ApplicationCreate,
+    ApplicationListResponse,
+    ApplicationOut,
+    ApplicationUpdate,
+    TabCounts,
+)
+from app.schemas.master import (
+    CrmLeadCustomFieldValueOut,
+    CrmLeadCustomFieldValueSave,
+    ToggleVerificationInput,
+    VerificationDocumentOut,
+)
+from app.schemas.notifications import ActivityLogOut
+from app.services.aging import aging_tone, duration_between, format_aging
+from app.services.auth import next_app_no, touch_application
+from app.services.ocr_analyzer import analyze_document_quality
 
-
-# --- Custom Field Values Endpoints ---
-
-from app.schemas.master import CrmLeadCustomFieldValueOut, CrmLeadCustomFieldValueSave
+router = APIRouter(prefix="/applications", tags=["applications"])
 
 
 @router.get("/{app_id}/custom-fields", response_model=list[CrmLeadCustomFieldValueOut])
@@ -413,6 +443,17 @@ def save_custom_field_values(
 ):
     saved_list = []
     for item in payload:
+        score = None
+        breakdown = None
+        if item.file_metadata:
+            fname = item.file_metadata.get("file_name", "document")
+            mtype = item.file_metadata.get("mime_type", "")
+            fsize = item.file_metadata.get("file_size", 0)
+            fpath = item.file_metadata.get("file_path", "")
+            field_obj = db.query(CrmTabField).filter(CrmTabField.id == item.field_id).first()
+            flabel = field_obj.label if field_obj else fname
+            score, breakdown = analyze_document_quality(fname, mtype, fsize, fpath, flabel)
+
         existing = (
             db.query(CrmLeadCustomFieldValue)
             .filter(
@@ -425,6 +466,8 @@ def save_custom_field_values(
             existing.value = item.value
             if item.file_metadata is not None:
                 existing.file_metadata = item.file_metadata
+                existing.quality_score = score
+                existing.quality_analysis = breakdown
             saved_list.append(existing)
         else:
             rec = CrmLeadCustomFieldValue(
@@ -432,6 +475,9 @@ def save_custom_field_values(
                 field_id=item.field_id,
                 value=item.value,
                 file_metadata=item.file_metadata,
+                quality_score=score,
+                quality_analysis=breakdown,
+                is_verified=False,
             )
             db.add(rec)
             saved_list.append(rec)
@@ -441,3 +487,127 @@ def save_custom_field_values(
     for item in saved_list:
         db.refresh(item)
     return saved_list
+
+
+@router.get("/{app_id}/verification-documents", response_model=list[VerificationDocumentOut])
+def get_verification_documents(
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+):
+    values = (
+        db.query(CrmLeadCustomFieldValue)
+        .join(CrmTabField, CrmLeadCustomFieldValue.field_id == CrmTabField.id)
+        .filter(
+            CrmLeadCustomFieldValue.application_id == app.id,
+            CrmTabField.is_archived == False,
+            CrmTabField.field_type == "file",
+        )
+        .all()
+    )
+
+    res = []
+    for val in values:
+        if not val.file_metadata:
+            continue
+        meta = val.file_metadata
+        if val.quality_score is None:
+            score, breakdown = analyze_document_quality(
+                meta.get("file_name", "document"),
+                meta.get("mime_type"),
+                meta.get("file_size"),
+                meta.get("file_path"),
+                val.field.label if val.field else "Document",
+            )
+            val.quality_score = score
+            val.quality_analysis = breakdown
+            db.commit()
+
+        vname = None
+        if val.verified_by:
+            vname = val.verified_by.full_name or val.verified_by.email
+
+        res.append(
+            VerificationDocumentOut(
+                id=val.id,
+                application_id=val.application_id,
+                field_id=val.field_id,
+                field_name=val.field.name if val.field else "file",
+                field_label=val.field.label if val.field else "Document",
+                file_name=meta.get("file_name", "Document"),
+                file_path=meta.get("file_path", ""),
+                file_size=meta.get("file_size"),
+                mime_type=meta.get("mime_type"),
+                uploaded_at=val.updated_at or val.created_at,
+                quality_score=val.quality_score,
+                quality_analysis=val.quality_analysis,
+                is_verified=val.is_verified,
+                verified_by_id=val.verified_by_id,
+                verified_by_name=vname,
+                verified_at=val.verified_at,
+            )
+        )
+
+    return res
+
+
+@router.post("/{app_id}/verification-documents/{value_id}/toggle-verify", response_model=VerificationDocumentOut)
+def toggle_document_verification(
+    value_id: int,
+    payload: ToggleVerificationInput,
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rec = (
+        db.query(CrmLeadCustomFieldValue)
+        .filter(
+            CrmLeadCustomFieldValue.id == value_id,
+            CrmLeadCustomFieldValue.application_id == app.id,
+        )
+        .first()
+    )
+    if not rec:
+        raise HTTPException(status_code=404, detail="Document verification record not found")
+
+    prev_status = "Verified (ON)" if rec.is_verified else "Pending Verification (OFF)"
+    new_status = "Verified (ON)" if payload.is_verified else "Pending Verification (OFF)"
+
+    rec.is_verified = payload.is_verified
+    rec.verified_by_id = user.id if payload.is_verified else None
+    rec.verified_at = datetime.now(timezone.utc) if payload.is_verified else None
+
+    # Audit Trail (ActivityLog entry)
+    field_label = rec.field.label if rec.field else "Document"
+    audit_entry = ActivityLog(
+        application_id=app.id,
+        actor_id=user.id,
+        field_name=f"Document Verification: {field_label}",
+        old_value=prev_status,
+        new_value=f"{new_status} by {user.full_name}",
+    )
+    db.add(audit_entry)
+    touch_application(db, app)
+    db.commit()
+    db.refresh(rec)
+
+    meta = rec.file_metadata or {}
+    vname = user.full_name if rec.is_verified else None
+
+    return VerificationDocumentOut(
+        id=rec.id,
+        application_id=rec.application_id,
+        field_id=rec.field_id,
+        field_name=rec.field.name if rec.field else "file",
+        field_label=rec.field.label if rec.field else "Document",
+        file_name=meta.get("file_name", "Document"),
+        file_path=meta.get("file_path", ""),
+        file_size=meta.get("file_size"),
+        mime_type=meta.get("mime_type"),
+        uploaded_at=rec.updated_at or rec.created_at,
+        quality_score=rec.quality_score,
+        quality_analysis=rec.quality_analysis,
+        is_verified=rec.is_verified,
+        verified_by_id=rec.verified_by_id,
+        verified_by_name=vname,
+        verified_at=rec.verified_at,
+    )

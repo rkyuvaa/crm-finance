@@ -59,6 +59,13 @@ class CrmLeadCustomFieldValue(Base):
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Document Verification & Automated OCR Quality Score (0-100)
+    quality_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quality_analysis: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verified_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -66,3 +73,4 @@ class CrmLeadCustomFieldValue(Base):
 
     application: Mapped["Application"] = relationship()
     field: Mapped["CrmTabField"] = relationship(back_populates="values")
+    verified_by: Mapped["User | None"] = relationship(foreign_keys=[verified_by_id])
