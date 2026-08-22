@@ -386,8 +386,8 @@ export default function LeadDetailPage() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 20, alignItems: 'start' }}>
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px)', gap: 20, alignItems: 'start', maxWidth: '100%' }}>
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3, minWidth: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
               <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>
@@ -400,26 +400,47 @@ export default function LeadDetailPage() {
             <StatusBadge status={lead.status} />
           </div>
 
-          {/* Dynamic Module Tabs for this Lead */}
-          <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 3 }}>
-            <Tabs
-              value={activeLeadTabCode}
-              onChange={(_, val) => setActiveLeadTabCode(val)}
-              textColor="primary"
-              indicatorColor="primary"
-              variant="scrollable"
-              scrollButtons="auto"
+          {/* Dynamic Module Tabs for this Lead - Wraps onto 2nd line when space runs out */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, borderBottom: '1px solid #E4EBE1', pb: 1.5, mb: 3 }}>
+            <Button
+              size="small"
+              variant={activeLeadTabCode === 'general' ? 'contained' : 'outlined'}
+              color={activeLeadTabCode === 'general' ? 'primary' : 'inherit'}
+              onClick={() => setActiveLeadTabCode('general')}
               sx={{
-                '& .MuiTab-root': { textTransform: 'none', fontSize: 13, fontWeight: 700, minHeight: 42 },
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: 13,
+                px: 2,
+                py: 0.8,
+                boxShadow: activeLeadTabCode === 'general' ? '0 2px 6px rgba(8,122,61,0.2)' : 'none',
               }}
             >
-              <Tab value="general" label="Lead Details" />
-              {crmTabs
-                .filter((t) => t.is_active)
-                .map((t) => (
-                  <Tab key={t.code} value={t.code} label={t.name} />
-                ))}
-            </Tabs>
+              Lead Details
+            </Button>
+            {crmTabs
+              .filter((t) => t.is_active)
+              .map((t) => (
+                <Button
+                  key={t.code}
+                  size="small"
+                  variant={activeLeadTabCode === t.code ? 'contained' : 'outlined'}
+                  color={activeLeadTabCode === t.code ? 'primary' : 'inherit'}
+                  onClick={() => setActiveLeadTabCode(t.code)}
+                  sx={{
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    px: 2,
+                    py: 0.8,
+                    boxShadow: activeLeadTabCode === t.code ? '0 2px 6px rgba(8,122,61,0.2)' : 'none',
+                  }}
+                >
+                  {t.name}
+                </Button>
+              ))}
           </Box>
 
           {activeLeadTabCode === 'general' ? (
@@ -555,7 +576,7 @@ export default function LeadDetailPage() {
           )}
         </Paper>
 
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3, minWidth: 0, overflow: 'hidden' }}>
           <Box sx={{ borderBottom: 1, borderColor: '#E4EBE1', mb: 2 }}>
             <Tabs
               value={sideTab}
