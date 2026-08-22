@@ -1,6 +1,6 @@
 """add crm_tab_fields and crm_lead_custom_field_values tables
 
-Revision ID: 20260822_add_crm_tab_fields_tables
+Revision ID: a8e9f01c2b3d
 Revises: b7d90390a88c
 Create Date: 2026-08-22
 
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '20260822_add_crm_tab_fields_tables'
+revision: str = 'a8e9f01c2b3d'
 down_revision: Union[str, None] = 'b7d90390a88c'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
