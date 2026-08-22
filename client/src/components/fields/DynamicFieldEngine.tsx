@@ -76,16 +76,20 @@ export default function DynamicFieldEngine({
       return;
     }
 
-    const meta = {
-      file_name: file.name,
-      file_path: URL.createObjectURL(file),
-      file_size: file.size,
-      mime_type: file.type || 'application/octet-stream',
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target?.result as string;
+      const meta = {
+        file_name: file.name,
+        file_path: dataUrl,
+        file_size: file.size,
+        mime_type: file.type || 'application/octet-stream',
+      };
+      setFileMetadataState((prev) => ({ ...prev, [field.id]: meta }));
+      setFormState((prev) => ({ ...prev, [field.id]: file.name }));
+      showToast(`Uploaded ${file.name}`, 'success');
     };
-
-    setFileMetadataState((prev) => ({ ...prev, [field.id]: meta }));
-    setFormState((prev) => ({ ...prev, [field.id]: file.name }));
-    showToast(`Uploaded ${file.name}`, 'success');
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveFile = (fieldId: number) => {

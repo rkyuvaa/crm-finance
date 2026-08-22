@@ -34,6 +34,20 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
   const isImage = file.mime_type?.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
   const isPdf = file.mime_type === 'application/pdf' || ext === 'pdf';
 
+  const handleOpenNewTab = () => {
+    if (file.file_path.startsWith('data:')) {
+      const win = window.open();
+      if (win) {
+        win.document.write(
+          `<!DOCTYPE html><html><head><title>${fileName}</title><style>html,body{margin:0;height:100%;overflow:hidden;}</style></head><body><iframe src="${file.file_path}" frameborder="0" style="width:100%;height:100%;border:none;"></iframe></body></html>`
+        );
+        win.document.close();
+      }
+    } else {
+      window.open(file.file_path, '_blank');
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: '16px', overflow: 'hidden' } }}>
       <DialogTitle
@@ -93,44 +107,13 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
           </Paper>
         ) : isPdf ? (
           <Box sx={{ width: '100%', height: '520px', background: '#FFFFFF', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E4EBE1' }}>
-            <object
-              data={file.file_path}
-              type="application/pdf"
+            <iframe
+              src={file.file_path}
+              title={fileName}
               width="100%"
               height="100%"
-              style={{ borderRadius: '12px' }}
-            >
-              <Paper sx={{ p: 4, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={40} color="#087A3D" style={{ marginBottom: 12 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#16231B', mb: 1 }}>
-                  {fileName}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#7A8B80', mb: 2.5, maxWidth: 380 }}>
-                  Browser security policies restrict inline PDF preview for temporary local files. You can open or download the file directly below.
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<ExternalLink size={16} />}
-                    href={file.file_path}
-                    target="_blank"
-                    sx={{ textTransform: 'none', fontWeight: 700 }}
-                  >
-                    Open PDF in New Tab
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Download size={16} />}
-                    href={file.file_path}
-                    download={fileName}
-                    sx={{ textTransform: 'none', fontWeight: 600 }}
-                  >
-                    Download PDF
-                  </Button>
-                </Box>
-              </Paper>
-            </object>
+              style={{ border: 'none', borderRadius: '12px' }}
+            />
           </Box>
         ) : (
           <Paper sx={{ p: 5, textAlign: 'center', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '16px', maxWidth: 420 }}>
@@ -146,7 +129,6 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
               color="primary"
               startIcon={<Download size={16} />}
               href={file.file_path}
-              target="_blank"
               download={fileName}
               sx={{ textTransform: 'none', fontWeight: 700, px: 3 }}
             >
@@ -163,8 +145,7 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
             variant="outlined"
             size="small"
             startIcon={<ExternalLink size={14} />}
-            href={file.file_path}
-            target="_blank"
+            onClick={handleOpenNewTab}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Open in New Tab
@@ -175,7 +156,6 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
             color="primary"
             startIcon={<Download size={14} />}
             href={file.file_path}
-            target="_blank"
             download={fileName}
             sx={{ textTransform: 'none', fontWeight: 700 }}
           >
