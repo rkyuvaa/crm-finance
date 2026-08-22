@@ -87,7 +87,8 @@ export default function Pipeline({
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(2, 48, 32, 0.07)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = bg ? '#E4EBE1' : '';
+                    const defaultBorder = bg ? '#E4EBE1' : '#E4EBE1';
+                    e.currentTarget.style.borderColor = defaultBorder;
                     e.currentTarget.style.transform = 'none';
                     e.currentTarget.style.boxShadow = 'none';
                   }}

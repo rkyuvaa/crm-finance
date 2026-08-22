@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Tab, Tabs, TablePagination } from '@mui/material';
-import { Plus, Trash2, Edit, MoreVertical } from 'lucide-react';
+import { Plus, Trash2, Edit, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
@@ -153,6 +153,32 @@ export default function LeadsPage() {
       </Paper>
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #E4EBE1' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconButton
+              size="small"
+              aria-label="Previous page"
+              onClick={() => handleChangePage(null, Math.max(0, page - 1))}
+              disabled={page === 0}
+              sx={{ color: page === 0 ? '#B0B8B0' : '#023020' }}
+            >
+              <ChevronLeft size={18} />
+            </IconButton>
+            <span style={{ fontSize: 12, color: '#7A8B80', minWidth: 60, textAlign: 'center' }}>
+              Page {page + 1} of {Math.ceil((data?.total ?? 0) / rowsPerPage) || 1}
+            </span>
+            <IconButton
+              size="small"
+              aria-label="Next page"
+              onClick={() => handleChangePage(null, Math.min(Math.ceil((data?.total ?? 0) / rowsPerPage) - 1, page + 1))}
+              disabled={page >= Math.ceil((data?.total ?? 0) / rowsPerPage) - 1}
+              sx={{ color: page >= Math.ceil((data?.total ?? 0) / rowsPerPage) - 1 ? '#B0B8B0' : '#023020' }}
+            >
+              <ChevronRight size={18} />
+            </IconButton>
+          </div>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           {isFetching && !data ? (
             <LoadingRows rows={8} />
