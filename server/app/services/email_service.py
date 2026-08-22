@@ -4,9 +4,86 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.db.session import SessionLocal
+from app.models.smtp_setting import SmtpSetting
 
 logger = logging.getLogger(__name__)
+
+
+def dispatch_email_smtp(
+    to_email: str,
+    subject: str,
+    plain_text: str,
+    html_content: str,
+    db: Session | None = None,
+) -> tuple[bool, str | None]:
+    """
+    Dispatches email via database SmtpSetting (or config fallback).
+    Returns (success, error_message).
+    """
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+
+    try:
+        smtp_rec = db.query(SmtpSetting).first()
+
+        host = smtp_rec.smtp_host if (smtp_rec and smtp_rec.smtp_host) else getattr(settings, "SMTP_HOST", None)
+        port = smtp_rec.smtp_port if smtp_rec else getattr(settings, "SMTP_PORT", 587)
+        security = (smtp_rec.smtp_security if smtp_rec else "TLS").upper()
+        user = smtp_rec.smtp_user if (smtp_rec and smtp_rec.smtp_user) else getattr(settings, "SMTP_USER", None)
+        password = smtp_rec.smtp_password if (smtp_rec and smtp_rec.smtp_password) else getattr(settings, "SMTP_PASSWORD", None)
+        from_email = (
+            smtp_rec.smtp_from_email if (smtp_rec and smtp_rec.smtp_from_email)
+            else getattr(settings, "SMTP_FROM", f"noreply@{host or 'crmfinance.com'}")
+        )
+        from_name = smtp_rec.smtp_from_name if smtp_rec else "CRMFinance"
+        is_enabled = smtp_rec.is_enabled if smtp_rec else True
+
+        if not is_enabled:
+            logger.info(f"Email service disabled. Simulated dispatch to {to_email}")
+            return True, None
+
+        if not host:
+            logger.info(f"SMTP Host not configured. Simulated email dispatch to {to_email}")
+            return True, None
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{from_name} <{from_email}>" if from_name else from_email
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(plain_text, "plain"))
+        msg.attach(MIMEText(html_content, "html"))
+
+        if security == "SSL":
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
+        else:
+            server = smtplib.SMTP(host, port, timeout=15)
+
+        with server:
+            if security == "TLS":
+                server.starttls()
+
+            if user and password:
+                server.login(user, password)
+
+            server.sendmail(from_email, [to_email], msg.as_string())
+
+        logger.info(f"Email sent successfully via SMTP to {to_email}")
+        return True, None
+
+    except Exception as e:
+        err_msg = str(e)
+        logger.error(f"SMTP Email send failed to {to_email}: {err_msg}")
+        return False, err_msg
+    finally:
+        if close_db:
+            db.close()
 
 
 def send_financier_documents_email(
@@ -16,10 +93,10 @@ def send_financier_documents_email(
     secure_link: str,
     expiry_datetime_str: str,
     company_name: str = "CRMFinance / KIM Vehicle Finance",
+    db: Session | None = None,
 ) -> bool:
     """
     Sends a secure no-login document link email to the financier.
-    Returns True if sent or simulated successfully, False if email dispatch failed.
     """
     subject = f"Documents submitted for review - Lead {lead_ref}"
 
@@ -68,41 +145,11 @@ Regards,
     <div class="notice">
       🔒 <strong>Security Notice:</strong> This link grants read-only access to uploaded documents for Lead {lead_ref} only. No login is required. It expires on <strong>{expiry_datetime_str}</strong>.
     </div>
-    <p style="margin-top: 300px; margin-top: 28px; font-size: 13px; color: #7a8b80;">Regards,<br><strong>{company_name}</strong></p>
+    <p style="margin-top: 28px; font-size: 13px; color: #7a8b80;">Regards,<br><strong>{company_name}</strong></p>
   </div>
 </body>
 </html>
 """
 
-    logger.info(
-        f"FINANCIER DOCUMENT EMAIL [Lead: {lead_ref}] -> To: {to_email} ({financier_name})\n"
-        f"Link: {secure_link}\n"
-        f"Expires: {expiry_datetime_str}"
-    )
-
-    # If SMTP is configured, attempt real SMTP send; otherwise log simulation cleanly
-    smtp_host = getattr(settings, "SMTP_HOST", None)
-    if smtp_host:
-        try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = getattr(settings, "SMTP_FROM", "noreply@crmfinance.com")
-            msg["To"] = to_email
-
-            msg.attach(MIMEText(plain_text, "plain"))
-            msg.attach(MIMEText(html_content, "html"))
-
-            with smtplib.SMTP(smtp_host, getattr(settings, "SMTP_PORT", 587)) as server:
-                server.starttls()
-                smtp_user = getattr(settings, "SMTP_USER", None)
-                smtp_pass = getattr(settings, "SMTP_PASSWORD", None)
-                if smtp_user and smtp_pass:
-                    server.login(smtp_user, smtp_pass)
-                server.sendmail(msg["From"], [to_email], msg.as_string())
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send SMTP email to {to_email}: {e}")
-            return False
-
-    # Default simulated send mode (succeeds & logs link)
-    return True
+    ok, _ = dispatch_email_smtp(to_email, subject, plain_text, html_content, db=db)
+    return ok

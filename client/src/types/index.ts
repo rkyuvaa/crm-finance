@@ -341,6 +341,28 @@ export interface PublicFinancierDocumentView {
   }[];
 }
 
+export interface SmtpSetting {
+  smtp_host?: string | null;
+  smtp_port: number;
+  smtp_security: 'TLS' | 'SSL' | 'NONE';
+  smtp_user?: string | null;
+  has_password: boolean;
+  smtp_from_email?: string | null;
+  smtp_from_name: string;
+  is_enabled: boolean;
+}
+
+export interface SmtpSettingInput {
+  smtp_host?: string | null;
+  smtp_port: number;
+  smtp_security: 'TLS' | 'SSL' | 'NONE';
+  smtp_user?: string | null;
+  smtp_password?: string | null;
+  smtp_from_email?: string | null;
+  smtp_from_name: string;
+  is_enabled: boolean;
+}
+
 export interface CrmTabInput {
   name: string;
   code: string;

@@ -1,4 +1,4 @@
-import { Alert, Button, Divider, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Button, Paper, TextField, Typography } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useChangePasswordMutation, useUpdateProfileMutation } from '@/api/authApi';
 import { setUser } from '@/auth/authSlice';
 import { useToast } from '@/components/ui/ToastHost';
+import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
 import { ROLE_LABELS } from '@/utils/format';
 
 const profileSchema = z.object({
@@ -77,7 +78,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 560 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760 }}>
         <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
           <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Profile</Typography>
           <Typography sx={{ fontSize: 12.5, color: '#7A8B80', mb: 2 }}>
@@ -137,11 +138,7 @@ export default function SettingsPage() {
           </form>
         </Paper>
 
-        <Divider />
-
-        <Typography sx={{ fontSize: 12, color: '#9BA99F' }}>
-          Organization settings, role permissions and notification preferences arrive in a later phase.
-        </Typography>
+        <MailServerConfigCard />
       </div>
     </div>
   );

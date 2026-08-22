@@ -27,6 +27,7 @@ from app.models.financier_token import (
 )
 from app.models.notification import Activity, ActivityLog, ActivityType, Notification, PlannedActivity
 from app.models.pipeline_stage import PipelineStage
+from app.models.smtp_setting import SmtpSetting
 from app.models.user import User
 from app.models.vehicle_model import VehicleModel
 
@@ -58,6 +59,7 @@ __all__ = [
     "PipelineStage",
     "PlannedActivity",
     "Sanction",
+    "SmtpSetting",
     "User",
     "UserRole",
     "VehicleModel",
