@@ -1,13 +1,17 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+logger = logging.getLogger(__name__)
+
 from app.core.deps import can_access_application, get_current_user, require_application_access
 from app.db.session import get_db
 from app.models import (
     Activity,
+    ActivityLog,
     ActivityType,
     Application,
     ApplicationStatus,
