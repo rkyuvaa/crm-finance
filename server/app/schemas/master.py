@@ -163,3 +163,90 @@ class CrmTabOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CrmTabFieldCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    label: str = Field(min_length=1, max_length=120)
+    field_type: str = "text"
+    is_required: bool = False
+    is_visible: bool = True
+    is_readonly: bool = False
+    is_searchable: bool = True
+    is_filterable: bool = True
+    is_sortable: bool = True
+    display_order: int = 0
+    placeholder: str | None = None
+    help_text: str | None = None
+    default_value: str | None = None
+    options: list[dict] | None = None
+    file_config: dict | None = None
+    field_permissions: dict | None = None
+    stage_rules: dict | None = None
+
+
+class CrmTabFieldUpdate(BaseModel):
+    name: str | None = None
+    label: str | None = None
+    field_type: str | None = None
+    is_required: bool | None = None
+    is_visible: bool | None = None
+    is_readonly: bool | None = None
+    is_searchable: bool | None = None
+    is_filterable: bool | None = None
+    is_sortable: bool | None = None
+    is_archived: bool | None = None
+    display_order: int | None = None
+    placeholder: str | None = None
+    help_text: str | None = None
+    default_value: str | None = None
+    options: list[dict] | None = None
+    file_config: dict | None = None
+    field_permissions: dict | None = None
+    stage_rules: dict | None = None
+
+
+class CrmTabFieldOut(BaseModel):
+    id: int
+    tab_id: int
+    name: str
+    label: str
+    field_type: str
+    is_required: bool
+    is_visible: bool
+    is_readonly: bool
+    is_searchable: bool
+    is_filterable: bool
+    is_sortable: bool
+    is_archived: bool
+    display_order: int
+    placeholder: str | None = None
+    help_text: str | None = None
+    default_value: str | None = None
+    options: list[dict] | None = None
+    file_config: dict | None = None
+    field_permissions: dict | None = None
+    stage_rules: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CrmLeadCustomFieldValueSave(BaseModel):
+    field_id: int
+    value: str | None = None
+    file_metadata: dict | None = None
+
+
+class CrmLeadCustomFieldValueOut(BaseModel):
+    id: int
+    application_id: int
+    field_id: int
+    value: str | None = None
+    file_metadata: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+

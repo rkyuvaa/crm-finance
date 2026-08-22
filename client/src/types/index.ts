@@ -168,6 +168,72 @@ export interface CrmTabConfig {
   updated_at: string;
 }
 
+export interface CrmTabFieldOption {
+  label: string;
+  value: string;
+  default?: boolean;
+}
+
+export interface CrmTabFieldConfig {
+  id: number;
+  tab_id: number;
+  name: string;
+  label: string;
+  field_type: 'text' | 'numeric' | 'date' | 'boolean' | 'toggle' | 'dropdown' | 'file';
+  is_required: boolean;
+  is_visible: boolean;
+  is_readonly: boolean;
+  is_searchable: boolean;
+  is_filterable: boolean;
+  is_sortable: boolean;
+  is_archived: boolean;
+  display_order: number;
+  placeholder?: string | null;
+  help_text?: string | null;
+  default_value?: string | null;
+  options?: CrmTabFieldOption[] | null;
+  file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
+  field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
+  stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrmTabFieldInput {
+  name: string;
+  label: string;
+  field_type: string;
+  is_required: boolean;
+  is_visible: boolean;
+  is_readonly: boolean;
+  is_searchable: boolean;
+  is_filterable: boolean;
+  is_sortable: boolean;
+  display_order: number;
+  placeholder?: string | null;
+  help_text?: string | null;
+  default_value?: string | null;
+  options?: CrmTabFieldOption[] | null;
+  file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
+  field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
+  stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+}
+
+export interface CrmLeadCustomFieldValue {
+  id: number;
+  application_id: number;
+  field_id: number;
+  value?: string | null;
+  file_metadata?: {
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CrmTabInput {
   name: string;
   code: string;

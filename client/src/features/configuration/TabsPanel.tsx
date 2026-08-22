@@ -29,7 +29,7 @@ import {
   TableRow,
   TextField,
 } from '@mui/material';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 
 import {
   useCreateTabMutation,
@@ -42,6 +42,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
 import type { CrmTabConfig, StageConfig } from '@/types';
+import FieldBuilderModal from './FieldBuilderModal';
 
 const ROLES = [
   { key: 'ADMIN', label: 'Admin' },
@@ -59,6 +60,7 @@ export default function TabsPanel() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTab, setEditingTab] = useState<CrmTabConfig | null>(null);
+  const [fieldBuilderTab, setFieldBuilderTab] = useState<CrmTabConfig | null>(null);
 
   const handleDelete = async (id: number, name: string) => {
     if (!window.confirm(`Are you sure you want to delete tab "${name}"?`)) return;
@@ -189,6 +191,15 @@ export default function TabsPanel() {
                       <Switch checked={tab.is_active} onChange={() => handleToggleActive(tab)} color="success" />
                     </TableCell>
                     <TableCell align="right">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Settings2 size={14} />}
+                        onClick={() => setFieldBuilderTab(tab)}
+                        sx={{ mr: 1, fontSize: 11, textTransform: 'none', borderRadius: 1.5 }}
+                      >
+                        Configure Fields
+                      </Button>
                       <IconButton
                         size="small"
                         onClick={() => {
@@ -209,6 +220,15 @@ export default function TabsPanel() {
           </Table>
         </TableContainer>
       </Paper>
+
+      {fieldBuilderTab && (
+        <FieldBuilderModal
+          open={Boolean(fieldBuilderTab)}
+          tabId={fieldBuilderTab.id}
+          tabName={fieldBuilderTab.name}
+          onClose={() => setFieldBuilderTab(null)}
+        />
+      )}
 
       {dialogOpen && (
         <CreateTabWizardDialog

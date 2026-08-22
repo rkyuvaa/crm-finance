@@ -9,6 +9,7 @@ from app.models.application import (
     Verification,
 )
 from app.models.crm_tab import CrmTab, CrmTabFilter, CrmTabStageMapping
+from app.models.crm_tab_field import CrmLeadCustomFieldValue, CrmTabField
 from app.models.enums import (
     ApplicationStatus,
     DeliveryStatus,
@@ -31,7 +32,9 @@ __all__ = [
     "Application",
     "ApplicationSequence",
     "ApplicationStatus",
+    "CrmLeadCustomFieldValue",
     "CrmTab",
+    "CrmTabField",
     "CrmTabFilter",
     "CrmTabStageMapping",
     "Delivery",

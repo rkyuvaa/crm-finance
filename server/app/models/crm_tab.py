@@ -35,6 +35,9 @@ class CrmTab(Base):
     filter_rules: Mapped[list["CrmTabFilter"]] = relationship(
         back_populates="tab", cascade="all, delete-orphan", lazy="joined"
     )
+    fields: Mapped[list["CrmTabField"]] = relationship(
+        back_populates="tab", cascade="all, delete-orphan", order_by="CrmTabField.display_order"
+    )
 
 
 class CrmTabStageMapping(Base):

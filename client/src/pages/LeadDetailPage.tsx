@@ -39,6 +39,7 @@ import {
 } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import StatusBadge from '@/components/ui/StatusBadge';
+import DynamicFieldEngine from '@/components/fields/DynamicFieldEngine';
 import { formatDate } from '@/utils/format';
 import type { ApplicationStatus } from '@/types';
 
@@ -544,52 +545,13 @@ export default function LeadDetailPage() {
               </div>
             </form>
           ) : (
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#16231B', marginBottom: 6 }}>
-                {crmTabs.find((t) => t.code === activeLeadTabCode)?.name ?? 'Tab Details'}
-              </div>
-              <div style={{ fontSize: 13, color: '#7A8B80', marginBottom: 16 }}>
-                {crmTabs.find((t) => t.code === activeLeadTabCode)?.description ||
-                  `Fields & documents for lead ${lead.app_no} under ${activeLeadTabCode.replace('_', ' ')}`}
-              </div>
-
-              {/* Tab Content Section (e.g. Document Upload) */}
-              <Box sx={{ border: '1px dashed #C9E0C6', borderRadius: '12px', p: 3, background: '#F8FAF8', textAlign: 'center', mb: 2 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#04552B', marginBottom: 6 }}>
-                  Upload & Manage Documents for {lead.customer_name}
-                </div>
-                <div style={{ fontSize: 12.5, color: '#667085', marginBottom: 16 }}>
-                  Upload KYC, Aadhaar, PAN Card, Bank Statements, or Income Proofs required for this application.
-                </div>
-                <Button variant="outlined" color="primary" onClick={() => showToast('Document file uploader opened', 'info')}>
-                  + Select & Upload Document
-                </Button>
-              </Box>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>Aadhaar Card / ID Proof</div>
-                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Required for KYC verification</div>
-                  </div>
-                  <Chip label="Verified" color="success" size="small" />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>PAN Card</div>
-                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Required for CIBIL check & finance approval</div>
-                  </div>
-                  <Chip label="Verified" color="success" size="small" />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>Income Proof / Bank Statement</div>
-                    <div style={{ fontSize: 11, color: '#7A8B80' }}>Last 6 months bank statement</div>
-                  </div>
-                  <Chip label="Pending Upload" color="warning" size="small" />
-                </div>
-              </div>
-            </div>
+            <DynamicFieldEngine
+              tabId={crmTabs.find((t) => t.code === activeLeadTabCode)?.id || 0}
+              tabCode={activeLeadTabCode}
+              applicationId={lead.id}
+              customerName={lead.customer_name}
+              currentStageKey={lead.status}
+            />
           )}
         </Paper>
 

@@ -4,6 +4,8 @@ import type {
   ActivityType,
   ActivityTypeInput,
   CrmTabConfig,
+  CrmTabFieldConfig,
+  CrmTabFieldInput,
   CrmTabInput,
   FinanceCompanyOption,
   StageConfig,
@@ -94,6 +96,26 @@ export const mastersApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/masters/tabs/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Tabs'],
     }),
+    tabFields: build.query<CrmTabFieldConfig[], number>({
+      query: (tabId) => ({ url: `/masters/tabs/${tabId}/fields` }),
+      providesTags: ['Tabs'],
+    }),
+    createTabField: build.mutation<CrmTabFieldConfig, { tabId: number; body: CrmTabFieldInput }>({
+      query: ({ tabId, body }) => ({ url: `/masters/tabs/${tabId}/fields`, method: 'POST', body }),
+      invalidatesTags: ['Tabs'],
+    }),
+    updateTabField: build.mutation<CrmTabFieldConfig, { tabId: number; fieldId: number; body: Partial<CrmTabFieldInput> }>({
+      query: ({ tabId, fieldId, body }) => ({ url: `/masters/tabs/${tabId}/fields/${fieldId}`, method: 'PATCH', body }),
+      invalidatesTags: ['Tabs'],
+    }),
+    deleteTabField: build.mutation<void, { tabId: number; fieldId: number }>({
+      query: ({ tabId, fieldId }) => ({ url: `/masters/tabs/${tabId}/fields/${fieldId}`, method: 'DELETE' }),
+      invalidatesTags: ['Tabs'],
+    }),
+    reorderTabFields: build.mutation<CrmTabFieldConfig[], { tabId: number; fieldIds: number[] }>({
+      query: ({ tabId, fieldIds }) => ({ url: `/masters/tabs/${tabId}/fields/reorder`, method: 'POST', body: fieldIds }),
+      invalidatesTags: ['Tabs'],
+    }),
   }),
 });
 
@@ -118,4 +140,9 @@ export const {
   useCreateTabMutation,
   useUpdateTabMutation,
   useDeleteTabMutation,
+  useTabFieldsQuery,
+  useCreateTabFieldMutation,
+  useUpdateTabFieldMutation,
+  useDeleteTabFieldMutation,
+  useReorderTabFieldsMutation,
 } = mastersApi;

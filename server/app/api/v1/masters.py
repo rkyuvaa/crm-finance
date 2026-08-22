@@ -11,6 +11,7 @@ from app.models import (
     Application,
     ApplicationStatus,
     CrmTab,
+    CrmTabField,
     CrmTabFilter,
     CrmTabStageMapping,
     FinanceCompany,
@@ -24,6 +25,9 @@ from app.schemas.master import (
     ActivityTypeOut,
     ActivityTypeUpdate,
     CrmTabCreate,
+    CrmTabFieldCreate,
+    CrmTabFieldOut,
+    CrmTabFieldUpdate,
     CrmTabFilterOut,
     CrmTabOut,
     CrmTabUpdate,
@@ -550,3 +554,137 @@ def _ensure_unique(db: Session, model, column, value: str, exclude_id: int | Non
         query = query.filter(model.id != exclude_id)
     if query.first() is not None:
         raise _conflict("An entry with this name already exists")
+
+
+# --- Dynamic Tab Field Management Endpoints ---
+
+@router.get("/tabs/{tab_id}/fields", response_model=list[CrmTabFieldOut])
+def list_tab_fields(
+    tab_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    fields = (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.is_archived == False)
+        .order_by(CrmTabField.display_order.asc(), CrmTabField.id.asc())
+        .all()
+    )
+    return fields
+
+
+@router.post("/tabs/{tab_id}/fields", response_model=CrmTabFieldOut, status_code=status.HTTP_201_CREATED)
+def create_tab_field(
+    tab_id: int,
+    payload: CrmTabFieldCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    # Check for duplicate field name in same tab
+    existing = (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.name == payload.name, CrmTabField.is_archived == False)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Field with name '{payload.name}' already exists in this tab")
+
+    field = CrmTabField(
+        tab_id=tab_id,
+        name=payload.name,
+        label=payload.label,
+        field_type=payload.field_type,
+        is_required=payload.is_required,
+        is_visible=payload.is_visible,
+        is_readonly=payload.is_readonly,
+        is_searchable=payload.is_searchable,
+        is_filterable=payload.is_filterable,
+        is_sortable=payload.is_sortable,
+        display_order=payload.display_order,
+        placeholder=payload.placeholder,
+        help_text=payload.help_text,
+        default_value=payload.default_value,
+        options=payload.options,
+        file_config=payload.file_config,
+        field_permissions=payload.field_permissions,
+        stage_rules=payload.stage_rules,
+    )
+    db.add(field)
+    db.commit()
+    db.refresh(field)
+    return field
+
+
+@router.patch("/tabs/{tab_id}/fields/{field_id}", response_model=CrmTabFieldOut)
+def update_tab_field(
+    tab_id: int,
+    field_id: int,
+    payload: CrmTabFieldUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    field = db.get(CrmTabField, field_id)
+    if not field or field.tab_id != tab_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Field not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name") is not None and data["name"] != field.name:
+        dup = (
+            db.query(CrmTabField)
+            .filter(CrmTabField.tab_id == tab_id, CrmTabField.name == data["name"], CrmTabField.id != field_id, CrmTabField.is_archived == False)
+            .first()
+        )
+        if dup:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Field name '{data['name']}' already exists in this tab")
+
+    for key, value in data.items():
+        setattr(field, key, value)
+
+    db.commit()
+    db.refresh(field)
+    return field
+
+
+@router.delete("/tabs/{tab_id}/fields/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tab_field(
+    tab_id: int,
+    field_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    field = db.get(CrmTabField, field_id)
+    if not field or field.tab_id != tab_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Field not found")
+
+    # Soft delete / archive to protect historical data
+    field.is_archived = True
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/tabs/{tab_id}/fields/reorder", response_model=list[CrmTabFieldOut])
+def reorder_tab_fields(
+    tab_id: int,
+    field_ids: list[int],
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    for idx, f_id in enumerate(field_ids):
+        db.query(CrmTabField).filter(CrmTabField.id == f_id, CrmTabField.tab_id == tab_id).update({CrmTabField.display_order: idx})
+    db.commit()
+
+    return (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.is_archived == False)
+        .order_by(CrmTabField.display_order.asc())
+        .all()
+    )
+

@@ -11,6 +11,7 @@ from app.models import (
     ActivityType,
     Application,
     ApplicationStatus,
+    CrmLeadCustomFieldValue,
     Disbursement,
     DisbursementStatus,
     FinanceCompany,
@@ -369,3 +370,61 @@ def delete_application(
     db.delete(app)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Custom Field Values Endpoints ---
+
+from app.schemas.master import CrmLeadCustomFieldValueOut, CrmLeadCustomFieldValueSave
+
+
+@router.get("/{app_id}/custom-fields", response_model=list[CrmLeadCustomFieldValueOut])
+def get_custom_field_values(
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    values = (
+        db.query(CrmLeadCustomFieldValue)
+        .filter(CrmLeadCustomFieldValue.application_id == app.id)
+        .all()
+    )
+    return values
+
+
+@router.post("/{app_id}/custom-fields", response_model=list[CrmLeadCustomFieldValueOut])
+def save_custom_field_values(
+    payload: list[CrmLeadCustomFieldValueSave],
+    app: Application = Depends(require_application_access),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    saved_list = []
+    for item in payload:
+        existing = (
+            db.query(CrmLeadCustomFieldValue)
+            .filter(
+                CrmLeadCustomFieldValue.application_id == app.id,
+                CrmLeadCustomFieldValue.field_id == item.field_id,
+            )
+            .first()
+        )
+        if existing:
+            existing.value = item.value
+            if item.file_metadata is not None:
+                existing.file_metadata = item.file_metadata
+            saved_list.append(existing)
+        else:
+            rec = CrmLeadCustomFieldValue(
+                application_id=app.id,
+                field_id=item.field_id,
+                value=item.value,
+                file_metadata=item.file_metadata,
+            )
+            db.add(rec)
+            saved_list.append(rec)
+
+    touch_application(db, app)
+    db.commit()
+    for item in saved_list:
+        db.refresh(item)
+    return saved_list

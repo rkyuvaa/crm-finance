@@ -4,6 +4,7 @@ import type {
   ActivityLogEntry,
   ApplicationItem,
   ApplicationListResponse,
+  CrmLeadCustomFieldValue,
   PlannedActivityInput,
   PlannedActivityItem,
 } from '@/types';
@@ -88,6 +89,21 @@ export const applicationsApi = baseApi.injectEndpoints({
         { type: 'Applications', id: appId },
       ],
     }),
+    customFieldValues: build.query<CrmLeadCustomFieldValue[], number>({
+      query: (appId) => ({ url: `/applications/${appId}/custom-fields` }),
+      providesTags: (_res, _err, appId) => [{ type: 'Applications', id: appId }],
+    }),
+    saveCustomFieldValues: build.mutation<
+      CrmLeadCustomFieldValue[],
+      { appId: number; body: Array<{ field_id: number; value?: string | null; file_metadata?: any }> }
+    >({
+      query: ({ appId, body }) => ({
+        url: `/applications/${appId}/custom-fields`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { appId }) => [{ type: 'Applications', id: appId }],
+    }),
   }),
 });
 
@@ -101,4 +117,6 @@ export const {
   usePlannedActivitiesQuery,
   useCreatePlannedActivityMutation,
   useUpdatePlannedActivityMutation,
+  useCustomFieldValuesQuery,
+  useSaveCustomFieldValuesMutation,
 } = applicationsApi;
