@@ -44,9 +44,9 @@ class Application(Base):
         ForeignKey("finance_companies.id"), nullable=True
     )
     assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True
+        DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp(), index=True
     )
 
     finance_company: Mapped["FinanceCompany | None"] = relationship(lazy="joined")

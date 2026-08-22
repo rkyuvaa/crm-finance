@@ -9,6 +9,7 @@ class FinanceCompany(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(120), nullable=True)
     total_apps: Mapped[int] = mapped_column(Integer, default=0)
     approved: Mapped[int] = mapped_column(Integer, default=0)
     rejected: Mapped[int] = mapped_column(Integer, default=0)

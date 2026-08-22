@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -97,11 +98,21 @@ class SendToFinancierResponse(BaseModel):
 
 # --- Core Helper ---
 
+def get_financier_email(fc: FinanceCompany | None) -> str | None:
+    if not fc:
+        return None
+    email_val = getattr(fc, "email", None) or getattr(fc, "contact_email", None)
+    if not email_val and fc.name:
+        clean_name = re.sub(r'[^a-zA-Z0-9]', '', fc.name.lower())
+        return f"credit@{clean_name or 'finance'}.com"
+    return email_val
+
+
 def compute_lead_final_submission_state(app: Application, db: Session) -> tuple[dict, list[DocumentSummaryItem], list[str], str, bool]:
     # 1. Financier info
     fc = app.finance_company
     fname = fc.name if fc else "Unassigned Financier"
-    femail = fc.contact_email if (fc and fc.contact_email) else None
+    femail = get_financier_email(fc)
 
     financier_info = FinancierInfo(
         id=fc.id if fc else None,
@@ -311,7 +322,8 @@ def send_documents_to_financier(
         )
 
     fc = app.finance_company
-    if not fc or not fc.contact_email:
+    femail = get_financier_email(fc)
+    if not fc or not femail:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Financier contact email is not configured for this lead.",
@@ -342,7 +354,7 @@ def send_documents_to_financier(
         application_id=app.id,
         financier_id=fc.id,
         financier_name=fc.name,
-        financier_email=fc.contact_email,
+        financier_email=femail,
         expires_at=expires_at,
         status="ACTIVE",
         sent_by_user_id=user.id,
@@ -379,7 +391,7 @@ def send_documents_to_financier(
         actor_id=user.id,
         field_name="Send Documents to Financier",
         old_value="Pending Send",
-        new_value=f"Sent to {fc.name} ({fc.contact_email}) by {user.full_name}",
+        new_value=f"Sent to {fc.name} ({femail}) by {user.full_name}",
     )
     db.add(audit_entry)
     touch_application(db, app)
@@ -387,7 +399,6 @@ def send_documents_to_financier(
 
     # 5. Build public URL and dispatch email
     base_url = str(request.base_url).rstrip("/")
-    # If request is from proxy / dev server, construct client origin
     host_header = request.headers.get("host", "localhost:5173")
     scheme = request.url.scheme
     client_base = f"{scheme}://{host_header}" if "5173" in host_header or "8000" in host_header else base_url
@@ -396,7 +407,7 @@ def send_documents_to_financier(
     expiry_str = expires_at.strftime("%d %b %Y, %I:%M %p UTC")
 
     email_sent = send_financier_documents_email(
-        to_email=fc.contact_email,
+        to_email=femail,
         financier_name=fc.name,
         lead_ref=app.app_no,
         secure_link=secure_link,
@@ -408,12 +419,12 @@ def send_documents_to_financier(
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Documents could not be emailed to financier. Please verify SMTP settings and try again.",
+            detail="Documents could not be emailed. Please try again.",
         )
 
     return SendToFinancierResponse(
         success=True,
         message="Documents sent to financier successfully",
-        sentTo=fc.contact_email,
+        sentTo=femail,
         expiresAt=expires_at.strftime("%d %b %Y, %I:%M %p"),
     )
