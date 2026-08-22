@@ -15,6 +15,7 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage'));
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
+const PublicFinancierDocumentView = lazy(() => import('@/pages/PublicFinancierDocumentView'));
 
 function RouteFallback() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/financier/documents-view/:token" element={<PublicFinancierDocumentView />} />
             <Route
               element={
                 <RequireAuth>

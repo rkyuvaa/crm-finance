@@ -5,8 +5,10 @@ import type {
   ApplicationItem,
   ApplicationListResponse,
   CrmLeadCustomFieldValue,
+  FinalSubmissionSummary,
   PlannedActivityInput,
   PlannedActivityItem,
+  PublicFinancierDocumentView,
   VerificationDocument,
 } from '@/types';
 
@@ -120,6 +122,24 @@ export const applicationsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_res, _err, { appId }) => [{ type: 'Applications', id: appId }],
     }),
+    finalSubmission: build.query<FinalSubmissionSummary, number>({
+      query: (id) => ({ url: `/applications/${id}/final-submission` }),
+      providesTags: (_res, _err, id) => [{ type: 'Applications', id }],
+    }),
+    sendToFinancier: build.mutation<
+      { success: boolean; message: string; sentTo: string; expiresAt: string },
+      { appId: number; confirm?: boolean }
+    >({
+      query: ({ appId, confirm = true }) => ({
+        url: `/applications/${appId}/final-submission/send-to-financier`,
+        method: 'POST',
+        body: { confirm },
+      }),
+      invalidatesTags: (_res, _err, { appId }) => [{ type: 'Applications', id: appId }],
+    }),
+    publicFinancierDocumentView: build.query<PublicFinancierDocumentView, string>({
+      query: (token) => ({ url: `/public/financier/documents/${token}` }),
+    }),
   }),
 });
 
@@ -137,4 +157,7 @@ export const {
   useSaveCustomFieldValuesMutation,
   useVerificationDocumentsQuery,
   useToggleVerifyDocumentMutation,
+  useFinalSubmissionQuery,
+  useSendToFinancierMutation,
+  usePublicFinancierDocumentViewQuery,
 } = applicationsApi;

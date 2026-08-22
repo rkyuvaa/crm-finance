@@ -540,8 +540,18 @@ def seed() -> None:
                 is_default=False,
                 visibility_type="EVERYONE",
             )
+            final_sub_tab = CrmTab(
+                name="Final Submission",
+                code="final_submission",
+                description="Review document readiness and send secure no-login link to financier",
+                display_order=3,
+                is_active=True,
+                is_default=False,
+                visibility_type="EVERYONE",
+            )
             db.add(doc_tab)
             db.add(verif_tab)
+            db.add(final_sub_tab)
             db.flush()
 
             # Seed default custom fields for Document Upload tab

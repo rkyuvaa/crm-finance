@@ -266,6 +266,75 @@ export interface VerificationDocument {
   verified_at?: string | null;
 }
 
+export interface FinalSubmissionSummary {
+  leadId: number;
+  leadReferenceNumber: string;
+  financier: {
+    id?: number | null;
+    name: string;
+    email?: string | null;
+  };
+  overallStatus: 'Documents Missing' | 'Quality Failed' | 'Pending Verification' | 'Ready to Send' | 'Sent to Financier' | 'Link Expired';
+  canSend: boolean;
+  blockers: string[];
+  counts: {
+    total: number;
+    mandatory: number;
+    uploaded: number;
+    pendingUpload: number;
+    qualityApproved: number;
+    qualityFailed: number;
+    verified: number;
+    pendingVerification: number;
+  };
+  documents: {
+    id: number;
+    name: string;
+    type: string;
+    mandatory: boolean;
+    uploadStatus: 'UPLOADED' | 'PENDING';
+    fileName?: string | null;
+    qualityStatus: 'GOOD' | 'POOR' | 'NOT_CHECKED' | '-';
+    qualityScore?: number | null;
+    verifiedBy?: string | null;
+    verifiedOn?: string | null;
+    fileMetadata?: {
+      file_name: string;
+      file_path: string;
+      file_size?: number;
+      mime_type?: string;
+    } | null;
+  }[];
+  lastSend?: {
+    status: string;
+    sentToName: string;
+    sentToEmail: string;
+    sentBy?: string | null;
+    sentOn: string;
+    expiresAt: string;
+    accessCount: number;
+  } | null;
+}
+
+export interface PublicFinancierDocumentView {
+  leadReferenceNumber: string;
+  financierName: string;
+  expiresAt: string;
+  documents: {
+    id: number;
+    name: string;
+    type: string;
+    fileName: string;
+    uploadStatus: string;
+    qualityStatus: string;
+    qualityScore?: number | null;
+    verifiedBy?: string | null;
+    verifiedOn?: string | null;
+    previewUrl: string;
+    downloadUrl: string;
+  }[];
+}
+
 export interface CrmTabInput {
   name: string;
   code: string;

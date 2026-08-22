@@ -20,6 +20,11 @@ from app.models.enums import (
     VerificationStatus,
 )
 from app.models.finance_company import FinanceCompany
+from app.models.financier_token import (
+    FinancierDocumentAccessLog,
+    FinancierDocumentAccessToken,
+    FinancierDocumentSendItem,
+)
 from app.models.notification import Activity, ActivityLog, ActivityType, Notification, PlannedActivity
 from app.models.pipeline_stage import PipelineStage
 from app.models.user import User
@@ -46,6 +51,9 @@ __all__ = [
     "FinanceCompany",
     "FinanceStatus",
     "FinanceSubmission",
+    "FinancierDocumentAccessLog",
+    "FinancierDocumentAccessToken",
+    "FinancierDocumentSendItem",
     "Notification",
     "PipelineStage",
     "PlannedActivity",
