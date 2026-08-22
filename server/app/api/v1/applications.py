@@ -223,25 +223,34 @@ def get_application_activity(
     app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
 ):
-    logs = (
-        db.query(ActivityLog)
-        .filter(ActivityLog.application_id == app.id)
-        .order_by(ActivityLog.created_at.desc())
-        .all()
-    )
-    return [
-        ActivityLogOut(
-            id=log.id,
-            application_id=log.application_id,
-            actor_id=log.actor_id,
-            actor_name=log.actor.full_name if log.actor else None,
-            field_name=log.field_name,
-            old_value=log.old_value,
-            new_value=log.new_value,
-            created_at=log.created_at,
+    try:
+        logs = (
+            db.query(ActivityLog)
+            .filter(ActivityLog.application_id == app.id)
+            .order_by(ActivityLog.created_at.desc())
+            .all()
         )
-        for log in logs
-    ]
+        res = []
+        for log in logs:
+            actor_name = None
+            if getattr(log, "actor", None):
+                actor_name = getattr(log.actor, "full_name", None) or getattr(log.actor, "email", None)
+            res.append(
+                ActivityLogOut(
+                    id=log.id,
+                    application_id=log.application_id,
+                    actor_id=log.actor_id,
+                    actor_name=actor_name,
+                    field_name=log.field_name,
+                    old_value=log.old_value,
+                    new_value=log.new_value,
+                    created_at=log.created_at,
+                )
+            )
+        return res
+    except Exception as e:
+        logger.error(f"Error fetching application activity: {e}")
+        return []
 
 
 @router.post("", response_model=ApplicationOut, status_code=status.HTTP_201_CREATED)

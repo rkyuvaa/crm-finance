@@ -93,13 +93,44 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
           </Paper>
         ) : isPdf ? (
           <Box sx={{ width: '100%', height: '520px', background: '#FFFFFF', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E4EBE1' }}>
-            <iframe
-              src={file.file_path}
-              title={fileName}
+            <object
+              data={file.file_path}
+              type="application/pdf"
               width="100%"
               height="100%"
-              style={{ border: 'none' }}
-            />
+              style={{ borderRadius: '12px' }}
+            >
+              <Paper sx={{ p: 4, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <FileText size={40} color="#087A3D" style={{ marginBottom: 12 }} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#16231B', mb: 1 }}>
+                  {fileName}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#7A8B80', mb: 2.5, maxWidth: 380 }}>
+                  Browser security policies restrict inline PDF preview for temporary local files. You can open or download the file directly below.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<ExternalLink size={16} />}
+                    href={file.file_path}
+                    target="_blank"
+                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                  >
+                    Open PDF in New Tab
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download size={16} />}
+                    href={file.file_path}
+                    download={fileName}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  >
+                    Download PDF
+                  </Button>
+                </Box>
+              </Paper>
+            </object>
           </Box>
         ) : (
           <Paper sx={{ p: 5, textAlign: 'center', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '16px', maxWidth: 420 }}>
