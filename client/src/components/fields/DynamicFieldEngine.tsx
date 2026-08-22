@@ -11,12 +11,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Save, Upload, FileText, Download } from 'lucide-react';
+import { Save, Upload, FileText, Download, Eye } from 'lucide-react';
 
 import { useTabFieldsQuery } from '@/api/mastersApi';
 import { useCustomFieldValuesQuery, useSaveCustomFieldValuesMutation } from '@/api/applicationsApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useAppSelector } from '@/app/hooks';
+import DocumentPreviewDialog, { type PreviewFileMeta } from '@/components/ui/DocumentPreviewDialog';
 import type { CrmTabFieldConfig } from '@/types';
 
 interface Props {
@@ -43,6 +44,7 @@ export default function DynamicFieldEngine({
 
   const [formState, setFormState] = useState<Record<number, string>>({});
   const [fileMetadataState, setFileMetadataState] = useState<Record<number, any>>({});
+  const [previewFile, setPreviewFile] = useState<PreviewFileMeta | null>(null);
 
   useEffect(() => {
     if (storedValues && storedValues.length > 0) {
@@ -277,26 +279,59 @@ export default function DynamicFieldEngine({
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <Button
                             size="small"
+                            variant="contained"
+                            color="primary"
+                            startIcon={<Eye size={14} />}
+                            onClick={() =>
+                              setPreviewFile({
+                                file_name: fileMeta.file_name,
+                                file_path: fileMeta.file_path,
+                                file_size: fileMeta.file_size,
+                                mime_type: fileMeta.mime_type,
+                                field_label: f.label,
+                              })
+                            }
+                            sx={{ textTransform: 'none', fontSize: 11.5, fontWeight: 700 }}
+                          >
+                            Preview
+                          </Button>
+                          <Button
+                            size="small"
                             variant="text"
                             startIcon={<Download size={14} />}
                             href={fileMeta.file_path}
                             target="_blank"
                             download={fileMeta.file_name}
+                            sx={{ textTransform: 'none', fontSize: 11.5 }}
                           >
                             Download
                           </Button>
-                          <Button size="small" color="error" onClick={() => handleRemoveFile(f.id)}>
+                          <Button size="small" color="error" onClick={() => handleRemoveFile(f.id)} sx={{ textTransform: 'none', fontSize: 11.5 }}>
                             Delete
                           </Button>
                         </Box>
                       </Box>
                       {fileMeta.mime_type?.startsWith('image/') && (
-                        <Box sx={{ mt: 1.5, textAlign: 'center' }}>
+                        <Box
+                          sx={{ mt: 1.5, textAlign: 'center', cursor: 'pointer' }}
+                          onClick={() =>
+                            setPreviewFile({
+                              file_name: fileMeta.file_name,
+                              file_path: fileMeta.file_path,
+                              file_size: fileMeta.file_size,
+                              mime_type: fileMeta.mime_type,
+                              field_label: f.label,
+                            })
+                          }
+                        >
                           <img
                             src={fileMeta.file_path}
                             alt="Preview"
-                            style={{ maxHeight: 120, borderRadius: 6, border: '1px solid #E4EBE1' }}
+                            style={{ maxHeight: 120, borderRadius: 6, border: '1px solid #E4EBE1', transition: 'transform 0.2s' }}
                           />
+                          <Typography variant="caption" sx={{ display: 'block', color: '#087A3D', fontWeight: 600, mt: 0.5 }}>
+                            Click image to open full popup preview
+                          </Typography>
                         </Box>
                       )}
                     </Paper>
@@ -340,6 +375,14 @@ export default function DynamicFieldEngine({
           Save Custom Fields
         </Button>
       </Box>
+
+      {previewFile && (
+        <DocumentPreviewDialog
+          open={Boolean(previewFile)}
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </Box>
   );
 }
