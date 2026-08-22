@@ -178,13 +178,13 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
                     </TableCell>
 
                     <TableCell>
-                      <Box sx={{ minWidth: 140 }}>
+                      <Box sx={{ minWidth: 160 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                           <span style={{ fontSize: 12.5, fontWeight: 800, color: scoreColor === 'error' ? '#D32F2F' : scoreColor === 'warning' ? '#B45309' : '#04552B' }}>
                             {score} / 100
                           </span>
                           <Chip
-                            label={score >= 80 ? 'Excellent' : score >= 50 ? 'Moderate' : 'Low'}
+                            label={score >= 80 ? 'Excellent' : score >= 50 ? 'Moderate' : 'Low / Blurry'}
                             color={scoreColor}
                             size="small"
                             sx={{ height: 18, fontSize: 9.5, fontWeight: 700 }}
@@ -196,14 +196,14 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
                           color={scoreColor}
                           sx={{ height: 6, borderRadius: 3 }}
                         />
-                        {isLowQuality && (
+                        {(isLowQuality || doc.quality_analysis?.warning) && (
                           <Chip
                             icon={<AlertTriangle size={12} />}
-                            label="Low Quality — Manual Review Required"
+                            label={doc.quality_analysis?.warning || "Low Quality — Manual Review Required"}
                             color="error"
                             variant="outlined"
                             size="small"
-                            sx={{ mt: 1, height: 20, fontSize: 9.5, fontWeight: 700 }}
+                            sx={{ mt: 1, height: 'auto', py: 0.3, fontSize: 9.5, fontWeight: 700, whiteSpace: 'normal', '& .MuiChip-label': { whiteSpace: 'normal' } }}
                           />
                         )}
                       </Box>

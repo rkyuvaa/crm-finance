@@ -486,17 +486,16 @@ def get_verification_documents(
         if not val.file_metadata:
             continue
         meta = val.file_metadata
-        if val.quality_score is None:
-            score, breakdown = analyze_document_quality(
-                meta.get("file_name", "document"),
-                meta.get("mime_type"),
-                meta.get("file_size"),
-                meta.get("file_path"),
-                val.field.label if val.field else "Document",
-            )
-            val.quality_score = score
-            val.quality_analysis = breakdown
-            db.commit()
+        score, breakdown = analyze_document_quality(
+            meta.get("file_name", "document"),
+            meta.get("mime_type"),
+            meta.get("file_size"),
+            meta.get("file_path"),
+            val.field.label if val.field else "Document",
+        )
+        val.quality_score = score
+        val.quality_analysis = breakdown
+        db.commit()
 
         vname = None
         if val.verified_by:
