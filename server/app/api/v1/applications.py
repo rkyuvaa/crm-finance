@@ -183,9 +183,15 @@ def _filtered_query(
         )
     if stage_key:
         from app.models.pipeline_stage import PipelineStage as PipelineStageModel
+        from app.services.dashboard import STATUS_KEY_MAP
         stage = db.query(PipelineStageModel).filter(PipelineStageModel.key == stage_key).first()
-        if stage and stage.status:
-            query = query.filter(Application.status == stage.status)
+        target_status = stage.status if (stage and stage.status) else None
+        if not target_status:
+            target_status = STATUS_KEY_MAP.get(stage_key.lower())
+            if not target_status and stage:
+                target_status = STATUS_KEY_MAP.get(stage.label.lower())
+        if target_status:
+            query = query.filter(Application.status == target_status)
     return query
 
 

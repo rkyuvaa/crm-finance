@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, IconButton, Menu, MenuItem, Paper, TablePagination } from '@mui/material';
+import { Avatar, Button, Chip, IconButton, Menu, MenuItem, Paper, TablePagination } from '@mui/material';
 import { Plus, Trash2, Edit, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation } from '@/api/applicationsApi';
@@ -76,43 +76,42 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Leads</div>
-          <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-            Manage and track all leads across pipeline stages.
-          </div>
+      {/* Top Section: Stage Pills + New Lead Button directly after stages */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Pipeline
+            stages={dashboard?.pipeline ?? []}
+            selectedStageKey={selectedStageKey}
+            onStageClick={(stage) => {
+              setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
+            }}
+          />
         </div>
-        <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setCreateOpen(true)}>
+        <Button
+          variant="contained"
+          startIcon={<Plus size={16} />}
+          onClick={() => setCreateOpen(true)}
+          sx={{ flexShrink: 0, height: 42, whiteSpace: 'nowrap', borderRadius: '10px', px: 2.5 }}
+        >
           New Lead
         </Button>
       </div>
 
-
-
-      <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden', mb: 2 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid #E4EBE1' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>
-            Pipeline Stages {selectedStageKey ? `(Filtered by ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label})` : '(All Stages)'}
-          </span>
-          {selectedStageKey && (
-            <Button size="small" variant="text" onClick={() => setSelectedStageKey(undefined)} sx={{ textTransform: 'none', fontSize: 12 }}>
-              Clear Filter (Show All Leads)
-            </Button>
-          )}
-        </div>
-        <Pipeline
-          stages={dashboard?.pipeline ?? []}
-          selectedStageKey={selectedStageKey}
-          onStageClick={(stage) => {
-            setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
-          }}
-        />
-      </Paper>
-
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #E4EBE1' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records</span>
+            {selectedStageKey && (
+              <Chip
+                label={`Filtered: ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
+                size="small"
+                onDelete={() => setSelectedStageKey(undefined)}
+                color="primary"
+                variant="outlined"
+                sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
+              />
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <IconButton
               size="small"

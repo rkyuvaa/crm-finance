@@ -66,16 +66,16 @@ export default function Pipeline({
                   onClick={() => onStageClick?.(stage)}
                   style={{
                     width: 122,
-                    height: 84,
+                    height: 80,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 8,
+                    gap: 5,
                     border: '1.5px solid',
                     borderColor: isSelected ? theme.color : theme.border,
                     borderRadius: 12,
-                    padding: '10px 6px',
+                    padding: '8px 4px',
                     cursor: 'pointer',
                     backgroundColor: isSelected ? `${theme.color}22` : theme.bg,
                     boxShadow: isSelected ? `0 4px 14px ${theme.color}33` : '0 1px 3px rgba(0, 0, 0, 0.04)',
@@ -103,11 +103,11 @@ export default function Pipeline({
                   <div
                     style={{
                       minWidth: 36,
-                      height: 30,
-                      padding: '0 10px',
-                      borderRadius: 15,
+                      height: 28,
+                      padding: '0 9px',
+                      borderRadius: 14,
                       backgroundColor: '#FFFFFF',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
                       border: `1px solid ${theme.color}25`,
                       display: 'flex',
                       alignItems: 'center',
@@ -116,7 +116,7 @@ export default function Pipeline({
                   >
                     <span
                       style={{
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: 800,
                         color: theme.color,
                         letterSpacing: '-0.3px',
@@ -127,20 +127,23 @@ export default function Pipeline({
                     </span>
                   </div>
 
-                  {/* Stage Label */}
+                  {/* Stage Label (2 lines max) */}
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: 700,
                       color: theme.color,
                       textAlign: 'center',
                       textTransform: 'uppercase',
-                      letterSpacing: 0.4,
-                      whiteSpace: 'nowrap',
-                      maxWidth: '100%',
+                      letterSpacing: 0.3,
+                      lineHeight: 1.15,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      padding: '0 4px',
+                      height: 24,
+                      wordBreak: 'break-word',
+                      padding: '0 2px',
                     }}
                   >
                     {stage.label}
