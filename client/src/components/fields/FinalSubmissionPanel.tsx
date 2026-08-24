@@ -248,7 +248,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
                       sx={{ height: 20, fontSize: 10, fontWeight: 700 }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontSize: 12, color: '#44584C' }}>{doc.fileName}</TableCell>
+                  <TableCell sx={{ fontSize: 12, color: '#44584C', wordBreak: 'break-all', maxWith: 200 }}>{doc.fileName}</TableCell>
                   <TableCell>
                     {doc.qualityStatus === 'GOOD' && <Chip label={`Good (${doc.qualityScore}/100)`} color="success" size="small" sx={{ height: 18, fontSize: 9.5, fontWeight: 700 }} />}
                     {doc.qualityStatus === 'POOR' && <Chip label={`Poor (${doc.qualityScore}/100)`} color="error" size="small" sx={{ height: 18, fontSize: 9.5, fontWeight: 700 }} />}

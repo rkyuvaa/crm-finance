@@ -161,12 +161,12 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
 
                 return (
                   <TableRow key={doc.id} sx={{ '&:hover': { background: '#FAFDF9' } }}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                        <FileText size={18} color="#087A3D" />
-                        <div>
+                    <TableCell sx={{ maxWith: 240 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
+                        <FileText size={18} color="#087A3D" style={{ flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#16231B' }}>{doc.field_label}</div>
-                          <div style={{ fontSize: 11, color: '#7A8B80' }}>
+                          <div style={{ fontSize: 11, color: '#7A8B80', wordBreak: 'break-all' }}>
                             {doc.file_name} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
                           </div>
                         </div>

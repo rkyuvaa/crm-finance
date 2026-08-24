@@ -162,7 +162,7 @@ export default function DynamicFieldEngine({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
         {visibleFields.map((f) => {
           const stageRule = f.stage_rules?.[currentStageKey] || {};
           const isReq = stageRule.required !== undefined ? stageRule.required : f.is_required;
@@ -171,7 +171,7 @@ export default function DynamicFieldEngine({
           const fileMeta = fileMetadataState[f.id];
 
           return (
-            <Paper key={f.id} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '10px', background: '#FFFFFF' }}>
+            <Paper key={f.id} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '10px', background: '#FFFFFF', minWidth: 0, overflow: 'hidden' }}>
               <FormLabel sx={{ fontWeight: 700, fontSize: 13, color: '#16231B', display: 'block', mb: 1 }}>
                 {f.label} {isReq && <span style={{ color: 'red' }}>*</span>}
               </FormLabel>
@@ -265,20 +265,20 @@ export default function DynamicFieldEngine({
               )}
 
               {f.field_type === 'file' && (
-                <Box>
+                <Box sx={{ minWidth: 0 }}>
                   {fileMeta ? (
-                    <Paper sx={{ p: 1.5, border: '1px solid #C9E0C6', background: '#F8FAF8', borderRadius: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <FileText size={18} color="#087A3D" />
-                          <div>
-                            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#16231B' }}>{fileMeta.file_name}</div>
+                    <Paper sx={{ p: 1.5, border: '1px solid #C9E0C6', background: '#F8FAF8', borderRadius: 2, minWidth: 0, overflow: 'hidden' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: '1 1 180px', overflow: 'hidden' }}>
+                          <FileText size={18} color="#087A3D" style={{ flexShrink: 0 }} />
+                          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#16231B', wordBreak: 'break-all' }}>{fileMeta.file_name}</div>
                             <div style={{ fontSize: 10.5, color: '#7A8B80' }}>
                               {(fileMeta.file_size / 1024).toFixed(1)} KB
                             </div>
                           </div>
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                           <Button
                             size="small"
                             variant="contained"
