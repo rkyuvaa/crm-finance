@@ -178,10 +178,11 @@ export default function MailServerConfigCard() {
         />
       </Box>
 
-      <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13 } }}>
-        <strong>Zoho / Gmail Configuration Tip:</strong> Use Host <code>smtp.zoho.com</code> (or <code>smtp.zoho.in</code>), Port <code>587</code> with TLS.
-        For Password, generate a dedicated <strong>App-Specific Password</strong> under <em>Zoho Account Security &gt; Application-Specific Passwords</em>.
-        Ensure <em>Sender Email Address</em> matches your SMTP Username or an authorized Zoho domain alias.
+      <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
+        <strong>Zoho / Gmail Configuration Checklist:</strong><br />
+        1. <strong>App Password Required:</strong> You must use a dedicated <strong>App-Specific Password</strong> (from <em>Zoho Account &gt; Security &gt; Application-Specific Passwords</em>), not your standard login password.<br />
+        2. <strong>Host Region:</strong> Use <code>smtp.zoho.com</code> (or <code>smtp.zoho.in</code> if your Zoho account was registered in India).<br />
+        3. <strong>Sender Matching:</strong> Make sure <em>Sender Email Address</em> (e.g. <code>support@...</code>) matches your <em>SMTP Username</em> (or is an authorized Send-As alias in Zoho).
       </Alert>
 
       <form onSubmit={handleSubmit(onSave)}>
