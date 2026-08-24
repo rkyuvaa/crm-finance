@@ -76,22 +76,36 @@ export default function LeadsPage() {
 
   return (
     <div>
-      {/* Top Section: Stage Pills + New Lead Button directly after stages */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Pipeline
-            stages={dashboard?.pipeline ?? []}
-            selectedStageKey={selectedStageKey}
-            onStageClick={(stage) => {
-              setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
-            }}
-          />
+      {/* 1. Full-width Stage Pills row */}
+      <div style={{ marginBottom: 12 }}>
+        <Pipeline
+          stages={dashboard?.pipeline ?? []}
+          selectedStageKey={selectedStageKey}
+          onStageClick={(stage) => {
+            setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
+          }}
+        />
+      </div>
+
+      {/* 2. Action row below stage pills */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {selectedStageKey && (
+            <Chip
+              label={`Filtered by: ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
+              size="small"
+              onDelete={() => setSelectedStageKey(undefined)}
+              color="primary"
+              variant="outlined"
+              sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
+            />
+          )}
         </div>
         <Button
           variant="contained"
           startIcon={<Plus size={16} />}
           onClick={() => setCreateOpen(true)}
-          sx={{ flexShrink: 0, height: 42, whiteSpace: 'nowrap', borderRadius: '10px', px: 2.5 }}
+          sx={{ height: 38, borderRadius: '10px', px: 2.5 }}
         >
           New Lead
         </Button>
@@ -99,19 +113,7 @@ export default function LeadsPage() {
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #E4EBE1' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records</span>
-            {selectedStageKey && (
-              <Chip
-                label={`Filtered: ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
-                size="small"
-                onDelete={() => setSelectedStageKey(undefined)}
-                color="primary"
-                variant="outlined"
-                sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
-              />
-            )}
-          </div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <IconButton
               size="small"
