@@ -19,9 +19,11 @@ def dispatch_email_smtp(
     plain_text: str,
     html_content: str,
     db: Session | None = None,
+    smtp_override: dict | None = None,
 ) -> tuple[bool, str | None]:
     """
     Dispatches email via database SmtpSetting (or config fallback).
+    Supports optional smtp_override dict for testing unsaved form values.
     Returns (success, error_message).
     """
     close_db = False
@@ -31,26 +33,37 @@ def dispatch_email_smtp(
 
     try:
         smtp_rec = db.query(SmtpSetting).first()
+        override = smtp_override or {}
 
-        host = smtp_rec.smtp_host if (smtp_rec and smtp_rec.smtp_host) else getattr(settings, "SMTP_HOST", None)
-        port = smtp_rec.smtp_port if smtp_rec else getattr(settings, "SMTP_PORT", 587)
-        security = (smtp_rec.smtp_security if smtp_rec else "TLS").upper()
-        user = smtp_rec.smtp_user if (smtp_rec and smtp_rec.smtp_user) else getattr(settings, "SMTP_USER", None)
-        password = smtp_rec.smtp_password if (smtp_rec and smtp_rec.smtp_password) else getattr(settings, "SMTP_PASSWORD", None)
+        host = override.get("smtp_host") or (smtp_rec.smtp_host if (smtp_rec and smtp_rec.smtp_host) else getattr(settings, "SMTP_HOST", None))
+        port = override.get("smtp_port") or (smtp_rec.smtp_port if smtp_rec else getattr(settings, "SMTP_PORT", 587))
+        security = (override.get("smtp_security") or (smtp_rec.smtp_security if smtp_rec else "TLS")).upper()
+        user = override.get("smtp_user") or (smtp_rec.smtp_user if (smtp_rec and smtp_rec.smtp_user) else getattr(settings, "SMTP_USER", None))
+
+        # Check override password first; if None, fall back to DB password if not blank
+        pwd_input = override.get("smtp_password")
+        if pwd_input is not None and pwd_input.strip() != "":
+            password = pwd_input.strip()
+        else:
+            password = smtp_rec.smtp_password if (smtp_rec and smtp_rec.smtp_password) else getattr(settings, "SMTP_PASSWORD", None)
+
         from_email = (
-            smtp_rec.smtp_from_email if (smtp_rec and smtp_rec.smtp_from_email)
-            else getattr(settings, "SMTP_FROM", f"noreply@{host or 'crmfinance.com'}")
+            override.get("smtp_from_email")
+            or (smtp_rec.smtp_from_email if (smtp_rec and smtp_rec.smtp_from_email) else None)
+            or getattr(settings, "SMTP_FROM", f"noreply@{host or 'crmfinance.com'}")
         )
-        from_name = smtp_rec.smtp_from_name if smtp_rec else "CRMFinance"
-        is_enabled = smtp_rec.is_enabled if smtp_rec else True
+        from_name = override.get("smtp_from_name") or (smtp_rec.smtp_from_name if smtp_rec else "CRMFinance")
+        is_enabled = override.get("is_enabled", smtp_rec.is_enabled if smtp_rec else True)
 
         if not is_enabled:
             logger.info(f"Email service disabled. Simulated dispatch to {to_email}")
             return True, None
 
         if not host:
-            logger.info(f"SMTP Host not configured. Simulated email dispatch to {to_email}")
-            return True, None
+            return False, "SMTP Host is not configured. Please enter your SMTP server host (e.g. smtp.zoho.com)."
+
+        if user and not password:
+            return False, f"SMTP Password is missing for user '{user}'. Please enter your SMTP App Password and save settings before sending."
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
@@ -77,10 +90,27 @@ def dispatch_email_smtp(
         logger.info(f"Email sent successfully via SMTP to {to_email}")
         return True, None
 
+    except smtplib.SMTPAuthenticationError as e:
+        err_str = str(e)
+        logger.error(f"SMTP Auth Error: {err_str}")
+        return False, f"Authentication Failed (535/530): Please check your SMTP Username and Password. For Zoho or Gmail, make sure to use an App-Specific Password instead of your primary account password."
+    except smtplib.SMTPResponseException as e:
+        err_code = e.smtp_code
+        err_msg = e.smtp_error.decode("utf-8", errors="ignore") if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
+        logger.error(f"SMTP Response Exception {err_code}: {err_msg}")
+        if err_code in (530, 535):
+            return False, f"Authentication Error ({err_code}): {err_msg}. Verify your SMTP Username and App Password."
+        elif err_code in (550, 553):
+            return False, f"Sender Address Error ({err_code}): {err_msg}. Ensure 'Sender Email' matches your SMTP user or authorized alias."
+        return False, f"SMTP Error ({err_code}): {err_msg}"
+    except (smtplib.SMTPConnectError, ConnectionRefusedError, OSError) as e:
+        err_str = str(e)
+        logger.error(f"SMTP Connection Error: {err_str}")
+        return False, f"Could not connect to {host}:{port} ({security}). Check your SMTP Host, Port, and network/firewall settings."
     except Exception as e:
         err_msg = str(e)
         logger.error(f"SMTP Email send failed to {to_email}: {err_msg}")
-        return False, err_msg
+        return False, f"SMTP Delivery Failed: {err_msg}"
     finally:
         if close_db:
             db.close()

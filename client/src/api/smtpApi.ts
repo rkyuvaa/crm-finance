@@ -15,7 +15,19 @@ export const smtpApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['SmtpSettings'],
     }),
-    testSmtpConnection: build.mutation<{ success: boolean; message: string }, { test_email: string }>({
+    testSmtpConnection: build.mutation<
+      { success: boolean; message: string },
+      {
+        test_email: string;
+        smtp_host?: string | null;
+        smtp_port?: number;
+        smtp_security?: string;
+        smtp_user?: string | null;
+        smtp_password?: string | null;
+        smtp_from_email?: string | null;
+        smtp_from_name?: string;
+      }
+    >({
       query: (body) => ({
         url: '/smtp-settings/test',
         method: 'POST',

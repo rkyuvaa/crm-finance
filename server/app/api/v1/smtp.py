@@ -41,6 +41,13 @@ class SmtpSettingInput(BaseModel):
 
 class SmtpTestInput(BaseModel):
     test_email: EmailStr
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_security: str | None = None
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_from_name: str | None = None
 
 
 class SmtpTestResponse(BaseModel):
@@ -132,18 +139,21 @@ def test_smtp_configuration(
 </body>
 </html>"""
 
+    override_data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+
     success, err_msg = dispatch_email_smtp(
         to_email=payload.test_email,
         subject=subject,
         plain_text=plain_text,
         html_content=html_content,
         db=db,
+        smtp_override=override_data,
     )
 
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"SMTP test failed: {err_msg}",
+            detail=err_msg,
         )
 
     return SmtpTestResponse(

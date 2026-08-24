@@ -120,8 +120,20 @@ export default function MailServerConfigCard() {
     }
 
     setTestResult(null);
+    const formVals = watch();
+
     try {
-      const res = await testSmtp({ test_email: testEmailInput.trim() }).unwrap();
+      const res = await testSmtp({
+        test_email: testEmailInput.trim(),
+        smtp_host: formVals.smtp_host || null,
+        smtp_port: formVals.smtp_port,
+        smtp_security: formVals.smtp_security,
+        smtp_user: formVals.smtp_user || null,
+        smtp_password: formVals.smtp_password || null,
+        smtp_from_email: formVals.smtp_from_email || null,
+        smtp_from_name: formVals.smtp_from_name,
+      }).unwrap();
+
       setTestResult({ success: true, message: res.message });
       showToast(res.message, 'success');
     } catch (err: any) {
@@ -165,6 +177,12 @@ export default function MailServerConfigCard() {
           label={<span style={{ fontWeight: 700, fontSize: 13, color: isEnabled ? '#087A3D' : '#7A8B80' }}>{isEnabled ? 'Mail Service Enabled' : 'Service Disabled'}</span>}
         />
       </Box>
+
+      <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13 } }}>
+        <strong>Zoho / Gmail Configuration Tip:</strong> Use Host <code>smtp.zoho.com</code> (or <code>smtp.zoho.in</code>), Port <code>587</code> with TLS.
+        For Password, generate a dedicated <strong>App-Specific Password</strong> under <em>Zoho Account Security &gt; Application-Specific Passwords</em>.
+        Ensure <em>Sender Email Address</em> matches your SMTP Username or an authorized Zoho domain alias.
+      </Alert>
 
       <form onSubmit={handleSubmit(onSave)}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 2, mb: 2 }}>
