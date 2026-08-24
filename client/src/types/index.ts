@@ -55,6 +55,7 @@ export interface PipelineStage {
   label: string;
   tip: string;
   count: number;
+  color?: string | null;
 }
 
 export interface RecentApplication {
@@ -135,6 +136,7 @@ export interface StageConfig {
   status?: ApplicationStatus | null;
   order_index: number;
   enabled: boolean;
+  color?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -144,6 +146,7 @@ export interface StageInput {
   label: string;
   order_index: number;
   enabled: boolean;
+  color?: string | null;
 }
 
 export interface CrmTabFilter {

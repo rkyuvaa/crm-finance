@@ -71,6 +71,26 @@ def _status_counts(db: Session) -> dict[ApplicationStatus, int]:
     return {status: count for status, count in rows}
 
 
+STATUS_KEY_MAP = {
+    "leads": ApplicationStatus.LEAD,
+    "new lead": ApplicationStatus.LEAD,
+    "applications": ApplicationStatus.APPLICATION,
+    "document upload": ApplicationStatus.APPLICATION,
+    "verification": ApplicationStatus.VERIFICATION,
+    "document verification": ApplicationStatus.VERIFICATION,
+    "finance": ApplicationStatus.FINANCE,
+    "final submission": ApplicationStatus.FINANCE,
+    "query": ApplicationStatus.QUERY,
+    "finance approval": ApplicationStatus.QUERY,
+    "sanctioned": ApplicationStatus.SANCTIONED,
+    "loan sanctioned": ApplicationStatus.SANCTIONED,
+    "delivery": ApplicationStatus.DELIVERY,
+    "disburse": ApplicationStatus.DISBURSEMENT,
+    "disbursement": ApplicationStatus.DISBURSEMENT,
+    "completed": ApplicationStatus.COMPLETED,
+}
+
+
 def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[PipelineStage]:
     configured = (
         db.query(PipelineStageModel)
@@ -78,18 +98,24 @@ def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[P
         .order_by(PipelineStageModel.order_index.asc(), PipelineStageModel.id.asc())
         .all()
     )
-    if configured:
-        base = [(s.status, s.key, s.label) for s in configured]
-    else:
-        base = [(status, key, label) for status, key, label, _tip in PIPELINE]
 
     stages = []
-    for status, key, label in base:
-        count = counts.get(status, 0)
-        tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
-        stages.append(
-            PipelineStage(key=key, status=status, count=count, tip=tip, label=label)
-        )
+    if configured:
+        for s in configured:
+            st = s.status or STATUS_KEY_MAP.get(s.key.lower()) or STATUS_KEY_MAP.get(s.label.lower())
+            count = counts.get(st, 0) if st else 0
+            tip = DEFAULT_TIPS.get(s.key, "{n} applications in this stage").format(n=count)
+            color = getattr(s, "color", None)
+            stages.append(
+                PipelineStage(key=s.key, status=st, count=count, tip=tip, label=s.label, color=color)
+            )
+    else:
+        for status, key, label, _tip in PIPELINE:
+            count = counts.get(status, 0)
+            tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
+            stages.append(
+                PipelineStage(key=key, status=status, count=count, tip=tip, label=label, color=None)
+            )
     return stages
 
 

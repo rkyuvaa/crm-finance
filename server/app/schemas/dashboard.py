@@ -25,6 +25,7 @@ class PipelineStage(BaseModel):
     label: str
     tip: str
     count: int
+    color: str | None = None
 
 
 class RecentApplication(BaseModel):

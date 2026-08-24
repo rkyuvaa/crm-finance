@@ -13,6 +13,7 @@ class PipelineStage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     key: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
     label: Mapped[str] = mapped_column(String(60), nullable=False)
+    color: Mapped[str | None] = mapped_column(String(30), nullable=True)
     status: Mapped[ApplicationStatus | None] = mapped_column(
         Enum(ApplicationStatus, name="application_status"), nullable=True
     )

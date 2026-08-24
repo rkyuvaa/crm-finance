@@ -62,6 +62,7 @@ class StageCreate(BaseModel):
     label: str = Field(min_length=2, max_length=60)
     order_index: int = Field(default=0, ge=0)
     enabled: bool = True
+    color: str | None = Field(default=None, max_length=30)
 
 
 class StageUpdate(BaseModel):
@@ -69,6 +70,7 @@ class StageUpdate(BaseModel):
     label: str | None = Field(default=None, min_length=2, max_length=60)
     order_index: int | None = Field(default=None, ge=0)
     enabled: bool | None = None
+    color: str | None = Field(default=None, max_length=30)
 
 
 class StageOut(BaseModel):
@@ -78,6 +80,7 @@ class StageOut(BaseModel):
     status: ApplicationStatus | None = None
     order_index: int
     enabled: bool
+    color: str | None = None
     created_at: datetime
     updated_at: datetime
 

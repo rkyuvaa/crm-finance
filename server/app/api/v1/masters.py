@@ -246,6 +246,7 @@ def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_
                     status=st,
                     order_index=s.order_index or 0,
                     enabled=s.enabled if s.enabled is not None else True,
+                    color=getattr(s, "color", None),
                     created_at=c_at,
                     updated_at=u_at,
                 )
@@ -269,6 +270,7 @@ def create_stage(
         label=payload.label,
         order_index=payload.order_index,
         enabled=payload.enabled,
+        color=payload.color,
     )
     db.add(stage)
     db.commit()

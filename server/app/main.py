@@ -9,8 +9,20 @@ from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
 
+def _ensure_schema_migrations():
+    try:
+        from sqlalchemy import text
+        from app.db.session import engine
+
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
+    except Exception:
+        pass
+
+
 setup_logging()
 logger = get_logger("app")
+_ensure_schema_migrations()
 
 app = FastAPI(
     title=settings.app_name,

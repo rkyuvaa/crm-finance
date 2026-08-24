@@ -29,6 +29,17 @@ import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
 import type { StageConfig } from '@/types';
 
+const PRESET_COLORS = [
+  { name: 'Blue', hex: '#2563EB' },
+  { name: 'Emerald', hex: '#059669' },
+  { name: 'Cyan', hex: '#0891B2' },
+  { name: 'Purple', hex: '#7C3AED' },
+  { name: 'Amber', hex: '#D97706' },
+  { name: 'Rose', hex: '#E11D48' },
+  { name: 'Sky', hex: '#0284C7' },
+  { name: 'Orange', hex: '#EA580C' },
+];
+
 const formSchema = z.object({
   key: z
     .string()
@@ -37,6 +48,7 @@ const formSchema = z.object({
   label: z.string().min(2, 'Label is required'),
   order_index: z.coerce.number({ invalid_type_error: 'Required' }).int('Must be a whole number').nonnegative(),
   enabled: z.boolean(),
+  color: z.string().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,7 +74,7 @@ function StageFormDialog({
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { key: '', label: '', order_index: 0, enabled: true },
+    defaultValues: { key: '', label: '', order_index: 0, enabled: true, color: '#2563EB' },
   });
 
   useEffect(() => {
@@ -72,8 +84,11 @@ function StageFormDialog({
       label: editing?.label ?? '',
       order_index: editing?.order_index ?? 0,
       enabled: editing?.enabled ?? true,
+      color: editing?.color ?? '#2563EB',
     });
   }, [open, editing, reset]);
+
+  const selectedColor = watch('color');
 
   const onSubmit = async (values: FormValues) => {
     const body = {
@@ -81,6 +96,7 @@ function StageFormDialog({
       label: values.label,
       order_index: values.order_index,
       enabled: values.enabled,
+      color: values.color || null,
     };
     try {
       if (editing) {
@@ -130,6 +146,43 @@ function StageFormDialog({
             helperText={errors.order_index?.message}
             {...register('order_index')}
           />
+
+          <div style={{ marginTop: 14, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#44584C', display: 'block', marginBottom: 6 }}>
+              Stage Color Accent
+            </span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  onClick={() => setValue('color', c.hex)}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
+                    backgroundColor: c.hex,
+                    border: selectedColor === c.hex ? '2px solid #023020' : '2px solid transparent',
+                    boxShadow: selectedColor === c.hex ? '0 0 0 2px rgba(8,122,61,0.4)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'transform 0.1s',
+                  }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          <TextField
+            fullWidth
+            label="Custom Hex Color"
+            margin="dense"
+            placeholder="#2563EB"
+            error={Boolean(errors.color)}
+            helperText={errors.color?.message}
+            {...register('color')}
+          />
+
           <FormControlLabel
             control={
               <Checkbox checked={watch('enabled')} onChange={(e) => setValue('enabled', e.target.checked)} />
@@ -232,7 +285,7 @@ export default function StagesPanel() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead>
                 <tr>
-                  {['Order', 'Key', 'Label', 'Show', ...(isAdmin ? ['Actions'] : [])].map((h) => (
+                  {['Order', 'Key', 'Label', 'Color', 'Show', ...(isAdmin ? ['Actions'] : [])].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -264,6 +317,19 @@ export default function StagesPanel() {
                     </td>
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 600, color: '#16231B' }}>
                       {s.label}
+                    </td>
+                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            backgroundColor: s.color || '#2563EB',
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: '#7A8B80' }}>{s.color || 'Default'}</span>
+                      </div>
                     </td>
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
                       <Switch

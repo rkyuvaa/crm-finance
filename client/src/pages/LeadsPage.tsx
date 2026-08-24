@@ -103,6 +103,7 @@ export default function LeadsPage() {
         </div>
         <Pipeline
           stages={dashboard?.pipeline ?? []}
+          selectedStageKey={selectedStageKey}
           onStageClick={(stage) => {
             setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
           }}
