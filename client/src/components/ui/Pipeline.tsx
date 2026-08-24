@@ -1,34 +1,7 @@
 import { Tooltip } from '@mui/material';
-import {
-  AlertCircle,
-  Banknote,
-  Building2,
-  CheckCircle2,
-  ChevronRight,
-  CircleCheck,
-  FileText,
-  ShieldCheck,
-  Truck,
-  UserPlus,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 import type { PipelineStage } from '@/types';
-
-const ICONS: Record<string, LucideIcon> = {
-  leads: UserPlus,
-  lead: UserPlus,
-  applications: FileText,
-  application: FileText,
-  verification: ShieldCheck,
-  finance: Building2,
-  query: AlertCircle,
-  sanctioned: CircleCheck,
-  delivery: Truck,
-  disburse: Banknote,
-  disbursement: Banknote,
-  completed: CheckCircle2,
-};
 
 // Vibrant default stage color themes
 const DEFAULT_STAGE_PALETTE: Record<string, { color: string; bg: string; border: string }> = {
@@ -80,9 +53,8 @@ export default function Pipeline({
 }) {
   return (
     <div className="scroll-touch" style={{ overflowX: 'auto', paddingBottom: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px', minWidth: 820 }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px', minWidth: 860 }}>
         {stages.map((stage, i) => {
-          const Icon = ICONS[stage.key.toLowerCase()] ?? FileText;
           const theme = getStageTheme(stage.key, stage.color, i);
           const isSelected = selectedStageKey === stage.key;
 
@@ -93,22 +65,24 @@ export default function Pipeline({
                   type="button"
                   onClick={() => onStageClick?.(stage)}
                   style={{
-                    flex: 1,
+                    width: 122,
+                    height: 84,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 6,
-                    minWidth: 104,
+                    justifyContent: 'center',
+                    gap: 8,
                     border: '1.5px solid',
                     borderColor: isSelected ? theme.color : theme.border,
                     borderRadius: 12,
-                    padding: '12px 8px 10px',
+                    padding: '10px 6px',
                     cursor: 'pointer',
                     backgroundColor: isSelected ? `${theme.color}22` : theme.bg,
-                    boxShadow: isSelected ? `0 4px 14px ${theme.color}33` : 'none',
+                    boxShadow: isSelected ? `0 4px 14px ${theme.color}33` : '0 1px 3px rgba(0, 0, 0, 0.04)',
                     transition: 'all 0.15s ease',
                     fontFamily: 'inherit',
-                    position: 'relative',
+                    boxSizing: 'border-box',
+                    flexShrink: 0,
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
@@ -121,36 +95,39 @@ export default function Pipeline({
                     if (!isSelected) {
                       e.currentTarget.style.borderColor = theme.border;
                       e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
                     }
                   }}
                 >
+                  {/* Rounded white background badge for count */}
                   <div
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: `${theme.color}20`,
+                      minWidth: 36,
+                      height: 30,
+                      padding: '0 10px',
+                      borderRadius: 15,
+                      backgroundColor: '#FFFFFF',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+                      border: `1px solid ${theme.color}25`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Icon size={17} color={theme.color} />
+                    <span
+                      style={{
+                        fontSize: 17,
+                        fontWeight: 800,
+                        color: theme.color,
+                        letterSpacing: '-0.3px',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {stage.count}
+                    </span>
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      color: theme.color,
-                      letterSpacing: '-0.3px',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {stage.count}
-                  </div>
-
+                  {/* Stage Label */}
                   <div
                     style={{
                       fontSize: 10,
@@ -159,13 +136,11 @@ export default function Pipeline({
                       textAlign: 'center',
                       textTransform: 'uppercase',
                       letterSpacing: 0.4,
-                      background: `${theme.color}15`,
-                      padding: '2px 6px',
-                      borderRadius: 6,
                       whiteSpace: 'nowrap',
                       maxWidth: '100%',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
+                      padding: '0 4px',
                     }}
                   >
                     {stage.label}
@@ -180,11 +155,11 @@ export default function Pipeline({
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#9BA99F',
-                    width: 22,
+                    width: 20,
                     flexShrink: 0,
                   }}
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={15} />
                 </div>
               )}
             </div>
