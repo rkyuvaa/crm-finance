@@ -178,12 +178,19 @@ export default function MailServerConfigCard() {
         />
       </Box>
 
-      <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
-        <strong>Zoho Configuration Guidelines:</strong><br />
-        • <strong>Using Primary Login Password:</strong> Set Host to <code>smtp.zoho.in</code> (for India accounts) or <code>smtp.zoho.com</code>, Port <code>587</code>, Encryption <code>TLS</code>. Ensure <em>SMTP Access</em> is enabled in Zoho Admin.<br />
-        • <strong>If 2FA/MFA is enabled on Zoho:</strong> Zoho requires an <em>App-Specific Password</em> (from <em>Zoho Account &gt; Security &gt; Application-Specific Passwords</em>).<br />
-        • <strong>Sender Matching:</strong> Ensure <em>Sender Email Address</em> matches your <em>SMTP Username</em> (or is an authorized Send-As alias).
-      </Alert>
+      {watch('smtp_host')?.toLowerCase().includes('gmail') ? (
+        <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
+          <strong>Google Gmail Notice:</strong> Google completely <strong>disabled standard passwords</strong> for SMTP on May 30, 2022. Your normal Gmail password will always fail with <code>535 Authentication Failed</code>.<br />
+          To fix this, turn on 2-Step Verification on <code>konwertit@gmail.com</code> and generate a 16-character <strong>App Password</strong> at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>myaccount.google.com/apppasswords</a>, then paste it into the Password field below.
+        </Alert>
+      ) : (
+        <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
+          <strong>Zoho / General Configuration Guidelines:</strong><br />
+          • <strong>Primary Password (Zoho):</strong> Use host <code>smtp.zoho.in</code> (India) or <code>smtp.zoho.com</code>, Port <code>587</code>, Encryption <code>TLS</code>, with <em>SMTP Access</em> enabled in Zoho Admin.<br />
+          • <strong>If 2FA is active:</strong> Generate an <em>App Password</em> (under <em>Zoho Account &gt; Security &gt; Application-Specific Passwords</em>).<br />
+          • <strong>Sender Matching:</strong> Ensure <em>Sender Email Address</em> matches your <em>SMTP Username</em>.
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSave)}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 2, mb: 2 }}>
