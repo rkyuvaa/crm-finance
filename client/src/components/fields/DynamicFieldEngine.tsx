@@ -313,29 +313,6 @@ export default function DynamicFieldEngine({
                           </Button>
                         </Box>
                       </Box>
-                      {fileMeta.mime_type?.startsWith('image/') && (
-                        <Box
-                          sx={{ mt: 1.5, textAlign: 'center', cursor: 'pointer' }}
-                          onClick={() =>
-                            setPreviewFile({
-                              file_name: fileMeta.file_name,
-                              file_path: fileMeta.file_path,
-                              file_size: fileMeta.file_size,
-                              mime_type: fileMeta.mime_type,
-                              field_label: f.label,
-                            })
-                          }
-                        >
-                          <img
-                            src={fileMeta.file_path}
-                            alt="Preview"
-                            style={{ maxHeight: 120, borderRadius: 6, border: '1px solid #E4EBE1', transition: 'transform 0.2s' }}
-                          />
-                          <Typography variant="caption" sx={{ display: 'block', color: '#087A3D', fontWeight: 600, mt: 0.5 }}>
-                            Click image to open full popup preview
-                          </Typography>
-                        </Box>
-                      )}
                     </Paper>
                   ) : (
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
