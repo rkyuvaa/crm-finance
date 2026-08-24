@@ -212,11 +212,17 @@ export default function MailServerConfigCard() {
               labelId="smtp-security-label"
               label="Encryption"
               value={securityVal}
-              onChange={(e) => setValue('smtp_security', e.target.value as 'TLS' | 'SSL' | 'NONE')}
+              onChange={(e) => {
+                const sec = e.target.value as 'TLS' | 'SSL' | 'NONE';
+                setValue('smtp_security', sec);
+                if (sec === 'TLS') setValue('smtp_port', 587);
+                if (sec === 'SSL') setValue('smtp_port', 465);
+                if (sec === 'NONE') setValue('smtp_port', 25);
+              }}
             >
-              <MenuItem value="TLS">TLS (STARTTLS)</MenuItem>
-              <MenuItem value="SSL">SSL (Implicit)</MenuItem>
-              <MenuItem value="NONE">None (Plain TCP)</MenuItem>
+              <MenuItem value="TLS">TLS (STARTTLS - Port 587)</MenuItem>
+              <MenuItem value="SSL">SSL (Implicit - Port 465)</MenuItem>
+              <MenuItem value="NONE">None (Plain TCP - Port 25)</MenuItem>
             </Select>
           </FormControl>
         </Box>
