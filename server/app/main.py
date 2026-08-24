@@ -11,13 +11,18 @@ from app.core.logging import get_logger, setup_logging
 
 def _ensure_schema_migrations():
     try:
-        from sqlalchemy import text
+        from sqlalchemy import inspect, text
         from app.db.session import engine
 
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
-    except Exception:
-        pass
+        inspector = inspect(engine)
+        if "pipeline_stages" in inspector.get_table_names():
+            cols = [c["name"] for c in inspector.get_columns("pipeline_stages")]
+            if "color" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
+    except Exception as err:
+        import logging
+        logging.error(f"Migration check error: {err}")
 
 
 setup_logging()
