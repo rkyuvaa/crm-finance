@@ -93,13 +93,13 @@ def dispatch_email_smtp(
     except smtplib.SMTPAuthenticationError as e:
         err_str = str(e)
         logger.error(f"SMTP Auth Error: {err_str}")
-        return False, f"Authentication Failed (535/530): Please check your SMTP Username and Password. For Zoho or Gmail, make sure to use an App-Specific Password instead of your primary account password."
+        return False, f"Authentication Failed (535/530): Invalid Username or Password. If using your primary login password, try host 'smtp.zoho.in' (for India region accounts) and verify SMTP access is enabled in Zoho Admin."
     except smtplib.SMTPResponseException as e:
         err_code = e.smtp_code
         err_msg = e.smtp_error.decode("utf-8", errors="ignore") if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
         logger.error(f"SMTP Response Exception {err_code}: {err_msg}")
         if err_code in (530, 535):
-            return False, f"Authentication Error ({err_code}): {err_msg}. Verify your SMTP Username and App Password."
+            return False, f"Authentication Error ({err_code}): {err_msg}. Verify your SMTP Username, Password, and region host (smtp.zoho.in vs smtp.zoho.com)."
         elif err_code in (550, 553):
             return False, f"Sender Address Error ({err_code}): {err_msg}. Ensure 'Sender Email' matches your SMTP user or authorized alias."
         return False, f"SMTP Error ({err_code}): {err_msg}"
