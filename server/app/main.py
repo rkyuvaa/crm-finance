@@ -11,9 +11,13 @@ from app.core.logging import get_logger, setup_logging
 
 def _ensure_schema_migrations():
     try:
-        from sqlalchemy import inspect, text
+        from app.db.base import Base
         from app.db.session import engine
 
+        # Ensure all tables (e.g. application_sequences) exist
+        Base.metadata.create_all(bind=engine)
+
+        from sqlalchemy import inspect, text
         inspector = inspect(engine)
         if "pipeline_stages" in inspector.get_table_names():
             cols = [c["name"] for c in inspector.get_columns("pipeline_stages")]
