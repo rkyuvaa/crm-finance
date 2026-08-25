@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models import (
     ActivityLog,
     Application,
+    Notification,
     PlannedActivity,
     User,
 )
@@ -84,6 +85,17 @@ def create_planned_activity(
             new_value=f"[{payload.activity_type_name}] {payload.subject}",
         )
     )
+
+    # Create notification for the assignee (if different from creator)
+    assignee_id = payload.assigned_to or user.id
+    if assignee_id != user.id:
+        db.add(
+            Notification(
+                user_id=assignee_id,
+                message=f"New activity assigned: [{payload.activity_type_name}] {payload.subject} for {app.app_no}",
+            )
+        )
+
     db.commit()
     db.refresh(act)
     return PlannedActivityOut(
