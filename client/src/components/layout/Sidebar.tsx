@@ -64,9 +64,11 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 export default function Sidebar({
   collapsed,
   onNavigate,
+  isMobile = false,
 }: {
   collapsed: boolean;
   onNavigate?: () => void;
+  isMobile?: boolean;
 }) {
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
@@ -107,10 +109,11 @@ export default function Sidebar({
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
-        position: 'sticky',
+        position: isMobile ? 'sticky' : 'fixed',
         top: 0,
+        left: isMobile ? undefined : 0,
         height: '100vh',
-        zIndex: 40,
+        zIndex: isMobile ? undefined : 40,
         overflow: 'hidden',
         transition: 'width 0.22s ease',
       }}
