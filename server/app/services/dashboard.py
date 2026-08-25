@@ -1,4 +1,5 @@
 from datetime import timedelta
+from datetime import date as date_type
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.models import (
     FinanceStatus,
     FinanceSubmission,
     Notification,
+    PlannedActivity,
     User,
     Verification,
     VerificationStatus,
@@ -359,9 +361,22 @@ def _build_nav_counts(db: Session, user: User, counts: dict[ApplicationStatus, i
         .scalar()
         or 0
     )
+    # Count unread notifications + planned activities due today/overdue
+    today = date_type.today()
     notifications = (
         db.query(func.count(Notification.id))
         .filter(Notification.user_id == user.id, Notification.read_at.is_(None))
+        .scalar()
+        or 0
+    )
+    planned_due = (
+        db.query(func.count(PlannedActivity.id))
+        .filter(
+            PlannedActivity.assigned_to == user.id,
+            PlannedActivity.status == "PLANNED",
+            PlannedActivity.due_date.isnot(None),
+            PlannedActivity.due_date <= today,
+        )
         .scalar()
         or 0
     )
@@ -373,7 +388,7 @@ def _build_nav_counts(db: Session, user: User, counts: dict[ApplicationStatus, i
         finance=finance,
         delivery=delivery,
         disbursement=disbursement,
-        notifications=notifications,
+        notifications=notifications + planned_due,
         stages={s.key: counts.get(s.status, 0) for s in configured if s.status},
     )
 

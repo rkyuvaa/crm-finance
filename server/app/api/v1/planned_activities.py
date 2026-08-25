@@ -76,25 +76,28 @@ def create_planned_activity(
     db.flush()
 
     # Log inside ActivityLog for the application
+    log_value = f"[{payload.activity_type_name}] {payload.subject}"
+    if payload.notes:
+        log_value += f" — {payload.notes}"
     db.add(
         ActivityLog(
             application_id=app.id,
             actor_id=user.id,
             field_name="Activity Planned",
             old_value=None,
-            new_value=f"[{payload.activity_type_name}] {payload.subject}",
+            new_value=log_value,
         )
     )
 
-    # Create notification for the assignee (if different from creator)
+    # Always notify the assignee so the activity appears in their inbox
     assignee_id = payload.assigned_to or user.id
-    if assignee_id != user.id:
-        db.add(
-            Notification(
-                user_id=assignee_id,
-                message=f"New activity assigned: [{payload.activity_type_name}] {payload.subject} for {app.app_no}",
-            )
+    assignee_label = "assigned to you" if assignee_id != user.id else "you scheduled"
+    db.add(
+        Notification(
+            user_id=assignee_id,
+            message=f"Activity {assignee_label}: [{payload.activity_type_name}] {payload.subject} for {app.app_no}",
         )
+    )
 
     db.commit()
     db.refresh(act)

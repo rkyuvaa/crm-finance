@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -8,6 +9,9 @@ class NotificationOut(BaseModel):
     message: str
     is_read: bool
     created_at: datetime
+    # Optional fields for planned activity notifications
+    planned_activity_id: Optional[int] = None
+    due_date: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

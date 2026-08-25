@@ -10,6 +10,7 @@ import type {
   FinanceCompanyOption,
   StageConfig,
   StageInput,
+  UserBrief,
   VehicleModel,
   VehicleModelInput,
 } from '@/types';
@@ -122,6 +123,10 @@ export const mastersApi = baseApi.injectEndpoints({
       query: ({ tabId, fieldIds }) => ({ url: `/masters/tabs/${tabId}/fields/reorder`, method: 'POST', body: fieldIds }),
       invalidatesTags: ['Tabs'],
     }),
+    users: build.query<UserBrief[], void>({
+      query: () => ({ url: '/masters/users' }),
+      providesTags: ['Users'],
+    }),
   }),
 });
 
@@ -151,4 +156,5 @@ export const {
   useUpdateTabFieldMutation,
   useDeleteTabFieldMutation,
   useReorderTabFieldsMutation,
+  useUsersQuery,
 } = mastersApi;

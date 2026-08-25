@@ -59,51 +59,63 @@ export default function NotificationsPage() {
         ) : !data || data.length === 0 ? (
           <EmptyState title="No notifications yet" hint="Updates about your applications will appear here." />
         ) : (
-          data.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => {
-                if (!n.is_read) markRead(n.id);
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '13px 16px',
-                border: 'none',
-                borderBottom: '1px solid #F0F4EE',
-                background: n.is_read ? '#fff' : '#F2FAF0',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                textAlign: 'left',
-              }}
-            >
-              <span
+          data.map((n) => {
+            // Check if this is a planned activity notification (negative ID)
+            const isPlannedActivity = n.id < 0;
+            const plannedActivityId = n.planned_activity_id;
+            const dueDate = n.due_date;
+
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => {
+                  if (!n.is_read && plannedActivityId) {
+                    markRead(n.id);
+                  }
+                }}
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: '50%',
-                  background: n.is_read ? '#EEF1EE' : '#E6F3EA',
-                  color: n.is_read ? '#6B7A6F' : '#087A3D',
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  gap: 12,
+                  padding: '13px 16px',
+                  border: 'none',
+                  borderBottom: '1px solid #F0F4EE',
+                  background: n.is_read ? '#fff' : '#F2FAF0',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
                 }}
               >
-                <Bell size={16} />
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, color: '#16231B' }}>{n.message}</div>
-                <div style={{ fontSize: 11, color: '#7A8B80', marginTop: 1 }}>{formatDateTime(n.created_at)}</div>
-              </div>
-              {!n.is_read && (
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#C2410C', flexShrink: 0 }} />
-              )}
-            </button>
-          ))
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    background: n.is_read ? '#EEF1EE' : '#E6F3EA',
+                    color: n.is_read ? '#6B7A6F' : '#087A3D',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Bell size={16} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, color: '#16231B' }}>{n.message}</div>
+                  {isPlannedActivity && dueDate && (
+                    <div style={{ fontSize: 11, color: '#7A8B80', marginTop: 1 }}>{formatDateTime(dueDate)}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: '#7A8B80', marginTop: 1 }}>{formatDateTime(n.created_at)}</div>
+                </div>
+                {!n.is_read && (
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#C2410C', flexShrink: 0 }} />
+                )}
+              </button>
+            )
+          })
         )}
       </Paper>
     </div>

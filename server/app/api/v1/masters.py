@@ -37,6 +37,7 @@ from app.schemas.master import (
     StageCreate,
     StageOut,
     StageUpdate,
+    UserBrief,
     VehicleModelCreate,
     VehicleModelOut,
     VehicleModelUpdate,
@@ -696,4 +697,18 @@ def reorder_tab_fields(
         .order_by(CrmTabField.display_order.asc())
         .all()
     )
+
+
+@router.get("/users", response_model=list[UserBrief])
+def list_users(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    users = db.query(User).order_by(User.full_name.asc()).all()
+    return [
+        UserBrief(
+            id=u.id,
+            full_name=u.full_name,
+            role=u.role,
+            email=u.email,
+        )
+        for u in users
+    ]
 

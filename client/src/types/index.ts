@@ -24,6 +24,13 @@ export interface User {
   initials: string;
 }
 
+export interface UserBrief {
+  id: number;
+  full_name: string;
+  role: UserRole;
+  email: string | null;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -466,6 +473,9 @@ export interface NotificationItem {
   message: string;
   is_read: boolean;
   created_at: string;
+  // Optional fields for planned activity notifications
+  planned_activity_id?: number;
+  due_date?: string;
 }
 
 export interface StageRow {

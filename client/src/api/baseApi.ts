@@ -58,6 +58,7 @@ export const baseApi = createApi({
     'PlannedActivities',
     'Tabs',
     'SmtpSettings',
+    'Users',
   ],
   endpoints: () => ({}),
 });

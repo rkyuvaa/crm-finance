@@ -1,8 +1,9 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import ApplicationStatus
+from app.models.enums import ApplicationStatus, UserRole
 
 
 class VehicleModelCreate(BaseModel):
@@ -289,6 +290,15 @@ class VerificationDocumentOut(BaseModel):
     verified_by_id: int | None = None
     verified_by_name: str | None = None
     verified_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class UserBrief(BaseModel):
+    id: int
+    full_name: str
+    role: UserRole
+    email: str | None = None
 
     model_config = {"from_attributes": True}
 

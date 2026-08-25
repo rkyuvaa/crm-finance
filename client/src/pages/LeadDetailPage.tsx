@@ -36,6 +36,7 @@ import {
   useStagesQuery,
   useTabsQuery,
   useVehicleModelsQuery,
+  useUsersQuery,
 } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -68,6 +69,7 @@ const planSchema = z.object({
   subject: z.string().min(2, 'Activity subject/title is required'),
   due_date: z.string().optional(),
   notes: z.string().optional(),
+  assigned_to: z.string().optional(),
 });
 
 type PlanForm = z.infer<typeof planSchema>;
@@ -91,6 +93,7 @@ export default function LeadDetailPage() {
   const { data: models = [], isFetching: loadingModels } = useVehicleModelsQuery();
   const { data: companies = [] } = useFinanceCompaniesQuery();
   const { data: crmTabs = [] } = useTabsQuery();
+  const { data: users = [] } = useUsersQuery();
 
   const [activeLeadTabCode, setActiveLeadTabCode] = useState<string>('general');
   const [sideTab, setSideTab] = useState(0);
@@ -308,6 +311,7 @@ export default function LeadDetailPage() {
           subject: values.subject,
           notes: values.notes,
           due_date: values.due_date ? new Date(values.due_date).toISOString() : null,
+          assigned_to: values.assigned_to ? Number(values.assigned_to) : null,
         },
       }).unwrap();
       showToast('Activity planned successfully', 'success');
@@ -767,6 +771,23 @@ export default function LeadDetailPage() {
               helperText={planErrors.subject?.message}
               {...registerPlan('subject')}
             />
+
+            <Select
+              fullWidth
+              displayEmpty
+              size="small"
+              value={watchPlan('assigned_to') || ''}
+              onChange={(e) => setPlanValue('assigned_to', String(e.target.value) || '', { shouldValidate: true })}
+              sx={{ mb: 1.5 }}
+              renderValue={(val) => (val ? users.find((u) => String(u.id) === val)?.full_name ?? val : 'Assign to (optional)')}
+            >
+              <MenuItem value="">Assign to (optional - defaults to you)</MenuItem>
+              {users.map((u) => (
+                <MenuItem key={u.id} value={String(u.id)}>
+                  {u.full_name} ({u.role})
+                </MenuItem>
+              ))}
+            </Select>
 
             <TextField
               fullWidth

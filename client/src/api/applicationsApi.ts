@@ -76,6 +76,7 @@ export const applicationsApi = baseApi.injectEndpoints({
       invalidatesTags: (_res, _err, { appId }) => [
         { type: 'PlannedActivities', id: appId },
         { type: 'Applications', id: appId },
+        'Notifications',
       ],
     }),
     updatePlannedActivity: build.mutation<
@@ -90,6 +91,7 @@ export const applicationsApi = baseApi.injectEndpoints({
       invalidatesTags: (_res, _err, { appId }) => [
         { type: 'PlannedActivities', id: appId },
         { type: 'Applications', id: appId },
+        'Notifications',
       ],
     }),
     customFieldValues: build.query<CrmLeadCustomFieldValue[], number>({
