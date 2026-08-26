@@ -1,5 +1,11 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../app/store';
+import {
+  createApi,
+  fetchBaseQuery,
+  type BaseQueryFn,
+  type FetchArgs,
+  type FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
+import { logout } from '@/auth/authSlice';
 import type {
   Action,
   Department,
@@ -12,18 +18,45 @@ import type {
   UserDetail,
 } from '../types/rbac';
 
+const rawRbacQuery = fetchBaseQuery({
+  baseUrl: '/api/v1/admin',
+  credentials: 'include',
+  prepareHeaders: (headers) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    return headers;
+  },
+});
+
+const rbacQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions,
+) => {
+  let result = await rawRbacQuery(args, api, extraOptions);
+
+  if (result.error && result.error.status === 401) {
+    const refreshResult = await fetchBaseQuery({ baseUrl: '/api/v1', credentials: 'include' })(
+      { url: '/auth/refresh', method: 'POST' },
+      api,
+      extraOptions,
+    );
+    if (refreshResult.data) {
+      const data = refreshResult.data as { access_token: string };
+      localStorage.setItem('access_token', data.access_token);
+      result = await rawRbacQuery(args, api, extraOptions);
+    } else {
+      api.dispatch(logout());
+    }
+  }
+  return result;
+};
+
 export const rbacApi = createApi({
   reducerPath: 'rbacApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api/v1/admin',
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: rbacQueryWithReauth,
   tagTypes: ['Users', 'Roles', 'Departments', 'Permissions', 'AuditLogs', 'EffectiveAccess'],
   endpoints: (builder) => ({
     // Users
