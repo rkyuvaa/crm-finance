@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
 from app.core.security import hash_password
-from app.models import (
+from app.models.rbac import (
     Action,
     AuditActionType,
     AuditLog,
@@ -19,13 +19,12 @@ from app.models import (
     RoleDataScope,
     RoleFieldPermission,
     RolePermission,
-    User,
     UserPermission,
     UserRole as RbacUserRole,
     DataScopeType,
 )
 from app.models.enums import UserRole
-from app.models.user import UserStatus
+from app.models.user import User, UserStatus
 from app.schemas.rbac import (
     ActionOut,
     AuditLogOut,
