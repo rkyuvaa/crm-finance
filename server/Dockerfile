@@ -6,13 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# 1. Install dependencies first for maximum Docker layer caching
 COPY pyproject.toml ./
+RUN pip install --no-cache-dir hatchling && \
+    mkdir -p app && echo '__version__ = "0.1.0"' > app/__init__.py && \
+    pip install --no-cache-dir -e .
+
+# 2. Copy application source code
 COPY app ./app
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY scripts ./scripts
-
-RUN pip install --no-cache-dir .
 
 EXPOSE 8000
 
