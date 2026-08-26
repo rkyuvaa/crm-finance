@@ -76,7 +76,7 @@ export default function UserManagementPage() {
   });
 
   // Edit Form State
-  const [editForm, setEditForm] = useState<Partial<UserDetail> & { password?: string; role_ids?: number[]; department_ids?: number[] }>({});
+  const [editForm, setEditForm] = useState<Partial<UserDetail> & { password?: string; role_ids?: number[]; department_ids?: number[]; primary_role?: string }>({});
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,6 +352,10 @@ export default function UserManagementPage() {
                             employee_id: u.employee_id || '',
                             designation: u.designation || '',
                             status: u.status,
+                            primary_role: u.role,
+                            primary_department_id: u.primary_department_id || undefined,
+                            reporting_manager_id: u.reporting_manager_id || undefined,
+                            force_password_change: u.force_password_change || false,
                             role_ids: u.assigned_roles?.map((r) => r.id) || [],
                             department_ids: u.departments?.map((d) => d.id) || [],
                           });
@@ -488,23 +492,32 @@ export default function UserManagementPage() {
       {/* Edit User 6-Tab Drawer Modal */}
       {selectedUser && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '100%', maxWidth: 620, background: '#FFF', height: '100vh', overflowY: 'auto', padding: 24, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 800, color: '#023020' }}>Edit User: {selectedUser.full_name}</h2>
+          <div style={{ width: '100%', maxWidth: 650, background: '#FFF', height: '100vh', overflowY: 'auto', padding: 24, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#023020' }}>Edit User: {selectedUser.full_name}</h2>
+                <div style={{ fontSize: 12, color: '#7A8B80' }}>ID: {selectedUser.id} | {selectedUser.email}</div>
+              </div>
+              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#7A8B80' }}>
+                ✕
+              </button>
+            </div>
 
             {/* 6 Tabs Header */}
-            <div style={{ display: 'flex', borderBottom: '1px solid #E4EBE1', marginBottom: 20 }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid #E4EBE1', marginBottom: 20, gap: 4 }}>
               {(['profile', 'account', 'roles', 'department', 'permissions', 'activity'] as const).map((tab) => (
                 <button
                   key={tab}
+                  type="button"
                   onClick={() => setEditTab(tab)}
                   style={{
-                    padding: '8px 12px',
+                    padding: '8px 14px',
                     border: 'none',
                     background: 'transparent',
                     borderBottom: editTab === tab ? '2px solid #087A3D' : 'none',
                     fontWeight: editTab === tab ? 700 : 500,
                     color: editTab === tab ? '#087A3D' : '#7A8B80',
-                    fontSize: 12.5,
+                    fontSize: 13,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
                   }}
@@ -515,29 +528,96 @@ export default function UserManagementPage() {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* TAB 1: PROFILE */}
               {editTab === 'profile' && (
                 <>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Full Name</label>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Full Name *</label>
                     <input
                       type="text"
+                      required
                       value={editForm.full_name || ''}
                       onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
                     />
                   </div>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Designation</label>
-                    <input
-                      type="text"
-                      value={editForm.designation || ''}
-                      onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                    />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        value={editForm.email || ''}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Username *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.username || ''}
+                        onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Employee ID</label>
+                      <input
+                        type="text"
+                        value={editForm.employee_id || ''}
+                        onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Mobile Number</label>
+                      <input
+                        type="text"
+                        value={editForm.mobile || ''}
+                        onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Designation</label>
+                      <input
+                        type="text"
+                        value={editForm.designation || ''}
+                        onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Reporting Manager</label>
+                      <select
+                        value={editForm.reporting_manager_id || ''}
+                        onChange={(e) => setEditForm({ ...editForm, reporting_manager_id: e.target.value ? Number(e.target.value) : undefined })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      >
+                        <option value="">None (Top Level)</option>
+                        {usersData?.items
+                          ?.filter((u) => u.id !== selectedUser.id)
+                          .map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.full_name} ({u.role})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
                   </div>
                 </>
               )}
 
+              {/* TAB 2: ACCOUNT */}
               {editTab === 'account' && (
                 <>
                   <div>
@@ -547,51 +627,140 @@ export default function UserManagementPage() {
                       onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
                       style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
                     >
-                      <option value="ACTIVE">Active</option>
-                      <option value="INACTIVE">Inactive</option>
-                      <option value="LOCKED">Locked</option>
+                      <option value="ACTIVE">Active (Can Log In)</option>
+                      <option value="INACTIVE">Inactive (Disabled)</option>
+                      <option value="LOCKED">Locked (Failed Logins)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Reset Password (Leave blank to keep existing)</label>
+                    <input
+                      type="password"
+                      placeholder="Enter new password..."
+                      value={editForm.password || ''}
+                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                    />
+                  </div>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', marginTop: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.force_password_change || false}
+                      onChange={(e) => setEditForm({ ...editForm, force_password_change: e.target.checked })}
+                    />
+                    <span style={{ fontWeight: 600, color: '#023020' }}>Require password change on next login</span>
+                  </label>
+
+                  <div style={{ marginTop: 14, padding: 14, background: '#F8FAF8', borderRadius: 10, border: '1px solid #E4EBE1', fontSize: 12, color: '#44584C' }}>
+                    <div style={{ fontWeight: 700, color: '#023020', marginBottom: 4 }}>Account Statistics</div>
+                    <div>Last Login: {selectedUser.last_login_at ? formatDateTime(selectedUser.last_login_at) : 'Never'}</div>
+                    <div>Account Created: {formatDateTime(selectedUser.created_at)}</div>
+                    <div>Failed Login Attempts: {selectedUser.failed_login_attempts || 0}</div>
+                  </div>
+                </>
+              )}
+
+              {/* TAB 3: ROLES */}
+              {editTab === 'roles' && (
+                <>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Primary User Role</label>
+                    <select
+                      value={editForm.primary_role || selectedUser.role}
+                      onChange={(e) => setEditForm({ ...editForm, primary_role: e.target.value as any })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, fontWeight: 700, color: '#087A3D' }}
+                    >
+                      <option value="ADMIN">ADMIN (Super Administrator)</option>
+                      <option value="SALES_MANAGER">SALES_MANAGER</option>
+                      <option value="SALES_EXECUTIVE">SALES_EXECUTIVE</option>
+                      <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
+                      <option value="DELIVERY_TEAM">DELIVERY_TEAM</option>
+                      <option value="HR_MANAGER">HR_MANAGER</option>
+                      <option value="EMPLOYEE">EMPLOYEE</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C', marginBottom: 8, display: 'block' }}>Additional Dynamic Roles</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                      {rolesList?.map((r) => {
+                        const isChecked = editForm.role_ids?.includes(r.id);
+                        return (
+                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: isChecked ? '#EAF6E8' : '#F9FAFB', border: `1px solid ${isChecked ? '#A3E635' : '#E5E7EB'}`, borderRadius: 8, cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const current = editForm.role_ids || [];
+                                if (e.target.checked) setEditForm({ ...editForm, role_ids: [...current, r.id] });
+                                else setEditForm({ ...editForm, role_ids: current.filter((id) => id !== r.id) });
+                              }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#023020', fontSize: 13 }}>{r.name}</div>
+                              <div style={{ color: '#7A8B80', fontSize: 11 }}>{r.description || 'No description'}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* TAB 4: DEPARTMENT */}
+              {editTab === 'department' && (
+                <>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Primary Department</label>
+                    <select
+                      value={editForm.primary_department_id || editForm.department_ids?.[0] || ''}
+                      onChange={(e) => {
+                        const depId = Number(e.target.value);
+                        setEditForm({ ...editForm, primary_department_id: depId, department_ids: [depId] });
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                    >
+                      <option value="">Select Department</option>
+                      {deptsList?.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code})
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </>
               )}
 
-              {editTab === 'roles' && (
+              {/* TAB 5: PERMISSIONS */}
+              {editTab === 'permissions' && (
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C', marginBottom: 8, display: 'block' }}>Assigned Roles</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {rolesList?.map((r) => (
-                      <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                        <input
-                          type="checkbox"
-                          checked={editForm.role_ids?.includes(r.id)}
-                          onChange={(e) => {
-                            const current = editForm.role_ids || [];
-                            if (e.target.checked) setEditForm({ ...editForm, role_ids: [...current, r.id] });
-                            else setEditForm({ ...editForm, role_ids: current.filter((id) => id !== r.id) });
-                          }}
-                        />
-                        <span style={{ fontWeight: 600 }}>{r.name}</span> - <span style={{ color: '#7A8B80', fontSize: 12 }}>{r.description}</span>
-                      </label>
-                    ))}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#023020' }}>Effective Authorization Breakdown</h4>
+                      <p style={{ margin: '2px 0 0', fontSize: 12, color: '#7A8B80' }}>Inspect combined role permissions and direct overrides.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInspectUserId(selectedUser.id)}
+                      style={{ padding: '8px 14px', background: '#087A3D', color: '#FFF', borderRadius: 8, fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Shield size={16} /> Open Inspector
+                    </button>
                   </div>
                 </div>
               )}
 
-              {editTab === 'department' && (
+              {/* TAB 6: ACTIVITY */}
+              {editTab === 'activity' && (
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Department Assignment</label>
-                  <select
-                    value={editForm.department_ids?.[0] || ''}
-                    onChange={(e) => setEditForm({ ...editForm, department_ids: [Number(e.target.value)] })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                  >
-                    <option value="">Select Department</option>
-                    {deptsList?.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: '#023020' }}>Audit Event Activity Log</h4>
+                  <div style={{ padding: 16, background: '#F8FAF8', borderRadius: 10, border: '1px solid #E4EBE1', fontSize: 12, color: '#44584C' }}>
+                    <div>User Account Created: {formatDateTime(selectedUser.created_at)}</div>
+                    <div>Last System Login: {selectedUser.last_login_at ? formatDateTime(selectedUser.last_login_at) : 'Never'}</div>
+                  </div>
                 </div>
               )}
 
