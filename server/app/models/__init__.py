@@ -43,7 +43,7 @@ from app.models.rbac import (
     RoleFieldPermission,
     RolePermission,
     UserPermission,
-    UserRole,
+    UserRole as RbacUserRole,
 )
 from app.models.smtp_setting import SmtpSetting
 from app.models.user import User
@@ -98,6 +98,7 @@ __all__ = [
     "User",
     "UserPermission",
     "UserRole",
+    "RbacUserRole",
     "VehicleModel",
     "Verification",
     "VerificationStatus",
