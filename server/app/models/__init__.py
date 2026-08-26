@@ -31,6 +31,7 @@ from app.models.rbac import (
     Action,
     AuditActionType,
     AuditLog,
+    DataScopeType,
     Department,
     DepartmentUser,
     FieldPermissionType,

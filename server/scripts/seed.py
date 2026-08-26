@@ -266,9 +266,13 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
     return companies
 
 
+from app.db.seed_rbac import seed_rbac_data
+
+
 def seed() -> None:
     db = SessionLocal()
     try:
+        seed_rbac_data(db)
         company_map = _ensure_masters(db)
         models = db.query(VehicleModel).order_by(VehicleModel.id).all()
 

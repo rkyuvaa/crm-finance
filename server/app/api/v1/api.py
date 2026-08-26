@@ -9,6 +9,7 @@ from app.api.v1 import (
     notifications,
     planned_activities,
     public_financier,
+    rbac_admin,
     smtp,
     stubs,
 )
@@ -23,4 +24,5 @@ api_router.include_router(smtp.router)
 api_router.include_router(planned_activities.router)
 api_router.include_router(notifications.router)
 api_router.include_router(masters.router)
+api_router.include_router(rbac_admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(stubs.router)

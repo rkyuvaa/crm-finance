@@ -44,6 +44,24 @@ def require_roles(*roles: UserRole) -> Callable:
     return dependency
 
 
+def require_permission(action: str, resource: str) -> Callable:
+    """Dependency that evaluates dynamic RBAC permission."""
+    from app.services.rbac_service import can_user
+
+    def dependency(
+        db: Session = Depends(get_db),
+        user: User = Depends(get_current_user),
+    ) -> User:
+        if not can_user(db, user, action, resource):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission denied: require {resource}:{action}",
+            )
+        return user
+
+    return dependency
+
+
 def can_access_application(user: User, app: Application) -> bool:
     """Check if user can access a specific application based on role and assignment."""
     if user.role == UserRole.ADMIN:

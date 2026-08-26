@@ -3,11 +3,16 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bell,
+  Building2,
   FileText,
+  KeyRound,
   LayoutDashboard,
   Settings,
   Settings2,
+  Shield,
+  ShieldAlert,
   UserPlus,
+  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -32,6 +37,16 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { key: 'admin-users', label: 'Users', path: '/admin/users', icon: Users, badge: null },
+      { key: 'admin-roles', label: 'Roles', path: '/admin/roles', icon: Shield, badge: null },
+      { key: 'admin-departments', label: 'Departments', path: '/admin/departments', icon: Building2, badge: null },
+      { key: 'admin-permissions', label: 'Permissions', path: '/admin/permissions', icon: KeyRound, badge: null },
+      { key: 'admin-audit-logs', label: 'Access Audit Log', path: '/admin/audit-logs', icon: ShieldAlert, badge: null },
     ],
   },
   {
