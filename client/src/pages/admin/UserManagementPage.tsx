@@ -18,6 +18,19 @@ import type { UserDetail } from '../../types/rbac';
 import EffectiveAccessModal from './EffectiveAccessModal';
 import { formatDateTime, initialsOf } from '../../utils/format';
 
+function getErrorMessage(err: any): string {
+  if (!err) return 'An unexpected error occurred';
+  if (typeof err?.data?.detail === 'string') return err.data.detail;
+  if (Array.isArray(err?.data?.detail)) {
+    return err.data.detail
+      .map((e: any) => `${e.loc ? e.loc.filter((x: string) => x !== 'body').join('.') + ': ' : ''}${e.msg}`)
+      .join('\n');
+  }
+  if (typeof err?.data?.message === 'string') return err.data.message;
+  if (typeof err?.message === 'string') return err.message;
+  return 'Failed to save user';
+}
+
 export default function UserManagementPage() {
   const [page] = useState(1);
   const [search, setSearch] = useState('');
@@ -68,7 +81,21 @@ export default function UserManagementPage() {
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createUser(createForm as any).unwrap();
+      const payload = {
+        ...createForm,
+        full_name: createForm.full_name.trim(),
+        email: createForm.email.trim(),
+        username: createForm.username.trim(),
+        mobile: createForm.mobile.trim() || undefined,
+        employee_id: createForm.employee_id.trim() || undefined,
+        designation: createForm.designation.trim() || undefined,
+        department_ids: createForm.department_ids.filter((id) => Boolean(id) && !isNaN(id)),
+        role_ids: createForm.role_ids.filter((id) => Boolean(id) && !isNaN(id)),
+        primary_department_id: createForm.primary_department_id || undefined,
+        reporting_manager_id: createForm.reporting_manager_id || undefined,
+      };
+
+      await createUser(payload as any).unwrap();
       setIsCreateOpen(false);
       setCreateForm({
         full_name: '',
@@ -88,7 +115,7 @@ export default function UserManagementPage() {
       });
       refetch();
     } catch (err: any) {
-      alert(err?.data?.detail || 'Failed to create user');
+      alert(getErrorMessage(err));
     }
   };
 
@@ -96,11 +123,23 @@ export default function UserManagementPage() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      await updateUser({ id: selectedUser.id, data: editForm }).unwrap();
+      const payload = {
+        ...editForm,
+        full_name: editForm.full_name?.trim(),
+        email: editForm.email?.trim(),
+        username: editForm.username?.trim(),
+        mobile: editForm.mobile?.trim() || undefined,
+        employee_id: editForm.employee_id?.trim() || undefined,
+        designation: editForm.designation?.trim() || undefined,
+        department_ids: editForm.department_ids?.filter((id) => Boolean(id) && !isNaN(id)),
+        role_ids: editForm.role_ids?.filter((id) => Boolean(id) && !isNaN(id)),
+      };
+
+      await updateUser({ id: selectedUser.id, data: payload }).unwrap();
       setSelectedUser(null);
       refetch();
     } catch (err: any) {
-      alert(err?.data?.detail || 'Failed to update user');
+      alert(getErrorMessage(err));
     }
   };
 

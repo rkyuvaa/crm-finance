@@ -217,7 +217,7 @@ def get_user_detail(
 
     u = db.get(User, user_id)
     if not u:
-        raise HTTPException(status_code=4404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     assigned_roles = [ur.role for ur in u.user_roles if ur.role]
     departments = [du.department for du in u.department_users if du.department]
