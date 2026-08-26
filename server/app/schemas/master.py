@@ -302,3 +302,46 @@ class UserBrief(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
+class StageAutomoveRuleCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    trigger_type: str = Field(default="standard_field")  # 'standard_field', 'custom_field', 'document_verification'
+    field_name: str | None = Field(default=None, max_length=100)
+    field_id: int | None = Field(default=None)
+    condition_operator: str = Field(default="is_filled")  # 'is_filled', 'is_verified', 'equals', 'greater_than'
+    condition_value: str | None = Field(default=None)
+    source_stage_key: str | None = Field(default=None, max_length=40)
+    target_status: str = Field(min_length=2, max_length=40)
+    is_enabled: bool = True
+
+
+class StageAutomoveRuleUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    trigger_type: str | None = Field(default=None)
+    field_name: str | None = Field(default=None, max_length=100)
+    field_id: int | None = Field(default=None)
+    condition_operator: str | None = Field(default=None)
+    condition_value: str | None = Field(default=None)
+    source_stage_key: str | None = Field(default=None, max_length=40)
+    target_status: str | None = Field(default=None, min_length=2, max_length=40)
+    is_enabled: bool | None = Field(default=None)
+
+
+class StageAutomoveRuleOut(BaseModel):
+    id: int
+    name: str
+    trigger_type: str
+    field_name: str | None = None
+    field_id: int | None = None
+    field_label: str | None = None
+    condition_operator: str
+    condition_value: str | None = None
+    source_stage_key: str | None = None
+    target_status: str
+    is_enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+

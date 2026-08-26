@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Plus, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Plus, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,18 +33,15 @@ import {
 import {
   useActivityTypesQuery,
   useFinanceCompaniesQuery,
-  useStagesQuery,
   useTabsQuery,
   useVehicleModelsQuery,
   useUsersQuery,
 } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import StatusBadge from '@/components/ui/StatusBadge';
 import DynamicFieldEngine from '@/components/fields/DynamicFieldEngine';
 import DocumentVerificationPanel from '@/components/fields/DocumentVerificationPanel';
 import FinalSubmissionPanel from '@/components/fields/FinalSubmissionPanel';
-import { formatDate } from '@/utils/format';
-import type { ApplicationStatus } from '@/types';
+import { formatDate, formatDateTime } from '@/utils/format';
 
 const editSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
@@ -81,7 +78,6 @@ export default function LeadDetailPage() {
   const appId = Number(id);
 
   const { data: lead, isFetching } = useGetApplicationQuery(appId, { skip: !appId });
-  const { data: stagesData = [] } = useStagesQuery();
 
   const { data: activityLogs = [] } = useApplicationActivityQuery(appId, { skip: !appId });
   const { data: plannedActivities = [] } = usePlannedActivitiesQuery(appId, { skip: !appId });
@@ -98,7 +94,6 @@ export default function LeadDetailPage() {
   const [activeLeadTabCode, setActiveLeadTabCode] = useState<string>('general');
   const [sideTab, setSideTab] = useState(0);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
-  const [movingStage, setMovingStage] = useState(false);
 
   const {
     register,
@@ -106,7 +101,6 @@ export default function LeadDetailPage() {
     reset,
     setValue,
     watch,
-    trigger,
     formState: { errors },
   } = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -141,133 +135,6 @@ export default function LeadDetailPage() {
   }, [lead, reset]);
 
   const selectedModel = models.find((m) => String(m.id) === modelId);
-
-  // Map known keys or custom stage keys to valid ApplicationStatus enum values
-  const STAGE_STATUS_MAP: Record<string, ApplicationStatus> = {
-    leads: 'LEAD',
-    lead: 'LEAD',
-    applications: 'APPLICATION',
-    application: 'APPLICATION',
-    verification: 'VERIFICATION',
-    finance: 'FINANCE',
-    query: 'QUERY',
-    sanctioned: 'SANCTIONED',
-    delivery: 'DELIVERY',
-    disburse: 'DISBURSEMENT',
-    disbursement: 'DISBURSEMENT',
-    completed: 'COMPLETED',
-  };
-
-  const VALID_ENUM_STATUSES = new Set([
-    'LEAD',
-    'APPLICATION',
-    'VERIFICATION',
-    'FINANCE',
-    'QUERY',
-    'SANCTIONED',
-    'DELIVERY',
-    'DISBURSEMENT',
-    'COMPLETED',
-    'REJECTED',
-  ]);
-
-  // Default pipeline sequence fallback in case masters stages have not loaded yet
-  const DEFAULT_STAGES = [
-    { key: 'leads', label: 'Leads', status: 'LEAD' as ApplicationStatus },
-    { key: 'applications', label: 'Applications', status: 'APPLICATION' as ApplicationStatus },
-    { key: 'verification', label: 'Verification', status: 'VERIFICATION' as ApplicationStatus },
-    { key: 'finance', label: 'Finance', status: 'FINANCE' as ApplicationStatus },
-    { key: 'query', label: 'Query', status: 'QUERY' as ApplicationStatus },
-    { key: 'sanctioned', label: 'Sanctioned', status: 'SANCTIONED' as ApplicationStatus },
-    { key: 'delivery', label: 'Delivery', status: 'DELIVERY' as ApplicationStatus },
-    { key: 'disburse', label: 'Disburse', status: 'DISBURSEMENT' as ApplicationStatus },
-    { key: 'completed', label: 'Completed', status: 'COMPLETED' as ApplicationStatus },
-  ];
-
-  const getValidStatus = (key: string, rawStatus?: string | null): ApplicationStatus => {
-    if (rawStatus && VALID_ENUM_STATUSES.has(rawStatus.toUpperCase())) {
-      return rawStatus.toUpperCase() as ApplicationStatus;
-    }
-    if (STAGE_STATUS_MAP[key.toLowerCase()]) {
-      return STAGE_STATUS_MAP[key.toLowerCase()];
-    }
-    // Default fallback order if custom stage key is added without status binding
-    return 'APPLICATION';
-  };
-
-  const activeStagesList = stagesData && stagesData.length > 0
-    ? [...stagesData].filter((s) => s.enabled).sort((a, b) => a.order_index - b.order_index).map((s) => ({
-        key: s.key,
-        label: s.label,
-        status: getValidStatus(s.key, s.status),
-      }))
-    : DEFAULT_STAGES;
-
-  const currentStatusUpper = (lead?.status || 'LEAD').toUpperCase();
-  let currentStageIndex = activeStagesList.findIndex(
-    (s) => s.status.toUpperCase() === currentStatusUpper || STAGE_STATUS_MAP[s.key] === currentStatusUpper
-  );
-  if (currentStageIndex === -1) {
-    currentStageIndex = 0; // Default to first stage (Leads) if unmapped
-  }
-
-  const isFinalStage = currentStageIndex >= activeStagesList.length - 1;
-  const nextStage = !isFinalStage ? activeStagesList[currentStageIndex + 1] : null;
-  const nextStatus = nextStage?.status ?? null;
-
-  const handleMoveNextStage = async () => {
-    if (!lead || !nextStage || !nextStatus) return;
-
-    setMovingStage(true);
-
-    // Step 1: Validate required fields before stage transition
-    const isValid = await trigger();
-
-    let missingDetails: string[] = [];
-    const values = watch();
-    if (!values.vehicle_model_id) missingDetails.push('Vehicle Model');
-    if (!values.finance_company_id) missingDetails.push('Finance Company');
-
-    if (!isValid || missingDetails.length > 0) {
-      setMovingStage(false);
-      showToast(
-        'Please complete all required fields before moving this Lead to the next stage.',
-        'error'
-      );
-      return;
-    }
-
-    try {
-      // Step 2: Save and update status to next stage
-      await updateApplication({
-        id: lead.id,
-        body: {
-          customer_name: values.customer_name,
-          customer_phone: values.customer_phone,
-          vehicle: selectedModel?.name ?? lead.vehicle,
-          amount: values.amount,
-          status: nextStatus,
-          vehicle_model_id: values.vehicle_model_id ? Number(values.vehicle_model_id) : null,
-          vehicle_price: values.vehicle_price,
-          down_payment: values.down_payment,
-          finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
-        },
-      }).unwrap();
-
-      showToast('Lead successfully moved to the next stage.', 'success');
-    } catch (err) {
-      const errData = (err as { data?: { detail?: unknown } })?.data;
-      let detailMsg = 'Could not move lead to next stage';
-      if (typeof errData?.detail === 'string') {
-        detailMsg = errData.detail;
-      } else if (Array.isArray(errData?.detail)) {
-        detailMsg = errData.detail.map((d: { msg?: string }) => d.msg || 'Invalid field').join(', ');
-      }
-      showToast(detailMsg, 'error');
-    } finally {
-      setMovingStage(false);
-    }
-  };
 
   const onSubmit = async (values: EditForm) => {
     if (!lead) return;
@@ -364,32 +231,6 @@ export default function LeadDetailPage() {
         >
           Back to Leads
         </Button>
-
-        {/* Prominent Move Next Stage Button in Top-Right Corner */}
-        {nextStage && !isFinalStage && (
-          <Button
-            variant="contained"
-            color="success"
-            endIcon={<ChevronRight size={18} />}
-            disabled={movingStage || isUpdating}
-            onClick={handleMoveNextStage}
-            sx={{
-              fontWeight: 700,
-              px: 3,
-              py: 1,
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontSize: 14,
-              boxShadow: '0 4px 12px rgba(8, 122, 61, 0.25)',
-              background: '#087A3D',
-              '&:hover': {
-                background: '#04552B',
-              },
-            }}
-          >
-            {movingStage ? 'Validating & Saving...' : `Move Next Stage (${nextStage.label})`}
-          </Button>
-        )}
       </div>
 
       <div className="two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px)', gap: 20, alignItems: 'start', maxWidth: '100%' }}>
@@ -403,7 +244,34 @@ export default function LeadDetailPage() {
                 Lead Details
               </div>
             </div>
-            <StatusBadge status={lead.status} />
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '4.5px 12px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 700,
+                background: '#F0F4EE',
+                color: '#087A3D',
+                border: '1px solid #C2E2BE',
+                boxShadow: '0 1px 2px rgba(2, 48, 32, 0.06)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: '#087A3D',
+                  boxShadow: '0 0 0 2.5px #E6F3EA, 0 0 6px rgba(8, 122, 61, 0.5)',
+                  flexShrink: 0,
+                }}
+              />
+              Last updated: {formatDateTime(lead.updated_at)}
+            </span>
           </div>
 
           {/* Dynamic Module Tabs for this Lead - Wraps onto 2nd line when space runs out */}
@@ -476,7 +344,7 @@ export default function LeadDetailPage() {
                 size="small"
                 value={modelId || ''}
                 onChange={(e) => setValue('vehicle_model_id', String(e.target.value), { shouldValidate: true })}
-                error={Boolean(errors.vehicle_model_id || (!watch('vehicle_model_id') && movingStage))}
+                error={Boolean(errors.vehicle_model_id)}
                 sx={{ mt: 1, mb: 0.5 }}
                 renderValue={(value) =>
                   value ? models.find((m) => String(m.id) === value)?.name ?? value : 'Select vehicle model *'
@@ -540,7 +408,7 @@ export default function LeadDetailPage() {
                 size="small"
                 value={watch('finance_company_id') || ''}
                 onChange={(e) => setValue('finance_company_id', String(e.target.value), { shouldValidate: true })}
-                error={Boolean(errors.finance_company_id || (!watch('finance_company_id') && movingStage))}
+                error={Boolean(errors.finance_company_id)}
                 sx={{ mt: 1, mb: 0.5 }}
                 renderValue={(value) =>
                   value ? companies.find((c) => String(c.id) === value)?.name ?? value : 'Select finance company *'

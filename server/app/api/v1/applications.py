@@ -42,6 +42,7 @@ from app.schemas.master import (
 from app.schemas.notifications import ActivityLogOut
 from app.services.aging import aging_tone, duration_between, format_aging
 from app.services.auth import next_app_no, touch_application
+from app.services.automove_service import evaluate_automove_rules
 from app.services.ocr_analyzer import analyze_document_quality
 
 router = APIRouter(prefix="/applications", tags=["applications"])
@@ -385,6 +386,7 @@ def update_application(
     )
     db.commit()
     db.refresh(app)
+    evaluate_automove_rules(db, app, user)
     return _to_out(app)
 
 
@@ -468,6 +470,7 @@ def save_custom_field_values(
     db.commit()
     for item in saved_list:
         db.refresh(item)
+    evaluate_automove_rules(db, app, user)
     return saved_list
 
 
@@ -570,6 +573,7 @@ def toggle_document_verification(
     touch_application(db, app)
     db.commit()
     db.refresh(rec)
+    evaluate_automove_rules(db, app, user)
 
     meta = rec.file_metadata or {}
     vname = user.full_name if rec.is_verified else None

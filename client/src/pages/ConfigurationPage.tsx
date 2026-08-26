@@ -3,6 +3,7 @@ import { Box, Tab, Tabs } from '@mui/material';
 
 import ActivityTypesPanel from '@/features/configuration/ActivityTypesPanel';
 import FinanciersPanel from '@/features/configuration/FinanciersPanel';
+import StageAutomovePanel from '@/features/configuration/StageAutomovePanel';
 import StagesPanel from '@/features/configuration/StagesPanel';
 import TabsPanel from '@/features/configuration/TabsPanel';
 import VehicleModelsPanel from '@/features/configuration/VehicleModelsPanel';
@@ -36,6 +37,7 @@ export default function ConfigurationPage() {
           <Tab label="Financiers" />
           <Tab label="Stages" />
           <Tab label="Activity Types" />
+          <Tab label="Stage Auto-Move Rules" />
         </Tabs>
       </Box>
 
@@ -44,6 +46,7 @@ export default function ConfigurationPage() {
       {tab === 2 && <FinanciersPanel />}
       {tab === 3 && <StagesPanel />}
       {tab === 4 && <ActivityTypesPanel />}
+      {tab === 5 && <StageAutomovePanel />}
     </div>
   );
 }

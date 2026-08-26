@@ -16,6 +16,7 @@ from app.models import (
     CrmTabStageMapping,
     FinanceCompany,
     PipelineStage,
+    StageAutomoveRule,
     User,
     UserRole,
     VehicleModel,
@@ -34,6 +35,9 @@ from app.schemas.master import (
     FinanceCompanyBrief,
     FinanceCompanyCreate,
     FinanceCompanyUpdate,
+    StageAutomoveRuleCreate,
+    StageAutomoveRuleOut,
+    StageAutomoveRuleUpdate,
     StageCreate,
     StageOut,
     StageUpdate,
@@ -711,4 +715,90 @@ def list_users(db: Session = Depends(get_db), user: User = Depends(get_current_u
         )
         for u in users
     ]
+
+
+# ---------------------------------------------------------------------------
+# Stage Auto-Move Rules
+# ---------------------------------------------------------------------------
+
+
+def _automove_to_out(rule: StageAutomoveRule) -> StageAutomoveRuleOut:
+    return StageAutomoveRuleOut(
+        id=rule.id,
+        name=rule.name,
+        trigger_type=rule.trigger_type,
+        field_name=rule.field_name,
+        field_id=rule.field_id,
+        field_label=rule.field.label if rule.field else None,
+        condition_operator=rule.condition_operator,
+        condition_value=rule.condition_value,
+        source_stage_key=rule.source_stage_key,
+        target_status=rule.target_status,
+        is_enabled=rule.is_enabled,
+        created_at=rule.created_at,
+        updated_at=rule.updated_at,
+    )
+
+
+@router.get("/automove-rules", response_model=list[StageAutomoveRuleOut])
+def list_automove_rules(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    rules = db.query(StageAutomoveRule).order_by(StageAutomoveRule.id.asc()).all()
+    return [_automove_to_out(r) for r in rules]
+
+
+@router.post("/automove-rules", response_model=StageAutomoveRuleOut, status_code=status.HTTP_201_CREATED)
+def create_automove_rule(
+    payload: StageAutomoveRuleCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = StageAutomoveRule(
+        name=payload.name,
+        trigger_type=payload.trigger_type,
+        field_name=payload.field_name,
+        field_id=payload.field_id,
+        condition_operator=payload.condition_operator,
+        condition_value=payload.condition_value,
+        source_stage_key=payload.source_stage_key,
+        target_status=payload.target_status,
+        is_enabled=payload.is_enabled,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return _automove_to_out(rule)
+
+
+@router.patch("/automove-rules/{rule_id}", response_model=StageAutomoveRuleOut)
+def update_automove_rule(
+    rule_id: int,
+    payload: StageAutomoveRuleUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = db.get(StageAutomoveRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auto-move rule not found")
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(rule, field, value)
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return _automove_to_out(rule)
+
+
+@router.delete("/automove-rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_automove_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = db.get(StageAutomoveRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auto-move rule not found")
+    db.delete(rule)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 

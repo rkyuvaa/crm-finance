@@ -10,6 +10,8 @@ import type {
   FinanceCompanyOption,
   StageConfig,
   StageInput,
+  StageAutomoveRule,
+  StageAutomoveRuleInput,
   UserBrief,
   VehicleModel,
   VehicleModelInput,
@@ -17,6 +19,22 @@ import type {
 
 export const mastersApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    automoveRules: build.query<StageAutomoveRule[], void>({
+      query: () => ({ url: '/masters/automove-rules' }),
+      providesTags: ['Stages'],
+    }),
+    createAutomoveRule: build.mutation<StageAutomoveRule, StageAutomoveRuleInput>({
+      query: (body) => ({ url: '/masters/automove-rules', method: 'POST', body }),
+      invalidatesTags: ['Stages'],
+    }),
+    updateAutomoveRule: build.mutation<StageAutomoveRule, { id: number; body: Partial<StageAutomoveRuleInput> }>({
+      query: ({ id, body }) => ({ url: `/masters/automove-rules/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Stages'],
+    }),
+    deleteAutomoveRule: build.mutation<void, number>({
+      query: (id) => ({ url: `/masters/automove-rules/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Stages'],
+    }),
     vehicleModels: build.query<VehicleModel[], void>({
       query: () => ({ url: '/masters/vehicle-models' }),
       providesTags: ['VehicleModels'],
@@ -131,6 +149,10 @@ export const mastersApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useAutomoveRulesQuery,
+  useCreateAutomoveRuleMutation,
+  useUpdateAutomoveRuleMutation,
+  useDeleteAutomoveRuleMutation,
   useVehicleModelsQuery,
   useCreateVehicleModelMutation,
   useUpdateVehicleModelMutation,
@@ -158,3 +180,4 @@ export const {
   useReorderTabFieldsMutation,
   useUsersQuery,
 } = mastersApi;
+

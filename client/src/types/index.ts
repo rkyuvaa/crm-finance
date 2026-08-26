@@ -532,3 +532,32 @@ export interface PlannedActivityInput {
   due_date?: string | null;
   assigned_to?: number | null;
 }
+
+export interface StageAutomoveRule {
+  id: number;
+  name: string;
+  trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
+  field_name?: string | null;
+  field_id?: number | null;
+  field_label?: string | null;
+  condition_operator: 'is_filled' | 'is_verified' | 'equals' | 'greater_than';
+  condition_value?: string | null;
+  source_stage_key?: string | null;
+  target_status: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageAutomoveRuleInput {
+  name: string;
+  trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
+  field_name?: string | null;
+  field_id?: number | null;
+  condition_operator: 'is_filled' | 'is_verified' | 'equals' | 'greater_than';
+  condition_value?: string | null;
+  source_stage_key?: string | null;
+  target_status: string;
+  is_enabled: boolean;
+}
+
