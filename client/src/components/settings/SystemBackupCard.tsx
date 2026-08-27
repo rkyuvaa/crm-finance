@@ -20,7 +20,7 @@ import {
   MenuItem,
   Select,
 } from '@mui/material';
-import { Download, UploadCloud, Database, RefreshCw, AlertTriangle, CheckCircle2, FileCode, Archive } from 'lucide-react';
+import { Download, UploadCloud, Database, RefreshCw, AlertTriangle, CheckCircle2, Archive } from 'lucide-react';
 
 import { useGetBackupSummaryQuery, useRestoreBackupMutation } from '@/api/backupApi';
 import { useToast } from '@/components/ui/ToastHost';
