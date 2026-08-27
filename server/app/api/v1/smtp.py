@@ -92,12 +92,12 @@ def update_smtp_settings(
         rec = SmtpSetting(id=1)
         db.add(rec)
 
-    rec.smtp_host = payload.smtp_host
+    rec.smtp_host = payload.smtp_host.strip() if payload.smtp_host else None
     rec.smtp_port = payload.smtp_port
-    rec.smtp_security = payload.smtp_security
-    rec.smtp_user = payload.smtp_user
-    rec.smtp_from_email = payload.smtp_from_email
-    rec.smtp_from_name = payload.smtp_from_name
+    rec.smtp_security = payload.smtp_security.strip().upper() if payload.smtp_security else "TLS"
+    rec.smtp_user = payload.smtp_user.strip() if payload.smtp_user else None
+    rec.smtp_from_email = payload.smtp_from_email.strip() if payload.smtp_from_email else None
+    rec.smtp_from_name = payload.smtp_from_name.strip() if payload.smtp_from_name else "CRMFinance"
     rec.is_enabled = payload.is_enabled
 
     # Only update password if non-empty string provided
@@ -140,6 +140,9 @@ def test_smtp_configuration(
 </html>"""
 
     override_data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+    for k, v in override_data.items():
+        if isinstance(v, str):
+            override_data[k] = v.strip()
 
     success, err_msg = dispatch_email_smtp(
         to_email=payload.test_email,

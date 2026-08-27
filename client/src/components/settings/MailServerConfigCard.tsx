@@ -17,11 +17,12 @@ import {
   Switch,
   TextField,
   Typography,
+  Chip,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Send, Server, ShieldCheck } from 'lucide-react';
+import { Mail, Send, Server, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
 
 import {
   useGetSmtpSettingsQuery,
@@ -79,7 +80,7 @@ export default function MailServerConfigCard() {
       reset({
         smtp_host: smtp.smtp_host ?? '',
         smtp_port: smtp.smtp_port ?? 587,
-        smtp_security: smtp.smtp_security ?? 'TLS',
+        smtp_security: (smtp.smtp_security as 'TLS' | 'SSL' | 'NONE') ?? 'TLS',
         smtp_user: smtp.smtp_user ?? '',
         smtp_password: '',
         smtp_from_email: smtp.smtp_from_email ?? '',
@@ -91,17 +92,25 @@ export default function MailServerConfigCard() {
 
   const isEnabled = watch('is_enabled');
   const securityVal = watch('smtp_security');
+  const hostVal = watch('smtp_host');
+
+  const applyPreset = (host: string, port: number, security: 'TLS' | 'SSL' | 'NONE') => {
+    setValue('smtp_host', host);
+    setValue('smtp_port', port);
+    setValue('smtp_security', security);
+    showToast(`Applied preset for ${host}`, 'info');
+  };
 
   const onSave = async (values: SmtpFormValues) => {
     try {
       await updateSmtp({
-        smtp_host: values.smtp_host || null,
+        smtp_host: values.smtp_host ? values.smtp_host.trim() : null,
         smtp_port: values.smtp_port,
         smtp_security: values.smtp_security,
-        smtp_user: values.smtp_user || null,
-        smtp_password: values.smtp_password || null,
-        smtp_from_email: values.smtp_from_email || null,
-        smtp_from_name: values.smtp_from_name,
+        smtp_user: values.smtp_user ? values.smtp_user.trim() : null,
+        smtp_password: values.smtp_password ? values.smtp_password.trim() : null,
+        smtp_from_email: values.smtp_from_email ? values.smtp_from_email.trim() : null,
+        smtp_from_name: values.smtp_from_name ? values.smtp_from_name.trim() : 'CRMFinance',
         is_enabled: values.is_enabled,
       }).unwrap();
 
@@ -125,13 +134,13 @@ export default function MailServerConfigCard() {
     try {
       const res = await testSmtp({
         test_email: testEmailInput.trim(),
-        smtp_host: formVals.smtp_host || null,
+        smtp_host: formVals.smtp_host ? formVals.smtp_host.trim() : null,
         smtp_port: formVals.smtp_port,
         smtp_security: formVals.smtp_security,
-        smtp_user: formVals.smtp_user || null,
-        smtp_password: formVals.smtp_password || null,
-        smtp_from_email: formVals.smtp_from_email || null,
-        smtp_from_name: formVals.smtp_from_name,
+        smtp_user: formVals.smtp_user ? formVals.smtp_user.trim() : null,
+        smtp_password: formVals.smtp_password ? formVals.smtp_password.trim() : null,
+        smtp_from_email: formVals.smtp_from_email ? formVals.smtp_from_email.trim() : null,
+        smtp_from_name: formVals.smtp_from_name ? formVals.smtp_from_name.trim() : 'CRMFinance',
       }).unwrap();
 
       setTestResult({ success: true, message: res.message });
@@ -162,7 +171,7 @@ export default function MailServerConfigCard() {
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ color: '#7A8B80', mt: 0.5 }}>
-            Configure your SMTP server credentials for sending no-login document links to financiers and system email alerts.
+            Configure your SMTP server credentials for sending document links to financiers and automated email notifications.
           </Typography>
         </div>
 
@@ -178,17 +187,54 @@ export default function MailServerConfigCard() {
         />
       </Box>
 
-      {watch('smtp_host')?.toLowerCase().includes('gmail') ? (
+      {/* Quick Provider Presets */}
+      <Box sx={{ mb: 2.5, p: 2, backgroundColor: '#F8FAF7', borderRadius: '10px', border: '1px solid #E4EBE1' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Zap size={14} color="#087A3D" />
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', textTransform: 'uppercase' }}>
+            Quick Presets (1-Click Provider Setup)
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Chip
+            label="Gmail / Google Workspace"
+            onClick={() => applyPreset('smtp.gmail.com', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+          <Chip
+            label="Zoho Mail (India - .in)"
+            onClick={() => applyPreset('smtp.zoho.in', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+          <Chip
+            label="Zoho Mail (Global - .com)"
+            onClick={() => applyPreset('smtp.zoho.com', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+          <Chip
+            label="Office 365 / Outlook"
+            onClick={() => applyPreset('smtp.office365.com', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+          <Chip
+            label="SendGrid"
+            onClick={() => applyPreset('smtp.sendgrid.net', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+        </Box>
+      </Box>
+
+      {hostVal?.toLowerCase().includes('gmail') ? (
         <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
-          <strong>Google Gmail Notice:</strong> Google completely <strong>disabled standard passwords</strong> for SMTP on May 30, 2022. Your normal Gmail password will always fail with <code>535 Authentication Failed</code>.<br />
-          To fix this, turn on 2-Step Verification on <code>konwertit@gmail.com</code> and generate a 16-character <strong>App Password</strong> at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>myaccount.google.com/apppasswords</a>, then paste it into the Password field below.
+          <strong>Google Gmail Setup:</strong> Google requires a 16-character <strong>App Password</strong> (normal login passwords will fail with 535 error). Turn on 2-Step Verification on your Google account and generate an App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>myaccount.google.com/apppasswords</a>.
+        </Alert>
+      ) : hostVal?.toLowerCase().includes('zoho') ? (
+        <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
+          <strong>Zoho Mail Setup:</strong> Use <code>smtp.zoho.in</code> for India accounts or <code>smtp.zoho.com</code> for Global. Ensure <em>SMTP Access</em> is enabled in your Zoho Mail account settings. If 2FA is active, generate an App Password under Zoho Account Security.
         </Alert>
       ) : (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
-          <strong>Zoho / General Configuration Guidelines:</strong><br />
-          • <strong>Primary Password (Zoho):</strong> Use host <code>smtp.zoho.in</code> (India) or <code>smtp.zoho.com</code>, Port <code>587</code>, Encryption <code>TLS</code>, with <em>SMTP Access</em> enabled in Zoho Admin.<br />
-          • <strong>If 2FA is active:</strong> Generate an <em>App Password</em> (under <em>Zoho Account &gt; Security &gt; Application-Specific Passwords</em>).<br />
-          • <strong>Sender Matching:</strong> Ensure <em>Sender Email Address</em> matches your <em>SMTP Username</em>.
+          Enter your SMTP Host, Port (587 for TLS, 465 for SSL), Username, and App Password. Click <strong>Test Connection</strong> to verify settings before saving.
         </Alert>
       )}
 
@@ -197,7 +243,7 @@ export default function MailServerConfigCard() {
           <TextField
             fullWidth
             label="SMTP Host"
-            placeholder="e.g. smtp.gmail.com or smtp.sendgrid.net"
+            placeholder="e.g. smtp.gmail.com or smtp.zoho.in"
             margin="dense"
             error={Boolean(errors.smtp_host)}
             helperText={errors.smtp_host?.message}
@@ -248,28 +294,28 @@ export default function MailServerConfigCard() {
             fullWidth
             label="SMTP Password / App Password"
             type="password"
+            placeholder={smtp?.has_password ? '•••••••• (Leave blank to keep existing)' : 'Enter SMTP password'}
             margin="dense"
-            placeholder={smtp?.has_password ? '•••••••• (Password Saved)' : 'Enter SMTP Password'}
-            helperText={smtp?.has_password ? 'Leave empty to keep existing password' : 'App-specific password recommended'}
             error={Boolean(errors.smtp_password)}
+            helperText={errors.smtp_password?.message}
             {...register('smtp_password')}
           />
         </Box>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
           <TextField
             fullWidth
-            label="Sender Email Address (From)"
-            placeholder="e.g. noreply@crmfinance.com"
+            label="Sender Email Address"
+            placeholder="e.g. no-reply@domain.com"
             margin="dense"
             error={Boolean(errors.smtp_from_email)}
-            helperText={errors.smtp_from_email?.message}
+            helperText={errors.smtp_from_email?.message || 'Must match your SMTP user or authorized domain alias'}
             {...register('smtp_from_email')}
           />
           <TextField
             fullWidth
-            label="Sender Name"
-            placeholder="e.g. CRMFinance / KIM"
+            label="Sender Display Name"
+            placeholder="CRMFinance"
             margin="dense"
             error={Boolean(errors.smtp_from_name)}
             helperText={errors.smtp_from_name?.message}
@@ -277,76 +323,92 @@ export default function MailServerConfigCard() {
           />
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, pt: 1, borderTop: '1px solid #E4EBE1' }}>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <Button
-            type="button"
             variant="outlined"
-            color="primary"
-            startIcon={<Mail size={16} />}
             onClick={() => {
-              setTestEmailInput(smtp?.smtp_from_email || smtp?.smtp_user || '');
-              setTestResult(null);
               setTestDialogOpen(true);
+              setTestResult(null);
+              setTestEmailInput(watch('smtp_from_email') || watch('smtp_user') || '');
             }}
-            sx={{ textTransform: 'none', fontWeight: 700 }}
+            startIcon={<Send size={16} />}
+            sx={{
+              borderColor: '#087A3D',
+              color: '#087A3D',
+              '&:hover': { borderColor: '#023020', backgroundColor: '#EAF6E8' },
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+            }}
           >
-            Send Test Email
+            Test Connection
           </Button>
 
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             disabled={isSaving}
-            startIcon={<ShieldCheck size={18} />}
-            sx={{ fontWeight: 800, px: 3, py: 1 }}
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <ShieldCheck size={16} />}
+            sx={{
+              backgroundColor: '#023020',
+              '&:hover': { backgroundColor: '#012015' },
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+            }}
           >
-            {isSaving ? 'Saving Settings...' : 'Save Mail Server Config'}
+            {isSaving ? 'Saving...' : 'Save Mail Server Settings'}
           </Button>
         </Box>
       </form>
 
-      {/* Send Test Email Dialog */}
-      <Dialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, color: '#023020' }}>
+      {/* Test Connection Modal */}
+      <Dialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 800, color: '#023020' }}>
+          <Mail size={22} color="#087A3D" />
           Send Test Email
         </DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" sx={{ color: '#44584C', mb: 2 }}>
-            Enter a recipient email address to test your SMTP server connection and email delivery.
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#7A8B80', mb: 2 }}>
+            Enter a recipient email address to send a test message using your current form configuration.
           </Typography>
+
           <TextField
             fullWidth
-            autoFocus
-            label="Test Recipient Email"
-            type="email"
+            label="Recipient Email Address"
+            placeholder="your-email@gmail.com"
             value={testEmailInput}
             onChange={(e) => setTestEmailInput(e.target.value)}
-            placeholder="recipient@example.com"
+            sx={{ mb: 2 }}
           />
 
           {testResult && (
             <Alert
               severity={testResult.success ? 'success' : 'error'}
-              sx={{ mt: 2, borderRadius: 2 }}
+              sx={{ borderRadius: '8px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}
             >
               {testResult.message}
             </Alert>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setTestDialogOpen(false)} color="inherit">
+        <DialogActions sx={{ p: 2.5, pt: 0 }}>
+          <Button onClick={() => setTestDialogOpen(false)} sx={{ textTransform: 'none', color: '#7A8B80' }}>
             Close
           </Button>
           <Button
-            onClick={handleSendTestEmail}
             variant="contained"
-            color="primary"
+            onClick={handleSendTestEmail}
             disabled={isTesting}
-            startIcon={<Send size={16} />}
-            sx={{ fontWeight: 700 }}
+            startIcon={isTesting ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
+            sx={{
+              backgroundColor: '#087A3D',
+              '&:hover': { backgroundColor: '#023020' },
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+            }}
           >
-            {isTesting ? 'Sending Test...' : 'Send Test'}
+            {isTesting ? 'Sending Test...' : 'Send Test Email'}
           </Button>
         </DialogActions>
       </Dialog>
