@@ -212,8 +212,13 @@ export default function MailServerConfigCard() {
             sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
           />
           <Chip
-            label="Office 365 / Outlook"
+            label="Microsoft 365 (Work/School)"
             onClick={() => applyPreset('smtp.office365.com', 587, 'TLS')}
+            sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
+          />
+          <Chip
+            label="Outlook / Hotmail (Personal)"
+            onClick={() => applyPreset('smtp-mail.outlook.com', 587, 'TLS')}
             sx={{ fontWeight: 700, fontSize: 11.5, cursor: 'pointer', backgroundColor: '#FFFFFF', border: '1px solid #D6E4D9' }}
           />
           <Chip
@@ -231,6 +236,12 @@ export default function MailServerConfigCard() {
       ) : hostVal?.toLowerCase().includes('zoho') ? (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
           <strong>Zoho Mail Setup:</strong> Use <code>smtp.zoho.in</code> for India accounts or <code>smtp.zoho.com</code> for Global. Ensure <em>SMTP Access</em> is enabled in your Zoho Mail account settings. If 2FA is active, generate an App Password under Zoho Account Security.
+        </Alert>
+      ) : hostVal?.toLowerCase().includes('office365') || hostVal?.toLowerCase().includes('outlook') || hostVal?.toLowerCase().includes('microsoft') ? (
+        <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
+          <strong>Microsoft 365 / Outlook Setup:</strong><br />
+          • <strong>Business / Work Account:</strong> Host <code>smtp.office365.com</code>, Port <code>587</code> (TLS). Ensure <em>Authenticated SMTP</em> is enabled for your mailbox in M365 Admin Center.<br />
+          • <strong>Personal Outlook (@outlook.com / @hotmail.com):</strong> Host <code>smtp-mail.outlook.com</code>, Port <code>587</code> (TLS). If 2FA is enabled on your Microsoft Account, generate an App Password at <a href="https://account.live.com/proofs/AppPassword" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>account.live.com/proofs/AppPassword</a>.
         </Alert>
       ) : (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
