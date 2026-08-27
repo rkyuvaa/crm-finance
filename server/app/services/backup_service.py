@@ -1,7 +1,12 @@
+import io
 import json
+import os
+import shutil
+import zipfile
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
@@ -47,6 +52,8 @@ from app.models import (
     VehicleModel,
     Verification,
 )
+
+UPLOAD_DIR_PATH = Path("uploads")
 
 # Topological model list for export and import
 TABLE_MODELS = [
@@ -101,6 +108,26 @@ def serialize_value(val: Any) -> Any:
     return val
 
 
+def sql_format_value(val: Any) -> str:
+    if val is None:
+        return "NULL"
+    if isinstance(val, bool):
+        return "TRUE" if val else "FALSE"
+    if isinstance(val, (int, float, Decimal)):
+        return str(val)
+    if isinstance(val, (datetime, date)):
+        return f"'{val.isoformat()}'"
+    if isinstance(val, Enum):
+        escaped = str(val.value).replace("'", "''")
+        return f"'{escaped}'"
+    if isinstance(val, (dict, list)):
+        escaped = json.dumps(val).replace("'", "''")
+        return f"'{escaped}'"
+    
+    escaped = str(val).replace("'", "''")
+    return f"'{escaped}'"
+
+
 def deserialize_value(val: Any, col_type: Any) -> Any:
     if val is None:
         return None
@@ -151,30 +178,94 @@ def create_system_backup(db: Session, include_audit_logs: bool = False) -> Dict[
     }
 
 
+def generate_sql_dump(db: Session, include_audit_logs: bool = False) -> str:
+    """Generates standard SQL script containing DDL/INSERT statements for all system tables."""
+    sql_lines = [
+        "-- ========================================================",
+        "-- CRMFinance System SQL Database Dump",
+        f"-- Exported at: {datetime.utcnow().isoformat()} UTC",
+        "-- ========================================================\n",
+        "BEGIN;\n"
+    ]
+
+    models_to_export = list(TABLE_MODELS)
+    if include_audit_logs:
+        models_to_export.append(("audit_logs", AuditLog))
+
+    for key, model in models_to_export:
+        table_name = model.__tablename__
+        mapper = inspect(model)
+        col_names = [col.key for col in mapper.columns]
+
+        records = db.scalars(select(model)).unique().all()
+        sql_lines.append(f"-- Table: {table_name}")
+
+        if records:
+            for rec in records:
+                col_sql = ", ".join([f'"{col}"' for col in col_names])
+                val_sql = ", ".join([sql_format_value(getattr(rec, col)) for col in col_names])
+                sql_lines.append(f'INSERT INTO "{table_name}" ({col_sql}) VALUES ({val_sql});')
+        else:
+            sql_lines.append(f"-- (0 records in {table_name})")
+
+        sql_lines.append("")
+
+    sql_lines.append("COMMIT;\n")
+    return "\n".join(sql_lines)
+
+
+def create_system_zip_backup(db: Session, target_upload_dir: Path = UPLOAD_DIR_PATH) -> bytes:
+    """Generates a complete system backup ZIP containing SQL dump, JSON metadata, and uploaded images/files."""
+    backup_payload = create_system_backup(db, include_audit_logs=True)
+    sql_dump_str = generate_sql_dump(db, include_audit_logs=True)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # 1. Add SQL Dump
+        zip_file.writestr("database_dump.sql", sql_dump_str.encode("utf-8"))
+
+        # 2. Add JSON Backup
+        zip_file.writestr("backup_data.json", json.dumps(backup_payload, indent=2, ensure_ascii=False).encode("utf-8"))
+
+        # 3. Add Uploaded images / files directory if it exists
+        uploaded_files_count = 0
+        if target_upload_dir.exists() and target_upload_dir.is_dir():
+            for root, _, files in os.walk(target_upload_dir):
+                for file in files:
+                    file_path = Path(root) / file
+                    arcname = Path("uploads") / file_path.relative_to(target_upload_dir)
+                    zip_file.write(file_path, arcname=str(arcname))
+                    uploaded_files_count += 1
+
+        # 4. Manifest
+        manifest = {
+            "app": "CRMFinance",
+            "created_at": datetime.utcnow().isoformat(),
+            "format": "zip_full_backup",
+            "uploaded_files_count": uploaded_files_count,
+            "database_tables": backup_payload["metadata"]["total_tables"],
+        }
+        zip_file.writestr("manifest.json", json.dumps(manifest, indent=2).encode("utf-8"))
+
+    zip_buffer.seek(0)
+    return zip_buffer.getvalue()
+
+
 def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str = "overwrite") -> Dict[str, Any]:
-    """Restores database tables from a backup payload.
-    
-    Args:
-        db: SQLAlchemy Session
-        backup_payload: Dict containing metadata and data
-        mode: "overwrite" (deletes dynamic tables first) or "merge"
-    """
+    """Restores database tables from a backup payload dict."""
     if "data" not in backup_payload:
         raise ValueError("Invalid backup file format: missing 'data' key.")
 
     tables_data = backup_payload["data"]
     restored_summary = {}
 
-    # We perform all deletions and insertions inside a savepoint / nested transaction
     try:
-        # Step 1: In overwrite mode, delete existing records in reverse topological order
         if mode == "overwrite":
             for key, model in reversed(TABLE_MODELS):
                 db.query(model).delete(synchronize_session=False)
             db.flush()
             db.expire_all()
 
-        # Step 2: Insert rows in topological order
         for key, model in TABLE_MODELS:
             if key not in tables_data:
                 continue
@@ -191,7 +282,6 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
                         processed_row[col_name] = deserialize_value(val, col_types[col_name])
                 
                 if mode == "merge":
-                    # Check if primary key exists
                     pk_cols = [pk.key for pk in mapper.primary_key]
                     pk_filter = {pk: processed_row[pk] for pk in pk_cols if pk in processed_row}
                     existing = None
@@ -213,7 +303,6 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
             db.flush()
             restored_summary[key] = inserted_count
 
-        # Adjust Postgres auto-increment sequences if on PostgreSQL
         if db.bind and db.bind.dialect.name == "postgresql":
             for key, model in TABLE_MODELS:
                 table_name = model.__tablename__
@@ -232,6 +321,53 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
         "message": "System data successfully restored.",
         "restored_tables": restored_summary,
     }
+
+
+def restore_system_zip_backup(
+    db: Session,
+    zip_bytes: bytes,
+    mode: str = "overwrite",
+    target_upload_dir: Path = UPLOAD_DIR_PATH,
+) -> Dict[str, Any]:
+    """Restores database AND uploaded images/files from a complete ZIP backup archive."""
+    try:
+        zip_buffer = io.BytesIO(zip_bytes)
+        with zipfile.ZipFile(zip_buffer, "r") as zip_file:
+            filenames = zip_file.namelist()
+
+            # 1. Restore Database
+            backup_payload = None
+            if "backup_data.json" in filenames:
+                json_bytes = zip_file.read("backup_data.json")
+                backup_payload = json.loads(json_bytes.decode("utf-8"))
+            
+            if not backup_payload:
+                raise ValueError("ZIP package missing 'backup_data.json' database archive.")
+
+            db_result = restore_system_backup(db, backup_payload, mode=mode)
+
+            # 2. Restore Uploaded files/images
+            restored_files_count = 0
+            target_upload_dir.mkdir(parents=True, exist_ok=True)
+
+            for member in zip_file.infolist():
+                if member.filename.startswith("uploads/") and not member.is_dir():
+                    rel_path = Path(member.filename).relative_to("uploads")
+                    dest_file = target_upload_dir / rel_path
+                    dest_file.parent.mkdir(parents=True, exist_ok=True)
+
+                    with zip_file.open(member) as source, open(dest_file, "wb") as target:
+                        shutil.copyfileobj(source, target)
+                    restored_files_count += 1
+
+            return {
+                "status": "success",
+                "message": f"Successfully restored database and {restored_files_count} uploaded files/images.",
+                "restored_tables": db_result.get("restored_tables", {}),
+                "restored_files_count": restored_files_count,
+            }
+    except Exception as e:
+        raise RuntimeError(f"ZIP Backup restoration failed: {str(e)}") from e
 
 
 def get_system_summary(db: Session) -> Dict[str, Any]:

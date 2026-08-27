@@ -8,6 +8,7 @@ export interface RestoreResponse {
   status: string;
   message: string;
   restored_tables: Record<string, number>;
+  restored_files_count?: number;
 }
 
 export const backupApi = baseApi.injectEndpoints({

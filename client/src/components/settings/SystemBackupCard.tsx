@@ -17,8 +17,10 @@ import {
   RadioGroup,
   Typography,
   Chip,
+  MenuItem,
+  Select,
 } from '@mui/material';
-import { Download, UploadCloud, Database, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Download, UploadCloud, Database, RefreshCw, AlertTriangle, CheckCircle2, FileCode, Archive } from 'lucide-react';
 
 import { useGetBackupSummaryQuery, useRestoreBackupMutation } from '@/api/backupApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -29,6 +31,7 @@ export default function SystemBackupCard() {
   const [restoreBackup, { isLoading: isRestoring }] = useRestoreBackupMutation();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [exportFormat, setExportFormat] = useState<'zip' | 'sql' | 'json'>('zip');
   const [restoreMode, setRestoreMode] = useState<'overwrite' | 'merge'>('overwrite');
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -38,7 +41,7 @@ export default function SystemBackupCard() {
     try {
       setDownloading(true);
       const token = localStorage.getItem('access_token');
-      const response = await fetch('/api/v1/admin/backup/export', {
+      const response = await fetch(`/api/v1/admin/backup/export?format=${exportFormat}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -53,13 +56,21 @@ export default function SystemBackupCard() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `crm_finance_backup_${timestamp}.json`;
+
+      if (exportFormat === 'zip') {
+        a.download = `crm_finance_full_backup_${timestamp}.zip`;
+      } else if (exportFormat === 'sql') {
+        a.download = `crm_finance_db_dump_${timestamp}.sql`;
+      } else {
+        a.download = `crm_finance_backup_${timestamp}.json`;
+      }
+
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      showToast('Backup archive downloaded successfully', 'success');
+      showToast(`Backup exported successfully as .${exportFormat.toUpperCase()}`, 'success');
     } catch {
       showToast('Failed to export system backup', 'error');
     } finally {
@@ -70,8 +81,9 @@ export default function SystemBackupCard() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (!file.name.endsWith('.json')) {
-        showToast('Please select a valid .json backup file', 'error');
+      const ext = file.name.toLowerCase();
+      if (!ext.endsWith('.zip') && !ext.endsWith('.sql') && !ext.endsWith('.json')) {
+        showToast('Please select a valid .zip, .sql, or .json backup archive', 'error');
         return;
       }
       setSelectedFile(file);
@@ -83,7 +95,12 @@ export default function SystemBackupCard() {
     try {
       setConfirmModalOpen(false);
       const res = await restoreBackup({ file: selectedFile, mode: restoreMode }).unwrap();
-      showToast(res.message || 'System data restored successfully!', 'success');
+      
+      let msg = res.message || 'System data restored successfully!';
+      if (res.restored_files_count !== undefined) {
+        msg += ` (${res.restored_files_count} uploaded files/images restored)`;
+      }
+      showToast(msg, 'success');
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -115,10 +132,10 @@ export default function SystemBackupCard() {
           </Box>
           <Box>
             <Typography sx={{ fontWeight: 800, fontSize: 16, color: '#023020' }}>
-              System Data Backup & Restore
+              Complete System Backup & Restore (Database SQL + Uploaded Images)
             </Typography>
             <Typography sx={{ fontSize: 12.5, color: '#7A8B80' }}>
-              Export complete CRM database (including custom fields & leads) or restore from an existing JSON backup archive.
+              Export full PostgreSQL/SQL dump along with all uploaded document images into a ZIP package, or restore an existing archive.
             </Typography>
           </Box>
         </Box>
@@ -196,17 +213,33 @@ export default function SystemBackupCard() {
         >
           <Box>
             <Typography sx={{ fontWeight: 700, fontSize: 14, color: '#023020', mb: 0.5 }}>
-              Export Full System Backup
+              Export System Backup
             </Typography>
             <Typography sx={{ fontSize: 12.5, color: '#667A6D', mb: 2 }}>
-              Downloads a complete JSON package containing all custom fields, lead records, field values, users, and system rules.
+              Generate a full backup package containing PostgreSQL database statements and uploaded images/documents.
             </Typography>
+
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: '#7A8B80', mb: 0.5 }}>
+                Export Format
+              </Typography>
+              <Select
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value as 'zip' | 'sql' | 'json')}
+                sx={{ backgroundColor: '#FFFFFF', borderRadius: '6px' }}
+              >
+                <MenuItem value="zip">Full Package (.ZIP) — Database SQL Dump + Uploaded Images/Docs</MenuItem>
+                <MenuItem value="sql">Database Dump (.SQL) — Raw SQL Insert Statements</MenuItem>
+                <MenuItem value="json">Database Archive (.JSON) — Portable Data Payload</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
+
           <Button
             variant="contained"
             onClick={handleExportBackup}
             disabled={downloading}
-            startIcon={downloading ? <CircularProgress size={16} color="inherit" /> : <Download size={16} />}
+            startIcon={downloading ? <CircularProgress size={16} color="inherit" /> : exportFormat === 'zip' ? <Archive size={16} /> : <Download size={16} />}
             sx={{
               backgroundColor: '#023020',
               '&:hover': { backgroundColor: '#012015' },
@@ -215,7 +248,7 @@ export default function SystemBackupCard() {
               fontWeight: 700,
             }}
           >
-            {downloading ? 'Preparing Backup...' : 'Export & Download Backup (.json)'}
+            {downloading ? 'Preparing Backup Package...' : `Download ${exportFormat.toUpperCase()} Backup`}
           </Button>
         </Box>
 
@@ -236,12 +269,12 @@ export default function SystemBackupCard() {
               Restore System Backup
             </Typography>
             <Typography sx={{ fontSize: 12.5, color: '#667A6D', mb: 1.5 }}>
-              Upload a previously exported JSON backup file to restore your system data and custom fields.
+              Upload a previously exported .ZIP package (or .SQL / .JSON) to restore database tables and uploaded images.
             </Typography>
 
             <input
               type="file"
-              accept=".json"
+              accept=".zip,.sql,.json"
               ref={fileInputRef}
               onChange={handleFileSelect}
               style={{ display: 'none' }}
@@ -262,7 +295,7 @@ export default function SystemBackupCard() {
               >
                 <UploadCloud size={20} style={{ color: '#023020', marginBottom: 4 }} />
                 <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#023020' }}>
-                  {selectedFile ? selectedFile.name : 'Click to browse backup JSON file'}
+                  {selectedFile ? selectedFile.name : 'Click to browse backup archive (.zip, .sql, .json)'}
                 </Typography>
                 {selectedFile && (
                   <Chip
@@ -286,7 +319,7 @@ export default function SystemBackupCard() {
                 <FormControlLabel
                   value="overwrite"
                   control={<Radio size="small" />}
-                  label={<Typography sx={{ fontSize: 12 }}>Overwrite (Replace tables)</Typography>}
+                  label={<Typography sx={{ fontSize: 12 }}>Overwrite (Replace tables & files)</Typography>}
                 />
                 <FormControlLabel
                   value="merge"
@@ -310,7 +343,7 @@ export default function SystemBackupCard() {
               mt: 1,
             }}
           >
-            {isRestoring ? 'Restoring Data...' : 'Restore System Data'}
+            {isRestoring ? 'Restoring Package...' : 'Restore System Package'}
           </Button>
         </Box>
       </Box>
@@ -323,10 +356,10 @@ export default function SystemBackupCard() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ fontSize: 13, color: '#4A5568' }}>
-            Are you sure you want to restore system data from <strong>{selectedFile?.name}</strong>?
+            Are you sure you want to restore system data & files from <strong>{selectedFile?.name}</strong>?
           </DialogContentText>
           <Alert severity="warning" sx={{ mt: 2, borderRadius: 2, fontSize: 12 }}>
-            <strong>Mode: {restoreMode.toUpperCase()}</strong>. {restoreMode === 'overwrite' ? 'This action will clear and replace existing system records with the backup file data.' : 'This action will merge and update matching records.'}
+            <strong>Mode: {restoreMode.toUpperCase()}</strong>. {restoreMode === 'overwrite' ? 'This action will replace existing database records and upload files with the backup payload.' : 'This action will merge and update matching records.'}
           </Alert>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
