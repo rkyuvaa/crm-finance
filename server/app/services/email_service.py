@@ -92,14 +92,26 @@ def dispatch_email_smtp(
 
     except smtplib.SMTPAuthenticationError as e:
         err_str = str(e)
-        logger.error(f"SMTP Auth Error: {err_str}")
-        return False, f"Authentication Failed (535/530): Invalid Username or Password. If using your primary login password, try host 'smtp.zoho.in' (for India region accounts) and verify SMTP access is enabled in Zoho Admin."
+        logger.error(f"SMTP Auth Error on {host}: {err_str}")
+        h = (host or "").lower()
+        if "gmail" in h:
+            return False, f"Google Gmail Authentication Failed (535): Google rejected your password for '{user}'. Google does NOT accept regular account passwords. You MUST turn on 2-Step Verification and generate a 16-character App Password at myaccount.google.com/apppasswords."
+        elif "zoho" in h:
+            return False, f"Zoho Authentication Failed (535): Invalid username or password for '{user}'. Verify host (smtp.zoho.in for India, smtp.zoho.com for Global) and ensure SMTP Access is enabled in Zoho Admin."
+        elif "office365" in h or "outlook" in h or "microsoft" in h:
+            return False, f"Microsoft Authentication Failed (535): Invalid credentials or Authenticated SMTP is disabled for mailbox '{user}' in Microsoft 365 Admin Center."
+        return False, f"Authentication Failed (535): Invalid Username or Password for '{user}' on host '{host}'."
     except smtplib.SMTPResponseException as e:
         err_code = e.smtp_code
         err_msg = e.smtp_error.decode("utf-8", errors="ignore") if isinstance(e.smtp_error, bytes) else str(e.smtp_error)
         logger.error(f"SMTP Response Exception {err_code}: {err_msg}")
+        h = (host or "").lower()
         if err_code in (530, 535):
-            return False, f"Authentication Error ({err_code}): {err_msg}. Verify your SMTP Username, Password, and region host (smtp.zoho.in vs smtp.zoho.com)."
+            if "gmail" in h:
+                return False, f"Google Gmail Authentication Error ({err_code}): Google rejected the login. Generate a 16-character App Password at myaccount.google.com/apppasswords."
+            elif "zoho" in h:
+                return False, f"Zoho Authentication Error ({err_code}): {err_msg}. Verify your SMTP Username, Password, and host (smtp.zoho.in vs smtp.zoho.com)."
+            return False, f"Authentication Error ({err_code}): {err_msg}. Check your username and password for {host}."
         elif err_code in (550, 553):
             return False, f"Sender Address Error ({err_code}): {err_msg}. Ensure 'Sender Email' matches your SMTP user or authorized alias."
         return False, f"SMTP Error ({err_code}): {err_msg}"
