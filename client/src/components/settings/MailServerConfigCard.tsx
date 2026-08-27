@@ -22,7 +22,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Send, Server, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
+import { Mail, Send, Server, ShieldCheck, Zap } from 'lucide-react';
 
 import {
   useGetSmtpSettingsQuery,
