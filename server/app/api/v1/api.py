@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     applications,
     auth,
+    backup_admin,
     dashboard,
     final_submission,
     masters,
@@ -25,4 +26,5 @@ api_router.include_router(planned_activities.router)
 api_router.include_router(notifications.router)
 api_router.include_router(masters.router)
 api_router.include_router(rbac_admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(backup_admin.router, prefix="/admin/backup", tags=["backup"])
 api_router.include_router(stubs.router)

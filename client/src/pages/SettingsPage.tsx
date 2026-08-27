@@ -8,6 +8,7 @@ import { useChangePasswordMutation, useUpdateProfileMutation } from '@/api/authA
 import { setUser } from '@/auth/authSlice';
 import { useToast } from '@/components/ui/ToastHost';
 import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
+import SystemBackupCard from '@/components/settings/SystemBackupCard';
 import { ROLE_LABELS } from '@/utils/format';
 
 const profileSchema = z.object({
@@ -137,6 +138,8 @@ export default function SettingsPage() {
             </Button>
           </form>
         </Paper>
+
+        {user?.role === 'ADMIN' && <SystemBackupCard />}
 
         <MailServerConfigCard />
       </div>
