@@ -243,8 +243,6 @@ class CrmTabFieldOut(BaseModel):
     field_permissions: dict | None = None
     stage_rules: dict | None = None
     dependent_rules: dict | None = None
-    field_permissions: dict | None = None
-    stage_rules: dict | None = None
     created_at: datetime
     updated_at: datetime
 
