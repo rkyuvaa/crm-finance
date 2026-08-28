@@ -36,6 +36,7 @@ class CrmTabField(Base):
     file_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {allowed_extensions: [], max_size_mb: 10}
     field_permissions: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {ADMIN: {view: true, edit: true, required: false}}
     stage_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {LEAD: {visible: true, required: true, readonly: false}}
+    dependent_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {depends_on_field_id: 12, condition: "equals", value: "YES", action: "show"}
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

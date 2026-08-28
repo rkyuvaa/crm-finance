@@ -134,7 +134,7 @@ export default function DynamicFieldEngine({
     return <Typography sx={{ p: 3, textAlign: 'center', color: '#7A8B80' }}>Loading dynamic fields...</Typography>;
   }
 
-  // Filter fields based on role & stage visibility
+  // Filter fields based on role, stage visibility, and dynamic dependent rules
   const userRole = user?.role || 'ADMIN';
   const visibleFields = fields.filter((f) => {
     if (f.is_archived) return false;
@@ -143,6 +143,28 @@ export default function DynamicFieldEngine({
 
     const stageRule = f.stage_rules?.[currentStageKey];
     if (stageRule && stageRule.visible === false) return false;
+
+    // Check dynamic dependent rules
+    if (f.dependent_rules && f.dependent_rules.depends_on_field_id) {
+      const parentVal = formState[f.dependent_rules.depends_on_field_id];
+      const cond = f.dependent_rules.condition || 'equals';
+      const targetVal = f.dependent_rules.value;
+      const action = f.dependent_rules.action || 'show';
+
+      let isMet = false;
+      if (cond === 'is_filled') {
+        isMet = parentVal !== undefined && parentVal !== null && String(parentVal).trim() !== '';
+      } else if (cond === 'is_empty') {
+        isMet = parentVal === undefined || parentVal === null || String(parentVal).trim() === '';
+      } else if (cond === 'equals') {
+        isMet = String(parentVal) === String(targetVal);
+      } else if (cond === 'not_equals') {
+        isMet = String(parentVal) !== String(targetVal);
+      }
+
+      if (action === 'show' && !isMet) return false;
+      if (action === 'hide' && isMet) return false;
+    }
 
     return f.is_visible;
   });

@@ -196,6 +196,7 @@ class CrmTabFieldCreate(BaseModel):
     file_config: dict | None = None
     field_permissions: dict | None = None
     stage_rules: dict | None = None
+    dependent_rules: dict | None = None
 
 
 class CrmTabFieldUpdate(BaseModel):
@@ -217,6 +218,7 @@ class CrmTabFieldUpdate(BaseModel):
     file_config: dict | None = None
     field_permissions: dict | None = None
     stage_rules: dict | None = None
+    dependent_rules: dict | None = None
 
 
 class CrmTabFieldOut(BaseModel):
@@ -238,6 +240,9 @@ class CrmTabFieldOut(BaseModel):
     default_value: str | None = None
     options: list[dict] | None = None
     file_config: dict | None = None
+    field_permissions: dict | None = None
+    stage_rules: dict | None = None
+    dependent_rules: dict | None = None
     field_permissions: dict | None = None
     stage_rules: dict | None = None
     created_at: datetime

@@ -630,6 +630,7 @@ def create_tab_field(
         file_config=payload.file_config,
         field_permissions=payload.field_permissions,
         stage_rules=payload.stage_rules,
+        dependent_rules=payload.dependent_rules,
     )
     db.add(field)
     db.commit()

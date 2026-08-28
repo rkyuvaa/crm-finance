@@ -211,6 +211,13 @@ export interface CrmTabFieldConfig {
   file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
   field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
   stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+  dependent_rules?: {
+    depends_on_field_id?: number | null;
+    depends_on_field_name?: string | null;
+    condition?: 'equals' | 'not_equals' | 'is_filled' | 'is_empty' | 'greater_than' | 'less_than';
+    value?: string | null;
+    action?: 'show' | 'hide' | 'enable' | 'disable' | 'require';
+  } | null;
   created_at: string;
   updated_at: string;
 }
@@ -233,6 +240,13 @@ export interface CrmTabFieldInput {
   file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
   field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
   stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+  dependent_rules?: {
+    depends_on_field_id?: number | null;
+    depends_on_field_name?: string | null;
+    condition?: 'equals' | 'not_equals' | 'is_filled' | 'is_empty' | 'greater_than' | 'less_than';
+    value?: string | null;
+    action?: 'show' | 'hide' | 'enable' | 'disable' | 'require';
+  } | null;
 }
 
 export interface CrmLeadCustomFieldValue {
