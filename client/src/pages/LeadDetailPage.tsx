@@ -441,7 +441,11 @@ export default function LeadDetailPage() {
             </form>
           ) : activeLeadTabCode === 'final_submission' || crmTabs.find((t) => t.code === activeLeadTabCode)?.name.toLowerCase().includes('final submission') ? (
             <FinalSubmissionPanel applicationId={lead.id} />
-          ) : activeLeadTabCode === 'document_verification' || activeLeadTabCode === 'verification' || crmTabs.find((t) => t.code === activeLeadTabCode)?.name.toLowerCase().includes('verification') ? (
+          ) : activeLeadTabCode === 'document_verification' ||
+              activeLeadTabCode === 'verification' ||
+              activeLeadTabCode === 'document_upload' ||
+              crmTabs.find((t) => t.code === activeLeadTabCode)?.name.toLowerCase().includes('verification') ||
+              crmTabs.find((t) => t.code === activeLeadTabCode)?.name.toLowerCase().includes('document') ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <DynamicFieldEngine
                 tabId={crmTabs.find((t) => t.code === activeLeadTabCode)?.id || 0}
@@ -449,6 +453,7 @@ export default function LeadDetailPage() {
                 applicationId={lead.id}
                 customerName={lead.customer_name}
                 currentStageKey={lead.status}
+                hideIfEmpty
               />
               <DocumentVerificationPanel applicationId={lead.id} />
             </Box>

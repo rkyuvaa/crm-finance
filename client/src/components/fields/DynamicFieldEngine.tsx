@@ -27,6 +27,7 @@ interface Props {
   applicationId: number;
   customerName?: string;
   currentStageKey: string;
+  hideIfEmpty?: boolean;
 }
 
 export default function DynamicFieldEngine({
@@ -35,6 +36,7 @@ export default function DynamicFieldEngine({
   applicationId,
   customerName: _customerName,
   currentStageKey,
+  hideIfEmpty = false,
 }: Props) {
   const { showToast } = useToast();
   const user = useAppSelector((state) => state.auth.user);
@@ -170,6 +172,7 @@ export default function DynamicFieldEngine({
   });
 
   if (visibleFields.length === 0) {
+    if (hideIfEmpty) return null;
     return (
       <Paper sx={{ p: 4, textAlign: 'center', background: '#F8FAF8', border: '1px dashed #C9E0C6', borderRadius: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, color: '#16231B' }}>
