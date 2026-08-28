@@ -3,17 +3,13 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bell,
-  Building2,
   FileText,
-  KeyRound,
   LayoutDashboard,
   Settings,
   Settings2,
-  Shield,
-  ShieldAlert,
   UserPlus,
-  Users,
 } from 'lucide-react';
+
 import type { LucideIcon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
@@ -40,16 +36,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'Administration',
-    items: [
-      { key: 'admin-users', label: 'Users', path: '/admin/users', icon: Users, badge: null },
-      { key: 'admin-roles', label: 'Roles', path: '/admin/roles', icon: Shield, badge: null },
-      { key: 'admin-departments', label: 'Departments', path: '/admin/departments', icon: Building2, badge: null },
-      { key: 'admin-permissions', label: 'Permissions', path: '/admin/permissions', icon: KeyRound, badge: null },
-      { key: 'admin-audit-logs', label: 'Access Audit Log', path: '/admin/audit-logs', icon: ShieldAlert, badge: null },
-    ],
-  },
-  {
     label: 'Other',
     items: [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
@@ -59,6 +45,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
 ];
+
 
 export default function Sidebar({
   collapsed,
