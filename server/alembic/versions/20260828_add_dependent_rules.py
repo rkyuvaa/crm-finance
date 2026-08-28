@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = '20260828_add_dependent_rules'
-down_revision: Union[str, None] = '20260826_create_stage_automove_rules'
+down_revision: Union[str, None] = 'b8e9f02c3b4e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
