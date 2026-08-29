@@ -308,7 +308,7 @@ export default function MailServerConfigCard() {
             placeholder={smtp?.has_password ? '•••••••• (Leave blank to keep existing)' : 'Enter SMTP password'}
             margin="dense"
             error={Boolean(errors.smtp_password)}
-            helperText={errors.smtp_password?.message}
+            helperText={errors.smtp_password?.message || (smtp?.has_password ? '✓ Password is saved in database' : '⚠️ No password saved in DB yet. Enter password & click Save Settings.')}
             {...register('smtp_password')}
           />
         </Box>
@@ -399,6 +399,11 @@ export default function MailServerConfigCard() {
               sx={{ borderRadius: '8px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}
             >
               {testResult.message}
+              {testResult.success && (
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, fontWeight: 700, color: '#087A3D' }}>
+                  📌 Note: Click "Save Mail Server Settings" at the bottom of the page so your lead document emails use these credentials!
+                </Typography>
+              )}
             </Alert>
           )}
         </DialogContent>
