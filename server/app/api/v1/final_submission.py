@@ -406,7 +406,7 @@ def send_documents_to_financier(
     secure_link = f"{client_base}/financier/documents-view/{raw_token}"
     expiry_str = expires_at.strftime("%d %b %Y, %I:%M %p UTC")
 
-    email_sent = send_financier_documents_email(
+    email_sent, err_detail = send_financier_documents_email(
         to_email=femail,
         financier_name=fc.name,
         lead_ref=app.app_no,
@@ -419,7 +419,7 @@ def send_documents_to_financier(
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Documents could not be emailed. Please try again.",
+            detail=err_detail or "Documents could not be emailed. Please try again.",
         )
 
     return SendToFinancierResponse(

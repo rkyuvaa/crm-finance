@@ -136,7 +136,7 @@ def send_financier_documents_email(
     expiry_datetime_str: str,
     company_name: str = "CRMFinance / KIM Vehicle Finance",
     db: Session | None = None,
-) -> bool:
+) -> tuple[bool, str | None]:
     """
     Sends a secure no-login document link email to the financier.
     """
@@ -193,5 +193,5 @@ Regards,
 </html>
 """
 
-    ok, _ = dispatch_email_smtp(to_email, subject, plain_text, html_content, db=db)
-    return ok
+    ok, err_msg = dispatch_email_smtp(to_email, subject, plain_text, html_content, db=db)
+    return ok, err_msg
