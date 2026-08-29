@@ -159,7 +159,31 @@ def test_smtp_configuration(
             detail=err_msg,
         )
 
+    # Persist working SMTP configuration to DB automatically upon successful test
+    rec = db.query(SmtpSetting).first()
+    if not rec:
+        rec = SmtpSetting(id=1)
+        db.add(rec)
+
+    if override_data.get("smtp_host"):
+        rec.smtp_host = override_data.get("smtp_host")
+    if override_data.get("smtp_port"):
+        rec.smtp_port = override_data.get("smtp_port")
+    if override_data.get("smtp_security"):
+        rec.smtp_security = override_data.get("smtp_security").upper()
+    if override_data.get("smtp_user"):
+        rec.smtp_user = override_data.get("smtp_user")
+    if override_data.get("smtp_password"):
+        rec.smtp_password = override_data.get("smtp_password")
+    if override_data.get("smtp_from_email"):
+        rec.smtp_from_email = override_data.get("smtp_from_email")
+    if override_data.get("smtp_from_name"):
+        rec.smtp_from_name = override_data.get("smtp_from_name")
+    rec.is_enabled = True
+
+    db.commit()
+
     return SmtpTestResponse(
         success=True,
-        message=f"Test email sent successfully to {payload.test_email}",
+        message=f"Test email sent successfully to {payload.test_email} (settings saved to database)",
     )
