@@ -13,6 +13,8 @@ import { useAppDispatch } from '@/app/hooks';
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/': ['Dashboard', 'Overview'],
   '/leads': ['Leads', 'All Leads'],
+  '/projects': ['Project & Task', 'Projects & Task Management'],
+  '/plm': ['PLM', 'Product Lifecycle Management'],
   '/applications': ['Applications', 'All Applications'],
   '/documents': ['Documents', 'Upload & Manage'],
   '/verification': ['Verification', 'Pending Review'],

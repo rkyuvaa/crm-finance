@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bell,
+  CheckSquare,
+  Cpu,
   FileText,
   LayoutDashboard,
   Settings,
@@ -33,6 +35,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
+      { key: 'projects', label: 'Project & Task', path: '/projects', icon: CheckSquare, badge: null },
+      { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
     ],
   },
   {

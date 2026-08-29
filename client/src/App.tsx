@@ -11,6 +11,8 @@ import { AuthPermissionProvider } from '@/context/AuthPermissionContext';
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const LeadsPage = lazy(() => import('@/pages/LeadsPage'));
 const LeadDetailPage = lazy(() => import('@/pages/LeadDetailPage'));
+const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
+const PlmPage = lazy(() => import('@/pages/PlmPage'));
 const GenericStagePage = lazy(() => import('@/pages/GenericStagePage'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
@@ -53,6 +55,8 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/plm" element={<PlmPage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />
