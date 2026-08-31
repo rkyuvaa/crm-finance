@@ -105,7 +105,7 @@ export default function Sidebar({
         height: '100vh',
         zIndex: isMobile ? undefined : 40,
         overflow: 'hidden',
-        transition: 'width 0.22s ease',
+        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
       <div

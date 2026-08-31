@@ -52,7 +52,14 @@ export default function AppLayout() {
       ) : (
         <>
           {sidebarContent}
-          <div style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.22s ease', minHeight: '100vh' }}>
+          <div
+            style={{
+              paddingLeft: sidebarWidth,
+              transition: 'padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              minHeight: '100vh',
+              willChange: 'padding-left',
+            }}
+          >
             <Topbar onToggleSidebar={() => setCollapsed((c) => !c)} />
             <main className="app-main" style={{ padding: '22px 24px 12px', minWidth: 0 }}>
               <Outlet />
