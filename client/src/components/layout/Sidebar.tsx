@@ -1,8 +1,10 @@
 ﻿import { NavLink } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart3,
   Bell,
+  ChevronDown,
+  ChevronRight,
   Cpu,
   FileText,
   FolderKanban,
@@ -30,7 +32,11 @@ interface NavItem {
   badge: NavBadgeKey | null;
 }
 
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+const NAV_GROUPS: {
+  label: string;
+  collapsible?: boolean;
+  items: NavItem[];
+}[] = [
   {
     label: 'Main',
     items: [
@@ -41,6 +47,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: 'Project & Task',
+    collapsible: true,
     items: [
       { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
       { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
@@ -57,6 +64,9 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+// Groups that can be expanded/collapsed (accordion behaviour).
+const COLLAPSIBLE_GROUPS = new Set(['Project & Task']);
+
 
 export default function Sidebar({
   collapsed,
@@ -70,6 +80,22 @@ export default function Sidebar({
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
   const counts = dashboard?.nav_counts;
+
+  // Expanded/collapsed state for collapsible group headers (accordion).
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  };
 
   const navItemStyle = useMemo(
     () => ({
@@ -163,10 +189,13 @@ export default function Sidebar({
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
         {NAV_GROUPS.map((group) => {
+          const isCollapsible = COLLAPSIBLE_GROUPS.has(group.label);
+          const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
           return (
             <div key={group.label}>
               {!collapsed && (
                 <div
+                  onClick={isCollapsible ? () => toggleGroup(group.label) : undefined}
                   style={{
                     fontSize: 9.5,
                     fontWeight: 700,
@@ -175,19 +204,30 @@ export default function Sidebar({
                     textTransform: 'uppercase',
                     padding: '14px 10px 6px',
                     whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: isCollapsible ? 'pointer' : 'default',
+                    userSelect: 'none',
                   }}
                 >
-                  {group.label}
+                  <span>{group.label}</span>
+                  {isCollapsible && (
+                    <span style={{ display: 'flex', alignItems: 'center', color: '#819688' }}>
+                      {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                    </span>
+                  )}
                 </div>
               )}
               {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-                const handleClick = () => {
-                  onNavigate?.();
-                };
-                return (
+              {!isCollapsed &&
+                group.items.map((item) => {
+                  const Icon = item.icon;
+                  const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
+                  const handleClick = () => {
+                    onNavigate?.();
+                  };
+                  return (
                   <NavLink
                     key={item.key}
                     to={item.path}
@@ -230,7 +270,8 @@ export default function Sidebar({
                     )}
                   </NavLink>
                 );
-              })}
+                })}
+              )}
             </div>
           );
         })}
