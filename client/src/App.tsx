@@ -10,6 +10,8 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const ApplicationsPage = lazy(() => import('@/pages/ApplicationsPage'));
 const LeadsPage = lazy(() => import('@/pages/LeadsPage'));
 const GenericStagePage = lazy(() => import('@/pages/GenericStagePage'));
+const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
+const TasksPage = lazy(() => import('@/pages/TasksPage'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
@@ -47,6 +49,8 @@ export default function App() {
               <Route path="/sanction" element={<GenericStagePage section="sanction" />} />
               <Route path="/delivery" element={<GenericStagePage section="delivery" />} />
               <Route path="/disbursement" element={<GenericStagePage section="disbursement" />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />

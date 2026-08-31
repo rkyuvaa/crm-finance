@@ -20,6 +20,8 @@ const BREADCRUMBS: Record<string, [string, string]> = {
   '/sanction': ['Sanction', 'Sanction Details'],
   '/delivery': ['Delivery', 'Vehicle Delivery'],
   '/disbursement': ['Disbursement', 'UTR Entry'],
+  '/projects': ['Projects', 'All Projects'],
+  '/tasks': ['Task', 'All Tasks'],
   '/reports': ['Reports', 'Analytics & Reports'],
   '/notifications': ['Notifications', 'Inbox'],
   '/settings': ['Settings', 'System Settings'],

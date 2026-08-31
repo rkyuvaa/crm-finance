@@ -7,8 +7,10 @@ import {
   Building2,
   CircleCheck,
   FileText,
+  FolderKanban,
   FolderOpen,
   LayoutDashboard,
+  ListTodo,
   Settings,
   Settings2,
   ShieldCheck,
@@ -53,6 +55,13 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'sanction', label: 'Sanction', path: '/sanction', icon: CircleCheck, badge: null },
       { key: 'delivery', label: 'Delivery', path: '/delivery', icon: Truck, badge: 'delivery' },
       { key: 'disbursement', label: 'Disbursement', path: '/disbursement', icon: Banknote, badge: 'disbursement' },
+    ],
+  },
+  {
+    label: 'Project & Task',
+    items: [
+      { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
+      { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
     ],
   },
   {
