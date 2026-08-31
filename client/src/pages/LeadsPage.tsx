@@ -40,7 +40,7 @@ export default function LeadsPage() {
   };
 
   const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
-  const { data: dashboard } = useDashboardQuery(undefined, { refetchOnMountOrArgChange: true });
+  const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);

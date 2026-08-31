@@ -204,7 +204,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  if (isFetching) {
+  if (isFetching && !lead) {
     return <div style={{ padding: 24, color: '#7A8B80' }}>Loading lead details...</div>;
   }
 
