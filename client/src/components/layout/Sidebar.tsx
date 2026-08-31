@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bell,
-  CheckSquare,
   Cpu,
   FileText,
   FolderKanban,
