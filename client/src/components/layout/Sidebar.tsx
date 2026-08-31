@@ -75,7 +75,7 @@ export default function Sidebar({
       border: 'none',
       background: 'transparent',
       borderRadius: 8,
-      color: '#44584C',
+      color: '#A0B2A6',
       fontSize: 13,
       fontWeight: 500,
       textAlign: 'left' as const,
@@ -94,8 +94,8 @@ export default function Sidebar({
       aria-label="Primary navigation"
       style={{
         width: collapsed ? 76 : 244,
-        background: '#FFFFFF',
-        borderRight: '1px solid #E4EBE1',
+        background: '#203020',
+        borderRight: '1px solid #2C3E2C',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -136,15 +136,15 @@ export default function Sidebar({
         </div>
         {!collapsed && (
           <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#023020', whiteSpace: 'nowrap' }}>
-              CRM<span style={{ color: '#087A3D' }}>FINANCE</span>
+            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+              CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
             </div>
             <div
               style={{
                 fontSize: 9,
                 fontWeight: 600,
                 letterSpacing: 1.4,
-                color: '#9BA99F',
+                color: '#819688',
                 textTransform: 'uppercase',
               }}
             >
@@ -164,7 +164,7 @@ export default function Sidebar({
                     fontSize: 9.5,
                     fontWeight: 700,
                     letterSpacing: 1.2,
-                    color: '#9BA99F',
+                    color: '#819688',
                     textTransform: 'uppercase',
                     padding: '14px 10px 6px',
                     whiteSpace: 'nowrap',
@@ -191,15 +191,15 @@ export default function Sidebar({
                       ...navItemStyle,
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       padding: collapsed ? '10px 0' : '8.5px 10px',
-                      background: isActive ? '#EAF6E8' : 'transparent',
-                      color: isActive ? '#04552B' : '#44584C',
+                      background: isActive ? '#2D442D' : 'transparent',
+                      color: isActive ? '#FFFFFF' : '#A0B2A6',
                       fontWeight: isActive ? 600 : 500,
                     })}
                   >
                     {({ isActive }) => (
                       <>
                         <span style={{ position: 'relative', display: 'flex' }}>
-                          <Icon size={17} color={isActive ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
+                          <Icon size={17} color={isActive ? '#4ADE80' : '#819688'} style={{ flexShrink: 0 }} />
                         </span>
                         {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
                         {!collapsed && badgeCount !== null && badgeCount > 0 && (
@@ -207,8 +207,8 @@ export default function Sidebar({
                             style={{
                               fontSize: 10,
                               fontWeight: 700,
-                              background: '#EAF6E8',
-                              color: '#04552B',
+                              background: '#2D442D',
+                              color: '#4ADE80',
                               padding: '2px 7px',
                               borderRadius: 20,
                               minWidth: 20,
@@ -235,7 +235,7 @@ export default function Sidebar({
           alignItems: 'center',
           gap: 10,
           padding: collapsed ? '12px 0' : '12px 14px',
-          borderTop: '1px solid #E4EBE1',
+          borderTop: '1px solid #2C3E2C',
           flexShrink: 0,
           justifyContent: collapsed ? 'center' : 'flex-start',
           cursor: 'pointer',
@@ -261,10 +261,10 @@ export default function Sidebar({
         {!collapsed && user && (
           <>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.full_name}
               </div>
-              <div style={{ fontSize: 11, color: '#7A8B80' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
+              <div style={{ fontSize: 11, color: '#819688' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
             </div>
           </>
         )}
