@@ -8,18 +8,18 @@ import RequireAuth from '@/auth/RequireAuth';
 
 import { AuthPermissionProvider } from '@/context/AuthPermissionContext';
 
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const LeadsPage = lazy(() => import('@/pages/LeadsPage'));
-const LeadDetailPage = lazy(() => import('@/pages/LeadDetailPage'));
-const ProjectsPage = lazy(() => import('@/pages/ProjectsPage'));
-const PlmPage = lazy(() => import('@/pages/PlmPage'));
-const GenericStagePage = lazy(() => import('@/pages/GenericStagePage'));
-const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
-const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
-const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
-const ConfigurationPage = lazy(() => import('@/pages/ConfigurationPage'));
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
-const PublicFinancierDocumentView = lazy(() => import('@/pages/PublicFinancierDocumentView'));
+import LoginPage from '@/pages/LoginPage';
+import LeadsPage from '@/pages/LeadsPage';
+import LeadDetailPage from '@/pages/LeadDetailPage';
+import ProjectsPage from '@/pages/ProjectsPage';
+import PlmPage from '@/pages/PlmPage';
+import GenericStagePage from '@/pages/GenericStagePage';
+import ReportsPage from '@/pages/ReportsPage';
+import NotificationsPage from '@/pages/NotificationsPage';
+import SettingsPage from '@/pages/SettingsPage';
+import ConfigurationPage from '@/pages/ConfigurationPage';
+import DashboardPage from '@/features/dashboard/DashboardPage';
+import PublicFinancierDocumentView from '@/pages/PublicFinancierDocumentView';
 
 // Admin RBAC Pages
 const UserManagementPage = lazy(() => import('@/pages/admin/UserManagementPage'));

@@ -189,7 +189,7 @@ export default function ApplicationsPage() {
           </Button>
         </div>
 
-        {isFetching ? (
+        {isFetching && !data ? (
           <LoadingRows rows={PAGE_SIZE} />
         ) : isError ? (
           <div style={{ padding: 24, textAlign: 'center', color: '#D9534F' }}>
