@@ -9,8 +9,29 @@ from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
 
+def _ensure_schema_migrations():
+    try:
+        from app.db.base import Base
+        from app.db.session import engine
+
+        # Ensure all tables (e.g. application_sequences) exist
+        Base.metadata.create_all(bind=engine)
+
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        if "pipeline_stages" in inspector.get_table_names():
+            cols = [c["name"] for c in inspector.get_columns("pipeline_stages")]
+            if "color" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
+    except Exception as err:
+        import logging
+        logging.error(f"Migration check error: {err}")
+
+
 setup_logging()
 logger = get_logger("app")
+_ensure_schema_migrations()
 
 app = FastAPI(
     title=settings.app_name,

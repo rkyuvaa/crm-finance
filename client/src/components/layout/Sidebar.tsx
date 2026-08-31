@@ -1,22 +1,19 @@
-import { NavLink } from 'react-router-dom';
+﻿import { NavLink } from 'react-router-dom';
 import { useMemo } from 'react';
 import {
-  Banknote,
   BarChart3,
   Bell,
-  Building2,
-  CircleCheck,
+  CheckSquare,
+  Cpu,
   FileText,
   FolderKanban,
-  FolderOpen,
   LayoutDashboard,
   ListTodo,
   Settings,
   Settings2,
-  ShieldCheck,
-  Truck,
   UserPlus,
 } from 'lucide-react';
+
 import type { LucideIcon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
@@ -24,12 +21,14 @@ import { useDashboardQuery } from '@/api/dashboardApi';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
 import type { NavCounts } from '@/types';
 
+type NavBadgeKey = Exclude<keyof NavCounts, 'stages'>;
+
 interface NavItem {
   key: string;
   label: string;
   path: string;
   icon: LucideIcon;
-  badge: keyof NavCounts | null;
+  badge: NavBadgeKey | null;
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -38,23 +37,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
-      { key: 'applications', label: 'Applications', path: '/applications', icon: FileText, badge: 'applications' },
-    ],
-  },
-  {
-    label: 'Processing',
-    items: [
-      { key: 'documents', label: 'Documents', path: '/documents', icon: FolderOpen, badge: 'documents' },
-      { key: 'verification', label: 'Verification', path: '/verification', icon: ShieldCheck, badge: 'verification' },
-      { key: 'finance', label: 'Finance', path: '/finance', icon: Building2, badge: 'finance' },
-    ],
-  },
-  {
-    label: 'Fulfilment',
-    items: [
-      { key: 'sanction', label: 'Sanction', path: '/sanction', icon: CircleCheck, badge: null },
-      { key: 'delivery', label: 'Delivery', path: '/delivery', icon: Truck, badge: 'delivery' },
-      { key: 'disbursement', label: 'Disbursement', path: '/disbursement', icon: Banknote, badge: 'disbursement' },
+      { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
     ],
   },
   {
@@ -75,12 +58,15 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+
 export default function Sidebar({
   collapsed,
   onNavigate,
+  isMobile = false,
 }: {
   collapsed: boolean;
   onNavigate?: () => void;
+  isMobile?: boolean;
 }) {
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
@@ -97,7 +83,7 @@ export default function Sidebar({
       border: 'none',
       background: 'transparent',
       borderRadius: 8,
-      color: '#44584C',
+      color: '#A0B2A6',
       fontSize: 13,
       fontWeight: 500,
       textAlign: 'left' as const,
@@ -116,17 +102,18 @@ export default function Sidebar({
       aria-label="Primary navigation"
       style={{
         width: collapsed ? 76 : 244,
-        background: '#FFFFFF',
-        borderRight: '1px solid #E4EBE1',
+        background: '#203020',
+        borderRight: '1px solid #2C3E2C',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
-        position: 'sticky',
+        position: isMobile ? 'sticky' : 'fixed',
         top: 0,
+        left: isMobile ? undefined : 0,
         height: '100vh',
-        zIndex: 40,
+        zIndex: isMobile ? undefined : 40,
         overflow: 'hidden',
-        transition: 'width 0.22s ease',
+        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
       <div
@@ -157,15 +144,15 @@ export default function Sidebar({
         </div>
         {!collapsed && (
           <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#023020', whiteSpace: 'nowrap' }}>
-              CRM<span style={{ color: '#087A3D' }}>FINANCE</span>
+            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+              CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
             </div>
             <div
               style={{
                 fontSize: 9,
                 fontWeight: 600,
                 letterSpacing: 1.4,
-                color: '#9BA99F',
+                color: '#819688',
                 textTransform: 'uppercase',
               }}
             >
@@ -176,73 +163,78 @@ export default function Sidebar({
       </div>
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <div
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  letterSpacing: 1.2,
-                  color: '#9BA99F',
-                  textTransform: 'uppercase',
-                  padding: '14px 10px 6px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {group.label}
-              </div>
-            )}
-            {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-            {group.items.map((item) => {
-              const Icon = item.icon;
-              const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-              return (
-                <NavLink
-                  key={item.key}
-                  to={item.path}
-                  end={item.path === '/'}
-                  onClick={onNavigate}
-                  className="nav-item"
-                  style={({ isActive }) => ({
-                    ...navItemStyle,
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    padding: collapsed ? '10px 0' : '8.5px 10px',
-                    background: isActive ? '#EAF6E8' : 'transparent',
-                    color: isActive ? '#04552B' : '#44584C',
-                    fontWeight: isActive ? 600 : 500,
-                  })}
+        {NAV_GROUPS.map((group) => {
+          return (
+            <div key={group.label}>
+              {!collapsed && (
+                <div
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    letterSpacing: 1.2,
+                    color: '#819688',
+                    textTransform: 'uppercase',
+                    padding: '14px 10px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  {({ isActive }) => (
-                    <>
-                      <span style={{ position: 'relative', display: 'flex' }}>
-                        <Icon size={17} color={isActive ? '#087A3D' : '#7A8B80'} style={{ flexShrink: 0 }} />
-                      </span>
-                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                      {!collapsed && badgeCount !== null && badgeCount > 0 && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            background: '#EAF6E8',
-                            color: '#04552B',
-                            padding: '2px 7px',
-                            borderRadius: 20,
-                            minWidth: 20,
-                            textAlign: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {badgeCount}
+                  {group.label}
+                </div>
+              )}
+              {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
+                const handleClick = () => {
+                  onNavigate?.();
+                };
+                return (
+                  <NavLink
+                    key={item.key}
+                    to={item.path}
+                    end={item.path === '/'}
+                    onClick={handleClick}
+                    className="nav-item"
+                    style={({ isActive }) => ({
+                      ...navItemStyle,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      padding: collapsed ? '10px 0' : '8.5px 10px',
+                      background: isActive ? '#2D442D' : 'transparent',
+                      color: isActive ? '#FFFFFF' : '#A0B2A6',
+                      fontWeight: isActive ? 600 : 500,
+                    })}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span style={{ position: 'relative', display: 'flex' }}>
+                          <Icon size={17} color={isActive ? '#4ADE80' : '#819688'} style={{ flexShrink: 0 }} />
                         </span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        ))}
+                        {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                        {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              background: '#2D442D',
+                              color: '#4ADE80',
+                              padding: '2px 7px',
+                              borderRadius: 20,
+                              minWidth: 20,
+                              textAlign: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {badgeCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
       <div
@@ -251,7 +243,7 @@ export default function Sidebar({
           alignItems: 'center',
           gap: 10,
           padding: collapsed ? '12px 0' : '12px 14px',
-          borderTop: '1px solid #E4EBE1',
+          borderTop: '1px solid #2C3E2C',
           flexShrink: 0,
           justifyContent: collapsed ? 'center' : 'flex-start',
           cursor: 'pointer',
@@ -277,10 +269,10 @@ export default function Sidebar({
         {!collapsed && user && (
           <>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#16231B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.full_name}
               </div>
-              <div style={{ fontSize: 11, color: '#7A8B80' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
+              <div style={{ fontSize: 11, color: '#819688' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
             </div>
           </>
         )}

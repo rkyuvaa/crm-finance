@@ -16,39 +16,57 @@ export default function AppLayout() {
   }, [location.pathname]);
 
   const sidebarContent = (
-    <Sidebar collapsed={isMobile ? false : collapsed} onNavigate={() => isMobile && setDrawerOpen(false)} />
+    <Sidebar
+      collapsed={isMobile ? false : collapsed}
+      onNavigate={() => isMobile && setDrawerOpen(false)}
+      isMobile={isMobile}
+    />
   );
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {isMobile ? (
-        <Drawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          sx={{
-            '& .MuiDrawer-paper': {
-              width: 244,
-              borderRight: '1px solid #E4EBE1',
-              boxShadow: '0 8px 24px rgba(2, 48, 32, 0.10)',
-            },
-          }}
-        >
-          {sidebarContent}
-        </Drawer>
-      ) : (
-        <div style={{ width: collapsed ? 76 : 244, flexShrink: 0, transition: 'width 0.22s ease' }}>
-          {sidebarContent}
-        </div>
-      )}
+  const sidebarWidth = collapsed ? 76 : 244;
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar
-          onToggleSidebar={() => (isMobile ? setDrawerOpen(true) : setCollapsed((c) => !c))}
-        />
-        <main className="app-main" style={{ flex: 1, padding: '22px 24px 12px', minWidth: 0 }}>
-          <Outlet />
-        </main>
-      </div>
+  return (
+    <div style={{ minHeight: '100vh' }}>
+      {isMobile ? (
+        <>
+          <Drawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            sx={{
+              '& .MuiDrawer-paper': {
+                width: 244,
+                borderRight: '1px solid #E4EBE1',
+                boxShadow: '0 8px 24px rgba(2, 48, 32, 0.10)',
+              },
+            }}
+          >
+            {sidebarContent}
+          </Drawer>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <Topbar onToggleSidebar={() => setDrawerOpen(true)} />
+            <main className="app-main" style={{ flex: 1, padding: '22px 24px 12px', minWidth: 0 }}>
+              <Outlet />
+            </main>
+          </div>
+        </>
+      ) : (
+        <>
+          {sidebarContent}
+          <div
+            style={{
+              paddingLeft: sidebarWidth,
+              transition: 'padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              minHeight: '100vh',
+              willChange: 'padding-left',
+            }}
+          >
+            <Topbar onToggleSidebar={() => setCollapsed((c) => !c)} />
+            <main className="app-main" style={{ padding: '22px 24px 12px', minWidth: 0 }}>
+              <Outlet />
+            </main>
+          </div>
+        </>
+      )}
     </div>
   );
 }

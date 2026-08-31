@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Divider, IconButton, InputAdornment, Menu, MenuItem, TextField, Tooltip } from '@mui/material';
+import { Avatar, Divider, IconButton, InputAdornment, Menu, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
 import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
@@ -13,6 +13,9 @@ import { useAppDispatch } from '@/app/hooks';
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/': ['Dashboard', 'Overview'],
   '/leads': ['Leads', 'All Leads'],
+  '/projects': ['Projects', 'All Projects'],
+  '/tasks': ['Task', 'All Tasks'],
+  '/plm': ['PLM', 'Product Lifecycle Management'],
   '/applications': ['Applications', 'All Applications'],
   '/documents': ['Documents', 'Upload & Manage'],
   '/verification': ['Verification', 'Pending Review'],
@@ -20,8 +23,6 @@ const BREADCRUMBS: Record<string, [string, string]> = {
   '/sanction': ['Sanction', 'Sanction Details'],
   '/delivery': ['Delivery', 'Vehicle Delivery'],
   '/disbursement': ['Disbursement', 'UTR Entry'],
-  '/projects': ['Projects', 'All Projects'],
-  '/tasks': ['Task', 'All Tasks'],
   '/reports': ['Reports', 'Analytics & Reports'],
   '/notifications': ['Notifications', 'Inbox'],
   '/settings': ['Settings', 'System Settings'],
@@ -36,6 +37,9 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
   const [doLogout] = useLogoutMutation();
+
+  const isSmallMobile = useMediaQuery('(max-width:600px)');
+  const isTablet = useMediaQuery('(max-width:900px)');
 
   const crumb = BREADCRUMBS[location.pathname] ?? BREADCRUMBS[`/${location.pathname.split('/')[1]}`] ?? [
     'CRMFinance',
@@ -55,7 +59,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
     try {
       await doLogout();
     } catch {
-      // cookie may already be gone; proceed with local logout
+      // cookie may already be gone
     }
     dispatch(logout());
     navigate('/login', { replace: true });
@@ -67,40 +71,43 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         position: 'sticky',
         top: 0,
         zIndex: 30,
-        height: 58,
-        background: 'rgba(255, 255, 255, 0.92)',
+        height: isSmallMobile ? 52 : 58,
+        background: 'rgba(255, 255, 255, 0.94)',
         backdropFilter: 'blur(8px)',
         borderBottom: '1px solid #E4EBE1',
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
-        padding: '0 20px',
+        gap: isSmallMobile ? 8 : 14,
+        padding: isSmallMobile ? '0 10px' : '0 20px',
         flexShrink: 0,
       }}
     >
-      <IconButton onClick={onToggleSidebar} aria-label="Toggle sidebar" sx={{ border: '1px solid #E4EBE1', borderRadius: 2 }}>
+      <IconButton onClick={onToggleSidebar} aria-label="Toggle sidebar" sx={{ border: '1px solid #E4EBE1', borderRadius: 2, p: 1 }}>
         <MenuIcon size={19} />
       </IconButton>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', minWidth: 0 }}>
-        <span style={{ fontSize: 13, color: '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>
-        <ChevronRight size={14} color="#9BA99F" />
-        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#16231B' }}>{crumb[1]}</span>
-      </div>
+      {!isSmallMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', minWidth: 0 }}>
+          {!isTablet && <span style={{ fontSize: 13, color: '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>}
+          {!isTablet && <ChevronRight size={14} color="#9BA99F" />}
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#16231B' }}>{crumb[1]}</span>
+        </div>
+      )}
 
       <TextField
         size="small"
-        placeholder="Search by App ID, customer, mobile, vehicle…"
+        placeholder={isSmallMobile ? "Search..." : "Search by App ID, customer, mobile, vehicle…"}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
         sx={{
           flex: 1,
-          maxWidth: 520,
-          mx: 'auto',
+          maxWidth: isSmallMobile ? 180 : 520,
+          mx: isSmallMobile ? 0 : 'auto',
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
             background: '#F7F9F5',
+            fontSize: isSmallMobile ? 12 : 13.5,
             '& fieldset': { borderColor: '#E4EBE1' },
             '&:hover fieldset': { borderColor: '#C9E0C6' },
             '&.Mui-focused fieldset': { borderColor: '#087A3D', borderWidth: 1 },
@@ -110,27 +117,27 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={17} color="#7A8B80" />
+                <Search size={16} color="#7A8B80" />
               </InputAdornment>
             ),
           },
         }}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? 6 : 10, flexShrink: 0 }}>
         <Tooltip title="Notifications" arrow>
           <IconButton
             onClick={() => navigate('/notifications')}
             aria-label="Notifications"
-            sx={{ border: '1px solid #E4EBE1', borderRadius: 2, position: 'relative' }}
+            sx={{ border: '1px solid #E4EBE1', borderRadius: 2, position: 'relative', p: 1 }}
           >
-            <Bell size={19} />
+            <Bell size={18} />
             {unread > 0 && (
               <span
                 style={{
                   position: 'absolute',
-                  top: 7,
-                  right: 8,
+                  top: 5,
+                  right: 6,
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
@@ -149,8 +156,8 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 9,
-            padding: '4px 10px 4px 5px',
+            gap: isSmallMobile ? 4 : 8,
+            padding: isSmallMobile ? '3px 6px' : '4px 10px 4px 5px',
             borderRadius: 24,
             border: '1px solid #E4EBE1',
             background: '#fff',
@@ -158,10 +165,12 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             fontFamily: 'inherit',
           }}
         >
-          <Avatar sx={{ width: 28, height: 28, bgcolor: '#087A3D', fontSize: 11.5, fontWeight: 700 }}>
+          <Avatar sx={{ width: 26, height: 26, bgcolor: '#087A3D', fontSize: 11, fontWeight: 700 }}>
             {user ? user.initials || initialsOf(user.full_name) : '?'}
           </Avatar>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>{user?.full_name}</span>
+          {!isSmallMobile && (
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>{user?.full_name}</span>
+          )}
           <ChevronDown size={14} color="#7A8B80" />
         </button>
 

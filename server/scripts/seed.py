@@ -13,8 +13,11 @@ from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import (
     Activity,
+    ActivityType,
     Application,
     ApplicationStatus,
+    CrmTab,
+    CrmTabStageMapping,
     Delivery,
     DeliveryStatus,
     Disbursement,
@@ -143,6 +146,14 @@ PIPELINE_STAGES = [
     ("completed", "Completed", ApplicationStatus.COMPLETED, 8),
 ]
 
+DEFAULT_ACTIVITY_TYPES = [
+    ("Phone Call", "Customer phone discussion / inquiry"),
+    ("Follow-up", "Lead status or document follow-up"),
+    ("Site Visit", "Customer location or dealership visit"),
+    ("Document Collection", "Collecting physical KYC or financial proofs"),
+    ("Meeting", "In-person or virtual meeting"),
+]
+
 NOTIFICATIONS = [
     "Finance query raised on APP-118",
     "Document pending for APP-116",
@@ -189,15 +200,18 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
         companies[name] = c
     db.flush()
 
+    now = utcnow()
     for name, price, down, loan in VEHICLE_MODELS:
         existing = db.query(VehicleModel).filter_by(name=name).first()
         if existing:
             existing.vehicle_price = price
             existing.down_payment = down
             existing.loan_amount = loan
+            existing.updated_at = now
         else:
             db.add(VehicleModel(
                 name=name, vehicle_price=price, down_payment=down, loan_amount=loan,
+                created_at=now, updated_at=now,
             ))
     db.flush()
 
@@ -208,17 +222,57 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
             existing.status = status
             existing.order_index = order
             existing.enabled = True
+            existing.updated_at = now
         else:
             db.add(PipelineStage(
                 key=key, label=label, status=status, order_index=order, enabled=True,
+                created_at=now, updated_at=now,
             ))
     db.flush()
+
+    for name, desc in DEFAULT_ACTIVITY_TYPES:
+        existing = db.query(ActivityType).filter_by(name=name).first()
+        if not existing:
+            db.add(ActivityType(
+                name=name, description=desc, icon="Calendar",
+                created_at=now, updated_at=now,
+            ))
+    db.flush()
+
+    DEFAULT_TABS = [
+        ("All Leads", "all_leads", "All captured leads across pipeline", "Layers", 0, True, "EVERYONE", []),
+        ("New Leads", "new_leads", "Unassigned and new leads", "UserPlus", 1, False, "EVERYONE", ["leads"]),
+        ("Qualification", "qualification", "Contacted and qualified leads", "CheckCircle2", 2, False, "EVERYONE", ["applications", "verification"]),
+        ("Finance", "finance", "Finance applications under review", "Building2", 3, False, "EVERYONE", ["finance", "query", "sanctioned"]),
+        ("Delivery & Closed", "closed", "Completed and delivered deals", "Truck", 4, False, "EVERYONE", ["delivery", "disburse", "completed"]),
+    ]
+
+    for name, code, desc, icon, order, is_def, vis, stage_keys in DEFAULT_TABS:
+        tab = db.query(CrmTab).filter_by(code=code).first()
+        if not tab:
+            tab = CrmTab(
+                name=name, code=code, description=desc, icon=icon,
+                display_order=order, is_default=is_def, visibility_type=vis,
+                created_at=now, updated_at=now,
+            )
+            db.add(tab)
+            db.flush()
+            for s_key in stage_keys:
+                st = db.query(PipelineStage).filter_by(key=s_key).first()
+                if st:
+                    db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=st.id))
+    db.flush()
+
     return companies
+
+
+from app.db.seed_rbac import seed_rbac_data
 
 
 def seed() -> None:
     db = SessionLocal()
     try:
+        seed_rbac_data(db)
         company_map = _ensure_masters(db)
         models = db.query(VehicleModel).order_by(VehicleModel.id).all()
 
@@ -467,8 +521,101 @@ def seed() -> None:
                 created_at=now - timedelta(days=1, hours=random.uniform(0, 22)),
             ))
 
+        # ---- Dynamic Tabs & Custom Fields Seed ----
+        from app.models.crm_tab import CrmTab, CrmTabStageMapping
+        from app.models.crm_tab_field import CrmTabField
+
+        if db.query(func.count(CrmTab.id)).scalar() == 0:
+            doc_tab = CrmTab(
+                name="Document Upload",
+                code="document_upload",
+                description="Manage KYC, PAN, Bank Statements and income proofs",
+                display_order=1,
+                is_active=True,
+                is_default=True,
+                visibility_type="EVERYONE",
+            )
+            verif_tab = CrmTab(
+                name="Document Verification",
+                code="document_verification",
+                description="Synchronized document quality score analysis & manual verification",
+                display_order=2,
+                is_active=True,
+                is_default=False,
+                visibility_type="EVERYONE",
+            )
+            final_sub_tab = CrmTab(
+                name="Final Submission",
+                code="final_submission",
+                description="Review document readiness and send secure no-login link to financier",
+                display_order=3,
+                is_active=True,
+                is_default=False,
+                visibility_type="EVERYONE",
+            )
+            db.add(doc_tab)
+            db.add(verif_tab)
+            db.add(final_sub_tab)
+            db.flush()
+
+            # Seed default custom fields for Document Upload tab
+            fields_seed = [
+                CrmTabField(
+                    tab_id=doc_tab.id,
+                    name="aadhaar_card",
+                    label="Aadhaar Card / ID Proof",
+                    field_type="file",
+                    is_required=True,
+                    display_order=0,
+                    help_text="Upload front & back side of customer Aadhaar ID proof",
+                    file_config={"allowed_extensions": [".pdf", ".png", ".jpg", ".jpeg"], "max_size_mb": 10},
+                    stage_rules={"VERIFICATION": {"visible": True, "required": True}},
+                ),
+                CrmTabField(
+                    tab_id=doc_tab.id,
+                    name="pan_card",
+                    label="PAN Card",
+                    field_type="file",
+                    is_required=True,
+                    display_order=1,
+                    help_text="Upload customer PAN card copy for CIBIL check",
+                    file_config={"allowed_extensions": [".pdf", ".png", ".jpg", ".jpeg"], "max_size_mb": 10},
+                    stage_rules={"VERIFICATION": {"visible": True, "required": True}},
+                ),
+                CrmTabField(
+                    tab_id=doc_tab.id,
+                    name="income_proof",
+                    label="Income Proof / Bank Statement",
+                    field_type="file",
+                    is_required=False,
+                    display_order=2,
+                    help_text="Upload last 6 months bank statement or payslips",
+                    file_config={"allowed_extensions": [".pdf", ".doc", ".png"], "max_size_mb": 15},
+                ),
+                CrmTabField(
+                    tab_id=doc_tab.id,
+                    name="cibil_score",
+                    label="CIBIL Credit Score",
+                    field_type="numeric",
+                    is_required=False,
+                    display_order=3,
+                    placeholder="750",
+                    help_text="Credit score evaluated during finance approval",
+                ),
+                CrmTabField(
+                    tab_id=doc_tab.id,
+                    name="kyc_verified",
+                    label="KYC Status Verified",
+                    field_type="boolean",
+                    is_required=False,
+                    display_order=4,
+                    default_value="Yes",
+                ),
+            ]
+            db.add_all(fields_seed)
+
         db.commit()
-        print(f"[seed] seeded {db.query(func.count(Application.id)).scalar()} applications")
+        print(f"[seed] seeded {db.query(func.count(Application.id)).scalar()} applications and dynamic tabs/fields")
     finally:
         db.close()
 

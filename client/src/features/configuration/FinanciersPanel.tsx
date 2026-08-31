@@ -28,6 +28,9 @@ import type { FinanceCompanyOption } from '@/types';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Financier name is required'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  contact_number: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,22 +54,27 @@ function FinancierFormDialog({
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: '', email: '', contact_number: '', address: '' },
   });
 
   useEffect(() => {
     if (!open) return;
-    reset({ name: editing?.name ?? '' });
+    reset({
+      name: editing?.name ?? '',
+      email: editing?.email ?? '',
+      contact_number: editing?.contact_number ?? '',
+      address: editing?.address ?? '',
+    });
   }, [open, editing, reset]);
 
   const onSubmit = async (values: FormValues) => {
     try {
       if (editing) {
         await updateCompany({ id: editing.id, body: values }).unwrap();
-        showToast('Financier updated', 'success');
+        showToast('Financier updated successfully', 'success');
       } else {
         await createCompany(values).unwrap();
-        showToast('Financier added', 'success');
+        showToast('Financier added successfully', 'success');
       }
       reset();
       onClose();
@@ -77,10 +85,10 @@ function FinancierFormDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ fontWeight: 700 }}>{editing ? 'Edit Financier' : 'Add Financier'}</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
             fullWidth
             label="Financier name"
@@ -89,6 +97,36 @@ function FinancierFormDialog({
             error={Boolean(errors.name)}
             helperText={errors.name?.message}
             {...register('name')}
+          />
+          <TextField
+            fullWidth
+            label="Email ID"
+            type="email"
+            margin="dense"
+            placeholder="e.g. credit@financier.com"
+            error={Boolean(errors.email)}
+            helperText={errors.email?.message}
+            {...register('email')}
+          />
+          <TextField
+            fullWidth
+            label="Contact Number"
+            margin="dense"
+            placeholder="e.g. +91 9876543210"
+            error={Boolean(errors.contact_number)}
+            helperText={errors.contact_number?.message}
+            {...register('contact_number')}
+          />
+          <TextField
+            fullWidth
+            label="Address"
+            margin="dense"
+            multiline
+            rows={2}
+            placeholder="e.g. Street, City, State, Pincode"
+            error={Boolean(errors.address)}
+            helperText={errors.address?.message}
+            {...register('address')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -172,10 +210,10 @@ export default function FinanciersPanel() {
               hint={isAdmin ? 'Add the finance companies you work with.' : 'Contact an admin to configure financiers.'}
             />
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
               <thead>
                 <tr>
-                  {['Name', ...(isAdmin ? ['Actions'] : [])].map((h) => (
+                  {['Name', 'Email ID', 'Contact Number', 'Address', ...(isAdmin ? ['Actions'] : [])].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -185,7 +223,7 @@ export default function FinanciersPanel() {
                         color: '#7A8B80',
                         textTransform: 'uppercase',
                         letterSpacing: 0.6,
-                        textAlign: 'left',
+                        textAlign: h === 'Actions' ? 'right' : 'left',
                         padding: '10px 16px',
                         borderBottom: '1px solid #E4EBE1',
                         whiteSpace: 'nowrap',
@@ -201,6 +239,15 @@ export default function FinanciersPanel() {
                   <tr key={c.id}>
                     <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 600, color: '#16231B' }}>
                       {c.name}
+                    </td>
+                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontSize: 13, color: '#44584C' }}>
+                      {c.email || '-'}
+                    </td>
+                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontSize: 13, color: '#44584C' }}>
+                      {c.contact_number || '-'}
+                    </td>
+                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontSize: 13, color: '#44584C' }}>
+                      {c.address || '-'}
                     </td>
                     {isAdmin && (
                       <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>

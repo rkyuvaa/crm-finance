@@ -24,6 +24,13 @@ export interface User {
   initials: string;
 }
 
+export interface UserBrief {
+  id: number;
+  full_name: string;
+  role: UserRole;
+  email: string | null;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -55,6 +62,7 @@ export interface PipelineStage {
   label: string;
   tip: string;
   count: number;
+  color?: string | null;
 }
 
 export interface RecentApplication {
@@ -91,6 +99,9 @@ export interface WaitingItem {
 export interface FinanceCompany {
   id: number;
   name: string;
+  email?: string | null;
+  contact_number?: string | null;
+  address?: string | null;
   total_apps: number;
   approved: number;
   rejected: number;
@@ -101,6 +112,9 @@ export interface FinanceCompany {
 export interface FinanceCompanyOption {
   id: number;
   name: string;
+  email?: string | null;
+  contact_number?: string | null;
+  address?: string | null;
 }
 
 export interface VehicleModel {
@@ -126,9 +140,10 @@ export interface StageConfig {
   id: number;
   key: string;
   label: string;
-  status: ApplicationStatus;
+  status?: ApplicationStatus | null;
   order_index: number;
   enabled: boolean;
+  color?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,9 +151,254 @@ export interface StageConfig {
 export interface StageInput {
   key: string;
   label: string;
-  status: ApplicationStatus;
   order_index: number;
   enabled: boolean;
+  color?: string | null;
+}
+
+export interface CrmTabFilter {
+  id?: number;
+  field: string;
+  operator: string;
+  value: string;
+  logical_operator: string;
+}
+
+export interface CrmTabConfig {
+  id: number;
+  module_id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  icon?: string | null;
+  display_order: number;
+  is_active: boolean;
+  is_default: boolean;
+  visibility_type: 'EVERYONE' | 'ROLES' | 'USERS';
+  allowed_roles?: string | null;
+  stage_ids: number[];
+  stage_names?: string[];
+  filters?: CrmTabFilter[];
+  count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrmTabFieldOption {
+  label: string;
+  value: string;
+  default?: boolean;
+}
+
+export interface CrmTabFieldConfig {
+  id: number;
+  tab_id: number;
+  name: string;
+  label: string;
+  field_type: 'text' | 'numeric' | 'date' | 'boolean' | 'toggle' | 'dropdown' | 'file';
+  is_required: boolean;
+  is_visible: boolean;
+  is_readonly: boolean;
+  is_searchable: boolean;
+  is_filterable: boolean;
+  is_sortable: boolean;
+  is_archived: boolean;
+  display_order: number;
+  placeholder?: string | null;
+  help_text?: string | null;
+  default_value?: string | null;
+  options?: CrmTabFieldOption[] | null;
+  file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
+  field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
+  stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+  dependent_rules?: {
+    depends_on_field_id?: number | null;
+    depends_on_field_name?: string | null;
+    condition?: 'equals' | 'not_equals' | 'is_filled' | 'is_empty' | 'greater_than' | 'less_than';
+    value?: string | null;
+    action?: 'show' | 'hide' | 'enable' | 'disable' | 'require';
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrmTabFieldInput {
+  name: string;
+  label: string;
+  field_type: string;
+  is_required: boolean;
+  is_visible: boolean;
+  is_readonly: boolean;
+  is_searchable: boolean;
+  is_filterable: boolean;
+  is_sortable: boolean;
+  display_order: number;
+  placeholder?: string | null;
+  help_text?: string | null;
+  default_value?: string | null;
+  options?: CrmTabFieldOption[] | null;
+  file_config?: { allowed_extensions?: string[]; max_size_mb?: number } | null;
+  field_permissions?: Record<string, { view?: boolean; edit?: boolean; required?: boolean; readonly?: boolean }> | null;
+  stage_rules?: Record<string, { visible?: boolean; required?: boolean; readonly?: boolean }> | null;
+  dependent_rules?: {
+    depends_on_field_id?: number | null;
+    depends_on_field_name?: string | null;
+    condition?: 'equals' | 'not_equals' | 'is_filled' | 'is_empty' | 'greater_than' | 'less_than';
+    value?: string | null;
+    action?: 'show' | 'hide' | 'enable' | 'disable' | 'require';
+  } | null;
+}
+
+export interface CrmLeadCustomFieldValue {
+  id: number;
+  application_id: number;
+  field_id: number;
+  value?: string | null;
+  file_metadata?: {
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+  } | null;
+  quality_score?: number | null;
+  quality_analysis?: Record<string, any> | null;
+  is_verified: boolean;
+  verified_by_id?: number | null;
+  verified_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VerificationDocument {
+  id: number;
+  application_id: number;
+  field_id: number;
+  field_name: string;
+  field_label: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_at: string;
+  quality_score?: number | null;
+  quality_analysis?: {
+    overall_score: number;
+    clarity_score: number;
+    readability_score: number;
+    completeness_score: number;
+    orientation_score: number;
+    ocr_extracted_text?: string;
+    warning?: string | null;
+  } | null;
+  is_verified: boolean;
+  verified_by_id?: number | null;
+  verified_by_name?: string | null;
+  verified_at?: string | null;
+}
+
+export interface FinalSubmissionSummary {
+  leadId: number;
+  leadReferenceNumber: string;
+  financier: {
+    id?: number | null;
+    name: string;
+    email?: string | null;
+  };
+  overallStatus: 'Documents Missing' | 'Quality Failed' | 'Pending Verification' | 'Ready to Send' | 'Sent to Financier' | 'Link Expired';
+  canSend: boolean;
+  blockers: string[];
+  counts: {
+    total: number;
+    mandatory: number;
+    uploaded: number;
+    pendingUpload: number;
+    qualityApproved: number;
+    qualityFailed: number;
+    verified: number;
+    pendingVerification: number;
+  };
+  documents: {
+    id: number;
+    name: string;
+    type: string;
+    mandatory: boolean;
+    uploadStatus: 'UPLOADED' | 'PENDING';
+    fileName?: string | null;
+    qualityStatus: 'GOOD' | 'POOR' | 'NOT_CHECKED' | '-';
+    qualityScore?: number | null;
+    verifiedBy?: string | null;
+    verifiedOn?: string | null;
+    fileMetadata?: {
+      file_name: string;
+      file_path: string;
+      file_size?: number;
+      mime_type?: string;
+    } | null;
+  }[];
+  lastSend?: {
+    status: string;
+    sentToName: string;
+    sentToEmail: string;
+    sentBy?: string | null;
+    sentOn: string;
+    expiresAt: string;
+    accessCount: number;
+  } | null;
+}
+
+export interface PublicFinancierDocumentView {
+  leadReferenceNumber: string;
+  financierName: string;
+  expiresAt: string;
+  documents: {
+    id: number;
+    name: string;
+    type: string;
+    fileName: string;
+    uploadStatus: string;
+    qualityStatus: string;
+    qualityScore?: number | null;
+    verifiedBy?: string | null;
+    verifiedOn?: string | null;
+    previewUrl: string;
+    downloadUrl: string;
+  }[];
+}
+
+export interface SmtpSetting {
+  smtp_host?: string | null;
+  smtp_port: number;
+  smtp_security: 'TLS' | 'SSL' | 'NONE';
+  smtp_user?: string | null;
+  has_password: boolean;
+  smtp_from_email?: string | null;
+  smtp_from_name: string;
+  is_enabled: boolean;
+}
+
+export interface SmtpSettingInput {
+  smtp_host?: string | null;
+  smtp_port: number;
+  smtp_security: 'TLS' | 'SSL' | 'NONE';
+  smtp_user?: string | null;
+  smtp_password?: string | null;
+  smtp_from_email?: string | null;
+  smtp_from_name: string;
+  is_enabled: boolean;
+}
+
+export interface CrmTabInput {
+  name: string;
+  code: string;
+  description?: string;
+  icon?: string;
+  display_order: number;
+  is_active: boolean;
+  is_default: boolean;
+  visibility_type: string;
+  allowed_roles?: string;
+  stage_ids: number[];
+  filters?: Omit<CrmTabFilter, 'id'>[];
 }
 
 export interface Activity {
@@ -146,6 +406,17 @@ export interface Activity {
   app_no: string | null;
   actor_name: string;
   action: string;
+  created_at: string;
+}
+
+export interface ActivityLogEntry {
+  id: number;
+  application_id: number;
+  actor_id: number | null;
+  actor_name: string | null;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
   created_at: string;
 }
 
@@ -158,6 +429,7 @@ export interface NavCounts {
   delivery: number;
   disbursement: number;
   notifications: number;
+  stages: Record<string, number>;
 }
 
 export interface TabCounts {
@@ -215,6 +487,9 @@ export interface NotificationItem {
   message: string;
   is_read: boolean;
   created_at: string;
+  // Optional fields for planned activity notifications
+  planned_activity_id?: number;
+  due_date?: string;
 }
 
 export interface StageRow {
@@ -230,3 +505,73 @@ export interface ReportsSummary {
   finance_companies: FinanceCompany[];
   monthly: { month: string; count: number }[];
 }
+
+export interface ActivityType {
+  id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityTypeInput {
+  name: string;
+  description?: string;
+  icon?: string;
+}
+
+export interface PlannedActivityItem {
+  id: number;
+  application_id: number;
+  activity_type_id: number | null;
+  activity_type_name: string;
+  subject: string;
+  notes: string | null;
+  due_date: string | null;
+  status: string;
+  assigned_to: number | null;
+  assignee_name: string | null;
+  created_by: number | null;
+  creator_name: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface PlannedActivityInput {
+  activity_type_id?: number | null;
+  activity_type_name: string;
+  subject: string;
+  notes?: string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+}
+
+export interface StageAutomoveRule {
+  id: number;
+  name: string;
+  trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
+  field_name?: string | null;
+  field_id?: number | null;
+  field_label?: string | null;
+  condition_operator: 'is_filled' | 'is_verified' | 'equals' | 'greater_than';
+  condition_value?: string | null;
+  source_stage_key?: string | null;
+  target_status: string;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StageAutomoveRuleInput {
+  name: string;
+  trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
+  field_name?: string | null;
+  field_id?: number | null;
+  condition_operator: 'is_filled' | 'is_verified' | 'equals' | 'greater_than';
+  condition_value?: string | null;
+  source_stage_key?: string | null;
+  target_status: string;
+  is_enabled: boolean;
+}
+

@@ -21,10 +21,11 @@ class Kpis(BaseModel):
 
 class PipelineStage(BaseModel):
     key: str
-    status: ApplicationStatus
+    status: ApplicationStatus | None = None
     label: str
     tip: str
     count: int
+    color: str | None = None
 
 
 class RecentApplication(BaseModel):
@@ -85,6 +86,7 @@ class NavCounts(BaseModel):
     delivery: int
     disbursement: int
     notifications: int
+    stages: dict[str, int] = {}
 
 
 class DashboardResponse(BaseModel):

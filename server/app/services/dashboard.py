@@ -1,4 +1,5 @@
 from datetime import timedelta
+from datetime import date as date_type
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.models import (
     FinanceStatus,
     FinanceSubmission,
     Notification,
+    PlannedActivity,
     User,
     Verification,
     VerificationStatus,
@@ -71,6 +73,26 @@ def _status_counts(db: Session) -> dict[ApplicationStatus, int]:
     return {status: count for status, count in rows}
 
 
+STATUS_KEY_MAP = {
+    "leads": ApplicationStatus.LEAD,
+    "new lead": ApplicationStatus.LEAD,
+    "applications": ApplicationStatus.APPLICATION,
+    "document upload": ApplicationStatus.APPLICATION,
+    "verification": ApplicationStatus.VERIFICATION,
+    "document verification": ApplicationStatus.VERIFICATION,
+    "finance": ApplicationStatus.FINANCE,
+    "final submission": ApplicationStatus.FINANCE,
+    "query": ApplicationStatus.QUERY,
+    "finance approval": ApplicationStatus.QUERY,
+    "sanctioned": ApplicationStatus.SANCTIONED,
+    "loan sanctioned": ApplicationStatus.SANCTIONED,
+    "delivery": ApplicationStatus.DELIVERY,
+    "disburse": ApplicationStatus.DISBURSEMENT,
+    "disbursement": ApplicationStatus.DISBURSEMENT,
+    "completed": ApplicationStatus.COMPLETED,
+}
+
+
 def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[PipelineStage]:
     configured = (
         db.query(PipelineStageModel)
@@ -78,18 +100,24 @@ def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[P
         .order_by(PipelineStageModel.order_index.asc(), PipelineStageModel.id.asc())
         .all()
     )
-    if configured:
-        base = [(s.status, s.key, s.label) for s in configured]
-    else:
-        base = [(status, key, label) for status, key, label, _tip in PIPELINE]
 
     stages = []
-    for status, key, label in base:
-        count = counts.get(status, 0)
-        tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
-        stages.append(
-            PipelineStage(key=key, status=status, count=count, tip=tip, label=label)
-        )
+    if configured:
+        for s in configured:
+            st = s.status or STATUS_KEY_MAP.get(s.key.lower()) or STATUS_KEY_MAP.get(s.label.lower())
+            count = counts.get(st, 0) if st else 0
+            tip = DEFAULT_TIPS.get(s.key, "{n} applications in this stage").format(n=count)
+            color = getattr(s, "color", None)
+            stages.append(
+                PipelineStage(key=s.key, status=st, count=count, tip=tip, label=s.label, color=color)
+            )
+    else:
+        for status, key, label, _tip in PIPELINE:
+            count = counts.get(status, 0)
+            tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
+            stages.append(
+                PipelineStage(key=key, status=status, count=count, tip=tip, label=label, color=None)
+            )
     return stages
 
 
@@ -283,8 +311,14 @@ def _build_activities(db: Session, limit: int = 5) -> list[ActivityOut]:
     return out
 
 
-def _build_nav_counts(db: Session, user: User) -> NavCounts:
+def _build_nav_counts(db: Session, user: User, counts: dict[ApplicationStatus, int]) -> NavCounts:
     thirty_days = db_now() - timedelta(days=30)
+    configured = (
+        db.query(PipelineStageModel)
+        .filter(PipelineStageModel.enabled.is_(True))
+        .order_by(PipelineStageModel.order_index.asc(), PipelineStageModel.id.asc())
+        .all()
+    )
     lead_unassigned = (
         db.query(func.count(Application.id))
         .filter(
@@ -327,9 +361,22 @@ def _build_nav_counts(db: Session, user: User) -> NavCounts:
         .scalar()
         or 0
     )
+    # Count unread notifications + planned activities due today/overdue
+    today = date_type.today()
     notifications = (
         db.query(func.count(Notification.id))
         .filter(Notification.user_id == user.id, Notification.read_at.is_(None))
+        .scalar()
+        or 0
+    )
+    planned_due = (
+        db.query(func.count(PlannedActivity.id))
+        .filter(
+            PlannedActivity.assigned_to == user.id,
+            PlannedActivity.status == "PLANNED",
+            PlannedActivity.due_date.isnot(None),
+            PlannedActivity.due_date <= today,
+        )
         .scalar()
         or 0
     )
@@ -341,7 +388,8 @@ def _build_nav_counts(db: Session, user: User) -> NavCounts:
         finance=finance,
         delivery=delivery,
         disbursement=disbursement,
-        notifications=notifications,
+        notifications=notifications + planned_due,
+        stages={s.key: counts.get(s.status, 0) for s in configured if s.status},
     )
 
 
@@ -398,5 +446,5 @@ def get_dashboard(db: Session, user: User) -> dict:
         "waiting_on_total": len(waiting),
         "finance_companies": _build_finance_companies(db),
         "activities": _build_activities(db),
-        "nav_counts": _build_nav_counts(db, user),
+        "nav_counts": _build_nav_counts(db, user, counts),
     }

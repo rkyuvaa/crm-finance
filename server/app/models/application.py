@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -44,9 +44,9 @@ class Application(Base):
         ForeignKey("finance_companies.id"), nullable=True
     )
     assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True
+        DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp(), index=True
     )
 
     finance_company: Mapped["FinanceCompany | None"] = relationship(lazy="joined")
@@ -161,3 +161,11 @@ class Disbursement(Base):
     disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="disbursements")
+
+
+class ApplicationSequence(Base):
+    """Single-row table to track the last used application number."""
+    __tablename__ = "application_sequences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    last_number: Mapped[int] = mapped_column(Integer, default=0)

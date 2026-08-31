@@ -1,12 +1,31 @@
-import { Alert, Button, Divider, Paper, TextField, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Alert, Box, Button, Paper, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import {
+  User as UserIcon,
+  Key,
+  Mail,
+  Database,
+  Users as UsersIcon,
+  Shield,
+  Building2,
+  KeyRound,
+  ShieldAlert,
+} from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useChangePasswordMutation, useUpdateProfileMutation } from '@/api/authApi';
 import { setUser } from '@/auth/authSlice';
 import { useToast } from '@/components/ui/ToastHost';
+import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
+import SystemBackupCard from '@/components/settings/SystemBackupCard';
+import UserManagementPage from '@/pages/admin/UserManagementPage';
+import RoleManagementPage from '@/pages/admin/RoleManagementPage';
+import DepartmentManagementPage from '@/pages/admin/DepartmentManagementPage';
+import PermissionRegistryPage from '@/pages/admin/PermissionRegistryPage';
+import AccessAuditLogPage from '@/pages/admin/AccessAuditLogPage';
 import { ROLE_LABELS } from '@/utils/format';
 
 const profileSchema = z.object({
@@ -27,10 +46,34 @@ const passwordSchema = z
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function CustomTabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`settings-tabpanel-${index}`}
+      aria-labelledby={`settings-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 2.5 }}>{children}</Box>}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState(0);
+  const [userRoleSubTab, setUserRoleSubTab] = useState(0);
+
   const [updateProfile, { isLoading: savingProfile }] = useUpdateProfileMutation();
   const [changePassword, { isLoading: changingPassword }] = useChangePasswordMutation();
 
@@ -68,45 +111,132 @@ export default function SettingsPage() {
     }
   };
 
-  return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.3, color: '#023020' }}>Settings</div>
-        <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-          Manage your profile, role and password.
-        </div>
-      </div>
+  const isAdmin = user?.role === 'ADMIN';
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 560 }}>
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
-          <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Profile</Typography>
-          <Typography sx={{ fontSize: 12.5, color: '#7A8B80', mb: 2 }}>
-            {user?.email} · {user ? ROLE_LABELS[user.role] ?? user.role : ''}
+  return (
+    <Box sx={{ maxWidth: 1200 }}>
+      <Box sx={{ mb: 2.5 }}>
+        <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.4, color: '#023020' }}>
+          System Settings & Preferences
+        </Typography>
+        <Typography sx={{ fontSize: 13, color: '#7A8B80', mt: 0.5 }}>
+          Manage account security, organization users & roles, departments, mail server, and data backups.
+        </Typography>
+      </Box>
+
+      {/* ERP Style Navigation Tabs */}
+      <Paper
+        elevation={0}
+        sx={{
+          border: '1px solid #E4EBE1',
+          borderRadius: '12px',
+          backgroundColor: '#FFFFFF',
+          px: 2,
+          pt: 1,
+          mb: 1,
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            minHeight: 44,
+            '& .MuiTab-root': {
+              minHeight: 44,
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: 13.5,
+              color: '#667A6D',
+              mr: 1,
+              px: 2,
+              borderRadius: '8px 8px 0 0',
+              '&.Mui-selected': {
+                color: '#023020',
+              },
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#023020',
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+            },
+          }}
+        >
+          <Tab icon={<UserIcon size={16} />} iconPosition="start" label="My Profile" />
+          <Tab icon={<Key size={16} />} iconPosition="start" label="Security & Password" />
+          {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
+          {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
+          <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
+          {isAdmin && <Tab icon={<Database size={16} />} iconPosition="start" label="System Data Backup" />}
+        </Tabs>
+      </Paper>
+
+      {/* Tab 0: My Profile */}
+      <CustomTabPanel value={activeTab} index={0}>
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3.5, maxWidth: 680 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 16, color: '#023020', mb: 0.5 }}>Profile Details</Typography>
+          <Typography sx={{ fontSize: 13, color: '#7A8B80', mb: 3 }}>
+            Primary account credentials and display details.
           </Typography>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, p: 2, mb: 3, backgroundColor: '#F8FAF7', borderRadius: '10px', border: '1px solid #E4EBE1' }}>
+            <Box>
+              <Typography sx={{ fontSize: 11, color: '#7A8B80', fontWeight: 700, textTransform: 'uppercase' }}>Email Address</Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#023020' }}>{user?.email}</Typography>
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: 11, color: '#7A8B80', fontWeight: 700, textTransform: 'uppercase' }}>Assigned Role</Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#023020' }}>
+                {user ? ROLE_LABELS[user.role] ?? user.role : ''}
+              </Typography>
+            </Box>
+          </Box>
+
           <form onSubmit={profileForm.handleSubmit(onSaveProfile)}>
             <TextField
               fullWidth
-              label="Full name"
+              label="Full Name"
               margin="normal"
               error={Boolean(profileForm.formState.errors.full_name)}
               helperText={profileForm.formState.errors.full_name?.message}
               {...profileForm.register('full_name')}
             />
-            <Button type="submit" variant="contained" disabled={savingProfile} sx={{ mt: 2 }}>
-              Save Profile
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={savingProfile}
+              sx={{
+                mt: 2.5,
+                backgroundColor: '#023020',
+                '&:hover': { backgroundColor: '#012015' },
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3,
+              }}
+            >
+              Save Profile Changes
             </Button>
           </form>
         </Paper>
+      </CustomTabPanel>
 
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3 }}>
-          <Typography sx={{ fontWeight: 700, mb: 2 }}>Change password</Typography>
-          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
-            You will stay signed in after changing your password.
+      {/* Tab 1: Security & Password */}
+      <CustomTabPanel value={activeTab} index={1}>
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3.5, maxWidth: 680 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 16, color: '#023020', mb: 0.5 }}>Change Password</Typography>
+          <Typography sx={{ fontSize: 13, color: '#7A8B80', mb: 2 }}>
+            Ensure your account uses a strong, unique password.
+          </Typography>
+
+          <Alert severity="info" sx={{ mb: 3, borderRadius: '10px' }}>
+            You will stay signed in on this device after changing your password.
           </Alert>
+
           <form onSubmit={passwordForm.handleSubmit(onChangePassword)}>
             <TextField
               fullWidth
-              label="Current password"
+              label="Current Password"
               type="password"
               margin="normal"
               error={Boolean(passwordForm.formState.errors.current_password)}
@@ -115,7 +245,7 @@ export default function SettingsPage() {
             />
             <TextField
               fullWidth
-              label="New password"
+              label="New Password"
               type="password"
               margin="normal"
               error={Boolean(passwordForm.formState.errors.new_password)}
@@ -124,25 +254,79 @@ export default function SettingsPage() {
             />
             <TextField
               fullWidth
-              label="Confirm new password"
+              label="Confirm New Password"
               type="password"
               margin="normal"
               error={Boolean(passwordForm.formState.errors.confirm)}
               helperText={passwordForm.formState.errors.confirm?.message}
               {...passwordForm.register('confirm')}
             />
-            <Button type="submit" variant="contained" disabled={changingPassword} sx={{ mt: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={changingPassword}
+              sx={{
+                mt: 2.5,
+                backgroundColor: '#023020',
+                '&:hover': { backgroundColor: '#012015' },
+                fontWeight: 700,
+                textTransform: 'none',
+                px: 3,
+              }}
+            >
               Update Password
             </Button>
           </form>
         </Paper>
+      </CustomTabPanel>
 
-        <Divider />
+      {/* Tab 2: Users & Roles */}
+      {isAdmin && (
+        <CustomTabPanel value={activeTab} index={2}>
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
+            <Tabs
+              value={userRoleSubTab}
+              onChange={(_, val) => setUserRoleSubTab(val)}
+              sx={{
+                borderBottom: 1,
+                borderColor: '#E4EBE1',
+                mb: 2,
+                '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 13 },
+              }}
+            >
+              <Tab icon={<UsersIcon size={15} />} iconPosition="start" label="Users Management" />
+              <Tab icon={<Shield size={15} />} iconPosition="start" label="Roles & Access" />
+              <Tab icon={<KeyRound size={15} />} iconPosition="start" label="Permission Matrix" />
+              <Tab icon={<ShieldAlert size={15} />} iconPosition="start" label="Access Audit Logs" />
+            </Tabs>
+            {userRoleSubTab === 0 && <UserManagementPage />}
+            {userRoleSubTab === 1 && <RoleManagementPage />}
+            {userRoleSubTab === 2 && <PermissionRegistryPage />}
+            {userRoleSubTab === 3 && <AccessAuditLogPage />}
+          </Paper>
+        </CustomTabPanel>
+      )}
 
-        <Typography sx={{ fontSize: 12, color: '#9BA99F' }}>
-          Organization settings, role permissions and notification preferences arrive in a later phase.
-        </Typography>
-      </div>
-    </div>
+      {/* Tab 3: Departments */}
+      {isAdmin && (
+        <CustomTabPanel value={activeTab} index={3}>
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
+            <DepartmentManagementPage />
+          </Paper>
+        </CustomTabPanel>
+      )}
+
+      {/* Tab 4: Mail Server Config */}
+      <CustomTabPanel value={activeTab} index={isAdmin ? 4 : 2}>
+        <MailServerConfigCard />
+      </CustomTabPanel>
+
+      {/* Tab 5: System Data Backup */}
+      {isAdmin && (
+        <CustomTabPanel value={activeTab} index={5}>
+          <SystemBackupCard />
+        </CustomTabPanel>
+      )}
+    </Box>
   );
 }

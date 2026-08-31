@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Avatar, Button, IconButton, InputAdornment, Menu, MenuItem, Paper, Select, TextField } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
 import {
   Building2,
   ChevronLeft,
@@ -15,13 +14,13 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import { useAppSelector } from '@/app/hooks';
 import { useApplicationsQuery, useCreateApplicationMutation, useDeleteApplicationMutation } from '@/api/applicationsApi';
-import { useDashboardQuery } from '@/api/dashboardApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
-import { agingColor, formatAmount, formatDate, initialsOf } from '@/utils/format';
+import { formatAmount, formatDate, initialsOf } from '@/utils/format';
 import type { ApplicationItem, ApplicationStatus } from '@/types';
 
 const PAGE_SIZE = 10;
@@ -43,17 +42,18 @@ const STATUS_OPTIONS: { value: ApplicationStatus | ''; label: string }[] = [
 export default function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
-  const { data: dashboard } = useDashboardQuery();
+  const selectedStageKey = useAppSelector((state) => state.stageFilter.selectedStageKey);
 
   const tab = (searchParams.get('tab') ?? 'all') as 'all' | 'mine' | 'pending';
   const [page, setPage] = useState(1);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [status, setStatus] = useState('');
-  const [financeId, setFinanceId] = useState('');
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [menuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
   const [createApplication] = useCreateApplicationMutation();
+
+  const stageKey = tab === 'all' && selectedStageKey ? selectedStageKey : undefined;
 
   const { data, isFetching, isError, refetch } = useApplicationsQuery({
     page,
@@ -61,7 +61,7 @@ export default function ApplicationsPage() {
     tab,
     q: q || undefined,
     status: status || undefined,
-    finance_company_id: financeId ? Number(financeId) : undefined,
+    stage_key: stageKey,
   });
 
   const total = data?.total ?? 0;
@@ -83,22 +83,10 @@ export default function ApplicationsPage() {
   const setTab = (next: 'all' | 'mine' | 'pending') => {
     setPage(1);
     const nextParams = new URLSearchParams(searchParams);
-    if (next === 'all') nextParams.delete('tab');
-    else nextParams.set('tab', next);
-    setSearchParams(nextParams, { replace: true });
-  };
-
-  const runSearch = () => {
-    setPage(1);
-    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', next);
     if (q.trim()) nextParams.set('q', q.trim());
     else nextParams.delete('q');
     setSearchParams(nextParams, { replace: true });
-  };
-
-  const onFilterChange = (setter: (v: string) => void) => (e: SelectChangeEvent<string>) => {
-    setter(e.target.value);
-    setPage(1);
   };
 
   const quickCreate = async () => {
@@ -141,307 +129,201 @@ export default function ApplicationsPage() {
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E4EBE1', padding: '0 16px' }}>
-          {(
-            [
-              ['all', `All Applications (${tabs.all})`],
-              ['mine', `My Applications (${tabs.mine})`],
-              ['pending', `Pending Action (${tabs.pending})`],
-            ] as const
-          ).map(([key, label]) => (
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'mine', label: 'Mine' },
+            { key: 'pending', label: 'Pending' },
+          ].map((t) => (
             <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
+              key={t.key}
+              onClick={() => setTab(t.key as 'all' | 'mine' | 'pending')}
               style={{
-                position: 'relative',
-                border: 'none',
-                background: 'transparent',
+                flex: 1,
                 padding: '10px 14px',
+                border: 'none',
+                background: tab === t.key ? '#087A3D' : 'transparent',
+                color: tab === t.key ? '#fff' : '#7A8B80',
                 fontSize: 13,
                 fontWeight: 600,
-                color: tab === key ? '#087A3D' : '#7A8B80',
                 cursor: 'pointer',
-                fontFamily: 'inherit',
+                borderBottom: tab === t.key ? '2px solid #087A3D' : 'transparent',
               }}
             >
-              {label}
-              {tab === key && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    left: 14,
-                    right: 14,
-                    bottom: -1,
-                    height: 2,
-                    borderRadius: '2px 2px 0 0',
-                    background: '#087A3D',
-                  }}
-                />
-              )}
+              {t.label} ({tabs[t.key as keyof typeof tabs] ?? 0})
             </button>
           ))}
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
-            padding: '13px 16px',
-            borderBottom: '1px solid #E4EBE1',
-          }}
-        >
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #E4EBE1', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
+            variant="outlined"
             size="small"
-            placeholder="Search by App ID, customer, mobile, vehicle…"
+            placeholder="Search applications..."
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-            sx={{ flex: 1, minWidth: 220 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={16} color="#7A8B80" />
-                  </InputAdornment>
-                ),
-              },
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} />
+                </InputAdornment>
+              ),
             }}
+            style={{ minWidth: 220, flex: 1 }}
           />
           <Select
             size="small"
             value={status}
-            onChange={onFilterChange(setStatus)}
+            onChange={(e) => setStatus(e.target.value)}
             displayEmpty
-            startAdornment={<Filter size={14} color="#7A8B80" style={{ marginRight: 6 }} />}
-            sx={{ fontSize: 12, minWidth: 130, borderRadius: 2 }}
+            inputProps={{ 'aria-label': 'Filter by status' }}
+            style={{ minWidth: 160 }}
           >
             {STATUS_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value || 'all'} value={opt.value}>
+              <MenuItem key={opt.value} value={opt.value}>
                 {opt.label}
               </MenuItem>
             ))}
           </Select>
-          <Select
-            size="small"
-            value={financeId}
-            onChange={onFilterChange(setFinanceId)}
-            displayEmpty
-            startAdornment={<Building2 size={14} color="#7A8B80" style={{ marginRight: 6 }} />}
-            sx={{ fontSize: 12, minWidth: 140, borderRadius: 2 }}
-          >
-            <MenuItem value="">All finance</MenuItem>
-            {(dashboard?.finance_companies ?? []).map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
+          <Button variant="outlined" startIcon={<Filter size={14} />} onClick={refetch} disabled={isFetching}>
+            Apply
+          </Button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          {isFetching && !data ? (
-            <LoadingRows rows={8} />
-          ) : isError ? (
-            <div style={{ padding: 24, textAlign: 'center' }}>
-              <Button variant="outlined" onClick={refetch}>
-                Retry loading applications
-              </Button>
-            </div>
-          ) : !data || data.items.length === 0 ? (
-            <EmptyState title="No applications found" hint="Adjust filters or create a new application." />
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
-              <thead>
-                <tr>
-                  {['App ID', 'Customer', 'Vehicle', 'Amount', 'Finance', 'Status', 'Aging', 'Created', 'Actions'].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        style={{
-                          background: '#F2FAF0',
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: '#7A8B80',
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.6,
-                          textAlign: 'left',
-                          padding: '10px 16px',
-                          borderBottom: '1px solid #E4EBE1',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((app) => (
-                  <tr key={app.id}>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <span className="app-id">{app.app_no}</span>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar
-                          sx={{ width: 30, height: 30, bgcolor: '#EAF6E8', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
-                        >
-                          {initialsOf(app.customer_name)}
-                        </Avatar>
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#16231B', fontSize: 13 }}>{app.customer_name}</div>
-                          <div style={{ fontSize: 11, color: '#7A8B80' }}>{app.customer_phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C' }}>
-                      {app.vehicle}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 700 }}>
-                      {formatAmount(app.amount)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
-                      {app.finance_company_name ?? '—'}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <StatusBadge status={app.status} />
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, color: agingColor(app.aging_tone) }}>
-                        {app.aging_label}
-                      </span>
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
-                      {formatDate(app.created_at)}
-                    </td>
-                    <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>
-                      <IconButton
-                        size="small"
-                        aria-label={`More actions for ${app.app_no}`}
-                        onClick={(e) => {
-                          setMenuFor(app);
-                          setMenuAnchor(e.currentTarget);
-                        }}
-                      >
-                        <MoreVertical size={16} />
-                      </IconButton>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '11px 16px',
-            borderTop: '1px solid #E4EBE1',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#7A8B80' }}>
-            Showing <strong>{total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}</strong> to{' '}
-            <strong>{Math.min(page * PAGE_SIZE, total)}</strong> of <strong>{total}</strong> entries
-          </span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} style={pageBtnStyle(page <= 1)} aria-label="Previous page">
-              <ChevronLeft size={16} />
-            </button>
-            {pagesToShow.map((p, i) =>
-              p === '…' ? (
-                <span key={`e${i}`} style={{ alignSelf: 'center', color: '#9BA99F' }}>
-                  …
-                </span>
-              ) : (
-                <button key={p} type="button" onClick={() => setPage(p)} style={pageBtnStyle(false, p === page)}>
-                  {p}
-                </button>
-              ),
-            )}
-            <button type="button" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)} style={pageBtnStyle(page >= pageCount)} aria-label="Next page">
-              <ChevronRight size={16} />
-            </button>
+        {isFetching && !data ? (
+          <LoadingRows rows={PAGE_SIZE} />
+        ) : isError ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#D9534F' }}>
+            Could not load applications. Try again.
           </div>
-        </div>
+        ) : (
+          <>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#F7FAF8' }}>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Application</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Customer</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Vehicle</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 600, color: '#6B8278' }}>Amount</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Finance</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Status</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Updated</th>
+                    <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 600, color: '#6B8278' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data?.items ?? []).map((app) => {
+                    const isUnassigned = app.assigned_to == null;
+                    const urgent = isUnassigned;
+                    return (
+                      <tr key={app.id} style={{ borderBottom: '1px solid #ECF0ED' }}>
+                        <td style={{ padding: '8px 14px', fontSize: 12, color: '#7A8B80' }}>{app.app_no}</td>
+                        <td style={{ padding: '8px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Avatar sx={{ width: 26, height: 26, fontSize: 11, bgcolor: urgent ? '#FEF3C6' : '#D1FAE5', color: urgent ? '#92400D' : '#065F46' }}>
+                              {initialsOf(app.customer_name)}
+                            </Avatar>
+                            <span style={{ fontWeight: 500, color: '#16231B' }}>{app.customer_name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '8px 14px', color: '#44584C' }}>{app.vehicle}</td>
+                        <td style={{ padding: '8px 14px', textAlign: 'right', color: '#023020', fontWeight: 600 }}>
+                          {formatAmount(app.amount)}
+                        </td>
+                        <td style={{ padding: '8px 14px', color: '#44584C' }}>{app.finance_company_name ?? <span style={{ color: '#9BA99F' }}>—</span>}</td>
+                        <td style={{ padding: '8px 14px' }}><StatusBadge status={app.status} /></td>
+                        <td style={{ padding: '8px 14px', fontSize: 12, color: '#7A8B80' }}>{formatDate(app.updated_at)}</td>
+                        <td style={{ padding: '8px 14px', textAlign: 'center' }}>
+                          <IconButton size="small" onClick={() => setMenuFor(app)}><MoreVertical size={16} /></IconButton>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {data?.items?.length === 0 && <EmptyState title="No applications found" hint="Adjust filters or create a new application." />}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #ECF0ED' }}>
+              <div style={{ fontSize: 13, color: '#7A8B80' }}>
+                Showing {((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, total)} of {total}
+              </div>
+              <div style={{ display: 'flex', gap: 2 }}>
+                <Button size="small" variant="outlined" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || isFetching}>
+                  <ChevronLeft size={16} />
+                </Button>
+                {pagesToShow.map((p) =>
+                  p === '…' ? (
+                    <span key={`…`} style={{ padding: '4px 8px', fontSize: 13, color: '#9BA99F' }}>…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      size="small"
+                      variant={p === page ? 'contained' : 'outlined'}
+                      onClick={() => setPage(p)}
+                      disabled={isFetching}
+                      style={{ minWidth: 32 }}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+                <Button size="small" variant="outlined" onClick={() => setPage((p) => p + 1)} disabled={page >= pageCount || isFetching}>
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </Paper>
 
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={() => {
-          setMenuAnchor(null);
-          setMenuFor(null);
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            showToast(`Opening ${menuFor?.app_no}…`, 'info');
-            setMenuAnchor(null);
-            setMenuFor(null);
-          }}
+      {menuFor && menuAnchor && (
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuFor)}
+          onClose={() => setMenuFor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <Eye size={15} style={{ marginRight: 9 }} /> View details
-        </MenuItem>
-        <MenuItem
-          onClick={async () => {
-            if (!menuFor) return;
-            try {
-              await navigator.clipboard.writeText(menuFor.app_no);
-            } catch {
-              // ignore
-            }
-            showToast(`${menuFor.app_no} copied to clipboard`, 'success');
-            setMenuAnchor(null);
-            setMenuFor(null);
-          }}
-        >
-          <Copy size={15} style={{ marginRight: 9 }} /> Copy App ID
-        </MenuItem>
-        <MenuItem
-          onClick={async () => {
-            if (!menuFor) return;
-            try {
+          <MenuItem
+            onClick={async () => {
               await deleteApplication(menuFor.id).unwrap();
-              showToast(`${menuFor.app_no} removed`, 'success');
-            } catch {
-              showToast('Could not remove the application', 'error');
+              showToast(`Application ${menuFor.app_no} deleted`, 'success');
+              setMenuFor(null);
+              refetch();
+            }}
+          >
+            <Trash2 size={14} style={{ marginRight: 6 }} />
+            Delete
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(menuFor.app_no);
+              showToast('Copied', 'success');
+            }}
+          >
+            <Copy size={14} style={{ marginRight: 6 }} />
+            Copy App No
+          </MenuItem>
+          <MenuItem
+            onClick={() =>
+              window.open(`mailto:${menuFor.customer_phone}`, '_blank')
             }
-            setMenuAnchor(null);
-            setMenuFor(null);
-          }}
-          sx={{ color: '#DC2626' }}
-        >
-          <Trash2 size={15} style={{ marginRight: 9 }} /> Remove
-        </MenuItem>
-      </Menu>
+          >
+            <Eye size={14} style={{ marginRight: 6 }} />
+            Contact
+          </MenuItem>
+          <MenuItem
+            onClick={() =>
+              window.open(`tel:${menuFor.customer_phone}`, '_blank')
+            }
+          >
+            <Building2 size={14} style={{ marginRight: 6 }} />
+            Call
+          </MenuItem>
+        </Menu>
+      )}
     </div>
   );
-}
-
-function pageBtnStyle(disabled: boolean, active = false): React.CSSProperties {
-  return {
-    minWidth: 32,
-    height: 32,
-    padding: '0 9px',
-    border: '1px solid #E4EBE1',
-    background: active ? '#087A3D' : '#fff',
-    color: active ? '#fff' : '#44584C',
-    borderRadius: 8,
-    fontSize: 12.5,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.4 : 1,
-    fontFamily: 'inherit',
-  };
 }

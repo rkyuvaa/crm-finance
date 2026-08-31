@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -5,20 +7,41 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, require_roles
 from app.db.session import get_db
 from app.models import (
+    ActivityType,
     Application,
+    ApplicationStatus,
+    CrmTab,
+    CrmTabField,
+    CrmTabFilter,
+    CrmTabStageMapping,
     FinanceCompany,
     PipelineStage,
+    StageAutomoveRule,
     User,
     UserRole,
     VehicleModel,
 )
 from app.schemas.master import (
+    ActivityTypeCreate,
+    ActivityTypeOut,
+    ActivityTypeUpdate,
+    CrmTabCreate,
+    CrmTabFieldCreate,
+    CrmTabFieldOut,
+    CrmTabFieldUpdate,
+    CrmTabFilterOut,
+    CrmTabOut,
+    CrmTabUpdate,
     FinanceCompanyBrief,
     FinanceCompanyCreate,
     FinanceCompanyUpdate,
+    StageAutomoveRuleCreate,
+    StageAutomoveRuleOut,
+    StageAutomoveRuleUpdate,
     StageCreate,
     StageOut,
     StageUpdate,
+    UserBrief,
     VehicleModelCreate,
     VehicleModelOut,
     VehicleModelUpdate,
@@ -128,12 +151,19 @@ def create_finance_company(
 ):
     _ensure_unique(db, FinanceCompany, FinanceCompany.name, payload.name)
     company = FinanceCompany(
-        name=payload.name, total_apps=0, approved=0, rejected=0, avg_time_days=0
+        name=payload.name,
+        email=payload.email,
+        contact_number=payload.contact_number,
+        address=payload.address,
+        total_apps=0,
+        approved=0,
+        rejected=0,
+        avg_time_days=0,
     )
     db.add(company)
     db.commit()
     db.refresh(company)
-    return FinanceCompanyBrief(id=company.id, name=company.name)
+    return company
 
 
 @router.patch("/finance-companies/{company_id}", response_model=FinanceCompanyBrief)
@@ -154,7 +184,7 @@ def update_finance_company(
     db.add(company)
     db.commit()
     db.refresh(company)
-    return FinanceCompanyBrief(id=company.id, name=company.name)
+    return company
 
 
 @router.delete("/finance-companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -187,11 +217,50 @@ def delete_finance_company(
 
 @router.get("/stages", response_model=list[StageOut])
 def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return (
-        db.query(PipelineStage)
-        .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
-        .all()
-    )
+    try:
+        stages = (
+            db.query(PipelineStage)
+            .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
+            .all()
+        )
+        status_map = {
+            "leads": ApplicationStatus.LEAD,
+            "lead": ApplicationStatus.LEAD,
+            "applications": ApplicationStatus.APPLICATION,
+            "application": ApplicationStatus.APPLICATION,
+            "verification": ApplicationStatus.VERIFICATION,
+            "finance": ApplicationStatus.FINANCE,
+            "query": ApplicationStatus.QUERY,
+            "sanctioned": ApplicationStatus.SANCTIONED,
+            "delivery": ApplicationStatus.DELIVERY,
+            "disburse": ApplicationStatus.DISBURSEMENT,
+            "disbursement": ApplicationStatus.DISBURSEMENT,
+            "completed": ApplicationStatus.COMPLETED,
+        }
+        now = datetime.now(timezone.utc)
+        result = []
+        for s in stages:
+            st = s.status or status_map.get(s.key.lower(), ApplicationStatus.APPLICATION)
+            c_at = s.created_at or now
+            u_at = s.updated_at or now
+            result.append(
+                StageOut(
+                    id=s.id,
+                    key=s.key,
+                    label=s.label,
+                    status=st,
+                    order_index=s.order_index or 0,
+                    enabled=s.enabled if s.enabled is not None else True,
+                    color=getattr(s, "color", None),
+                    created_at=c_at,
+                    updated_at=u_at,
+                )
+            )
+        return result
+    except Exception as err:
+        import logging
+        logging.error(f"Error in list_stages: {err}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.post("/stages", response_model=StageOut, status_code=status.HTTP_201_CREATED)
@@ -204,9 +273,9 @@ def create_stage(
     stage = PipelineStage(
         key=payload.key,
         label=payload.label,
-        status=payload.status,
         order_index=payload.order_index,
         enabled=payload.enabled,
+        color=payload.color,
     )
     db.add(stage)
     db.commit()
@@ -249,9 +318,488 @@ def delete_stage(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+# ---------------------------------------------------------------------------
+# Activity types
+# ---------------------------------------------------------------------------
+
+
+@router.get("/activity-types", response_model=list[ActivityTypeOut])
+def list_activity_types(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return db.query(ActivityType).order_by(ActivityType.name.asc()).all()
+
+
+@router.post("/activity-types", response_model=ActivityTypeOut, status_code=status.HTTP_201_CREATED)
+def create_activity_type(
+    payload: ActivityTypeCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    _ensure_unique(db, ActivityType, ActivityType.name, payload.name)
+    act_type = ActivityType(
+        name=payload.name,
+        description=payload.description,
+        icon=payload.icon or "Calendar",
+    )
+    db.add(act_type)
+    db.commit()
+    db.refresh(act_type)
+    return act_type
+
+
+@router.patch("/activity-types/{type_id}", response_model=ActivityTypeOut)
+def update_activity_type(
+    type_id: int,
+    payload: ActivityTypeUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    act_type = db.get(ActivityType, type_id)
+    if not act_type:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity type not found")
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name") is not None:
+        _ensure_unique(db, ActivityType, ActivityType.name, data["name"], exclude_id=type_id)
+    for field, value in data.items():
+        setattr(act_type, field, value)
+    db.add(act_type)
+    db.commit()
+    db.refresh(act_type)
+    return act_type
+
+
+@router.delete("/activity-types/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_activity_type(
+    type_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    act_type = db.get(ActivityType, type_id)
+    if not act_type:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity type not found")
+    db.delete(act_type)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Dynamic CRM Tabs
+# ---------------------------------------------------------------------------
+
+
+def _build_tab_out(db: Session, tab: CrmTab, user: User) -> CrmTabOut:
+    stage_ids = [m.stage_id for m in tab.stage_mappings]
+    stage_names = [m.stage.label for m in tab.stage_mappings if m.stage]
+    
+    # Calculate count based on stage mapping and visibility
+    app_query = db.query(Application)
+    if stage_ids:
+        app_query = app_query.filter(Application.vehicle_model_id.in_(stage_ids) | Application.id.isnot(None))
+        # Filter applications based on stage status values of mapped stages
+        mapped_statuses = [m.stage.status for m in tab.stage_mappings if m.stage and m.stage.status]
+        if mapped_statuses:
+            app_query = app_query.filter(Application.status.in_(mapped_statuses))
+    
+    # Filter by user role if tab restricts visibility
+    if tab.visibility_type == "ROLES" and tab.allowed_roles:
+        allowed = [r.strip() for r in tab.allowed_roles.split(",") if r.strip()]
+        if user.role.value not in allowed and user.role != UserRole.ADMIN:
+            count = 0
+        else:
+            count = app_query.count()
+    else:
+        count = app_query.count()
+
+    filters_out = [
+        CrmTabFilterOut(
+            id=f.id,
+            field=f.field,
+            operator=f.operator,
+            value=f.value,
+            logical_operator=f.logical_operator,
+        )
+        for f in tab.filter_rules
+    ]
+
+    now = datetime.now(timezone.utc)
+    return CrmTabOut(
+        id=tab.id,
+        module_id=tab.module_id,
+        name=tab.name,
+        code=tab.code,
+        description=tab.description,
+        icon=tab.icon or "Layers",
+        display_order=tab.display_order,
+        is_active=tab.is_active,
+        is_default=tab.is_default,
+        visibility_type=tab.visibility_type,
+        allowed_roles=tab.allowed_roles,
+        stage_ids=stage_ids,
+        stage_names=stage_names,
+        filters=filters_out,
+        count=count,
+        created_at=tab.created_at or now,
+        updated_at=tab.updated_at or now,
+    )
+
+
+@router.get("/tabs", response_model=list[CrmTabOut])
+def list_tabs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    tabs = db.query(CrmTab).order_by(CrmTab.display_order.asc(), CrmTab.id.asc()).all()
+    filtered_tabs = []
+    for tab in tabs:
+        if not tab.is_active:
+            continue
+        if tab.visibility_type == "ROLES" and tab.allowed_roles:
+            allowed = [r.strip() for r in tab.allowed_roles.split(",") if r.strip()]
+            if user.role.value not in allowed and user.role != UserRole.ADMIN:
+                continue
+        filtered_tabs.append(_build_tab_out(db, tab, user))
+    return filtered_tabs
+
+
+@router.post("/tabs", response_model=CrmTabOut, status_code=status.HTTP_201_CREATED)
+def create_tab(
+    payload: CrmTabCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    _ensure_unique(db, CrmTab, CrmTab.code, payload.code)
+    
+    if payload.is_default:
+        db.query(CrmTab).update({CrmTab.is_default: False})
+        
+    tab = CrmTab(
+        name=payload.name,
+        code=payload.code,
+        description=payload.description,
+        icon=payload.icon or "Layers",
+        display_order=payload.display_order,
+        is_active=payload.is_active,
+        is_default=payload.is_default,
+        visibility_type=payload.visibility_type,
+        allowed_roles=payload.allowed_roles,
+    )
+    db.add(tab)
+    db.flush()
+
+    for stage_id in payload.stage_ids:
+        db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=stage_id))
+
+    for flt in payload.filters:
+        db.add(
+            CrmTabFilter(
+                tab_id=tab.id,
+                field=flt.field,
+                operator=flt.operator,
+                value=flt.value,
+                logical_operator=flt.logical_operator,
+            )
+        )
+
+    db.commit()
+    db.refresh(tab)
+    return _build_tab_out(db, tab, user)
+
+
+@router.patch("/tabs/{tab_id}", response_model=CrmTabOut)
+def update_tab(
+    tab_id: int,
+    payload: CrmTabUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    stage_ids = data.pop("stage_ids", None)
+    filters = data.pop("filters", None)
+
+    if data.get("code") is not None:
+        _ensure_unique(db, CrmTab, CrmTab.code, data["code"], exclude_id=tab_id)
+
+    if data.get("is_default") is True:
+        db.query(CrmTab).filter(CrmTab.id != tab_id).update({CrmTab.is_default: False})
+
+    for field, value in data.items():
+        setattr(tab, field, value)
+
+    if stage_ids is not None:
+        db.query(CrmTabStageMapping).filter(CrmTabStageMapping.tab_id == tab_id).delete()
+        for sid in stage_ids:
+            db.add(CrmTabStageMapping(tab_id=tab_id, stage_id=sid))
+
+    if filters is not None:
+        db.query(CrmTabFilter).filter(CrmTabFilter.tab_id == tab_id).delete()
+        for flt in filters:
+            db.add(
+                CrmTabFilter(
+                    tab_id=tab_id,
+                    field=flt["field"] if isinstance(flt, dict) else flt.field,
+                    operator=flt["operator"] if isinstance(flt, dict) else flt.operator,
+                    value=flt["value"] if isinstance(flt, dict) else flt.value,
+                    logical_operator=flt.get("logical_operator", "AND") if isinstance(flt, dict) else flt.logical_operator,
+                )
+            )
+
+    db.commit()
+    db.refresh(tab)
+    return _build_tab_out(db, tab, user)
+
+
+@router.delete("/tabs/{tab_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tab(
+    tab_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+    db.delete(tab)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 def _ensure_unique(db: Session, model, column, value: str, exclude_id: int | None = None) -> None:
     query = db.query(model).filter(column == value)
     if exclude_id is not None:
         query = query.filter(model.id != exclude_id)
     if query.first() is not None:
         raise _conflict("An entry with this name already exists")
+
+
+# --- Dynamic Tab Field Management Endpoints ---
+
+@router.get("/tabs/{tab_id}/fields", response_model=list[CrmTabFieldOut])
+def list_tab_fields(
+    tab_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    fields = (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.is_archived == False)
+        .order_by(CrmTabField.display_order.asc(), CrmTabField.id.asc())
+        .all()
+    )
+    return fields
+
+
+@router.post("/tabs/{tab_id}/fields", response_model=CrmTabFieldOut, status_code=status.HTTP_201_CREATED)
+def create_tab_field(
+    tab_id: int,
+    payload: CrmTabFieldCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    tab = db.get(CrmTab, tab_id)
+    if not tab:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tab not found")
+
+    # Check for duplicate field name in same tab
+    existing = (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.name == payload.name, CrmTabField.is_archived == False)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Field with name '{payload.name}' already exists in this tab")
+
+    field = CrmTabField(
+        tab_id=tab_id,
+        name=payload.name,
+        label=payload.label,
+        field_type=payload.field_type,
+        is_required=payload.is_required,
+        is_visible=payload.is_visible,
+        is_readonly=payload.is_readonly,
+        is_searchable=payload.is_searchable,
+        is_filterable=payload.is_filterable,
+        is_sortable=payload.is_sortable,
+        display_order=payload.display_order,
+        placeholder=payload.placeholder,
+        help_text=payload.help_text,
+        default_value=payload.default_value,
+        options=payload.options,
+        file_config=payload.file_config,
+        field_permissions=payload.field_permissions,
+        stage_rules=payload.stage_rules,
+        dependent_rules=payload.dependent_rules,
+    )
+    db.add(field)
+    db.commit()
+    db.refresh(field)
+    return field
+
+
+@router.patch("/tabs/{tab_id}/fields/{field_id}", response_model=CrmTabFieldOut)
+def update_tab_field(
+    tab_id: int,
+    field_id: int,
+    payload: CrmTabFieldUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    field = db.get(CrmTabField, field_id)
+    if not field or field.tab_id != tab_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Field not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("name") is not None and data["name"] != field.name:
+        dup = (
+            db.query(CrmTabField)
+            .filter(CrmTabField.tab_id == tab_id, CrmTabField.name == data["name"], CrmTabField.id != field_id, CrmTabField.is_archived == False)
+            .first()
+        )
+        if dup:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Field name '{data['name']}' already exists in this tab")
+
+    for key, value in data.items():
+        setattr(field, key, value)
+
+    db.commit()
+    db.refresh(field)
+    return field
+
+
+@router.delete("/tabs/{tab_id}/fields/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tab_field(
+    tab_id: int,
+    field_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    field = db.get(CrmTabField, field_id)
+    if not field or field.tab_id != tab_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Field not found")
+
+    # Soft delete / archive to protect historical data
+    field.is_archived = True
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/tabs/{tab_id}/fields/reorder", response_model=list[CrmTabFieldOut])
+def reorder_tab_fields(
+    tab_id: int,
+    field_ids: list[int],
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    for idx, f_id in enumerate(field_ids):
+        db.query(CrmTabField).filter(CrmTabField.id == f_id, CrmTabField.tab_id == tab_id).update({CrmTabField.display_order: idx})
+    db.commit()
+
+    return (
+        db.query(CrmTabField)
+        .filter(CrmTabField.tab_id == tab_id, CrmTabField.is_archived == False)
+        .order_by(CrmTabField.display_order.asc())
+        .all()
+    )
+
+
+@router.get("/users", response_model=list[UserBrief])
+def list_users(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    users = db.query(User).order_by(User.full_name.asc()).all()
+    return [
+        UserBrief(
+            id=u.id,
+            full_name=u.full_name,
+            role=u.role,
+            email=u.email,
+        )
+        for u in users
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Stage Auto-Move Rules
+# ---------------------------------------------------------------------------
+
+
+def _automove_to_out(rule: StageAutomoveRule) -> StageAutomoveRuleOut:
+    return StageAutomoveRuleOut(
+        id=rule.id,
+        name=rule.name,
+        trigger_type=rule.trigger_type,
+        field_name=rule.field_name,
+        field_id=rule.field_id,
+        field_label=rule.field.label if rule.field else None,
+        condition_operator=rule.condition_operator,
+        condition_value=rule.condition_value,
+        source_stage_key=rule.source_stage_key,
+        target_status=rule.target_status,
+        is_enabled=rule.is_enabled,
+        created_at=rule.created_at,
+        updated_at=rule.updated_at,
+    )
+
+
+@router.get("/automove-rules", response_model=list[StageAutomoveRuleOut])
+def list_automove_rules(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    rules = db.query(StageAutomoveRule).order_by(StageAutomoveRule.id.asc()).all()
+    return [_automove_to_out(r) for r in rules]
+
+
+@router.post("/automove-rules", response_model=StageAutomoveRuleOut, status_code=status.HTTP_201_CREATED)
+def create_automove_rule(
+    payload: StageAutomoveRuleCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = StageAutomoveRule(
+        name=payload.name,
+        trigger_type=payload.trigger_type,
+        field_name=payload.field_name,
+        field_id=payload.field_id,
+        condition_operator=payload.condition_operator,
+        condition_value=payload.condition_value,
+        source_stage_key=payload.source_stage_key,
+        target_status=payload.target_status,
+        is_enabled=payload.is_enabled,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return _automove_to_out(rule)
+
+
+@router.patch("/automove-rules/{rule_id}", response_model=StageAutomoveRuleOut)
+def update_automove_rule(
+    rule_id: int,
+    payload: StageAutomoveRuleUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = db.get(StageAutomoveRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auto-move rule not found")
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(rule, field, value)
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return _automove_to_out(rule)
+
+
+@router.delete("/automove-rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_automove_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    rule = db.get(StageAutomoveRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auto-move rule not found")
+    db.delete(rule)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+

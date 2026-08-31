@@ -1,5 +1,6 @@
 from app.models.application import (
     Application,
+    ApplicationSequence,
     Delivery,
     Disbursement,
     Document,
@@ -7,6 +8,8 @@ from app.models.application import (
     Sanction,
     Verification,
 )
+from app.models.crm_tab import CrmTab, CrmTabFilter, CrmTabStageMapping
+from app.models.crm_tab_field import CrmLeadCustomFieldValue, CrmTabField
 from app.models.enums import (
     ApplicationStatus,
     DeliveryStatus,
@@ -17,29 +20,86 @@ from app.models.enums import (
     VerificationStatus,
 )
 from app.models.finance_company import FinanceCompany
-from app.models.notification import Activity, Notification
+from app.models.financier_token import (
+    FinancierDocumentAccessLog,
+    FinancierDocumentAccessToken,
+    FinancierDocumentSendItem,
+)
+from app.models.notification import Activity, ActivityLog, ActivityType, Notification, PlannedActivity
 from app.models.pipeline_stage import PipelineStage
+from app.models.rbac import (
+    Action,
+    AuditActionType,
+    AuditLog,
+    DataScopeType,
+    Department,
+    DepartmentUser,
+    FieldPermissionType,
+    Module,
+    Permission,
+    PermissionStatus,
+    Resource,
+    Role,
+    RoleDataScope,
+    RoleFieldPermission,
+    RolePermission,
+    UserPermission,
+    UserRole as RbacUserRole,
+)
+from app.models.smtp_setting import SmtpSetting
 from app.models.user import User
+from app.models.automove_rule import StageAutomoveRule
 from app.models.vehicle_model import VehicleModel
 
 __all__ = [
+    "StageAutomoveRule",
+    "Action",
     "Activity",
+    "ActivityLog",
+    "ActivityType",
     "Application",
+    "ApplicationSequence",
     "ApplicationStatus",
+    "AuditActionType",
+    "AuditLog",
+    "CrmLeadCustomFieldValue",
+    "CrmTab",
+    "CrmTabField",
+    "CrmTabFilter",
+    "CrmTabStageMapping",
+    "DataScopeType",
     "Delivery",
     "DeliveryStatus",
+    "Department",
+    "DepartmentUser",
     "Disbursement",
     "DisbursementStatus",
     "DocStatus",
     "Document",
+    "FieldPermissionType",
     "FinanceCompany",
     "FinanceStatus",
     "FinanceSubmission",
+    "FinancierDocumentAccessLog",
+    "FinancierDocumentAccessToken",
+    "FinancierDocumentSendItem",
+    "Module",
     "Notification",
+    "Permission",
+    "PermissionStatus",
     "PipelineStage",
+    "PlannedActivity",
+    "Resource",
+    "Role",
+    "RoleDataScope",
+    "RoleFieldPermission",
+    "RolePermission",
     "Sanction",
+    "SmtpSetting",
     "User",
+    "UserPermission",
     "UserRole",
+    "RbacUserRole",
     "VehicleModel",
     "Verification",
     "VerificationStatus",
