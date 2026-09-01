@@ -1,4 +1,4 @@
-﻿import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import {
   BarChart3,
@@ -12,6 +12,7 @@ import {
   ListTodo,
   Settings,
   Settings2,
+  Sparkles,
   UserPlus,
 } from 'lucide-react';
 
@@ -41,8 +42,15 @@ const NAV_GROUPS: {
     label: 'Main',
     items: [
       { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
-      { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
       { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
+    ],
+  },
+  {
+    label: 'CRM',
+    collapsible: true,
+    items: [
+      { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
+      { key: 'opportunities', label: 'Opportunities', path: '/opportunities', icon: Sparkles, badge: null },
     ],
   },
   {
@@ -65,7 +73,7 @@ const NAV_GROUPS: {
 ];
 
 // Groups that can be expanded/collapsed (accordion behaviour).
-const COLLAPSIBLE_GROUPS = new Set(['Project & Task']);
+const COLLAPSIBLE_GROUPS = new Set(['CRM', 'Project & Task']);
 
 
 export default function Sidebar({

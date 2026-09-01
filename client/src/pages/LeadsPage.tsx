@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Button,
@@ -51,6 +51,8 @@ const KANBAN_COLUMNS: { status: ApplicationStatus; label: string; bg: string; bo
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOpportunityRoute = location.pathname === '/opportunities';
   const [searchParams] = useSearchParams();
   const searchQ = searchParams.get('q') ?? '';
 
@@ -92,9 +94,13 @@ export default function LeadsPage() {
 
   const { data: masterStages } = useStagesQuery();
 
-  // Filter rows based on active dynamic tab configuration and search query
+  // Filter rows based on route, dynamic tab configuration and search query
   const allRows = data?.items ?? [];
   const rows = allRows.filter((app) => {
+    if (isOpportunityRoute && app.status === 'LEAD') {
+      return false;
+    }
+
     if (searchQ) {
       const qLower = searchQ.trim().toLowerCase();
       const matchNo = app.app_no?.toLowerCase().includes(qLower);
@@ -262,7 +268,9 @@ export default function LeadsPage() {
       {viewMode === 'list' ? (
         <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #E4EBE1' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>All Records ({rows.length})</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>
+              {isOpportunityRoute ? 'All Opportunities' : 'All Records'} ({rows.length})
+            </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <IconButton
                 size="small"

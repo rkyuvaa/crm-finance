@@ -12,7 +12,8 @@ import { useAppDispatch } from '@/app/hooks';
 
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/': ['Dashboard', 'Overview'],
-  '/leads': ['Leads', 'All Leads'],
+  '/leads': ['CRM', 'Leads'],
+  '/opportunities': ['CRM', 'Opportunities'],
   '/projects': ['Projects', 'All Projects'],
   '/tasks': ['Task', 'All Tasks'],
   '/plm': ['PLM', 'Product Lifecycle Management'],
@@ -48,10 +49,12 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
     setQuery(currentQ);
   }, [currentQ]);
 
+  const isCrmRoute = location.pathname === '/leads' || location.pathname === '/opportunities' || location.pathname === '/applications';
+
   const handleQueryChange = (newVal: string) => {
     setQuery(newVal);
     const trimmed = newVal.trim();
-    if (location.pathname === '/leads' || location.pathname === '/applications') {
+    if (isCrmRoute) {
       const nextParams = new URLSearchParams(searchParams);
       if (trimmed) {
         nextParams.set('q', trimmed);
@@ -67,14 +70,14 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   const submitSearch = () => {
     const q = query.trim();
     if (!q) return;
-    if (location.pathname !== '/leads' && location.pathname !== '/applications') {
+    if (!isCrmRoute) {
       navigate(`/leads?q=${encodeURIComponent(q)}`);
     }
   };
 
   const handleClearSearch = () => {
     setQuery('');
-    if (location.pathname === '/leads' || location.pathname === '/applications') {
+    if (isCrmRoute) {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('q');
       setSearchParams(nextParams, { replace: true });

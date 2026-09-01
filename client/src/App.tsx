@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
 
@@ -56,6 +56,7 @@ export default function App() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
+                <Route path="/opportunities" element={<LeadsPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/plm" element={<PlmPage />} />
