@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar, Divider, IconButton, InputAdornment, Menu, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
-import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon, X } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
@@ -29,7 +29,7 @@ const BREADCRUMBS: Record<string, [string, string]> = {
 };
 
 export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,18 +41,51 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   const isSmallMobile = useMediaQuery('(max-width:600px)');
   const isTablet = useMediaQuery('(max-width:900px)');
 
+  const currentQ = searchParams.get('q') ?? '';
+  const [query, setQuery] = useState(currentQ);
+
+  useEffect(() => {
+    setQuery(currentQ);
+  }, [currentQ]);
+
+  const handleQueryChange = (newVal: string) => {
+    setQuery(newVal);
+    const trimmed = newVal.trim();
+    if (location.pathname === '/leads' || location.pathname === '/applications') {
+      const nextParams = new URLSearchParams(searchParams);
+      if (trimmed) {
+        nextParams.set('q', trimmed);
+      } else {
+        nextParams.delete('q');
+      }
+      setSearchParams(nextParams, { replace: true });
+    } else if (trimmed) {
+      navigate(`/leads?q=${encodeURIComponent(trimmed)}`);
+    }
+  };
+
+  const submitSearch = () => {
+    const q = query.trim();
+    if (!q) return;
+    if (location.pathname !== '/leads' && location.pathname !== '/applications') {
+      navigate(`/leads?q=${encodeURIComponent(q)}`);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setQuery('');
+    if (location.pathname === '/leads' || location.pathname === '/applications') {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('q');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
   const crumb = BREADCRUMBS[location.pathname] ?? BREADCRUMBS[`/${location.pathname.split('/')[1]}`] ?? [
     'CRMFinance',
     'KIM',
   ];
   const unread = dashboard?.nav_counts.notifications ?? 0;
-
-  const submitSearch = () => {
-    const q = query.trim();
-    if (!q) return;
-    navigate(`/applications?q=${encodeURIComponent(q)}`);
-    setQuery('');
-  };
 
   const handleLogout = async () => {
     setAnchorEl(null);
@@ -98,7 +131,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         size="small"
         placeholder={isSmallMobile ? "Search..." : "Search by App ID, customer, mobile, vehicle…"}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => handleQueryChange(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
         sx={{
           flex: 1,
@@ -120,6 +153,13 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
                 <Search size={16} color="#7A8B80" />
               </InputAdornment>
             ),
+            endAdornment: query ? (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={handleClearSearch} sx={{ p: 0.5 }}>
+                  <X size={14} color="#7A8B80" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
           },
         }}
       />
