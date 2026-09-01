@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   Calendar,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
@@ -82,6 +83,7 @@ export default function LeadsPage() {
   const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
   const { data: dashboard } = useDashboardQuery();
   const [createOpen, setCreateOpen] = useState(false);
+  const [createOppOpen, setCreateOppOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
@@ -233,6 +235,26 @@ export default function LeadsPage() {
             sx={{ height: 38, borderRadius: '10px', px: 2.5 }}
           >
             New Lead
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<Sparkles size={16} />}
+            onClick={() => setCreateOppOpen(true)}
+            sx={{
+              height: 38,
+              borderRadius: '10px',
+              px: 2,
+              borderColor: '#2563EB',
+              color: '#2563EB',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: '#1D4ED8',
+                background: 'rgba(37, 99, 235, 0.04)',
+              },
+            }}
+          >
+            + Opportunity
           </Button>
         </div>
       </div>
@@ -606,7 +628,7 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Quick menu for delete / edit */}
+      {/* Quick menu for delete / edit / convert */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
@@ -615,6 +637,24 @@ export default function LeadsPage() {
           setMenuFor(null);
         }}
       >
+        {menuFor && menuFor.status === 'LEAD' && (
+          <MenuItem
+            onClick={async () => {
+              if (!menuFor) return;
+              try {
+                await updateApplication({ id: menuFor.id, body: { status: 'APPLICATION' } }).unwrap();
+                showToast(`Lead ${menuFor.app_no} converted to Opportunity`, 'success');
+              } catch {
+                showToast('Could not convert lead to opportunity', 'error');
+              }
+              setMenuAnchor(null);
+              setMenuFor(null);
+            }}
+            sx={{ color: '#2563EB' }}
+          >
+            <Sparkles size={15} style={{ marginRight: 9 }} /> Convert to Opportunity
+          </MenuItem>
+        )}
         <MenuItem
           onClick={async () => {
             if (!menuFor) return;
@@ -646,6 +686,13 @@ export default function LeadsPage() {
       </Menu>
 
       <NewApplicationDialog title="New Lead" open={createOpen} onClose={() => setCreateOpen(false)} />
+      <NewApplicationDialog
+        title="New Opportunity"
+        submitLabel="Create Opportunity"
+        initialStatus="APPLICATION"
+        open={createOppOpen}
+        onClose={() => setCreateOppOpen(false)}
+      />
     </div>
   );
 }

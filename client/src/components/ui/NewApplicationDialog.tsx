@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { useCreateApplicationMutation } from '@/api/applicationsApi';
 import { useFinanceCompaniesQuery, useVehicleModelsQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
+import type { ApplicationStatus } from '@/types';
 
 export const createSchema = z.object({
   customer_name: z.string().min(2, 'Customer name is required'),
@@ -40,6 +41,7 @@ interface NewApplicationDialogProps {
   onClose: () => void;
   title?: string;
   submitLabel?: string;
+  initialStatus?: ApplicationStatus;
 }
 
 export default function NewApplicationDialog({
@@ -47,6 +49,7 @@ export default function NewApplicationDialog({
   onClose,
   title = 'New Application',
   submitLabel = 'Create Application',
+  initialStatus = 'LEAD',
 }: NewApplicationDialogProps) {
   const [createApplication, { isLoading }] = useCreateApplicationMutation();
   const { data: models = [], isFetching: loadingModels } = useVehicleModelsQuery();
@@ -92,13 +95,13 @@ export default function NewApplicationDialog({
         customer_phone: values.customer_phone,
         vehicle: selectedModel?.name ?? '',
         amount: values.amount,
-        status: 'LEAD',
+        status: initialStatus,
         vehicle_model_id: values.vehicle_model_id ? Number(values.vehicle_model_id) : null,
         vehicle_price: values.vehicle_price,
         down_payment: values.down_payment,
         finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
       }).unwrap();
-      showToast(`Application ${app.app_no} created`, 'success');
+      showToast(`${initialStatus === 'APPLICATION' ? 'Opportunity' : 'Application'} ${app.app_no} created`, 'success');
       reset();
       onClose();
     } catch (err: unknown) {
