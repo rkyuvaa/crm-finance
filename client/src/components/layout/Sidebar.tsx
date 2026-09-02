@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Bell,
+  Briefcase,
   ChevronDown,
   ChevronRight,
   Cpu,
@@ -25,7 +26,7 @@ import type { NavCounts } from '@/types';
 
 type NavBadgeKey = Exclude<keyof NavCounts, 'stages'>;
 
-interface NavItem {
+interface ChildNavItem {
   key: string;
   label: string;
   path: string;
@@ -33,11 +34,17 @@ interface NavItem {
   badge: NavBadgeKey | null;
 }
 
-const NAV_GROUPS: {
+interface NavItem {
+  key: string;
   label: string;
-  collapsible?: boolean;
-  items: NavItem[];
-}[] = [
+  /** Omit for parent-only items that just expand/collapse their children. */
+  path?: string;
+  icon: LucideIcon;
+  badge: NavBadgeKey | null;
+  children?: ChildNavItem[];
+}
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Main',
     items: [
@@ -47,10 +54,17 @@ const NAV_GROUPS: {
   },
   {
     label: 'CRM',
-    collapsible: true,
     items: [
-      { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
-      { key: 'opportunities', label: 'Opportunities', path: '/opportunities', icon: Sparkles, badge: null },
+      {
+        key: 'crm',
+        label: 'CRM',
+        icon: Briefcase,
+        badge: null,
+        children: [
+          { key: 'leads', label: 'Leads', path: '/leads', icon: UserPlus, badge: 'leads' },
+          { key: 'opportunities', label: 'Opportunities', path: '/opportunities', icon: Sparkles, badge: null },
+        ],
+      },
     ],
   },
   {
@@ -71,9 +85,15 @@ const NAV_GROUPS: {
   },
 ];
 
-// Groups that can be expanded/collapsed (accordion behaviour).
-const COLLAPSIBLE_GROUPS = new Set(['CRM']);
-
+/** Map of parent-item key → child paths, used for auto-expand on route change. */
+const PARENT_CHILD_PATHS: Record<string, string[]> = {};
+NAV_GROUPS.forEach((group) => {
+  group.items.forEach((item) => {
+    if (item.children) {
+      PARENT_CHILD_PATHS[item.key] = item.children.map((c) => c.path);
+    }
+  });
+});
 
 export default function Sidebar({
   collapsed,
@@ -87,23 +107,42 @@ export default function Sidebar({
   const user = useAppSelector((state) => state.auth.user);
   const { data: dashboard } = useDashboardQuery();
   const counts = dashboard?.nav_counts;
+  const location = useLocation();
 
-  // Expanded/collapsed state for collapsible group headers (accordion).
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
+  // Which expandable nav items are open (keyed by NavItem.key).
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    // Auto-expand any parent whose child is the current route.
+    Object.entries(PARENT_CHILD_PATHS).forEach(([key, paths]) => {
+      if (paths.some((p) => location.pathname.startsWith(p))) initial.add(key);
+    });
+    return initial;
+  });
+
+  // Keep auto-expanding on route changes (e.g. programmatic navigation).
+  useEffect(() => {
+    Object.entries(PARENT_CHILD_PATHS).forEach(([key, paths]) => {
+      if (paths.some((p) => location.pathname.startsWith(p))) {
+        setExpandedItems((prev) => {
+          if (prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
       }
+    });
+  }, [location.pathname]);
+
+  const toggleItem = (key: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
+  /** Shared style base for all primary nav items (links + expandable buttons). */
   const navItemStyle = useMemo(
     () => ({
       display: 'flex',
@@ -148,6 +187,7 @@ export default function Sidebar({
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
+      {/* ── Brand / logo ───────────────────────────────────────────────── */}
       <div
         style={{
           display: 'flex',
@@ -194,95 +234,191 @@ export default function Sidebar({
         )}
       </div>
 
+      {/* ── Navigation ─────────────────────────────────────────────────── */}
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
-        {NAV_GROUPS.map((group) => {
-          const isCollapsible = COLLAPSIBLE_GROUPS.has(group.label);
-          const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
-          return (
-            <div key={group.label}>
-              {!collapsed && (
-                <div
-                  onClick={isCollapsible ? () => toggleGroup(group.label) : undefined}
-                  style={{
-                    fontSize: 9.5,
-                    fontWeight: 700,
-                    letterSpacing: 1.2,
-                    color: '#819688',
-                    textTransform: 'uppercase',
-                    padding: '14px 10px 6px',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: isCollapsible ? 'pointer' : 'default',
-                    userSelect: 'none',
-                  }}
-                >
-                  <span>{group.label}</span>
-                  {isCollapsible && (
-                    <span style={{ display: 'flex', alignItems: 'center', color: '#819688' }}>
-                      {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-                    </span>
-                  )}
-                </div>
-              )}
-              {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-              {!isCollapsed &&
-                group.items.map((item) => {
-                  const Icon = item.icon;
-                  const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-                  const handleClick = () => {
-                    onNavigate?.();
-                  };
-                  return (
-                  <NavLink
-                    key={item.key}
-                    to={item.path}
-                    end={item.path === '/'}
-                    onClick={handleClick}
-                    className="nav-item"
-                    style={({ isActive }) => ({
-                      ...navItemStyle,
-                      justifyContent: collapsed ? 'center' : 'flex-start',
-                      padding: collapsed ? '10px 0' : '8.5px 10px',
-                      background: isActive ? '#2D442D' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#A0B2A6',
-                      fontWeight: isActive ? 600 : 500,
-                    })}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <span style={{ position: 'relative', display: 'flex' }}>
-                          <Icon size={17} color={isActive ? '#4ADE80' : '#819688'} style={{ flexShrink: 0 }} />
-                        </span>
-                        {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                        {!collapsed && badgeCount !== null && badgeCount > 0 && (
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              background: '#2D442D',
-                              color: '#4ADE80',
-                              padding: '2px 7px',
-                              borderRadius: 20,
-                              minWidth: 20,
-                              textAlign: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {badgeCount}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label}>
+            {/* Section label (small uppercase) */}
+            {!collapsed && (
+              <div
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  letterSpacing: 1.2,
+                  color: '#819688',
+                  textTransform: 'uppercase',
+                  padding: '14px 10px 6px',
+                  whiteSpace: 'nowrap',
+                  userSelect: 'none',
+                }}
+              >
+                {group.label}
+              </div>
+            )}
+            {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
+
+            {group.items.map((item) => {
+              const Icon = item.icon;
+
+              /* ── Expandable parent item (e.g. CRM) ────────────────── */
+              if (item.children) {
+                const isExpanded = expandedItems.has(item.key);
+                const isAnyChildActive = item.children.some((c) =>
+                  location.pathname.startsWith(c.path),
                 );
-                })}
-            </div>
-          );
-        })}
+
+                return (
+                  <div key={item.key}>
+                    {/* Primary nav button — same look as Dashboard / PLM */}
+                    <button
+                      onClick={() => toggleItem(item.key)}
+                      style={{
+                        ...navItemStyle,
+                        justifyContent: collapsed ? 'center' : 'flex-start',
+                        padding: collapsed ? '10px 0' : '8.5px 10px',
+                        background: isAnyChildActive ? '#2D442D' : 'transparent',
+                        color: isAnyChildActive ? '#FFFFFF' : '#A0B2A6',
+                        fontWeight: isAnyChildActive ? 600 : 500,
+                        width: '100%',
+                      }}
+                    >
+                      <span style={{ display: 'flex', flexShrink: 0 }}>
+                        <Icon
+                          size={17}
+                          color={isAnyChildActive ? '#4ADE80' : '#819688'}
+                          style={{ flexShrink: 0 }}
+                        />
+                      </span>
+                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                      {!collapsed && (
+                        <span style={{ display: 'flex', alignItems: 'center', color: '#819688' }}>
+                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Child items — shown when expanded and sidebar is not collapsed */}
+                    {isExpanded && !collapsed && (
+                      <div
+                        style={{
+                          marginLeft: 14,
+                          paddingLeft: 10,
+                          borderLeft: '1px solid #2C3E2C',
+                          marginBottom: 2,
+                        }}
+                      >
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
+                          return (
+                            <NavLink
+                              key={child.key}
+                              to={child.path}
+                              onClick={() => onNavigate?.()}
+                              className="nav-item"
+                              style={({ isActive }) => ({
+                                ...navItemStyle,
+                                padding: '7px 10px',
+                                marginBottom: 1,
+                                fontSize: 12.5,
+                                background: isActive ? '#2D442D' : 'transparent',
+                                color: isActive ? '#FFFFFF' : '#A0B2A6',
+                                fontWeight: isActive ? 600 : 500,
+                              })}
+                            >
+                              {({ isActive }) => (
+                                <>
+                                  <span style={{ display: 'flex', flexShrink: 0 }}>
+                                    <ChildIcon
+                                      size={15}
+                                      color={isActive ? '#4ADE80' : '#819688'}
+                                      style={{ flexShrink: 0 }}
+                                    />
+                                  </span>
+                                  <span style={{ flex: 1 }}>{child.label}</span>
+                                  {badgeCount !== null && badgeCount > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        background: '#2D442D',
+                                        color: '#4ADE80',
+                                        padding: '2px 7px',
+                                        borderRadius: 20,
+                                        minWidth: 20,
+                                        textAlign: 'center',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {badgeCount}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              /* ── Regular nav item (leaf) ───────────────────────────── */
+              const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
+              return (
+                <NavLink
+                  key={item.key}
+                  to={item.path!}
+                  end={item.path === '/'}
+                  onClick={() => onNavigate?.()}
+                  className="nav-item"
+                  style={({ isActive }) => ({
+                    ...navItemStyle,
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    padding: collapsed ? '10px 0' : '8.5px 10px',
+                    background: isActive ? '#2D442D' : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#A0B2A6',
+                    fontWeight: isActive ? 600 : 500,
+                  })}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span style={{ display: 'flex', flexShrink: 0 }}>
+                        <Icon
+                          size={17}
+                          color={isActive ? '#4ADE80' : '#819688'}
+                          style={{ flexShrink: 0 }}
+                        />
+                      </span>
+                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                      {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            background: '#2D442D',
+                            color: '#4ADE80',
+                            padding: '2px 7px',
+                            borderRadius: 20,
+                            minWidth: 20,
+                            textAlign: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {badgeCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
+      {/* ── User profile footer ────────────────────────────────────────── */}
       <div
         style={{
           display: 'flex',
@@ -315,7 +451,16 @@ export default function Sidebar({
         {!collapsed && user && (
           <>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#FFFFFF',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {user.full_name}
               </div>
               <div style={{ fontSize: 11, color: '#819688' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
