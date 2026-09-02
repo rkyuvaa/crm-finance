@@ -55,7 +55,6 @@ const NAV_GROUPS: {
   },
   {
     label: 'Project & Task',
-    collapsible: true,
     items: [
       { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
       { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
@@ -73,7 +72,7 @@ const NAV_GROUPS: {
 ];
 
 // Groups that can be expanded/collapsed (accordion behaviour).
-const COLLAPSIBLE_GROUPS = new Set(['CRM', 'Project & Task']);
+const COLLAPSIBLE_GROUPS = new Set(['CRM']);
 
 
 export default function Sidebar({
