@@ -322,6 +322,8 @@ def create_application(
         )
         db.commit()
         db.refresh(app)
+        evaluate_automove_rules(db, app, user)
+        db.refresh(app)
         return _to_out(app)
     except Exception as err:
         db.rollback()
