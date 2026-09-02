@@ -51,6 +51,9 @@ RECENT_WINDOW = 50
 
 
 def _to_out(app: Application) -> ApplicationOut:
+    stg_key = getattr(app, "stage_key", None)
+    if not stg_key:
+        stg_key = "new" if app.status == ApplicationStatus.LEAD else "applications"
     return ApplicationOut(
         id=app.id,
         app_no=app.app_no,
@@ -59,6 +62,7 @@ def _to_out(app: Application) -> ApplicationOut:
         vehicle=app.vehicle,
         amount=float(app.amount),
         status=app.status,
+        stage_key=stg_key,
         finance_company_id=app.finance_company_id,
         finance_company_name=app.finance_company.name if app.finance_company else None,
         vehicle_model_id=app.vehicle_model_id,
@@ -288,13 +292,19 @@ def create_application(
 ):
     try:
         app_number = next_app_no(db)
+        app_status = payload.status or ApplicationStatus.LEAD
+        stg_key = payload.stage_key
+        if not stg_key:
+            stg_key = "new" if app_status == ApplicationStatus.LEAD else "applications"
+
         app = Application(
             app_no=app_number,
             customer_name=payload.customer_name,
             customer_phone=payload.customer_phone,
             vehicle=payload.vehicle,
             amount=payload.amount,
-            status=payload.status or ApplicationStatus.LEAD,
+            status=app_status,
+            stage_key=stg_key,
             finance_company_id=payload.finance_company_id,
             vehicle_model_id=payload.vehicle_model_id,
             vehicle_price=payload.vehicle_price,
@@ -337,11 +347,18 @@ def update_application(
         'vehicle': 'Vehicle',
         'amount': 'Loan Amount',
         'status': 'Status',
+        'stage_key': 'Stage',
         'finance_company_id': 'Finance Company',
         'vehicle_model_id': 'Vehicle Model',
         'vehicle_price': 'Vehicle Price',
         'down_payment': 'Down Payment',
     }
+
+    if payload.stage_key is not None:
+        from app.models.pipeline_stage import PipelineStage as PipelineStageModel
+        stg = db.query(PipelineStageModel).filter(PipelineStageModel.key == payload.stage_key).first()
+        if stg and stg.status:
+            setattr(app, 'status', stg.status)
 
     for field, value in data.items():
         old_value = getattr(app, field)

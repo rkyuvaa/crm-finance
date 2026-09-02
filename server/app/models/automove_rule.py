@@ -27,11 +27,15 @@ class StageAutomoveRule(Base):
     condition_operator: Mapped[str] = mapped_column(String(40), default="is_filled", nullable=False)
     condition_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     
-    # Optional source stage key filter (e.g., only if currently in 'leads')
+    # Module: 'LEAD' or 'OPPORTUNITY'
+    module: Mapped[str] = mapped_column(String(20), default="LEAD", server_default="LEAD", nullable=False)
+    
+    # Optional source stage key filter (e.g., only if currently in 'new')
     source_stage_key: Mapped[str | None] = mapped_column(String(40), nullable=True)
     
-    # Target stage status e.g., 'VERIFICATION', 'FINANCE', 'SANCTIONED', 'DISBURSEMENT', 'COMPLETED'
+    # Target stage status or stage key
     target_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    target_stage_key: Mapped[str | None] = mapped_column(String(40), nullable=True)
     
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     

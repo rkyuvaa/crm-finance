@@ -11,6 +11,7 @@ class ApplicationBase(BaseModel):
     vehicle: str = Field(min_length=2, max_length=120)
     amount: float = Field(gt=0)
     status: ApplicationStatus = ApplicationStatus.LEAD
+    stage_key: str | None = None
     finance_company_id: int | None = None
     vehicle_model_id: int | None = None
     vehicle_price: float | None = Field(default=None, gt=0)
@@ -27,6 +28,7 @@ class ApplicationUpdate(BaseModel):
     vehicle: str | None = None
     amount: float | None = Field(default=None, gt=0)
     status: ApplicationStatus | None = None
+    stage_key: str | None = None
     finance_company_id: int | None = None
     vehicle_model_id: int | None = None
     vehicle_price: float | None = Field(default=None, gt=0)
@@ -41,6 +43,7 @@ class ApplicationOut(BaseModel):
     vehicle: str
     amount: float
     status: ApplicationStatus
+    stage_key: str | None = "new"
     finance_company_id: int | None
     finance_company_name: str | None
     vehicle_model_id: int | None

@@ -311,6 +311,7 @@ class UserBrief(BaseModel):
 
 class StageAutomoveRuleCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
+    module: str = Field(default="LEAD", max_length=20)
     trigger_type: str = Field(default="standard_field")  # 'standard_field', 'custom_field', 'document_verification'
     field_name: str | None = Field(default=None, max_length=100)
     field_id: int | None = Field(default=None)
@@ -318,11 +319,13 @@ class StageAutomoveRuleCreate(BaseModel):
     condition_value: str | None = Field(default=None)
     source_stage_key: str | None = Field(default=None, max_length=40)
     target_status: str = Field(min_length=2, max_length=40)
+    target_stage_key: str | None = Field(default=None, max_length=40)
     is_enabled: bool = True
 
 
 class StageAutomoveRuleUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
+    module: str | None = Field(default=None, max_length=20)
     trigger_type: str | None = Field(default=None)
     field_name: str | None = Field(default=None, max_length=100)
     field_id: int | None = Field(default=None)
@@ -330,12 +333,14 @@ class StageAutomoveRuleUpdate(BaseModel):
     condition_value: str | None = Field(default=None)
     source_stage_key: str | None = Field(default=None, max_length=40)
     target_status: str | None = Field(default=None, min_length=2, max_length=40)
+    target_stage_key: str | None = Field(default=None, max_length=40)
     is_enabled: bool | None = Field(default=None)
 
 
 class StageAutomoveRuleOut(BaseModel):
     id: int
     name: str
+    module: str = "LEAD"
     trigger_type: str
     field_name: str | None = None
     field_id: int | None = None
@@ -344,6 +349,7 @@ class StageAutomoveRuleOut(BaseModel):
     condition_value: str | None = None
     source_stage_key: str | None = None
     target_status: str
+    target_stage_key: str | None = None
     is_enabled: bool
     created_at: datetime
     updated_at: datetime

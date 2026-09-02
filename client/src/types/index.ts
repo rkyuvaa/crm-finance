@@ -463,6 +463,7 @@ export interface ApplicationItem {
   vehicle: string;
   amount: number;
   status: ApplicationStatus;
+  stage_key?: string | null;
   finance_company_id: number | null;
   finance_company_name: string | null;
   vehicle_model_id: number | null;
@@ -552,6 +553,7 @@ export interface PlannedActivityInput {
 export interface StageAutomoveRule {
   id: number;
   name: string;
+  module: 'LEAD' | 'OPPORTUNITY';
   trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
   field_name?: string | null;
   field_id?: number | null;
@@ -560,6 +562,7 @@ export interface StageAutomoveRule {
   condition_value?: string | null;
   source_stage_key?: string | null;
   target_status: string;
+  target_stage_key?: string | null;
   is_enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -567,6 +570,7 @@ export interface StageAutomoveRule {
 
 export interface StageAutomoveRuleInput {
   name: string;
+  module: 'LEAD' | 'OPPORTUNITY';
   trigger_type: 'standard_field' | 'custom_field' | 'document_verification';
   field_name?: string | null;
   field_id?: number | null;
@@ -574,6 +578,7 @@ export interface StageAutomoveRuleInput {
   condition_value?: string | null;
   source_stage_key?: string | null;
   target_status: string;
+  target_stage_key?: string | null;
   is_enabled: boolean;
 }
 

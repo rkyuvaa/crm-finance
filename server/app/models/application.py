@@ -40,6 +40,9 @@ class Application(Base):
         index=True,
         nullable=False,
     )
+    stage_key: Mapped[str | None] = mapped_column(
+        String(40), default="new", server_default="new", index=True, nullable=True
+    )
     finance_company_id: Mapped[int | None] = mapped_column(
         ForeignKey("finance_companies.id"), nullable=True
     )

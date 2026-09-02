@@ -739,6 +739,7 @@ def _automove_to_out(rule: StageAutomoveRule) -> StageAutomoveRuleOut:
     return StageAutomoveRuleOut(
         id=rule.id,
         name=rule.name,
+        module=getattr(rule, "module", "LEAD") or "LEAD",
         trigger_type=rule.trigger_type,
         field_name=rule.field_name,
         field_id=rule.field_id,
@@ -747,6 +748,7 @@ def _automove_to_out(rule: StageAutomoveRule) -> StageAutomoveRuleOut:
         condition_value=rule.condition_value,
         source_stage_key=rule.source_stage_key,
         target_status=rule.target_status,
+        target_stage_key=getattr(rule, "target_stage_key", None),
         is_enabled=rule.is_enabled,
         created_at=rule.created_at,
         updated_at=rule.updated_at,
@@ -754,8 +756,21 @@ def _automove_to_out(rule: StageAutomoveRule) -> StageAutomoveRuleOut:
 
 
 @router.get("/automove-rules", response_model=list[StageAutomoveRuleOut])
-def list_automove_rules(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    rules = db.query(StageAutomoveRule).order_by(StageAutomoveRule.id.asc()).all()
+def list_automove_rules(
+    module: Optional[str] = Query(default=None, description="Filter by module: LEAD or OPPORTUNITY"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = db.query(StageAutomoveRule).order_by(StageAutomoveRule.id.asc())
+    if module and hasattr(StageAutomoveRule, "module"):
+        try:
+            query = query.filter(StageAutomoveRule.module == module.upper())
+            rules = query.all()
+        except Exception:
+            db.rollback()
+            rules = db.query(StageAutomoveRule).order_by(StageAutomoveRule.id.asc()).all()
+    else:
+        rules = query.all()
     return [_automove_to_out(r) for r in rules]
 
 
@@ -767,6 +782,7 @@ def create_automove_rule(
 ):
     rule = StageAutomoveRule(
         name=payload.name,
+        module=payload.module or "LEAD",
         trigger_type=payload.trigger_type,
         field_name=payload.field_name,
         field_id=payload.field_id,
@@ -774,6 +790,7 @@ def create_automove_rule(
         condition_value=payload.condition_value,
         source_stage_key=payload.source_stage_key,
         target_status=payload.target_status,
+        target_stage_key=payload.target_stage_key,
         is_enabled=payload.is_enabled,
     )
     db.add(rule)

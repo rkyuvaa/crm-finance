@@ -115,6 +115,7 @@ export default function LeadsPage() {
       const count = (data?.items ?? []).filter((app) => {
         if (!isOpportunityRoute && app.status !== 'LEAD') return false;
         if (isOpportunityRoute && app.status === 'LEAD') return false;
+        if (app.stage_key) return app.stage_key.toLowerCase() === s.key.toLowerCase();
         if (s.status) return app.status === s.status;
         return app.status?.toLowerCase() === s.key?.toLowerCase();
       }).length;
@@ -189,21 +190,23 @@ export default function LeadsPage() {
     setPage(0);
   };
 
-  const handleStatusChange = async (app: ApplicationItem, newStatus: ApplicationStatus) => {
-    if (app.status === newStatus) return;
+  const handleStageChange = async (app: ApplicationItem, newStageKey: string, newStatus?: ApplicationStatus) => {
+    if (app.stage_key === newStageKey) return;
     try {
-      await updateApplication({ id: app.id, body: { status: newStatus } }).unwrap();
-      showToast(`Moved ${app.app_no} to ${newStatus}`, 'success');
+      const body: any = { stage_key: newStageKey };
+      if (newStatus) body.status = newStatus;
+      await updateApplication({ id: app.id, body }).unwrap();
+      showToast(`Moved ${app.app_no} to ${newStageKey.toUpperCase()}`, 'success');
     } catch {
-      showToast(`Failed to update status for ${app.app_no}`, 'error');
+      showToast(`Failed to update stage for ${app.app_no}`, 'error');
     }
   };
 
-  const handleDrop = (targetStatus: ApplicationStatus) => {
+  const handleDrop = (targetStageKey: string, targetStatus?: ApplicationStatus) => {
     if (!draggedAppId) return;
     const targetApp = rows.find((a) => a.id === draggedAppId);
     if (targetApp) {
-      handleStatusChange(targetApp, targetStatus);
+      handleStageChange(targetApp, targetStageKey, targetStatus);
     }
     setDraggedAppId(null);
   };
@@ -485,6 +488,7 @@ export default function LeadsPage() {
             >
               {kanbanColumns.map((col) => {
                 const colApps = rows.filter((app) => {
+                  if (app.stage_key) return app.stage_key.toLowerCase() === col.key.toLowerCase();
                   if (col.status && app.status === col.status) return true;
                   return app.status?.toLowerCase() === col.key.toLowerCase();
                 });
@@ -493,7 +497,7 @@ export default function LeadsPage() {
                   <div
                     key={col.key}
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDrop(col.status)}
+                    onDrop={() => handleDrop(col.key, col.status)}
                     style={{
                       width: 280,
                       flexShrink: 0,

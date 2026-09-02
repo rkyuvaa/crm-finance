@@ -23,6 +23,10 @@ export const mastersApi = baseApi.injectEndpoints({
       query: () => ({ url: '/masters/automove-rules' }),
       providesTags: ['Stages'],
     }),
+    automoveRulesByModule: build.query<StageAutomoveRule[], 'LEAD' | 'OPPORTUNITY'>({
+      query: (module) => ({ url: `/masters/automove-rules?module=${module}` }),
+      providesTags: ['Stages'],
+    }),
     createAutomoveRule: build.mutation<StageAutomoveRule, StageAutomoveRuleInput>({
       query: (body) => ({ url: '/masters/automove-rules', method: 'POST', body }),
       invalidatesTags: ['Stages'],
@@ -154,6 +158,7 @@ export const mastersApi = baseApi.injectEndpoints({
 
 export const {
   useAutomoveRulesQuery,
+  useAutomoveRulesByModuleQuery,
   useCreateAutomoveRuleMutation,
   useUpdateAutomoveRuleMutation,
   useDeleteAutomoveRuleMutation,
