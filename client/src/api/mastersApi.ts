@@ -77,6 +77,10 @@ export const mastersApi = baseApi.injectEndpoints({
       query: () => ({ url: '/masters/stages' }),
       providesTags: ['Stages'],
     }),
+    stagesByModule: build.query<StageConfig[], 'LEAD' | 'OPPORTUNITY'>({
+      query: (module) => ({ url: `/masters/stages?module=${module}` }),
+      providesTags: ['Stages'],
+    }),
     createStage: build.mutation<StageConfig, StageInput>({
       query: (body) => ({ url: '/masters/stages', method: 'POST', body }),
       invalidatesTags: ['Stages'],
@@ -162,6 +166,7 @@ export const {
   useUpdateFinanceCompanyMutation,
   useDeleteFinanceCompanyMutation,
   useStagesQuery,
+  useStagesByModuleQuery,
   useCreateStageMutation,
   useUpdateStageMutation,
   useDeleteStageMutation,

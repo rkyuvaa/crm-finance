@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
@@ -10,7 +11,11 @@ import {
   IconButton,
   Paper,
   Switch,
+  Tab,
+  Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +33,8 @@ import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
 import type { StageConfig } from '@/types';
+
+type StageModule = 'LEAD' | 'OPPORTUNITY';
 
 const PRESET_COLORS = [
   { name: 'Blue', hex: '#2563EB' },
@@ -49,6 +56,7 @@ const formSchema = z.object({
   order_index: z.coerce.number({ invalid_type_error: 'Required' }).int('Must be a whole number').nonnegative(),
   enabled: z.boolean(),
   color: z.string().optional().or(z.literal('')),
+  module: z.enum(['LEAD', 'OPPORTUNITY']),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -56,10 +64,12 @@ type FormValues = z.infer<typeof formSchema>;
 function StageFormDialog({
   open,
   editing,
+  defaultModule,
   onClose,
 }: {
   open: boolean;
   editing: StageConfig | null;
+  defaultModule: StageModule;
   onClose: () => void;
 }) {
   const [createStage, { isLoading: creating }] = useCreateStageMutation();
@@ -74,7 +84,7 @@ function StageFormDialog({
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { key: '', label: '', order_index: 0, enabled: true, color: '#2563EB' },
+    defaultValues: { key: '', label: '', order_index: 0, enabled: true, color: '#2563EB', module: defaultModule },
   });
 
   useEffect(() => {
@@ -85,10 +95,12 @@ function StageFormDialog({
       order_index: editing?.order_index ?? 0,
       enabled: editing?.enabled ?? true,
       color: editing?.color ?? '#2563EB',
+      module: (editing?.module as StageModule) ?? defaultModule,
     });
-  }, [open, editing, reset]);
+  }, [open, editing, defaultModule, reset]);
 
   const selectedColor = watch('color');
+  const selectedModule = watch('module');
 
   const onSubmit = async (values: FormValues) => {
     const body = {
@@ -97,6 +109,7 @@ function StageFormDialog({
       order_index: values.order_index,
       enabled: values.enabled,
       color: values.color || null,
+      module: values.module,
     };
     try {
       if (editing) {
@@ -119,12 +132,38 @@ function StageFormDialog({
       <DialogTitle sx={{ fontWeight: 700 }}>{editing ? 'Edit Stage' : 'Add Stage'}</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
+          {/* Module selector */}
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#44584C', display: 'block', marginBottom: 6 }}>
+              Module
+            </span>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={selectedModule}
+              onChange={(_, val) => { if (val) setValue('module', val); }}
+              disabled={Boolean(editing)}
+            >
+              <ToggleButton value="LEAD" sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
+                Lead
+              </ToggleButton>
+              <ToggleButton value="OPPORTUNITY" sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
+                Opportunity
+              </ToggleButton>
+            </ToggleButtonGroup>
+            {editing && (
+              <div style={{ fontSize: 11, color: '#7A8B80', marginTop: 4 }}>
+                Module cannot be changed after creation.
+              </div>
+            )}
+          </div>
+
           <TextField
             fullWidth
             label="Key"
             margin="dense"
             disabled={Boolean(editing)}
-            placeholder="e.g. leads"
+            placeholder="e.g. lead_new"
             error={Boolean(errors.key)}
             helperText={errors.key?.message}
             {...register('key')}
@@ -212,8 +251,10 @@ export default function StagesPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StageConfig | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StageConfig | null>(null);
+  const [activeModule, setActiveModule] = useState<StageModule>('LEAD');
 
-  const stages = data ?? [];
+  const allStages = data ?? [];
+  const stages = allStages.filter((s) => (s.module ?? 'OPPORTUNITY') === activeModule);
 
   const openCreate = () => {
     setEditing(null);
@@ -249,6 +290,7 @@ export default function StagesPanel() {
   return (
     <>
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
+        {/* Header */}
         <div
           style={{
             display: 'flex',
@@ -267,6 +309,22 @@ export default function StagesPanel() {
             </Button>
           )}
         </div>
+
+        {/* Module tabs */}
+        <Box sx={{ borderBottom: '1px solid #E4EBE1', px: 2 }}>
+          <Tabs
+            value={activeModule}
+            onChange={(_, val) => setActiveModule(val)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: 13, minWidth: 120 } }}
+          >
+            <Tab value="LEAD" label="Lead Stages" />
+            <Tab value="OPPORTUNITY" label="Opportunity Stages" />
+          </Tabs>
+        </Box>
+
+        {/* Table */}
         <div style={{ overflowX: 'auto' }}>
           {isFetching && !data ? (
             <LoadingRows rows={6} />
@@ -278,8 +336,12 @@ export default function StagesPanel() {
             </div>
           ) : stages.length === 0 ? (
             <EmptyState
-              title="No stages configured"
-              hint={isAdmin ? 'Add stages to control pipeline visibility.' : 'Contact an admin to configure stages.'}
+              title={`No ${activeModule === 'LEAD' ? 'Lead' : 'Opportunity'} stages configured`}
+              hint={
+                isAdmin
+                  ? `Click "Add Stage" to create stages for the ${activeModule === 'LEAD' ? 'Lead' : 'Opportunity'} pipeline.`
+                  : 'Contact an admin to configure stages.'
+              }
             />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
@@ -359,7 +421,12 @@ export default function StagesPanel() {
         </div>
       </Paper>
 
-      <StageFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} />
+      <StageFormDialog
+        open={dialogOpen}
+        editing={editing}
+        defaultModule={activeModule}
+        onClose={() => setDialogOpen(false)}
+      />
 
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Delete stage?</DialogTitle>

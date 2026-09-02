@@ -64,6 +64,7 @@ class StageCreate(BaseModel):
     order_index: int = Field(default=0, ge=0)
     enabled: bool = True
     color: str | None = Field(default=None, max_length=30)
+    module: str = Field(default="OPPORTUNITY", max_length=20)
 
 
 class StageUpdate(BaseModel):
@@ -72,6 +73,7 @@ class StageUpdate(BaseModel):
     order_index: int | None = Field(default=None, ge=0)
     enabled: bool | None = None
     color: str | None = Field(default=None, max_length=30)
+    module: str | None = Field(default=None, max_length=20)
 
 
 class StageOut(BaseModel):
@@ -82,6 +84,7 @@ class StageOut(BaseModel):
     order_index: int
     enabled: bool
     color: str | None = None
+    module: str = "OPPORTUNITY"
     created_at: datetime
     updated_at: datetime
 

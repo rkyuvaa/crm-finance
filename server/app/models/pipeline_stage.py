@@ -4,7 +4,7 @@ from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.models.enums import ApplicationStatus
+from app.models.enums import ApplicationStatus, StageModule
 
 
 class PipelineStage(Base):
@@ -20,6 +20,7 @@ class PipelineStage(Base):
 
     order_index: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    module: Mapped[str] = mapped_column(String(20), default=StageModule.OPPORTUNITY, server_default="OPPORTUNITY", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

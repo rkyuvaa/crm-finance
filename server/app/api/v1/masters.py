@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -216,13 +217,16 @@ def delete_finance_company(
 
 
 @router.get("/stages", response_model=list[StageOut])
-def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_stages(
+    module: Optional[str] = Query(default=None, description="Filter by module: LEAD or OPPORTUNITY"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     try:
-        stages = (
-            db.query(PipelineStage)
-            .order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
-            .all()
-        )
+        query = db.query(PipelineStage).order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
+        if module:
+            query = query.filter(PipelineStage.module == module.upper())
+        stages = query.all()
         status_map = {
             "leads": ApplicationStatus.LEAD,
             "lead": ApplicationStatus.LEAD,
@@ -252,6 +256,7 @@ def list_stages(db: Session = Depends(get_db), user: User = Depends(get_current_
                     order_index=s.order_index or 0,
                     enabled=s.enabled if s.enabled is not None else True,
                     color=getattr(s, "color", None),
+                    module=getattr(s, "module", "OPPORTUNITY") or "OPPORTUNITY",
                     created_at=c_at,
                     updated_at=u_at,
                 )
@@ -276,6 +281,7 @@ def create_stage(
         order_index=payload.order_index,
         enabled=payload.enabled,
         color=payload.color,
+        module=payload.module or "OPPORTUNITY",
     )
     db.add(stage)
     db.commit()

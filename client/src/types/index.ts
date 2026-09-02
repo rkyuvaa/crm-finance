@@ -144,6 +144,7 @@ export interface StageConfig {
   order_index: number;
   enabled: boolean;
   color?: string | null;
+  module: 'LEAD' | 'OPPORTUNITY';
   created_at: string;
   updated_at: string;
 }
@@ -154,6 +155,7 @@ export interface StageInput {
   order_index: number;
   enabled: boolean;
   color?: string | null;
+  module: 'LEAD' | 'OPPORTUNITY';
 }
 
 export interface CrmTabFilter {

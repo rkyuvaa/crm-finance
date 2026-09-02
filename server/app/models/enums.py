@@ -21,6 +21,11 @@ class ApplicationStatus(enum.StrEnum):
     REJECTED = "REJECTED"
 
 
+class StageModule(enum.StrEnum):
+    LEAD = "LEAD"
+    OPPORTUNITY = "OPPORTUNITY"
+
+
 class DocStatus(enum.StrEnum):
     UPLOADED = "UPLOADED"
     PENDING = "PENDING"

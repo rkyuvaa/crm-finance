@@ -16,6 +16,7 @@ from app.models.enums import (
     DisbursementStatus,
     DocStatus,
     FinanceStatus,
+    StageModule,
     UserRole,
     VerificationStatus,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "Application",
     "ApplicationSequence",
     "ApplicationStatus",
+    "StageModule",
     "AuditActionType",
     "AuditLog",
     "CrmLeadCustomFieldValue",
