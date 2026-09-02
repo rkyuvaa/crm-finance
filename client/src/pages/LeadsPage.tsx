@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
@@ -97,10 +97,29 @@ export default function LeadsPage() {
 
   const { data: masterStages } = useStagesQuery();
 
-  const pipelineStages: PipelineStage[] = (moduleStages.filter((s) => s.enabled).length > 0
-    ? moduleStages.filter((s) => s.enabled)
-    : (dashboard?.pipeline ?? []))
-    .map((s) => {
+  const isLeadStageKey = (key: string, status?: string | null) => {
+    if (status === 'LEAD') return true;
+    const k = key.toLowerCase();
+    return ['new', 'contacted', 'interested', 'not-interested', 'not_interested', 'qualified', 'lead', 'leads'].includes(k);
+  };
+
+  const pipelineStages: PipelineStage[] = useMemo(() => {
+    let stagesForModule = moduleStages.filter((s) => {
+      if (!s.enabled) return false;
+      if (s.module) return s.module.toUpperCase() === currentModule;
+      const isLead = isLeadStageKey(s.key, s.status);
+      return currentModule === 'LEAD' ? isLead : !isLead;
+    });
+
+    // Fallback to dashboard pipeline filtered by module if no master stages found
+    if (stagesForModule.length === 0 && dashboard?.pipeline) {
+      stagesForModule = dashboard.pipeline.filter((s) => {
+        const isLead = isLeadStageKey(s.key, s.status);
+        return currentModule === 'LEAD' ? isLead : !isLead;
+      }) as any;
+    }
+
+    return stagesForModule.map((s) => {
       const count = (data?.items ?? []).filter((app) => {
         if (!isOpportunityRoute && app.status !== 'LEAD') return false;
         if (isOpportunityRoute && app.status === 'LEAD') return false;
@@ -117,6 +136,7 @@ export default function LeadsPage() {
         color: s.color,
       };
     });
+  }, [moduleStages, dashboard?.pipeline, data?.items, currentModule, isOpportunityRoute]);
 
   // Filter rows based on route, dynamic tab configuration and search query
   const allRows = data?.items ?? [];
