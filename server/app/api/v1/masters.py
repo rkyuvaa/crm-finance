@@ -224,9 +224,15 @@ def list_stages(
 ):
     try:
         query = db.query(PipelineStage).order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc())
-        if module:
-            query = query.filter(PipelineStage.module == module.upper())
-        stages = query.all()
+        if module and hasattr(PipelineStage, "module"):
+            try:
+                query = query.filter(PipelineStage.module == module.upper())
+                stages = query.all()
+            except Exception:
+                db.rollback()
+                stages = db.query(PipelineStage).order_by(PipelineStage.order_index.asc(), PipelineStage.id.asc()).all()
+        else:
+            stages = query.all()
         status_map = {
             "leads": ApplicationStatus.LEAD,
             "lead": ApplicationStatus.LEAD,
