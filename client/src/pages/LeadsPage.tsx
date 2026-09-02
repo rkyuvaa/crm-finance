@@ -115,9 +115,28 @@ export default function LeadsPage() {
       const count = (data?.items ?? []).filter((app) => {
         if (!isOpportunityRoute && app.status !== 'LEAD') return false;
         if (isOpportunityRoute && app.status === 'LEAD') return false;
-        if (app.stage_key) return app.stage_key.toLowerCase() === s.key.toLowerCase();
-        if (s.status) return app.status === s.status;
-        return app.status?.toLowerCase() === s.key?.toLowerCase();
+
+        // 1. Direct match by stage_key
+        if (app.stage_key && app.stage_key.toLowerCase() === s.key.toLowerCase()) {
+          return true;
+        }
+        // 2. Match by defined ApplicationStatus enum
+        if (s.status && app.status === s.status) {
+          return true;
+        }
+        // 3. Match status string against stage key
+        if (app.status?.toLowerCase() === s.key?.toLowerCase()) {
+          return true;
+        }
+        // 4. Default fallback for initial Opportunity stage
+        if (
+          isOpportunityRoute &&
+          app.status === 'APPLICATION' &&
+          ['applications', 'leads', 'new_opportunity', 'new-opportunity'].includes(s.key.toLowerCase())
+        ) {
+          return true;
+        }
+        return false;
       }).length;
 
       return {
@@ -488,9 +507,23 @@ export default function LeadsPage() {
             >
               {kanbanColumns.map((col) => {
                 const colApps = rows.filter((app) => {
-                  if (app.stage_key) return app.stage_key.toLowerCase() === col.key.toLowerCase();
-                  if (col.status && app.status === col.status) return true;
-                  return app.status?.toLowerCase() === col.key.toLowerCase();
+                  if (app.stage_key && app.stage_key.toLowerCase() === col.key.toLowerCase()) {
+                    return true;
+                  }
+                  if (col.status && app.status === col.status) {
+                    return true;
+                  }
+                  if (app.status?.toLowerCase() === col.key.toLowerCase()) {
+                    return true;
+                  }
+                  if (
+                    isOpportunityRoute &&
+                    app.status === 'APPLICATION' &&
+                    ['applications', 'leads', 'new_opportunity', 'new-opportunity'].includes(col.key.toLowerCase())
+                  ) {
+                    return true;
+                  }
+                  return false;
                 });
 
                 return (
