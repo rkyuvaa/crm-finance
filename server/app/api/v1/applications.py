@@ -361,6 +361,10 @@ def update_application(
         stg = db.query(PipelineStageModel).filter(PipelineStageModel.key == payload.stage_key).first()
         if stg and stg.status:
             setattr(app, 'status', stg.status)
+    elif payload.status is not None and payload.status != ApplicationStatus.LEAD:
+        lead_keys = ('new', 'contacted', 'interested', 'not-interested', 'not_interested', 'qualified')
+        if not getattr(app, 'stage_key', None) or str(app.stage_key).lower() in lead_keys:
+            setattr(app, 'stage_key', 'applications')
 
     for field, value in data.items():
         old_value = getattr(app, field)

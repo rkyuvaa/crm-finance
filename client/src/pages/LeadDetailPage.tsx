@@ -33,6 +33,7 @@ import {
 import {
   useActivityTypesQuery,
   useFinanceCompaniesQuery,
+  useStagesByModuleQuery,
   useTabsQuery,
   useVehicleModelsQuery,
   useUsersQuery,
@@ -204,11 +205,17 @@ export default function LeadDetailPage() {
     }
   };
 
+  const { data: oppStages = [] } = useStagesByModuleQuery('OPPORTUNITY');
+
   const convertToOpportunity = async () => {
     if (!lead) return;
     try {
-      await updateApplication({ id: lead.id, body: { status: 'APPLICATION' } }).unwrap();
-      showToast(`${lead.app_no} moved to Opportunity`, 'success');
+      const defaultOppStage = oppStages.find((s) => s.enabled)?.key || 'applications';
+      await updateApplication({
+        id: lead.id,
+        body: { status: 'APPLICATION', stage_key: defaultOppStage } as any,
+      }).unwrap();
+      showToast(`${lead.app_no} moved to Opportunity (${defaultOppStage.toUpperCase()})`, 'success');
       navigate('/opportunities');
     } catch {
       showToast('Could not convert to opportunity', 'error');
