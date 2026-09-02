@@ -24,7 +24,6 @@ import {
   LayoutGrid,
   Calendar,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
@@ -645,24 +644,7 @@ export default function LeadsPage() {
           setMenuFor(null);
         }}
       >
-        {menuFor && menuFor.status === 'LEAD' && (
-          <MenuItem
-            onClick={async () => {
-              if (!menuFor) return;
-              try {
-                await updateApplication({ id: menuFor.id, body: { status: 'APPLICATION' } }).unwrap();
-                showToast(`Lead ${menuFor.app_no} converted to Opportunity`, 'success');
-              } catch {
-                showToast('Could not convert lead to opportunity', 'error');
-              }
-              setMenuAnchor(null);
-              setMenuFor(null);
-            }}
-            sx={{ color: '#2563EB' }}
-          >
-            <Sparkles size={15} style={{ marginRight: 9 }} /> Convert to Opportunity
-          </MenuItem>
-        )}
+
         <MenuItem
           onClick={async () => {
             if (!menuFor) return;

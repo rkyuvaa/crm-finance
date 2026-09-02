@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowLeft, CheckCircle2, Clock, Plus, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Plus, Save, Sparkles } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -201,6 +201,17 @@ export default function LeadDetailPage() {
       showToast('Activity marked as completed', 'success');
     } catch {
       showToast('Could not update activity status', 'error');
+    }
+  };
+
+  const convertToOpportunity = async () => {
+    if (!lead) return;
+    try {
+      await updateApplication({ id: lead.id, body: { status: 'APPLICATION' } }).unwrap();
+      showToast(`${lead.app_no} moved to Opportunity`, 'success');
+      navigate('/opportunities');
+    } catch {
+      showToast('Could not convert to opportunity', 'error');
     }
   };
 
@@ -428,7 +439,24 @@ export default function LeadDetailPage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                {lead.status === 'LEAD' && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<Sparkles size={16} />}
+                    disabled={isUpdating}
+                    onClick={convertToOpportunity}
+                    sx={{
+                      borderColor: '#2563EB',
+                      color: '#2563EB',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': { background: '#EFF6FF', borderColor: '#1D4ED8' },
+                    }}
+                  >
+                    Move to Opportunity
+                  </Button>
+                )}
                 <Button
                   type="submit"
                   variant="contained"
