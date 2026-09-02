@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   Calendar,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
