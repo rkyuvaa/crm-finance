@@ -133,8 +133,15 @@ def _filtered_query(
     date_from: datetime | None,
     date_to: datetime | None,
     stage_key: str | None = None,
+    module: str | None = None,
 ):
     query = db.query(Application)
+
+    if module:
+        if module.upper() == "LEAD":
+            query = query.filter(Application.status == ApplicationStatus.LEAD)
+        elif module.upper() == "OPPORTUNITY":
+            query = query.filter(Application.status != ApplicationStatus.LEAD)
 
     # Apply role-based filtering
     if user.role == UserRole.SALES_EXECUTIVE:
@@ -208,11 +215,12 @@ def list_applications(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     stage_key: str | None = None,
+    module: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     query = _filtered_query(
-        db, user, scope, tab, q, status, finance_company_id, date_from, date_to, stage_key
+        db, user, scope, tab, q, status, finance_company_id, date_from, date_to, stage_key, module
     )
     total = query.count()
     items = (

@@ -29,7 +29,7 @@ import {
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
-import { useStagesQuery, useTabsQuery } from '@/api/mastersApi';
+import { useStagesQuery, useStagesByModuleQuery, useTabsQuery } from '@/api/mastersApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
@@ -37,7 +37,7 @@ import Pipeline from '@/components/ui/Pipeline';
 import { LoadingRows } from '@/components/ui/PageState';
 import { formatAmount, formatDate, initialsOf, statusMeta } from '@/utils/format';
 import { useToast } from '@/components/ui/ToastHost';
-import type { ApplicationItem, ApplicationStatus } from '@/types';
+import type { ApplicationItem, ApplicationStatus, PipelineStage } from '@/types';
 
 const KANBAN_COLUMNS: { status: ApplicationStatus; label: string; bg: string; border: string }[] = [
   { status: 'LEAD', label: 'New Lead', bg: '#FAF8F5', border: '#B45309' },
@@ -53,6 +53,7 @@ export default function LeadsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isOpportunityRoute = location.pathname === '/opportunities';
+  const currentModule = isOpportunityRoute ? 'OPPORTUNITY' : 'LEAD';
   const [searchParams] = useSearchParams();
   const searchQ = searchParams.get('q') ?? '';
 
@@ -79,11 +80,13 @@ export default function LeadsPage() {
     page: page + 1,
     page_size: rowsPerPage,
     q: searchQ || undefined,
+    module: currentModule,
     ...(selectedStageKey ? { stage_key: selectedStageKey } : {}),
   };
 
   const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
   const { data: dashboard } = useDashboardQuery();
+  const { data: moduleStages = [] } = useStagesByModuleQuery(currentModule);
   const [createOpen, setCreateOpen] = useState(false);
   const [createOppOpen, setCreateOppOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
@@ -94,9 +97,33 @@ export default function LeadsPage() {
 
   const { data: masterStages } = useStagesQuery();
 
+  const pipelineStages: PipelineStage[] = (moduleStages.filter((s) => s.enabled).length > 0
+    ? moduleStages.filter((s) => s.enabled)
+    : (dashboard?.pipeline ?? []))
+    .map((s) => {
+      const count = (data?.items ?? []).filter((app) => {
+        if (!isOpportunityRoute && app.status !== 'LEAD') return false;
+        if (isOpportunityRoute && app.status === 'LEAD') return false;
+        if (s.status) return app.status === s.status;
+        return app.status?.toLowerCase() === s.key?.toLowerCase();
+      }).length;
+
+      return {
+        key: s.key,
+        status: (s.status ?? (isOpportunityRoute ? 'APPLICATION' : 'LEAD')) as ApplicationStatus,
+        label: s.label,
+        tip: `${s.label} (${count})`,
+        count,
+        color: s.color,
+      };
+    });
+
   // Filter rows based on route, dynamic tab configuration and search query
   const allRows = data?.items ?? [];
   const rows = allRows.filter((app) => {
+    if (!isOpportunityRoute && app.status !== 'LEAD') {
+      return false;
+    }
     if (isOpportunityRoute && app.status === 'LEAD') {
       return false;
     }
@@ -157,7 +184,7 @@ export default function LeadsPage() {
       {/* 1. Full-width Stage Pills row */}
       <div style={{ marginBottom: 12 }}>
         <Pipeline
-          stages={dashboard?.pipeline ?? []}
+          stages={pipelineStages}
           selectedStageKey={selectedStageKey}
           onStageClick={(stage) => {
             setSelectedStageKey((prev) => (prev === stage.key ? undefined : stage.key));
@@ -170,7 +197,7 @@ export default function LeadsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {selectedStageKey && (
             <Chip
-              label={`Filtered by: ${dashboard?.pipeline?.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
+              label={`Filtered by: ${pipelineStages.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
               size="small"
               onDelete={() => setSelectedStageKey(undefined)}
               color="primary"

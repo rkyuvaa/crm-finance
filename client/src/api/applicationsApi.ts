@@ -23,6 +23,7 @@ export interface ApplicationFilters {
   date_from?: string;
   date_to?: string;
   stage_key?: string;
+  module?: string;
 }
 
 export interface NewApplication {
