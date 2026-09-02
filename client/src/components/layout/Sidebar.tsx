@@ -62,8 +62,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: Briefcase,
         badge: null,
         children: [
-          { key: 'opportunities', label: 'Lead', path: '/opportunities', icon: Sparkles, badge: null },
-          { key: 'leads', label: 'Opportunity', path: '/leads', icon: UserPlus, badge: 'leads' },
+          { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
+          { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
         ],
       },
     ],
