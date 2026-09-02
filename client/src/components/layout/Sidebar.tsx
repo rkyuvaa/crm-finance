@@ -9,6 +9,7 @@ import {
   Cpu,
   FileText,
   FolderKanban,
+  Layers,
   LayoutDashboard,
   ListTodo,
   Settings,
@@ -70,8 +71,16 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Project & Task',
     items: [
-      { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
-      { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
+      {
+        key: 'project-task',
+        label: 'Project & Task',
+        icon: Layers,
+        badge: null,
+        children: [
+          { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
+          { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
+        ],
+      },
     ],
   },
   {
@@ -236,25 +245,8 @@ export default function Sidebar({
 
       {/* ── Navigation ─────────────────────────────────────────────────── */}
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            {/* Section label (small uppercase) */}
-            {!collapsed && (
-              <div
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  letterSpacing: 1.2,
-                  color: '#819688',
-                  textTransform: 'uppercase',
-                  padding: '14px 10px 6px',
-                  whiteSpace: 'nowrap',
-                  userSelect: 'none',
-                }}
-              >
-                {group.label}
-              </div>
-            )}
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={group.label} style={{ marginTop: gi === 0 ? 0 : 6 }}>
             {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
 
             {group.items.map((item) => {
