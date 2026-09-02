@@ -39,15 +39,7 @@ import { formatAmount, formatDate, initialsOf, statusMeta } from '@/utils/format
 import { useToast } from '@/components/ui/ToastHost';
 import type { ApplicationItem, ApplicationStatus, PipelineStage } from '@/types';
 
-const KANBAN_COLUMNS: { status: ApplicationStatus; label: string; bg: string; border: string }[] = [
-  { status: 'LEAD', label: 'New Lead', bg: '#FAF8F5', border: '#B45309' },
-  { status: 'APPLICATION', label: 'Document Upload', bg: '#F5F8FF', border: '#2563EB' },
-  { status: 'VERIFICATION', label: 'Verification', bg: '#F4F7FE', border: '#1D4ED8' },
-  { status: 'FINANCE', label: 'Processing', bg: '#FFF7ED', border: '#EA580C' },
-  { status: 'SANCTIONED', label: 'Sanctioned', bg: '#F2FAF4', border: '#087A3D' },
-  { status: 'DISBURSEMENT', label: 'Disbursement', bg: '#FFF5F5', border: '#DC2626' },
-  { status: 'COMPLETED', label: 'Completed', bg: '#F0FBF3', border: '#15803D' },
-];
+
 
 export default function LeadsPage() {
   const navigate = useNavigate();
@@ -137,6 +129,23 @@ export default function LeadsPage() {
       };
     });
   }, [moduleStages, dashboard?.pipeline, data?.items, currentModule, isOpportunityRoute]);
+
+  const kanbanColumns = useMemo(() => {
+    return pipelineStages.map((col) => {
+      const meta = statusMeta(col.status as ApplicationStatus);
+      const color = col.color || meta.dot || '#087A3D';
+      return {
+        key: col.key,
+        status: col.status as ApplicationStatus,
+        label: col.label,
+        color,
+        bg: `${color}0A`,
+        border: color,
+        badgeBg: `${color}18`,
+        badgeColor: color,
+      };
+    });
+  }, [pipelineStages]);
 
   // Filter rows based on route, dynamic tab configuration and search query
   const allRows = data?.items ?? [];
@@ -474,13 +483,15 @@ export default function LeadsPage() {
                 padding: '4px 2px',
               }}
             >
-              {KANBAN_COLUMNS.map((col) => {
-                const colApps = rows.filter((app) => app.status === col.status);
-                const meta = statusMeta(col.status);
+              {kanbanColumns.map((col) => {
+                const colApps = rows.filter((app) => {
+                  if (col.status && app.status === col.status) return true;
+                  return app.status?.toLowerCase() === col.key.toLowerCase();
+                });
 
                 return (
                   <div
-                    key={col.status}
+                    key={col.key}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDrop(col.status)}
                     style={{
@@ -513,15 +524,15 @@ export default function LeadsPage() {
                             width: 8,
                             height: 8,
                             borderRadius: '50%',
-                            background: meta.dot,
+                            background: col.color,
                           }}
                         />
                         <span style={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>{col.label}</span>
                       </div>
                       <span
                         style={{
-                          background: meta.bg,
-                          color: meta.color,
+                          background: col.badgeBg,
+                          color: col.badgeColor,
                           fontSize: 11,
                           fontWeight: 700,
                           padding: '2px 8px',
