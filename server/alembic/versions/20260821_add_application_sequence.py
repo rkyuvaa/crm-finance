@@ -1,6 +1,6 @@
 """add application_sequence table
 
-Revision ID: 20260821_add_application_sequence
+Revision ID: 20260821_add_app_sequence
 Revises: 93491516004c
 Create Date: 2026-08-21
 
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '20260821_add_application_sequence'
+revision: str = '20260821_add_app_sequence'
 down_revision: Union[str, None] = '93491516004c'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
