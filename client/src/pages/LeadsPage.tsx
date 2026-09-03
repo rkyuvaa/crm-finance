@@ -44,6 +44,8 @@ import type { ApplicationItem, ApplicationStatus, PipelineStage } from '@/types'
 export default function LeadsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isOpportunityModule = location.pathname.startsWith('/opportunities');
+  const detailPrefix = isOpportunityModule ? '/opportunities' : '/leads';
   const isOpportunityRoute = location.pathname === '/opportunities';
   const currentModule = isOpportunityRoute ? 'OPPORTUNITY' : 'LEAD';
   const [searchParams] = useSearchParams();
@@ -395,7 +397,7 @@ export default function LeadsPage() {
                     {rows.map((app) => (
                       <tr
                         key={app.id}
-                        onClick={() => navigate(`/leads/${app.id}`)}
+                        onClick={() => navigate(`${detailPrefix}/${app.id}`)}
                         style={{ cursor: 'pointer', transition: 'background 0.15s ease' }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F9FBF8')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -593,7 +595,7 @@ export default function LeadsPage() {
                             key={app.id}
                             draggable
                             onDragStart={() => setDraggedAppId(app.id)}
-                            onClick={() => navigate(`/leads/${app.id}`)}
+                            onClick={() => navigate(`${detailPrefix}/${app.id}`)}
                             sx={{
                               p: 1.5,
                               borderRadius: '12px',
@@ -741,7 +743,7 @@ export default function LeadsPage() {
         <MenuItem
           onClick={() => {
             if (menuFor) {
-              navigate(`/leads/${menuFor.id}`);
+              navigate(`${detailPrefix}/${menuFor.id}`);
             }
             setMenuAnchor(null);
             setMenuFor(null);

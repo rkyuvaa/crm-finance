@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -205,17 +205,24 @@ export default function LeadDetailPage() {
     }
   };
 
+  const location = useLocation();
   const { data: oppStages = [] } = useStagesByModuleQuery('OPPORTUNITY');
+
+  const isOpportunity = lead?.status ? lead.status.toUpperCase() !== 'LEAD' : false;
+  const isOppUrl = location.pathname.startsWith('/opportunities');
+  const backTarget = (isOpportunity || isOppUrl) ? '/opportunities' : '/leads';
+  const backLabel = (isOpportunity || isOppUrl) ? 'Back to Opportunities' : 'Back to Leads';
+  const detailTitle = (isOpportunity || isOppUrl) ? 'Opportunity Details' : 'Lead Details';
 
   const convertToOpportunity = async () => {
     if (!lead) return;
     try {
-      const defaultOppStage = oppStages.find((s) => s.enabled)?.key || 'applications';
+      const validOppStage = oppStages.find((s) => s.enabled && String(s.status).toUpperCase() !== 'LEAD')?.key || 'applications';
       await updateApplication({
         id: lead.id,
-        body: { status: 'APPLICATION', stage_key: defaultOppStage } as any,
+        body: { status: 'APPLICATION', stage_key: validOppStage } as any,
       }).unwrap();
-      showToast(`${lead.app_no} moved to Opportunity (${defaultOppStage.toUpperCase()})`, 'success');
+      showToast(`${lead.app_no} moved to Opportunity (${validOppStage.toUpperCase()})`, 'success');
       navigate('/opportunities');
     } catch {
       showToast('Could not convert to opportunity', 'error');
@@ -223,17 +230,17 @@ export default function LeadDetailPage() {
   };
 
   if (isFetching && !lead) {
-    return <div style={{ padding: 24, color: '#7A8B80' }}>Loading lead details...</div>;
+    return <div style={{ padding: 24, color: '#7A8B80' }}>Loading details...</div>;
   }
 
   if (!lead) {
     return (
       <div style={{ padding: 24 }}>
         <Typography variant="h6" color="error">
-          Lead not found
+          Record not found
         </Typography>
-        <Button onClick={() => navigate('/leads')} sx={{ mt: 2 }}>
-          Back to Leads
+        <Button onClick={() => navigate(backTarget)} sx={{ mt: 2 }}>
+          {backLabel}
         </Button>
       </div>
     );
@@ -244,10 +251,10 @@ export default function LeadDetailPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
         <Button
           startIcon={<ArrowLeft size={16} />}
-          onClick={() => navigate('/leads')}
+          onClick={() => navigate(backTarget)}
           sx={{ color: '#44584C', textTransform: 'none', fontWeight: 600 }}
         >
-          Back to Leads
+          {backLabel}
         </Button>
       </div>
 
@@ -259,7 +266,7 @@ export default function LeadDetailPage() {
                 {lead.app_no}
               </div>
               <div style={{ fontSize: 13, color: '#7A8B80', marginTop: 3 }}>
-                Lead Details
+                {detailTitle}
               </div>
             </div>
             <span

@@ -217,16 +217,18 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
     db.flush()
 
     for key, label, status, order in PIPELINE_STAGES:
+        stg_module = "LEAD" if status == ApplicationStatus.LEAD else "OPPORTUNITY"
         existing = db.query(PipelineStage).filter_by(key=key).first()
         if existing:
             existing.label = label
             existing.status = status
+            existing.module = stg_module
             existing.order_index = order
             existing.enabled = True
             existing.updated_at = now
         else:
             db.add(PipelineStage(
-                key=key, label=label, status=status, order_index=order, enabled=True,
+                key=key, label=label, status=status, module=stg_module, order_index=order, enabled=True,
                 created_at=now, updated_at=now,
             ))
     db.flush()
