@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import get_db
-from app.models.projects import Project, Task, ProjectMilestone, TaskStatusDef
+from app.models.projects import (
+    Project, Task, ProjectMilestone, TaskStatusDef,
+    ProjectCustomFieldDefinition, ProjectCustomFieldValue,
+    TaskCustomFieldDefinition, TaskCustomFieldValue,
+)
 from app.models.user import User
 from app.schemas.projects import (
     ProjectCreate,
@@ -12,6 +16,8 @@ from app.schemas.projects import (
     ProjectUpdate,
     ProjectMilestoneCreate,
     ProjectMilestoneOut,
+    CustomFieldDefinitionCreate,
+    CustomFieldDefinitionOut,
 )
 from app.core.deps import get_current_user
 
@@ -142,3 +148,51 @@ def delete_project(
     db.delete(project)
     db.commit()
     return None
+
+
+# --- Custom Field Definitions API ---
+@router.get("/custom-fields/definitions", response_model=List[CustomFieldDefinitionOut])
+def get_project_custom_field_definitions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List custom field definitions for projects"""
+    return db.query(ProjectCustomFieldDefinition).order_by(ProjectCustomFieldDefinition.display_order).all()
+
+
+@router.post("/custom-fields/definitions", response_model=CustomFieldDefinitionOut, status_code=status.HTTP_201_CREATED)
+def create_project_custom_field_definition(
+    data: CustomFieldDefinitionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new custom field definition for projects"""
+    field_def = ProjectCustomFieldDefinition(**data.model_dump())
+    db.add(field_def)
+    db.commit()
+    db.refresh(field_def)
+    return field_def
+
+
+@router.get("/tasks/custom-fields/definitions", response_model=List[CustomFieldDefinitionOut])
+def get_task_custom_field_definitions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List custom field definitions for tasks"""
+    return db.query(TaskCustomFieldDefinition).order_by(TaskCustomFieldDefinition.display_order).all()
+
+
+@router.post("/tasks/custom-fields/definitions", response_model=CustomFieldDefinitionOut, status_code=status.HTTP_201_CREATED)
+def create_task_custom_field_definition(
+    data: CustomFieldDefinitionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new custom field definition for tasks"""
+    field_def = TaskCustomFieldDefinition(**data.model_dump())
+    db.add(field_def)
+    db.commit()
+    db.refresh(field_def)
+    return field_def
+

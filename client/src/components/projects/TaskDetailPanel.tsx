@@ -167,6 +167,23 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>{task.actual_hours}h / {task.estimated_hours}h</Typography>
               </Box>
             </Box>
+
+            <Divider sx={{ my: 1 }} />
+
+            <Typography variant="subtitle2" sx={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, fontSize: '0.7rem' }}>
+              Custom Fields
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Cost Center</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>CC-OPS-2026</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Risk Level</Typography>
+                <Chip size="small" label="Medium" sx={{ height: 20, fontSize: '0.7rem', bgcolor: '#FEF3C7', color: '#D97706' }} />
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Box>

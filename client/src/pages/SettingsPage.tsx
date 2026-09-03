@@ -13,6 +13,7 @@ import {
   Building2,
   KeyRound,
   ShieldAlert,
+  Sliders,
 } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -21,6 +22,7 @@ import { setUser } from '@/auth/authSlice';
 import { useToast } from '@/components/ui/ToastHost';
 import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
 import SystemBackupCard from '@/components/settings/SystemBackupCard';
+import ProjectWorkflowSettingsCard from '@/components/settings/ProjectWorkflowSettingsCard';
 import UserManagementPage from '@/pages/admin/UserManagementPage';
 import RoleManagementPage from '@/pages/admin/RoleManagementPage';
 import DepartmentManagementPage from '@/pages/admin/DepartmentManagementPage';
@@ -167,6 +169,7 @@ export default function SettingsPage() {
           <Tab icon={<Key size={16} />} iconPosition="start" label="Security & Password" />
           {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
           {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
+          {isAdmin && <Tab icon={<Sliders size={16} />} iconPosition="start" label="Workflows & Custom Fields" />}
           <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
           {isAdmin && <Tab icon={<Database size={16} />} iconPosition="start" label="System Data Backup" />}
         </Tabs>
@@ -316,14 +319,21 @@ export default function SettingsPage() {
         </CustomTabPanel>
       )}
 
-      {/* Tab 4: Mail Server Config */}
-      <CustomTabPanel value={activeTab} index={isAdmin ? 4 : 2}>
+      {/* Tab 4: Workflows & Custom Fields */}
+      {isAdmin && (
+        <CustomTabPanel value={activeTab} index={4}>
+          <ProjectWorkflowSettingsCard />
+        </CustomTabPanel>
+      )}
+
+      {/* Tab 5: Mail Server Config */}
+      <CustomTabPanel value={activeTab} index={isAdmin ? 5 : 2}>
         <MailServerConfigCard />
       </CustomTabPanel>
 
-      {/* Tab 5: System Data Backup */}
+      {/* Tab 6: System Data Backup */}
       {isAdmin && (
-        <CustomTabPanel value={activeTab} index={5}>
+        <CustomTabPanel value={activeTab} index={6}>
           <SystemBackupCard />
         </CustomTabPanel>
       )}

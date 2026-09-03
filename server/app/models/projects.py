@@ -2,7 +2,7 @@ from datetime import datetime, date
 from typing import TYPE_CHECKING, List
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func, Date, Float, Boolean, Integer, Text, UniqueConstraint
+from sqlalchemy import DateTime, Enum, ForeignKey, String, func, Date, Float, Boolean, Integer, Text, UniqueConstraint, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -203,3 +203,52 @@ class TaskComment(Base):
 
     task: Mapped["Task"] = relationship("Task", back_populates="comments")
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], lazy="joined")
+
+
+class ProjectCustomFieldDefinition(Base):
+    """Definition of custom fields for projects"""
+    __tablename__ = "project_custom_field_definitions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    field_type: Mapped[str] = mapped_column(String(30), default="text", nullable=False)  # text, number, select, date, currency
+    is_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    options: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {"choices": ["A", "B"]}
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+
+class ProjectCustomFieldValue(Base):
+    """Values for project custom fields"""
+    __tablename__ = "project_custom_field_values"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False)
+    field_id: Mapped[int] = mapped_column(ForeignKey("project_custom_field_definitions.id", ondelete="CASCADE"), index=True, nullable=False)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class TaskCustomFieldDefinition(Base):
+    """Definition of custom fields for tasks"""
+    __tablename__ = "task_custom_field_definitions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    field_type: Mapped[str] = mapped_column(String(30), default="text", nullable=False)  # text, number, select, date, currency
+    is_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    options: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+
+class TaskCustomFieldValue(Base):
+    """Values for task custom fields"""
+    __tablename__ = "task_custom_field_values"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True, nullable=False)
+    field_id: Mapped[int] = mapped_column(ForeignKey("task_custom_field_definitions.id", ondelete="CASCADE"), index=True, nullable=False)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+

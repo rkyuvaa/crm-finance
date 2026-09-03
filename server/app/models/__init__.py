@@ -76,6 +76,10 @@ from app.models.projects import (
     TaskSubtask,
     TaskTimeLog,
     TaskComment,
+    ProjectCustomFieldDefinition,
+    ProjectCustomFieldValue,
+    TaskCustomFieldDefinition,
+    TaskCustomFieldValue,
 )
 
 __all__ = [

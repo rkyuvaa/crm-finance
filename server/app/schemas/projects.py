@@ -183,3 +183,41 @@ class ProjectOut(ProjectBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Custom Fields ---
+class CustomFieldDefinitionBase(BaseModel):
+    name: str
+    label: str
+    field_type: str = "text"  # text, number, select, date, currency
+    is_required: bool = False
+    options: Optional[dict] = None
+    display_order: int = 0
+
+
+class CustomFieldDefinitionCreate(CustomFieldDefinitionBase):
+    pass
+
+
+class CustomFieldDefinitionOut(CustomFieldDefinitionBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CustomFieldValueBase(BaseModel):
+    field_id: int
+    value: Optional[str] = None
+
+
+class CustomFieldValueCreate(CustomFieldValueBase):
+    pass
+
+
+class CustomFieldValueOut(CustomFieldValueBase):
+    id: int
+    field_label: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
