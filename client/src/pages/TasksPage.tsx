@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, addDays, eachDayOfInterval } from 'date-fns';
-import enUS from 'date-fns/locale/en-US';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { format, addDays, eachDayOfInterval } from 'date-fns';
 import {
   Box,
   Button,
@@ -11,7 +8,6 @@ import {
   Chip,
   Checkbox,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   Grid,
@@ -695,7 +691,7 @@ export default function TasksPage() {
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
     // Get tasks by date
-    const tasksByDate = daysInMonth.map((date) => {
+    const tasksByDate = daysInMonth.map((date: Date) => {
       const dateStr = format(date, 'dd MMM yyyy');
       return {
         date,
@@ -738,7 +734,7 @@ export default function TasksPage() {
 
         {/* Weekday Headers */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day: string) => (
             <Box key={day} sx={{ textAlign: 'center', fontWeight: 700, color: '#6B7280', py: 1 }}>
               {day}
             </Box>
@@ -747,7 +743,7 @@ export default function TasksPage() {
 
         {/* Calendar Grid */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-          {tasksByDate.map(({ date, dateStr, tasks }) => (
+          {tasksByDate.map(({ date, dateStr, tasks }: any) => (
             <Card
               key={dateStr}
               sx={{
@@ -769,7 +765,7 @@ export default function TasksPage() {
               </Box>
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                {tasks.slice(0, 3).map((task) => (
+                {tasks.slice(0, 3).map((task: Task) => (
                   <Box
                     key={task.id}
                     onClick={() => {
@@ -816,7 +812,7 @@ export default function TasksPage() {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Box sx={{ width: 200, flexShrink: 0 }} />
           <Box sx={{ display: 'flex', gap: 0 }}>
-            {ganttDays.map((day, idx) => (
+            {ganttDays.map((day: Date, idx: number) => (
               <Box
                 key={idx}
                 sx={{
@@ -837,14 +833,13 @@ export default function TasksPage() {
 
         {/* Gantt Rows */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {filteredTasks.map((task) => {
+          {filteredTasks.map((task: Task) => {
             const taskStart = new Date(task.dueDate.split(' ').reverse().join('-'));
             const taskEnd = addDays(taskStart, 3); // Assume 3-day duration
             
             // Find positions
             const startIdx = Math.max(0, Math.floor((taskStart.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)));
             const endIdx = Math.min(ganttDays.length, Math.floor((taskEnd.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)));
-            const duration = endIdx - startIdx;
 
             return (
               <Box key={task.id} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -872,7 +867,7 @@ export default function TasksPage() {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 0, flex: 1 }}>
-                  {ganttDays.map((day, idx) => (
+                  {ganttDays.map((day: Date, idx: number) => (
                     <Box
                       key={idx}
                       sx={{
@@ -936,7 +931,6 @@ export default function TasksPage() {
   // ── Task Detail Panel ──
   // ── Task Detail Panel with Subtask Management ──
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [editingSubtaskIdx, setEditingSubtaskIdx] = useState<number | null>(null);
 
   const handleToggleSubtask = (subtaskIdx: number) => {
     if (!selectedTask) return;
