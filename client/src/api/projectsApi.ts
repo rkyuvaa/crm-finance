@@ -241,6 +241,21 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['StatusDefs'],
     }),
+    updateStatusDefinition: builder.mutation<StatusDefinitionItem, { id: number; body: Partial<StatusDefinitionItem> }>({
+      query: ({ id, body }) => ({
+        url: `/projects/statuses/definitions/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['StatusDefs'],
+    }),
+    deleteStatusDefinition: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/projects/statuses/definitions/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['StatusDefs'],
+    }),
 
     // Custom Field Definitions
     getCustomFieldDefinitions: builder.query<CustomFieldDefinitionItem[], void>({
@@ -252,6 +267,21 @@ export const projectsApi = createApi({
         url: '/projects/tasks/custom-fields/definitions',
         method: 'POST',
         body,
+      }),
+      invalidatesTags: ['CustomFieldDefs'],
+    }),
+    updateCustomFieldDefinition: builder.mutation<CustomFieldDefinitionItem, { id: number; body: Partial<CustomFieldDefinitionItem> }>({
+      query: ({ id, body }) => ({
+        url: `/projects/tasks/custom-fields/definitions/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['CustomFieldDefs'],
+    }),
+    deleteCustomFieldDefinition: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/projects/tasks/custom-fields/definitions/${id}`,
+        method: 'DELETE',
       }),
       invalidatesTags: ['CustomFieldDefs'],
     }),
@@ -277,6 +307,10 @@ export const {
   useGetTaskCommentsQuery,
   useGetStatusDefinitionsQuery,
   useCreateStatusDefinitionMutation,
+  useUpdateStatusDefinitionMutation,
+  useDeleteStatusDefinitionMutation,
   useGetCustomFieldDefinitionsQuery,
   useCreateCustomFieldDefinitionMutation,
+  useUpdateCustomFieldDefinitionMutation,
+  useDeleteCustomFieldDefinitionMutation,
 } = projectsApi;

@@ -199,6 +199,15 @@ class CustomFieldDefinitionCreate(CustomFieldDefinitionBase):
     pass
 
 
+class CustomFieldDefinitionUpdate(BaseModel):
+    name: Optional[str] = None
+    label: Optional[str] = None
+    field_type: Optional[str] = None
+    is_required: Optional[bool] = None
+    options: Optional[dict] = None
+    display_order: Optional[int] = None
+
+
 class CustomFieldDefinitionOut(CustomFieldDefinitionBase):
     id: int
     created_at: datetime
@@ -222,6 +231,7 @@ class CustomFieldValueOut(CustomFieldValueBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+
 # --- Status Definitions ---
 class StatusDefinitionBase(BaseModel):
     name: str
@@ -234,9 +244,17 @@ class StatusDefinitionCreate(StatusDefinitionBase):
     pass
 
 
+class StatusDefinitionUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+    display_order: Optional[int] = None
+    is_terminal: Optional[bool] = None
+
+
 class StatusDefinitionOut(StatusDefinitionBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
 
 

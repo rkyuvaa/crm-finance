@@ -17,8 +17,10 @@ from app.schemas.projects import (
     ProjectMilestoneCreate,
     ProjectMilestoneOut,
     CustomFieldDefinitionCreate,
+    CustomFieldDefinitionUpdate,
     CustomFieldDefinitionOut,
     StatusDefinitionCreate,
+    StatusDefinitionUpdate,
     StatusDefinitionOut,
 )
 from app.core.deps import get_current_user
@@ -203,6 +205,40 @@ def create_task_custom_field_definition(
     return field_def
 
 
+@router.put("/tasks/custom-fields/definitions/{field_id}", response_model=CustomFieldDefinitionOut)
+def update_task_custom_field_definition(
+    field_id: int,
+    data: CustomFieldDefinitionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a custom field definition"""
+    field_def = db.query(TaskCustomFieldDefinition).filter(TaskCustomFieldDefinition.id == field_id).first()
+    if not field_def:
+        raise HTTPException(status_code=404, detail="Custom field definition not found")
+    update_dict = data.model_dump(exclude_unset=True)
+    for k, v in update_dict.items():
+        setattr(field_def, k, v)
+    db.commit()
+    db.refresh(field_def)
+    return field_def
+
+
+@router.delete("/tasks/custom-fields/definitions/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_custom_field_definition(
+    field_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a custom field definition"""
+    field_def = db.query(TaskCustomFieldDefinition).filter(TaskCustomFieldDefinition.id == field_id).first()
+    if not field_def:
+        raise HTTPException(status_code=404, detail="Custom field definition not found")
+    db.delete(field_def)
+    db.commit()
+    return None
+
+
 # --- Workflow Status Definitions API ---
 @router.get("/statuses/definitions", response_model=List[StatusDefinitionOut])
 def get_task_status_definitions(
@@ -225,5 +261,48 @@ def create_task_status_definition(
     db.commit()
     db.refresh(status_def)
     return status_def
+
+
+@router.put("/statuses/definitions/{status_id}", response_model=StatusDefinitionOut)
+def update_task_status_definition(
+    status_id: int,
+    data: StatusDefinitionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a workflow status definition"""
+    status_def = db.query(TaskStatusDef).filter(TaskStatusDef.id == status_id).first()
+    if not status_def:
+        raise HTTPException(status_code=404, detail="Status definition not found")
+    update_dict = data.model_dump(exclude_unset=True)
+    for k, v in update_dict.items():
+        setattr(status_def, k, v)
+    db.commit()
+    db.refresh(status_def)
+    return status_def
+
+
+@router.delete("/statuses/definitions/{status_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_status_definition(
+    status_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a status definition with data integrity protection"""
+    status_def = db.query(TaskStatusDef).filter(TaskStatusDef.id == status_id).first()
+    if not status_def:
+        raise HTTPException(status_code=404, detail="Status definition not found")
+
+    tasks_count = db.query(Task).filter(Task.status_id == status_id).count()
+    if tasks_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete status '{status_def.name}' because it is currently assigned to {tasks_count} task(s). Please reassign those tasks before deleting.",
+        )
+
+    db.delete(status_def)
+    db.commit()
+    return None
+
 
 
