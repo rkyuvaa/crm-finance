@@ -386,8 +386,8 @@ export default function ProjectWorkspace() {
         {tab === 'tasks' && <ProjectTasksList projectId={id!} />}
         {tab === 'milestones' && <ProjectMilestonesList projectId={id!} />}
         {tab === 'timeline' && <ProjectTimelineView />}
-        {tab === 'team' && <ProjectTeamView />}
-        {tab === 'timesheets' && <ProjectTimesheetsView />}
+        {tab === 'team' && <ProjectTeamView projectId={id!} />}
+        {tab === 'timesheets' && <ProjectTimesheetsView projectId={id!} />}
 
         {/* ── CLICKUP WHITEBOARD / CANVAS TAB ────────────────────────────── */}
         {tab === 'whiteboard' && (
