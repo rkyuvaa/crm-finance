@@ -23,11 +23,30 @@ import {
   Select,
   MenuItem,
   CircularProgress,
+  ToggleButtonGroup,
+  ToggleButton,
+  InputAdornment,
+  Tooltip,
 } from '@mui/material';
-import { ChevronDown, ChevronRight, Plus, Calendar } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Calendar,
+  LayoutGrid,
+  List as ListIcon,
+  Search,
+  Flag,
+  CheckSquare,
+  Clock,
+  Paperclip,
+  Tag,
+} from 'lucide-react';
 import {
   useGetTasksQuery,
   useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useGetStatusDefinitionsQuery,
   TaskItem,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -40,12 +59,22 @@ interface ProjectTasksListProps {
 export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const toast = useToast();
   const numericProjectId = Number(projectId);
-  const { data: tasks = [], isLoading } = useGetTasksQuery({ project_id: numericProjectId });
+
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [searchQ, setSearchQ] = useState('');
+
+  const { data: tasks = [], isLoading } = useGetTasksQuery({
+    project_id: numericProjectId,
+    q: searchQ || undefined,
+  });
+
+  const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
   const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
+  const [updateTask] = useUpdateTaskMutation();
 
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({
-    1: true, // TODO
-    2: true, // IN_PROGRESS
+    1: true,
+    2: true,
     3: true,
     4: true,
     5: true,
@@ -63,6 +92,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
 
+  const defaultStatuses = [
+    { id: 1, name: 'To Do', color: '#64748B', is_terminal: false },
+    { id: 2, name: 'In Progress', color: '#2563EB', is_terminal: false },
+    { id: 3, name: 'In Review', color: '#D97706', is_terminal: false },
+    { id: 4, name: 'Done', color: '#16A34A', is_terminal: true },
+    { id: 5, name: 'Blocked', color: '#DC2626', is_terminal: false },
+  ];
+
+  const activeStatuses = statusDefs.length > 0 ? statusDefs : defaultStatuses;
+
   const toggleGroup = (statusIdVal: number) => {
     setExpandedGroups((prev) => ({ ...prev, [statusIdVal]: !prev[statusIdVal] }));
   };
@@ -72,10 +111,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setPanelOpen(true);
   };
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (defaultStatusId: number = 1) => {
     setTitle('');
     setDescription('');
-    setStatusId(1);
+    setStatusId(defaultStatusId);
     setPriority('NORMAL');
     setDueDate('');
     setEstimatedHours(0);
@@ -104,13 +143,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     }
   };
 
-  const statuses = [
-    { id: 1, label: 'To Do', color: '#64748B', bg: '#F1F5F9' },
-    { id: 2, label: 'In Progress', color: '#2563EB', bg: '#EFF6FF' },
-    { id: 3, label: 'In Review', color: '#D97706', bg: '#FEF3C7' },
-    { id: 4, label: 'Done', color: '#16A34A', bg: '#F0FDF4' },
-    { id: 5, label: 'Blocked', color: '#DC2626', bg: '#FEF2F2' },
-  ];
+  const getPriorityFlagColor = (p: string) => {
+    switch (p) {
+      case 'URGENT': return '#DC2626';
+      case 'HIGH': return '#D97706';
+      case 'NORMAL': return '#2563EB';
+      case 'LOW': return '#64748B';
+      default: return '#64748B';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -121,126 +162,377 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   }
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0F172A' }}>Tasks</Typography>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<Plus size={16} />}
-          onClick={handleOpenCreateModal}
-          sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', fontWeight: 600 }}
-        >
-          Add Task
-        </Button>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* ── CLICKUP STYLE TOOLBAR (Top Bar) ────────────────────────────── */}
+      <Box
+        sx={{
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          p: 1.5,
+          bgcolor: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          borderRadius: '8px',
+        }}
+      >
+        {/* View Toggle Buttons (Board vs List) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, val) => val && setViewMode(val)}
+            size="small"
+            sx={{
+              height: 32,
+              '& .MuiToggleButton-root': {
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 12,
+                px: 1.5,
+                color: '#64748B',
+                '&.Mui-selected': { bgcolor: '#FFFFFF', color: '#04552B', fontWeight: 700, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
+              },
+            }}
+          >
+            <ToggleButton value="board">
+              <LayoutGrid size={14} style={{ marginRight: 6 }} /> Board
+            </ToggleButton>
+            <ToggleButton value="list">
+              <ListIcon size={14} style={{ marginRight: 6 }} /> List
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Chip label="Group: Status" size="small" variant="outlined" sx={{ height: 26, fontSize: 11, fontWeight: 600, bgcolor: '#FFFFFF' }} />
+        </Box>
+
+        {/* Right Search & Add Task Action */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <TextField
+            placeholder="Search tasks..."
+            size="small"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={14} color="#94A3B8" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: 220, '& .MuiOutlinedInput-root': { height: 32, fontSize: 12, bgcolor: '#FFFFFF' } }}
+          />
+
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Plus size={15} />}
+            onClick={() => handleOpenCreateModal(1)}
+            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+          >
+            Add Task
+          </Button>
+        </Box>
       </Box>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '8px' }}>
-        <Table size="small">
-          <TableHead sx={{ bgcolor: '#F8FAFC' }}>
-            <TableRow>
-              <TableCell width={40}></TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Assignee</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Due Date</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={120}>Priority</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={120}>Tracked Time</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tasks.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                  <Typography color="textSecondary" variant="body2" sx={{ mb: 1 }}>
-                    No tasks found in this project yet.
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Plus size={15} />}
-                    onClick={handleOpenCreateModal}
-                    sx={{ textTransform: 'none', color: '#04552B', borderColor: '#04552B' }}
-                  >
-                    Create First Task
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ) : (
-              statuses.map((status) => {
-                const statusTasks = tasks.filter((t) => t.status_id === status.id);
-                if (statusTasks.length === 0) return null;
-                const isExpanded = expandedGroups[status.id];
+      {/* ── CLICKUP KANBAN BOARD VIEW ──────────────────────────────────── */}
+      {viewMode === 'board' && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            overflowX: 'auto',
+            pb: 2,
+            minHeight: '520px',
+            alignItems: 'flex-start',
+          }}
+        >
+          {activeStatuses.map((st) => {
+            const statusTasks = tasks.filter((t) => (t.status_id || 1) === st.id);
 
-                return (
-                  <React.Fragment key={status.id}>
-                    {/* Group Header */}
-                    <TableRow sx={{ bgcolor: status.bg, cursor: 'pointer', '&:hover': { bgcolor: status.bg } }} onClick={() => toggleGroup(status.id)}>
-                      <TableCell>
-                        <IconButton size="small">
-                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell colSpan={5}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip label={status.label} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
-                          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
+            return (
+              <Box
+                key={st.id}
+                sx={{
+                  width: 300,
+                  minWidth: 300,
+                  bgcolor: '#F1F5F9',
+                  borderRadius: '10px',
+                  p: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  maxHeight: 'calc(100vh - 280px)',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                {/* Column Header */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label={st.name.toUpperCase()}
+                      size="small"
+                      sx={{
+                        bgcolor: st.color,
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                        fontSize: '0.68rem',
+                        height: 22,
+                        px: 0.5,
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B' }}>
+                      {statusTasks.length}
+                    </Typography>
+                  </Box>
 
-                    {/* Tasks */}
-                    {isExpanded && statusTasks.map((task) => (
-                      <TableRow 
-                        key={task.id} 
-                        hover 
-                        sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#F8FAFC' } }}
-                        onClick={() => openTask(task)}
+                  <Tooltip title="Add Task in this status">
+                    <IconButton size="small" onClick={() => handleOpenCreateModal(st.id)} sx={{ p: 0.5 }}>
+                      <Plus size={16} color="#64748B" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                {/* Cards Container */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    overflowY: 'auto',
+                    pr: 0.5,
+                    flex: 1,
+                  }}
+                >
+                  {statusTasks.length === 0 ? (
+                    <Box
+                      sx={{
+                        p: 3,
+                        textAlign: 'center',
+                        border: '2px dashed #CBD5E1',
+                        borderRadius: '8px',
+                        bgcolor: '#FFFFFF',
+                      }}
+                    >
+                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                        No tasks in {st.name}
+                      </Typography>
+                      <Button
+                        size="small"
+                        startIcon={<Plus size={13} />}
+                        onClick={() => handleOpenCreateModal(st.id)}
+                        sx={{ textTransform: 'none', fontSize: 11, color: '#04552B' }}
                       >
-                        <TableCell align="center">
-                          <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: `2px solid ${status.color}`, margin: 'auto' }} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#0F172A' }}>{task.title}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#E2E8F0', color: '#475569' }}>
-                              {task.assignee_name?.charAt(0) || '?'}
-                            </Avatar>
-                            <Typography variant="body2">{task.assignee_name || 'Unassigned'}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? '#475569' : '#94A3B8' }}>
-                            <Calendar size={14} />
-                            <Typography variant="body2">{task.due_date || 'None'}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={task.priority} 
-                            size="small" 
-                            sx={{ 
-                              height: 20, fontSize: '0.7rem', fontWeight: 600,
-                              bgcolor: task.priority === 'URGENT' ? '#FEE2E2' : task.priority === 'HIGH' ? '#FEF3C7' : '#F1F5F9',
-                              color: task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : '#64748B'
-                            }} 
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ color: '#64748B' }}>
-                            {task.actual_hours}h / {task.estimated_hours}h
+                        Add Task
+                      </Button>
+                    </Box>
+                  ) : (
+                    statusTasks.map((task) => {
+                      const completedSubtasks = task.subtasks?.filter((s) => s.is_completed).length || 0;
+                      const totalSubtasks = task.subtasks?.length || 0;
+
+                      return (
+                        <Paper
+                          key={task.id}
+                          elevation={0}
+                          onClick={() => openTask(task)}
+                          sx={{
+                            p: 2,
+                            borderRadius: '8px',
+                            bgcolor: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease-in-out',
+                            '&:hover': {
+                              borderColor: '#04552B',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                              transform: 'translateY(-1px)',
+                            },
+                          }}
+                        >
+                          {/* Task Title */}
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mb: 1.5, lineHeight: 1.4 }}>
+                            {task.title}
                           </Typography>
+
+                          {/* Subtasks Progress indicator if present */}
+                          {totalSubtasks > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
+                              <CheckSquare size={13} color="#64748B" />
+                              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: 11 }}>
+                                {completedSubtasks}/{totalSubtasks} subtasks
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Footer Meta Row */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: '1px solid #F1F5F9' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {/* Assignee Avatar */}
+                              <Tooltip title={task.assignee_name || 'Unassigned'}>
+                                <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
+                                  {task.assignee_name?.charAt(0) || '?'}
+                                </Avatar>
+                              </Tooltip>
+
+                              {/* Priority Flag */}
+                              <Tooltip title={`Priority: ${task.priority}`}>
+                                <Flag size={14} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />
+                              </Tooltip>
+                            </Box>
+
+                            {/* Due Date or Tracked Hours */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {task.due_date && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: '#64748B' }}>
+                                  <Calendar size={12} />
+                                  <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 500 }}>
+                                    {task.due_date}
+                                  </Typography>
+                                </Box>
+                              )}
+                              <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' }}>
+                                {task.actual_hours}h/{task.estimated_hours}h
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Paper>
+                      );
+                    })
+                  )}
+                </Box>
+
+                {/* Inline Add Task at Column Bottom */}
+                <Button
+                  size="small"
+                  startIcon={<Plus size={14} />}
+                  onClick={() => handleOpenCreateModal(st.id)}
+                  sx={{
+                    mt: 1.5,
+                    width: '100%',
+                    justify: 'flex-start',
+                    color: '#64748B',
+                    textTransform: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' },
+                  }}
+                >
+                  Add Task
+                </Button>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
+      {/* ── CLICKUP GROUPED LIST VIEW ───────────────────────────────────── */}
+      {viewMode === 'list' && (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+          <Table size="small">
+            <TableHead sx={{ bgcolor: '#F8FAFC' }}>
+              <TableRow>
+                <TableCell width={40}></TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Assignee</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Due Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={120}>Priority</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={140}>Tracked Time</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                    <Typography color="textSecondary" variant="body2" sx={{ mb: 1 }}>
+                      No tasks found in this project yet.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Plus size={15} />}
+                      onClick={() => handleOpenCreateModal(1)}
+                      sx={{ textTransform: 'none', color: '#04552B', borderColor: '#04552B' }}
+                    >
+                      Create First Task
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                activeStatuses.map((status) => {
+                  const statusTasks = tasks.filter((t) => (t.status_id || 1) === status.id);
+                  if (statusTasks.length === 0) return null;
+                  const isExpanded = expandedGroups[status.id];
+
+                  return (
+                    <React.Fragment key={status.id}>
+                      {/* Group Header */}
+                      <TableRow sx={{ bgcolor: '#F8FAFC', cursor: 'pointer', '&:hover': { bgcolor: '#F1F5F9' } }} onClick={() => toggleGroup(status.id)}>
+                        <TableCell>
+                          <IconButton size="small">
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </IconButton>
+                        </TableCell>
+                        <TableCell colSpan={5}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip label={status.name} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
+                            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
+                          </Box>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+
+                      {/* Tasks */}
+                      {isExpanded && statusTasks.map((task) => (
+                        <TableRow 
+                          key={task.id} 
+                          hover 
+                          sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#F8FAFC' } }}
+                          onClick={() => openTask(task)}
+                        >
+                          <TableCell align="center">
+                            <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: `2px solid ${status.color}`, margin: 'auto' }} />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>{task.title}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
+                                {task.assignee_name?.charAt(0) || '?'}
+                              </Avatar>
+                              <Typography variant="body2">{task.assignee_name || 'Unassigned'}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? '#475569' : '#94A3B8' }}>
+                              <Calendar size={14} />
+                              <Typography variant="body2">{task.due_date || 'None'}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                              <Flag size={14} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />
+                              <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 600, color: getPriorityFlagColor(task.priority) }}>
+                                {task.priority}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ color: '#64748B', fontFamily: 'monospace' }}>
+                              {task.actual_hours}h / {task.estimated_hours}h
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Task Drawer Panel */}
       <TaskDetailPanel open={panelOpen} onClose={() => setPanelOpen(false)} task={selectedTask} />
@@ -275,8 +567,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               label="Status"
               onChange={(e) => setStatusId(Number(e.target.value))}
             >
-              {statuses.map((s) => (
-                <MenuItem key={s.id} value={s.id}>{s.label}</MenuItem>
+              {activeStatuses.map((s) => (
+                <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
