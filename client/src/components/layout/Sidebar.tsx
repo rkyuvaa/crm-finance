@@ -15,6 +15,7 @@ import {
   Settings,
   Settings2,
   Sparkles,
+  Users,
   UserPlus,
 } from 'lucide-react';
 
@@ -81,6 +82,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
           { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
         ],
       },
+    ],
+  },
+  {
+    label: 'People',
+    items: [
+      { key: 'hr', label: 'HR & Employee', path: '/hr', icon: Users, badge: null },
     ],
   },
   {
