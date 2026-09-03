@@ -2,7 +2,7 @@ from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.projects import ProjectStatus, TaskStatus, TaskPriority
+from app.models.projects import TaskPriority
 
 
 # --- Subtask / Checklist ---
@@ -68,7 +68,8 @@ class TaskCommentOut(TaskCommentBase):
 class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
-    status: TaskStatus = TaskStatus.TODO
+    type_id: Optional[int] = None
+    status_id: Optional[int] = None
     priority: TaskPriority = TaskPriority.NORMAL
     assignee_id: Optional[int] = None
     start_date: Optional[date] = None
@@ -85,7 +86,8 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    status: Optional[TaskStatus] = None
+    type_id: Optional[int] = None
+    status_id: Optional[int] = None
     priority: Optional[TaskPriority] = None
     assignee_id: Optional[int] = None
     start_date: Optional[date] = None
@@ -137,7 +139,8 @@ class ProjectBase(BaseModel):
     space_id: Optional[int] = None
     lead_id: Optional[int] = None
     category: str = "General"
-    status: ProjectStatus = ProjectStatus.PLANNING
+    type_id: Optional[int] = None
+    status_id: Optional[int] = None
     progress: int = 0
     budget: float = 0.0
     estimated_cost: float = 0.0
@@ -158,7 +161,8 @@ class ProjectUpdate(BaseModel):
     space_id: Optional[int] = None
     lead_id: Optional[int] = None
     category: Optional[str] = None
-    status: Optional[ProjectStatus] = None
+    type_id: Optional[int] = None
+    status_id: Optional[int] = None
     progress: Optional[int] = None
     budget: Optional[float] = None
     estimated_cost: Optional[float] = None
@@ -178,5 +182,4 @@ class ProjectOut(ProjectBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

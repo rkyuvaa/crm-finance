@@ -12,20 +12,37 @@ if TYPE_CHECKING:
     from app.models.application import Application
 
 
-class ProjectStatus(enum.StrEnum):
-    PLANNING = "PLANNING"
-    IN_PROGRESS = "IN_PROGRESS"
-    ON_HOLD = "ON_HOLD"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
+class ProjectType(Base):
+    """Configurable project types"""
+    __tablename__ = "project_types"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+class ProjectStatusDef(Base):
+    """Configurable project statuses"""
+    __tablename__ = "project_statuses"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    color: Mapped[str] = mapped_column(String(20), default="#E2E8F0", nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_terminal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-class TaskStatus(enum.StrEnum):
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
-    IN_REVIEW = "IN_REVIEW"
-    DONE = "DONE"
-    BLOCKED = "BLOCKED"
+class TaskType(Base):
+    """Configurable task types"""
+    __tablename__ = "task_types"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+class TaskStatusDef(Base):
+    """Configurable task statuses"""
+    __tablename__ = "task_statuses"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    color: Mapped[str] = mapped_column(String(20), default="#E2E8F0", nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_terminal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class TaskPriority(enum.StrEnum):
@@ -72,9 +89,8 @@ class Project(Base):
     space_id: Mapped[int | None] = mapped_column(ForeignKey("project_spaces.id", ondelete="SET NULL"), nullable=True)
     lead_id: Mapped[int | None] = mapped_column(ForeignKey("applications.id", ondelete="SET NULL"), nullable=True, index=True)
     category: Mapped[str] = mapped_column(String(100), default="General", nullable=False)
-    status: Mapped[ProjectStatus] = mapped_column(
-        Enum(ProjectStatus, name="project_status"), default=ProjectStatus.PLANNING, nullable=False, index=True
-    )
+    type_id: Mapped[int | None] = mapped_column(ForeignKey("project_types.id", ondelete="SET NULL"), nullable=True)
+    status_id: Mapped[int | None] = mapped_column(ForeignKey("project_statuses.id", ondelete="SET NULL"), nullable=True, index=True)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0 to 100%
     budget: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -88,6 +104,8 @@ class Project(Base):
     )
 
     space: Mapped["ProjectSpace | None"] = relationship("ProjectSpace", back_populates="projects")
+    project_type: Mapped["ProjectType | None"] = relationship("ProjectType")
+    status_def: Mapped["ProjectStatusDef | None"] = relationship("ProjectStatusDef")
     lead: Mapped["Application | None"] = relationship("Application", foreign_keys=[lead_id], lazy="joined")
     owner: Mapped["User | None"] = relationship("User", foreign_keys=[owner_id], lazy="joined")
     milestones: Mapped[List["ProjectMilestone"]] = relationship("ProjectMilestone", back_populates="project", cascade="all, delete-orphan")
@@ -118,9 +136,8 @@ class Task(Base):
     parent_task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(250), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status"), default=TaskStatus.TODO, nullable=False, index=True
-    )
+    type_id: Mapped[int | None] = mapped_column(ForeignKey("task_types.id", ondelete="SET NULL"), nullable=True)
+    status_id: Mapped[int | None] = mapped_column(ForeignKey("task_statuses.id", ondelete="SET NULL"), nullable=True, index=True)
     priority: Mapped[TaskPriority] = mapped_column(
         Enum(TaskPriority, name="task_priority"), default=TaskPriority.NORMAL, nullable=False, index=True
     )
@@ -136,6 +153,8 @@ class Task(Base):
     )
 
     project: Mapped["Project | None"] = relationship("Project", back_populates="tasks")
+    task_type: Mapped["TaskType | None"] = relationship("TaskType")
+    status_def: Mapped["TaskStatusDef | None"] = relationship("TaskStatusDef")
     assignee: Mapped["User | None"] = relationship("User", foreign_keys=[assignee_id], lazy="joined")
     subtasks: Mapped[List["TaskSubtask"]] = relationship("TaskSubtask", back_populates="task", cascade="all, delete-orphan")
     time_logs: Mapped[List["TaskTimeLog"]] = relationship("TaskTimeLog", back_populates="task", cascade="all, delete-orphan")

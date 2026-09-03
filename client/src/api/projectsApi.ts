@@ -11,7 +11,8 @@ export interface ProjectItem {
   lead_app_no?: string;
   lead_customer_name?: string;
   category: string;
-  status: 'PLANNING' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
+  type_id?: number;
+  status_id?: number;
   progress: number;
   budget: float;
   estimated_cost: float;
@@ -43,7 +44,8 @@ export interface TaskItem {
   parent_task_id?: number;
   title: string;
   description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'BLOCKED';
+  type_id?: number;
+  status_id?: number;
   priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
   assignee_id?: number;
   assignee_name?: string;

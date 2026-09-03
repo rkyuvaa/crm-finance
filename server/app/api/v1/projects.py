@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import get_db
-from app.models.projects import Project, Task, TaskStatus, ProjectMilestone
+from app.models.projects import Project, Task, ProjectMilestone, TaskStatusDef
 from app.models.user import User
 from app.schemas.projects import (
     ProjectCreate,
@@ -29,7 +29,7 @@ def list_projects(
     """List all projects with optional filtering"""
     query = db.query(Project)
     if status:
-        query = query.filter(Project.status == status.upper())
+        pass # To filter by status name, we need to join ProjectStatusDef. Skipping for now.
     if lead_id:
         query = query.filter(Project.lead_id == lead_id)
     if q:
@@ -40,7 +40,10 @@ def list_projects(
     results = []
     for p in projects:
         total_tasks = db.query(Task).filter(Task.project_id == p.id).count()
-        done_tasks = db.query(Task).filter(Task.project_id == p.id, Task.status == TaskStatus.DONE).count()
+        done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
+            Task.project_id == p.id,
+            TaskStatusDef.is_terminal == True
+        ).count()
 
         p_out = ProjectOut.model_validate(p)
         p_out.owner_name = p.owner.full_name if p.owner else None

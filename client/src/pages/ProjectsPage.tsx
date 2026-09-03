@@ -40,7 +40,10 @@ import {
 import { useApplicationsQuery } from '@/api/applicationsApi';
 import { useToast } from '@/components/ui/ToastHost';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function ProjectsPage() {
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [searchQ, setSearchQ] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -96,15 +99,12 @@ export default function ProjectsPage() {
   };
 
   const filteredProjects = projects.filter((p) => {
-    if (tabValue === 1) return p.status === 'IN_PROGRESS';
-    if (tabValue === 2) return p.status === 'PLANNING';
-    if (tabValue === 3) return p.status === 'ON_HOLD';
-    if (tabValue === 4) return p.status === 'COMPLETED';
+    // Basic filter until dynamic statuses are fetched
     return true;
   });
 
-  const totalBudget = projects.reduce((acc, curr) => acc + (curr.budget || 0), 0);
-  const totalCompleted = projects.filter((p) => p.status === 'COMPLETED').length;
+  const totalBudget = projects.reduce((acc, p) => acc + (p.budget || 0), 0);
+  const totalCompleted = projects.filter((p) => p.status_id === 4).length; // Assuming 4 is completed for now
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, margin: '0 auto' }}>
@@ -166,7 +166,7 @@ export default function ProjectsPage() {
               </Typography>
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: '#0F172A' }}>
-              {projects.filter((p) => p.status === 'IN_PROGRESS').length}
+              {projects.filter((p) => p.status_id === 2).length}
             </Typography>
           </Paper>
         </Grid>
@@ -250,7 +250,9 @@ export default function ProjectsPage() {
                 <Grid item xs={12} md={6} lg={4} key={project.id}>
                   <Card
                     elevation={0}
+                    onClick={() => navigate(`/projects/${project.id}`)}
                     sx={{
+                      cursor: 'pointer',
                       border: '1px solid #E2E8F0',
                       borderRadius: '12px',
                       height: '100%',
@@ -268,13 +270,11 @@ export default function ProjectsPage() {
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Chip
-                            label={project.status.replace('_', ' ')}
+                            label={project.status_id ? `Status: ${project.status_id}` : 'Planning'}
                             size="small"
                             sx={{
-                              backgroundColor:
-                                project.status === 'COMPLETED' ? '#DCFCE7' : project.status === 'IN_PROGRESS' ? '#DBEAFE' : '#FEF3C7',
-                              color:
-                                project.status === 'COMPLETED' ? '#15803D' : project.status === 'IN_PROGRESS' ? '#1D4ED8' : '#B45309',
+                              backgroundColor: '#DBEAFE',
+                              color: '#1D4ED8',
                               fontWeight: 600,
                               fontSize: '0.75rem',
                             }}

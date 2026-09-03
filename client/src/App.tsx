@@ -14,6 +14,7 @@ import LeadDetailPage from '@/pages/LeadDetailPage';
 import HRPage from '@/pages/HRPage';
 import PlmPage from '@/pages/PlmPage';
 import ProjectsPage from '@/pages/ProjectsPage';
+import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import TasksPage from '@/pages/TasksPage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="/hr" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/projects/:id" element={<ProjectWorkspace />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 
                 {/* Administration / Access Control */}
