@@ -715,6 +715,137 @@ export default function TasksPage() {
     );
   };
 
+  // ── Render Gantt Chart View ──
+  const renderGanttView = () => {
+    const today = new Date();
+    const ganttStart = addDays(today, -7);
+    const ganttEnd = addDays(today, 60);
+    const ganttDays = eachDayOfInterval({ start: ganttStart, end: ganttEnd });
+    const pixelsPerDay = 40;
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflowX: 'auto' }}>
+        {/* Timeline Header */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ width: 200, flexShrink: 0 }} />
+          <Box sx={{ display: 'flex', gap: 0 }}>
+            {ganttDays.map((day, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  width: pixelsPerDay,
+                  textAlign: 'center',
+                  fontSize: '9px',
+                  fontWeight: 600,
+                  color: day.toDateString() === today.toDateString() ? '#087A3D' : '#6B7280',
+                  py: 0.5,
+                  borderRight: day.toDateString() === today.toDateString() ? '2px solid #087A3D' : '1px solid #E5E7EB',
+                }}
+              >
+                {format(day, 'd')}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Gantt Rows */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {filteredTasks.map((task) => {
+            const taskStart = new Date(task.dueDate.split(' ').reverse().join('-'));
+            const taskEnd = addDays(taskStart, 3); // Assume 3-day duration
+            
+            // Find positions
+            const startIdx = Math.max(0, Math.floor((taskStart.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)));
+            const endIdx = Math.min(ganttDays.length, Math.floor((taskEnd.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)));
+            const duration = endIdx - startIdx;
+
+            return (
+              <Box key={task.id} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    width: 200,
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    '&:hover': { fontWeight: 700 },
+                  }}
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setOpenDetailPanel(true);
+                  }}
+                >
+                  <Typography sx={{ fontSize: '12px', fontWeight: 500 }}>
+                    {task.id}
+                  </Typography>
+                  <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
+                    {task.title}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 0, flex: 1 }}>
+                  {ganttDays.map((day, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{
+                        width: pixelsPerDay,
+                        height: 40,
+                        borderRight: '1px solid #E5E7EB',
+                        bgcolor: idx === startIdx ? 'transparent' : 'transparent',
+                        position: 'relative',
+                      }}
+                    >
+                      {idx >= startIdx && idx < endIdx && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: idx === startIdx ? 2 : 0,
+                            top: 4,
+                            right: idx === endIdx - 1 ? 2 : 0,
+                            height: 32,
+                            bgcolor: STATUS_CONFIG[task.status].bg,
+                            border: `2px solid ${STATUS_CONFIG[task.status].color}`,
+                            borderRadius: idx === startIdx ? '6px 0 0 6px' : idx === endIdx - 1 ? '0 6px 6px 0' : '0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.8 },
+                          }}
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setOpenDetailPanel(true);
+                          }}
+                        >
+                          {idx === startIdx && (
+                            <Typography sx={{ fontSize: '9px', fontWeight: 600, color: STATUS_CONFIG[task.status].color }}>
+                              {PRIORITY_CONFIG[task.priority].label}
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+
+        {/* Legend */}
+        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #E5E7EB', display: 'flex', gap: 3 }}>
+          {Object.entries(STATUS_CONFIG).map(([status, config]) => (
+            <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ width: 16, height: 16, bgcolor: config.bg, border: `2px solid ${config.color}`, borderRadius: '2px' }} />
+              <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>{status}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  };
+
   // ── Task Detail Panel ──
   const renderDetailPanel = () => {
     if (!selectedTask) return null;
@@ -931,12 +1062,8 @@ export default function TasksPage() {
         {view === 'list' && renderListView()}
         {view === 'board' && renderBoardView()}
         {view === 'calendar' && renderCalendarView()}
+        {view === 'gantt' && renderGanttView()}
         {view === 'workload' && renderWorkloadView()}
-        {view === 'gantt' && (
-          <Typography sx={{ textAlign: 'center', py: 4, color: '#6B7280' }}>
-            Gantt Chart View — Coming soon
-          </Typography>
-        )}
       </Paper>
 
       {/* Task Detail Panel */}
