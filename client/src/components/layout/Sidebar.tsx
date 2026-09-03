@@ -8,7 +8,9 @@ import {
   ChevronRight,
   Cpu,
   FileText,
+  FolderPlus,
   LayoutDashboard,
+  ListTodo,
   Settings,
   Settings2,
   Sparkles,
@@ -62,6 +64,21 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         children: [
           { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
           { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Projects',
+    items: [
+      {
+        key: 'project_task',
+        label: 'Project & Task',
+        icon: FolderPlus,
+        badge: null,
+        children: [
+          { key: 'projects', label: 'Projects', path: '/projects', icon: Briefcase, badge: null },
+          { key: 'tasks', label: 'Tasks', path: '/tasks', icon: ListTodo, badge: null },
         ],
       },
     ],
