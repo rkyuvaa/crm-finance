@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay, addDays, eachDayOfInterval } from 'date-fns';
+import enUS from 'date-fns/locale/en-US';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import {
   Box,
   Button,
@@ -27,9 +31,8 @@ import {
   X,
   ChevronDown,
   GripVertical,
-  Calendar,
-  BarChart3,
-  Zap,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 
@@ -218,6 +221,7 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [openDetailPanel, setOpenDetailPanel] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // Filtered Tasks
   const filteredTasks = tasks.filter((t) => {
@@ -597,6 +601,120 @@ export default function TasksPage() {
     );
   };
 
+  // ── Render Calendar View ──
+  const renderCalendarView = () => {
+    const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+    const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    
+    // Get tasks by date
+    const tasksByDate = daysInMonth.map((date) => {
+      const dateStr = format(date, 'dd MMM yyyy');
+      return {
+        date,
+        dateStr,
+        tasks: filteredTasks.filter((t) => t.dueDate === dateStr),
+      };
+    });
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* Calendar Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '18px' }}>
+            {format(calendarMonth, 'MMMM yyyy')}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              onClick={() => setCalendarMonth(addDays(calendarMonth, -30))}
+              startIcon={<ChevronLeft size={16} />}
+            >
+              Prev
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setCalendarMonth(new Date())}
+              variant="outlined"
+            >
+              Today
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setCalendarMonth(addDays(calendarMonth, 30))}
+              endIcon={<ChevronRight size={16} />}
+            >
+              Next
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Weekday Headers */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <Box key={day} sx={{ textAlign: 'center', fontWeight: 700, color: '#6B7280', py: 1 }}>
+              {day}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Calendar Grid */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+          {tasksByDate.map(({ date, dateStr, tasks }) => (
+            <Card
+              key={dateStr}
+              sx={{
+                p: 1,
+                minHeight: 100,
+                bgcolor: date.getDate() === new Date().getDate() ? '#F0F9FF' : '#F9FAFB',
+                border: date.getDate() === new Date().getDate() ? '2px solid #087A3D' : '1px solid #E5E7EB',
+                cursor: 'pointer',
+                '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.08)' },
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '12px' }}>
+                  {format(date, 'd')}
+                </Typography>
+                {tasks.length > 0 && (
+                  <Chip label={tasks.length} size="small" sx={{ height: 20, fontSize: '10px' }} />
+                )}
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                {tasks.slice(0, 3).map((task) => (
+                  <Box
+                    key={task.id}
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setOpenDetailPanel(true);
+                    }}
+                    sx={{
+                      p: 0.5,
+                      bgcolor: PRIORITY_CONFIG[task.priority].bg,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '9px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {task.title}
+                    </Typography>
+                  </Box>
+                ))}
+                {tasks.length > 3 && (
+                  <Typography sx={{ fontSize: '9px', color: '#6B7280', fontStyle: 'italic' }}>
+                    +{tasks.length - 3} more
+                  </Typography>
+                )}
+              </Box>
+            </Card>
+          ))}
+        </Box>
+      </Box>
+    );
+  };
+
   // ── Task Detail Panel ──
   const renderDetailPanel = () => {
     if (!selectedTask) return null;
@@ -812,10 +930,11 @@ export default function TasksPage() {
       <Paper sx={{ p: 2, borderRadius: '14px', border: '1px solid #E4EBE1' }}>
         {view === 'list' && renderListView()}
         {view === 'board' && renderBoardView()}
+        {view === 'calendar' && renderCalendarView()}
         {view === 'workload' && renderWorkloadView()}
-        {(view === 'calendar' || view === 'gantt') && (
+        {view === 'gantt' && (
           <Typography sx={{ textAlign: 'center', py: 4, color: '#6B7280' }}>
-            {view === 'calendar' ? 'Calendar View' : 'Gantt Chart View'} — Coming soon
+            Gantt Chart View — Coming soon
           </Typography>
         )}
       </Paper>
