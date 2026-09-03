@@ -62,6 +62,19 @@ from app.models.hr import (
     PerformanceReview,
     PerformanceStatus,
 )
+from app.models.projects import (
+    ProjectWorkspace,
+    ProjectSpace,
+    Project,
+    ProjectMilestone,
+    ProjectStatus,
+    Task,
+    TaskStatus,
+    TaskPriority,
+    TaskSubtask,
+    TaskTimeLog,
+    TaskComment,
+)
 
 __all__ = [
     "StageAutomoveRule",

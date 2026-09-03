@@ -5,6 +5,7 @@ import authReducer from '@/auth/authSlice';
 import stageFilterReducer from '@/app/stageSlice';
 
 import { rbacApi } from '@/api/rbacApi';
+import { projectsApi } from '@/api/projectsApi';
 
 export const store = configureStore({
   reducer: {
@@ -12,9 +13,10 @@ export const store = configureStore({
     stageFilter: stageFilterReducer,
     [baseApi.reducerPath]: baseApi.reducer,
     [rbacApi.reducerPath]: rbacApi.reducer,
+    [projectsApi.reducerPath]: projectsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(baseApi.middleware, rbacApi.middleware),
+    getDefaultMiddleware().concat(baseApi.middleware, rbacApi.middleware, projectsApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

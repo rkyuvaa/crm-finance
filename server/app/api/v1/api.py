@@ -10,10 +10,12 @@ from app.api.v1 import (
     masters,
     notifications,
     planned_activities,
+    projects,
     public_financier,
     rbac_admin,
     smtp,
     stubs,
+    tasks,
 )
 
 api_router = APIRouter()
@@ -27,6 +29,8 @@ api_router.include_router(planned_activities.router)
 api_router.include_router(notifications.router)
 api_router.include_router(masters.router)
 api_router.include_router(hr.router)
+api_router.include_router(projects.router)
+api_router.include_router(tasks.router)
 api_router.include_router(rbac_admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(backup_admin.router, prefix="/admin/backup", tags=["backup"])
 api_router.include_router(stubs.router)
