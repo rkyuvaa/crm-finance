@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
@@ -29,7 +29,7 @@ import {
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
-import { useStagesQuery, useStagesByModuleQuery, useTabsByModuleQuery } from '@/api/mastersApi';
+import { useStagesByModuleQuery } from '@/api/mastersApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
@@ -49,24 +49,12 @@ export default function LeadsPage() {
   const [searchParams] = useSearchParams();
   const searchQ = searchParams.get('q') ?? '';
 
-  const { data: crmTabs } = useTabsByModuleQuery(currentModule);
-  const [activeTabCode, setActiveTabCode] = useState<string>('');
   const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const [draggedAppId, setDraggedAppId] = useState<number | null>(null);
-
-  // Set default tab on load if configured
-  useEffect(() => {
-    if (crmTabs && crmTabs.length > 0 && !activeTabCode) {
-      const def = crmTabs.find((t) => t.is_default && t.is_active) ?? crmTabs[0];
-      if (def) setActiveTabCode(def.code);
-    }
-  }, [crmTabs, activeTabCode]);
-
-  const activeTabConfig = crmTabs?.find((t) => t.code === activeTabCode);
 
   const queryParams = {
     page: page + 1,
@@ -86,8 +74,6 @@ export default function LeadsPage() {
   const [deleteApplication] = useDeleteApplicationMutation();
   const [updateApplication] = useUpdateApplicationMutation();
   const { showToast } = useToast();
-
-  const { data: masterStages } = useStagesQuery();
 
   const isLeadStageKey = (key: string, status?: string | null) => {
     if (status === 'LEAD') return true;
@@ -171,7 +157,7 @@ export default function LeadsPage() {
     });
   }, [pipelineStages]);
 
-  // Filter rows based on route, dynamic tab configuration and search query
+  // Filter rows based on route and search query
   const allRows = data?.items ?? [];
   const rows = allRows.filter((app) => {
     const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
@@ -192,17 +178,6 @@ export default function LeadsPage() {
       if (!matchNo && !matchName && !matchPhone && !matchVehicle && !matchStatus) return false;
     }
 
-    // Show all records if no tab is active, or tab has no stage restrictions
-    if (!activeTabConfig || !activeTabConfig.stage_ids || activeTabConfig.stage_ids.length === 0) return true;
-    if (masterStages) {
-      const mappedStatusesUpper = masterStages
-        .filter((s) => activeTabConfig.stage_ids.includes(s.id))
-        .map((s) => (s.status ? String(s.status).toUpperCase() : ''))
-        .filter(Boolean);
-      if (mappedStatusesUpper.length > 0) {
-        return mappedStatusesUpper.includes(appStatusUpper);
-      }
-    }
     return true;
   });
 
