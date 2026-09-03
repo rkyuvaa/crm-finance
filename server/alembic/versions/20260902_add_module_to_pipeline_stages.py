@@ -15,8 +15,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Ensure alembic_version column is wide enough (VARCHAR(255)) for long revision IDs in Postgres
-    op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255);")
+    bind = op.get_bind()
+    if bind.dialect.name == 'postgresql':
+        op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255);")
     op.add_column(
         'pipeline_stages',
         sa.Column(

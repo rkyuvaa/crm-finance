@@ -74,6 +74,7 @@ def _status_counts(db: Session) -> dict[ApplicationStatus, int]:
 
 
 STATUS_KEY_MAP = {
+    "new": ApplicationStatus.LEAD,
     "leads": ApplicationStatus.LEAD,
     "new lead": ApplicationStatus.LEAD,
     "applications": ApplicationStatus.APPLICATION,
