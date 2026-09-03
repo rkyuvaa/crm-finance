@@ -189,8 +189,9 @@ export default function LeadsPage() {
       if (!matchNo && !matchName && !matchPhone && !matchVehicle && !matchStatus) return false;
     }
 
-    if (!activeTabConfig || activeTabConfig.code === 'all_leads') return true;
-    if (activeTabConfig.stage_ids && activeTabConfig.stage_ids.length > 0 && masterStages) {
+    // Show all records if no tab is active, or tab has no stage restrictions
+    if (!activeTabConfig || !activeTabConfig.stage_ids || activeTabConfig.stage_ids.length === 0) return true;
+    if (masterStages) {
       const mappedStatuses = masterStages
         .filter((s) => activeTabConfig.stage_ids.includes(s.id))
         .map((s) => s.status)
