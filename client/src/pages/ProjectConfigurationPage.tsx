@@ -39,6 +39,7 @@ import {
   FileCode2,
   CheckSquare,
   FolderCog,
+  Zap,
 } from 'lucide-react';
 import {
   useGetStatusDefinitionsQuery,
