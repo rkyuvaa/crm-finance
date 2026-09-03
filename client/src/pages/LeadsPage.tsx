@@ -63,7 +63,6 @@ export default function LeadsPage() {
     page_size: rowsPerPage,
     q: searchQ || undefined,
     module: currentModule,
-    ...(selectedStageKey ? { stage_key: selectedStageKey } : {}),
   };
 
   const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
@@ -83,6 +82,64 @@ export default function LeadsPage() {
     return ['new', 'contacted', 'interested', 'not-interested', 'not_interested', 'qualified', 'lead', 'leads'].includes(k);
   };
 
+  const isAppInStage = (app: ApplicationItem, stage: PipelineStage, idx: number, isOpportunity: boolean) => {
+    const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
+    const appStageKeyLower = app.stage_key ? app.stage_key.toLowerCase().trim() : '';
+    const stageKeyLower = stage.key ? stage.key.toLowerCase().trim() : '';
+    const stageStatusUpper = stage.status ? String(stage.status).toUpperCase() : '';
+
+    if (!isOpportunity && appStatusUpper !== 'LEAD' && !['new', 'contacted', 'interested', 'not_interested', 'not-interested', 'qualified', 'lead', 'leads'].includes(appStageKeyLower)) {
+      return false;
+    }
+    if (isOpportunity && appStatusUpper === 'LEAD' && ['new', 'contacted', 'interested', 'not_interested', 'not-interested', 'qualified', 'lead', 'leads'].includes(appStageKeyLower)) {
+      return false;
+    }
+
+    if (appStageKeyLower && appStageKeyLower === stageKeyLower) {
+      return true;
+    }
+
+    const keyAliases: Record<string, string[]> = {
+      new: ['new', 'leads', 'lead', 'all_leads', 'lead_details'],
+      applications: ['applications', 'application', 'new_opportunity', 'new-opportunity', 'all_opportunities', 'document_upload', 'doc_upload'],
+      verification: ['verification', 'document_verification', 'doc_verification'],
+      finance: ['finance', 'finance_approval', 'query', 'final_submission'],
+      query: ['query', 'finance_approval'],
+      sanctioned: ['sanctioned', 'loan_sanctioned'],
+      delivery: ['delivery', 'disbursement', 'disburse'],
+      disburse: ['disburse', 'disbursement'],
+      completed: ['completed', 'closed'],
+
+      new_opportunity: ['applications', 'application', 'new_opportunity', 'all_opportunities', 'document_upload'],
+      document_upload: ['applications', 'application', 'document_upload', 'verification'],
+      document_verification: ['verification', 'document_verification'],
+      final_submission: ['finance', 'final_submission', 'applications'],
+      finance_approval: ['finance', 'finance_approval', 'query'],
+      loan_sanctioned: ['sanctioned', 'loan_sanctioned'],
+      disbursement: ['disbursement', 'disburse', 'delivery'],
+    };
+
+    const aliasesForStage = keyAliases[stageKeyLower] || [];
+    if (appStageKeyLower && aliasesForStage.includes(appStageKeyLower)) {
+      return true;
+    }
+
+    if (stageStatusUpper && stageStatusUpper !== 'APPLICATION' && stageStatusUpper !== 'LEAD') {
+      if (appStatusUpper === stageStatusUpper) return true;
+    }
+
+    if (idx === 0) {
+      if (!isOpportunity && (appStatusUpper === 'LEAD' || appStageKeyLower === 'new' || appStageKeyLower === 'leads' || !appStageKeyLower)) {
+        return true;
+      }
+      if (isOpportunity && (appStatusUpper === 'APPLICATION' || appStageKeyLower === 'applications' || appStageKeyLower === 'new_opportunity' || !appStageKeyLower)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const pipelineStages: PipelineStage[] = useMemo(() => {
     let stagesForModule = moduleStages.filter((s) => {
       if (!s.enabled) return false;
@@ -91,7 +148,6 @@ export default function LeadsPage() {
       return currentModule === 'LEAD' ? isLead : !isLead;
     });
 
-    // Fallback to dashboard pipeline filtered by module if no master stages found
     if (stagesForModule.length === 0 && dashboard?.pipeline) {
       stagesForModule = dashboard.pipeline.filter((s) => {
         const isLead = isLeadStageKey(s.key, s.status);
@@ -100,36 +156,7 @@ export default function LeadsPage() {
     }
 
     return stagesForModule.map((s, idx) => {
-      const count = (data?.items ?? []).filter((app) => {
-        const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
-        if (!isOpportunityRoute && appStatusUpper !== 'LEAD') return false;
-        if (isOpportunityRoute && appStatusUpper === 'LEAD') return false;
-
-        // If app has an explicit stage_key, match ONLY against that stage's key
-        if (app.stage_key) {
-          return app.stage_key.toLowerCase() === s.key.toLowerCase();
-        }
-
-        // Fallbacks for applications without explicit stage_key
-        if (!isOpportunityRoute) {
-          return idx === 0 || s.key.toLowerCase() === 'new' || s.key.toLowerCase() === 'leads';
-        }
-
-        const sStatusUpper = s.status ? String(s.status).toUpperCase() : '';
-        if (sStatusUpper && sStatusUpper !== 'APPLICATION' && appStatusUpper === sStatusUpper) {
-          return true;
-        }
-
-        if (
-          isOpportunityRoute &&
-          appStatusUpper === 'APPLICATION' &&
-          (idx === 0 || ['applications', 'leads', 'new_opportunity', 'new-opportunity'].includes(s.key.toLowerCase()))
-        ) {
-          return true;
-        }
-
-        return false;
-      }).length;
+      const count = (data?.items ?? []).filter((app) => isAppInStage(app, s as any, idx, isOpportunityRoute)).length;
 
       return {
         key: s.key,
@@ -159,7 +186,7 @@ export default function LeadsPage() {
     });
   }, [pipelineStages]);
 
-  // Filter rows based on route and search query
+  // Filter rows based on route, selected stage, and search query
   const allRows = data?.items ?? [];
   const rows = allRows.filter((app) => {
     const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
@@ -168,6 +195,14 @@ export default function LeadsPage() {
     }
     if (isOpportunityRoute && appStatusUpper === 'LEAD') {
       return false;
+    }
+
+    if (selectedStageKey) {
+      const selectedObj = pipelineStages.find((s) => s.key === selectedStageKey);
+      const selectedIdx = pipelineStages.findIndex((s) => s.key === selectedStageKey);
+      if (selectedObj && !isAppInStage(app, selectedObj, selectedIdx, isOpportunityRoute)) {
+        return false;
+      }
     }
 
     if (searchQ) {
