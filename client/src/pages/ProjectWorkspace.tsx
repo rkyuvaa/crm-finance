@@ -25,6 +25,10 @@ import {
   PieChart,
 } from 'lucide-react';
 import ProjectTasksList from '@/components/projects/ProjectTasksList';
+import ProjectMilestonesList from '@/components/projects/ProjectMilestonesList';
+import ProjectTimelineView from '@/components/projects/ProjectTimelineView';
+import ProjectTimesheetsView from '@/components/projects/ProjectTimesheetsView';
+import ProjectTeamView from '@/components/projects/ProjectTeamView';
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
@@ -140,6 +144,18 @@ export default function ProjectWorkspace() {
         )}
         {tab === 'tasks' && (
           <ProjectTasksList projectId={id!} />
+        )}
+        {tab === 'milestones' && (
+          <ProjectMilestonesList projectId={id!} />
+        )}
+        {tab === 'timeline' && (
+          <ProjectTimelineView />
+        )}
+        {tab === 'team' && (
+          <ProjectTeamView />
+        )}
+        {tab === 'timesheets' && (
+          <ProjectTimesheetsView />
         )}
       </Box>
     </Box>
