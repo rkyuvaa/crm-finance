@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Chip,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -219,18 +220,24 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterAssignee, setFilterAssignee] = useState<string>('All');
+  const [filterProject, setFilterProject] = useState<string>('All');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [openDetailPanel, setOpenDetailPanel] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [bulkStatusUpdate, setBulkStatusUpdate] = useState<Task['status'] | ''>('');
 
-  // Filtered Tasks
+  // Filtered Tasks with Enhanced Filtering
   const filteredTasks = tasks.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.projectName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPriority = filterPriority === 'All' || t.priority === filterPriority;
     const matchesStatus = filterStatus === 'All' || t.status === filterStatus;
-    return matchesSearch && matchesPriority && matchesStatus;
+    const matchesAssignee = filterAssignee === 'All' || t.assignees.includes(filterAssignee);
+    const matchesProject = filterProject === 'All' || t.projectId === filterProject;
+    return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesProject;
   });
 
   // Group Tasks
@@ -277,6 +284,49 @@ export default function TasksPage() {
   const handleTaskStatusChange = (taskId: string, newStatus: Task['status']) => {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
     showToast('Task status updated', 'info');
+  };
+
+  // Bulk Operations
+  const handleSelectTask = (taskId: string) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTasks.size === filteredTasks.length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(filteredTasks.map((t) => t.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = (newStatus: Task['status']) => {
+    if (selectedTasks.size === 0) {
+      showToast('Please select tasks first', 'warning');
+      return;
+    }
+    setTasks(
+      tasks.map((t) =>
+        selectedTasks.has(t.id) ? { ...t, status: newStatus } : t
+      )
+    );
+    setSelectedTasks(new Set());
+    showToast(`Updated ${selectedTasks.size} tasks`, 'success');
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedTasks.size === 0) {
+      showToast('Please select tasks first', 'warning');
+      return;
+    }
+    setTasks(tasks.filter((t) => !selectedTasks.has(t.id)));
+    setSelectedTasks(new Set());
+    showToast(`Deleted ${selectedTasks.size} tasks`, 'success');
   };
 
   // ── Render List View ──
@@ -1198,6 +1248,32 @@ export default function TasksPage() {
             <MenuItem value="Done">Done</MenuItem>
             <MenuItem value="Blocked">Blocked</MenuItem>
           </Select>
+          <Select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            size="small"
+            sx={{ minWidth: 100 }}
+          >
+            <MenuItem value="All">All Assignees</MenuItem>
+            {TEAM_MEMBERS.map((member) => (
+              <MenuItem key={member} value={member}>
+                {member}
+              </MenuItem>
+            ))}
+          </Select>
+          <Select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)}
+            size="small"
+            sx={{ minWidth: 100 }}
+          >
+            <MenuItem value="All">All Projects</MenuItem>
+            {PROJECTS.map((project) => (
+              <MenuItem key={project.id} value={project.id}>
+                {project.name}
+              </MenuItem>
+            ))}
+          </Select>
           <Button
             variant="contained"
             startIcon={<Plus size={16} />}
@@ -1245,6 +1321,56 @@ export default function TasksPage() {
           </Select>
         </Box>
       </Box>
+
+      {/* Bulk Operations Toolbar */}
+      {selectedTasks.size > 0 && (
+        <Paper sx={{ p: 1.5, mb: 2, bgcolor: '#F0F9FF', border: '1px solid #087A3D', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Checkbox
+            checked={selectedTasks.size === filteredTasks.length}
+            indeterminate={selectedTasks.size > 0 && selectedTasks.size < filteredTasks.length}
+            onChange={handleSelectAll}
+          />
+          <Typography sx={{ fontWeight: 600, fontSize: '13px' }}>
+            {selectedTasks.size} selected
+          </Typography>
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+            <Select
+              size="small"
+              value={bulkStatusUpdate}
+              onChange={(e) => {
+                const newStatus = e.target.value as Task['status'];
+                handleBulkStatusUpdate(newStatus);
+                setBulkStatusUpdate('');
+              }}
+              sx={{ minWidth: 130 }}
+              displayEmpty
+            >
+              <MenuItem value="">Change Status</MenuItem>
+              <MenuItem value="To Do">To Do</MenuItem>
+              <MenuItem value="In Progress">In Progress</MenuItem>
+              <MenuItem value="In Review">In Review</MenuItem>
+              <MenuItem value="Done">Done</MenuItem>
+              <MenuItem value="Blocked">Blocked</MenuItem>
+            </Select>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={handleBulkDelete}
+              sx={{ textTransform: 'none' }}
+            >
+              Delete ({selectedTasks.size})
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setSelectedTasks(new Set())}
+              sx={{ textTransform: 'none' }}
+            >
+              Clear
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {/* View Content */}
       <Paper sx={{ p: 2, borderRadius: '14px', border: '1px solid #E4EBE1' }}>
