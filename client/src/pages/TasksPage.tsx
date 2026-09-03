@@ -320,16 +320,6 @@ export default function TasksPage() {
   };
 
   // Bulk Operations
-  const handleSelectTask = (taskId: string) => {
-    const newSelected = new Set(selectedTasks);
-    if (newSelected.has(taskId)) {
-      newSelected.delete(taskId);
-    } else {
-      newSelected.add(taskId);
-    }
-    setSelectedTasks(newSelected);
-  };
-
   const handleSelectAll = () => {
     if (selectedTasks.size === filteredTasks.length) {
       setSelectedTasks(new Set());
@@ -487,7 +477,7 @@ export default function TasksPage() {
             const statusTasks = filteredTasks.filter((t) => t.status === status);
             return (
               <Droppable key={status} droppableId={status} type="TASK">
-                {(provided, snapshot) => (
+                {(provided: any, snapshot: any) => (
                   <Box
                     ref={provided.innerRef}
                     {...provided.droppableProps}
@@ -520,7 +510,7 @@ export default function TasksPage() {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {statusTasks.map((task, index) => (
                         <Draggable key={task.id} draggableId={task.id} index={index}>
-                          {(provided, snapshot) => (
+                          {(provided: any, snapshot: any) => (
                             <Card
                               ref={provided.innerRef}
                               {...provided.draggableProps}
@@ -867,7 +857,7 @@ export default function TasksPage() {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 0, flex: 1 }}>
-                  {ganttDays.map((day: Date, idx: number) => (
+                  {ganttDays.map((_day: Date, idx: number) => (
                     <Box
                       key={idx}
                       sx={{
