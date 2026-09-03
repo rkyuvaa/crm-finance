@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Drawer,
@@ -12,10 +12,7 @@ import {
   Button,
   LinearProgress,
   Paper,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  Tooltip,
 } from '@mui/material';
 import {
   X,
@@ -27,12 +24,21 @@ import {
   Plus,
   Paperclip,
   Lock,
-  Zap,
   FileText,
   UploadCloud,
   Trash2,
+  Play,
+  Square,
+  Send,
 } from 'lucide-react';
-import { TaskItem, useToggleSubtaskMutation } from '@/api/projectsApi';
+import {
+  TaskItem,
+  useToggleSubtaskMutation,
+  useAddSubtaskMutation,
+  useLogTimeMutation,
+  useAddCommentMutation,
+  useGetTaskCommentsQuery,
+} from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 interface TaskDetailPanelProps {
@@ -42,8 +48,22 @@ interface TaskDetailPanelProps {
 }
 
 export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanelProps) {
-  const [comment, setComment] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  
+  // Stopwatch Timer State
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+
   const [toggleSubtask] = useToggleSubtaskMutation();
+  const [addSubtask, { isLoading: isAddingSubtask }] = useAddSubtaskMutation();
+  const [logTime, { isLoading: isLoggingTime }] = useLogTimeMutation();
+  const [addComment, { isLoading: isAddingComment }] = useAddCommentMutation();
+
+  const { data: comments = [] } = useGetTaskCommentsQuery(task?.id || 0, {
+    skip: !task?.id,
+  });
+
   const { showToast } = useToast();
 
   const [attachments, setAttachments] = useState<
@@ -52,13 +72,85 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     { id: 1, name: 'engineering_blueprint_v2.pdf', size: '2.4 MB', date: '2026-09-02' },
   ]);
 
+  // Timer Tick Effect
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
   if (!task) return null;
 
-  const handleToggle = async (subtaskId: number) => {
+  const formatTimer = (totalSec: number) => {
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleToggleTimer = async () => {
+    if (!isTimerRunning) {
+      setIsTimerRunning(true);
+      showToast('Stopwatch timer started ⏱️', 'info');
+    } else {
+      setIsTimerRunning(false);
+      const hoursLogged = Math.max(0.1, parseFloat((timerSeconds / 3600).toFixed(2)));
+      try {
+        await logTime({
+          taskId: task.id,
+          body: {
+            hours: hoursLogged,
+            log_date: new Date().toISOString().split('T')[0],
+            description: `Timer logged work: ${formatTimer(timerSeconds)}`,
+          },
+        }).unwrap();
+        showToast(`Logged ${hoursLogged} hours to timesheet!`, 'success');
+        setTimerSeconds(0);
+      } catch {
+        showToast('Failed to log timer hours', 'error');
+      }
+    }
+  };
+
+  const handleToggleSubtask = async (subtaskId: number) => {
     try {
       await toggleSubtask(subtaskId).unwrap();
     } catch {
       showToast('Failed to update subtask', 'error');
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    if (!newSubtaskTitle.trim()) return;
+    try {
+      await addSubtask({
+        taskId: task.id,
+        body: { title: newSubtaskTitle.trim() },
+      }).unwrap();
+      setNewSubtaskTitle('');
+      showToast('Subtask added', 'success');
+    } catch {
+      showToast('Failed to add subtask', 'error');
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!commentText.trim()) return;
+    try {
+      await addComment({
+        taskId: task.id,
+        body: { content: commentText.trim() },
+      }).unwrap();
+      setCommentText('');
+      showToast('Comment posted', 'success');
+    } catch {
+      showToast('Failed to post comment', 'error');
     }
   };
 
@@ -104,18 +196,45 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Chip
-            label={task.status_id ? `Status ID: ${task.status_id}` : 'To Do'}
+            label={task.priority}
             size="small"
-            sx={{ bgcolor: 'primary.light', color: '#FFFFFF', fontWeight: 600 }}
+            sx={{ bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}
           />
           <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600 }}>
             {task.project_name || 'Project Workspace'}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small">
-            <AlertCircle size={18} />
-          </IconButton>
+
+        {/* Live Stopwatch Timer Widget */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              py: 0.5,
+              borderRadius: '20px',
+              bgcolor: isTimerRunning ? '#F0FDF4' : 'background.paper',
+              borderColor: isTimerRunning ? '#16A34A' : 'divider',
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: isTimerRunning ? '#16A34A' : 'text.primary' }}>
+              {formatTimer(timerSeconds)}
+            </Typography>
+            <Button
+              size="small"
+              variant={isTimerRunning ? 'contained' : 'outlined'}
+              color={isTimerRunning ? 'error' : 'primary'}
+              startIcon={isTimerRunning ? <Square size={12} /> : <Play size={12} />}
+              onClick={handleToggleTimer}
+              sx={{ height: 24, fontSize: 11, textTransform: 'none', px: 1 }}
+            >
+              {isTimerRunning ? 'Stop & Log' : 'Start Timer'}
+            </Button>
+          </Paper>
+
           <IconButton size="small" onClick={onClose}>
             <X size={20} />
           </IconButton>
@@ -162,7 +281,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── CLICKUP CHECKLISTS ────────────────────────────────────────── */}
+          {/* ── CLICKUP CHECKLISTS & INTERACTIVE SUBTASKS ──────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -186,14 +305,14 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               />
             )}
 
-            {task.subtasks?.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {task.subtasks?.length > 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
                 {task.subtasks.map((sub) => (
                   <Box key={sub.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <input
                       type="checkbox"
                       checked={sub.is_completed}
-                      onChange={() => handleToggle(sub.id)}
+                      onChange={() => handleToggleSubtask(sub.id)}
                       style={{ cursor: 'pointer', width: 16, height: 16 }}
                     />
                     <Typography sx={{ textDecoration: sub.is_completed ? 'line-through' : 'none', color: sub.is_completed ? 'text.secondary' : 'text.primary', fontSize: 14 }}>
@@ -202,9 +321,29 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   </Box>
                 ))}
               </Box>
-            ) : (
-              <Typography variant="body2" color="textSecondary">No subtasks added yet.</Typography>
             )}
+
+            {/* Add Subtask Input */}
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="+ Add Subtask item (Press Enter)"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: 13 } }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleAddSubtask}
+                disabled={isAddingSubtask}
+                sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none' }}
+              >
+                Add
+              </Button>
+            </Box>
           </Box>
 
           <Divider sx={{ mb: 3 }} />
@@ -272,18 +411,44 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <MessageSquare size={18} color="#64748B" /> Activity & Comments
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#04552B', fontSize: '0.875rem' }}>A</Avatar>
+
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: '#04552B', fontSize: '0.875rem', fontWeight: 700 }}>A</Avatar>
               <TextField
                 fullWidth
                 size="small"
                 placeholder="Write a comment..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
                 multiline
                 rows={2}
               />
+              <IconButton
+                onClick={handlePostComment}
+                disabled={isAddingComment || !commentText.trim()}
+                sx={{ bgcolor: '#04552B', color: '#FFF', '&:hover': { bgcolor: '#034120' }, alignSelf: 'flex-end' }}
+              >
+                <Send size={16} />
+              </IconButton>
             </Box>
+
+            {/* Comments List */}
+            {comments.map((c) => (
+              <Box key={c.id} sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
+                <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#64748B' }}>
+                  {c.user_name?.charAt(0) || 'U'}
+                </Avatar>
+                <Paper variant="outlined" sx={{ p: 1.5, flex: 1, borderRadius: '8px', bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12 }}>
+                    {c.user_name || 'Admin'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary', mt: 0.5 }}>
+                    {c.content}
+                  </Typography>
+                </Paper>
+              </Box>
+            ))}
           </Box>
         </Box>
 

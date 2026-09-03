@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,11 +15,7 @@ import {
   LinearProgress,
   Paper,
   Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
+  Tooltip,
 } from '@mui/material';
 import {
   ArrowLeft,
@@ -33,6 +29,10 @@ import {
   CheckCircle2,
   AlertCircle,
   User,
+  PenTool,
+  Eraser,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 import { useGetProjectQuery } from '@/api/projectsApi';
 import ProjectTasksList from '@/components/projects/ProjectTasksList';
@@ -51,8 +51,63 @@ export default function ProjectWorkspace() {
     skip: !numericId,
   });
 
+  // Whiteboard Canvas State
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [penColor, setPenColor] = useState('#04552B');
+  const [penLineWidth, setPenLineWidth] = useState(3);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTab(newValue);
+  };
+
+  // Canvas Drawing Handlers
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penLineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const handleClearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const handleDownloadCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const image = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `${project?.name || 'Project'}_Whiteboard_Design.png`;
+    link.click();
   };
 
   if (isLoading) {
@@ -99,7 +154,7 @@ export default function ProjectWorkspace() {
             <ArrowLeft size={20} />
           </IconButton>
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5, color: '#0F172A' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5, color: 'text.primary' }}>
               {project.name}
               <Chip size="small" label={projectCode} variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
             </Typography>
@@ -123,7 +178,7 @@ export default function ProjectWorkspace() {
                 <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Health</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                   <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#16A34A' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: '#0F172A' }}>On Track</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: 'text.primary' }}>On Track</Typography>
                 </Box>
               </CardContent>
             </Card>
@@ -133,7 +188,7 @@ export default function ProjectWorkspace() {
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Progress</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>{progressPercent}%</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>{progressPercent}%</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -142,7 +197,7 @@ export default function ProjectWorkspace() {
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Tasks Completion</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>
                   {doneTasks} / {totalTasks}
                 </Typography>
               </CardContent>
@@ -153,7 +208,7 @@ export default function ProjectWorkspace() {
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Budget Usage</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>
                   ₹{(project.actual_cost || 0).toLocaleString()} / ₹{(project.budget || 0).toLocaleString()}
                 </Typography>
               </CardContent>
@@ -186,6 +241,7 @@ export default function ProjectWorkspace() {
           <Tab label="Timeline (Gantt)" value="timeline" />
           <Tab label="Team" value="team" />
           <Tab label="Timesheets" value="timesheets" />
+          <Tab label="Whiteboard" value="whiteboard" />
           <Tab label="Expenses" value="expenses" />
           <Tab label="Documents" value="documents" />
         </Tabs>
@@ -198,8 +254,8 @@ export default function ProjectWorkspace() {
           <Grid container spacing={3}>
             {/* Project Summary & Details */}
             <Grid item xs={12} md={8}>
-              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3, mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 3, mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
                   Project Overview
                 </Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 3, lineHeight: 1.6 }}>
@@ -208,36 +264,36 @@ export default function ProjectWorkspace() {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>CATEGORY</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5 }}>
                         {project.category || 'Vehicle Customization'}
                       </Typography>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>PROJECT OWNER</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <User size={14} color="#04552B" /> {project.owner_name || 'Admin'}
                       </Typography>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET START DATE</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Calendar size={14} color="#64748B" /> {project.target_start_date || 'Not set'}
                       </Typography>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Calendar size={14} color="#64748B" /> {project.target_end_date || 'Not set'}
                       </Typography>
                     </Box>
@@ -246,19 +302,19 @@ export default function ProjectWorkspace() {
               </Paper>
 
               {/* Progress & Milestone Tracking */}
-              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', mb: 2 }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
                   Completion Status
                 </Typography>
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#475569' }}>Overall Project Progress</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Overall Project Progress</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>{progressPercent}%</Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
                     value={progressPercent}
-                    sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+                    sx={{ height: 8, borderRadius: 4, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
                   />
                 </Box>
               </Paper>
@@ -268,11 +324,11 @@ export default function ProjectWorkspace() {
             <Grid item xs={12} md={4}>
               {/* Linked CRM Lead Info */}
               {project.lead_customer_name && (
-                <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3, mb: 3 }}>
+                <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 3, mb: 3 }}>
                   <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 700, mb: 1 }}>
                     LINKED CRM APPLICATION
                   </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     {project.lead_customer_name}
                   </Typography>
                   <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 2 }}>
@@ -290,20 +346,20 @@ export default function ProjectWorkspace() {
               )}
 
               {/* Financial Breakdown */}
-              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3 }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 3 }}>
                 <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 700, mb: 2 }}>
                   FINANCIAL SUMMARY
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="textSecondary">Total Budget:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                       ₹{(project.budget || 0).toLocaleString()}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="textSecondary">Estimated Cost:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                       ₹{(project.estimated_cost || 0).toLocaleString()}
                     </Typography>
                   </Box>
@@ -315,7 +371,7 @@ export default function ProjectWorkspace() {
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#475569' }}>Remaining Budget:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Remaining Budget:</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>
                       ₹{Math.max(0, (project.budget || 0) - (project.actual_cost || 0)).toLocaleString()}
                     </Typography>
@@ -333,10 +389,74 @@ export default function ProjectWorkspace() {
         {tab === 'team' && <ProjectTeamView />}
         {tab === 'timesheets' && <ProjectTimesheetsView />}
 
+        {/* ── CLICKUP WHITEBOARD / CANVAS TAB ────────────────────────────── */}
+        {tab === 'whiteboard' && (
+          <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PenTool size={20} color="#04552B" /> Project Interactive Whiteboard
+              </Typography>
+
+              {/* Whiteboard Controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center' }}>
+                  {['#04552B', '#2563EB', '#D97706', '#DC2626', '#0F172A'].map((c) => (
+                    <Box
+                      key={c}
+                      onClick={() => setPenColor(c)}
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        bgcolor: c,
+                        cursor: 'pointer',
+                        border: penColor === c ? '2px solid #000' : 'none',
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<RotateCcw size={14} />}
+                  onClick={handleClearCanvas}
+                  sx={{ textTransform: 'none', fontSize: 12 }}
+                >
+                  Clear Canvas
+                </Button>
+
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<Download size={14} />}
+                  onClick={handleDownloadCanvas}
+                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 12, fontWeight: 600 }}
+                >
+                  Export Design
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ border: '2px dashed', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden', bgcolor: '#FFFFFF' }}>
+              <canvas
+                ref={canvasRef}
+                width={1000}
+                height={550}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                style={{ cursor: 'crosshair', display: 'block', width: '100%', height: '550px' }}
+              />
+            </Box>
+          </Paper>
+        )}
+
         {tab === 'expenses' && (
-          <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 4, textAlign: 'center' }}>
+          <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 4, textAlign: 'center' }}>
             <DollarSign size={32} color="#04552B" style={{ marginBottom: 8 }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Project Expenses</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Project Expenses</Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
               Track purchase orders, vendor invoices, and material costs logged against {project.name}.
             </Typography>
@@ -344,9 +464,9 @@ export default function ProjectWorkspace() {
         )}
 
         {tab === 'documents' && (
-          <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 4, textAlign: 'center' }}>
+          <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 4, textAlign: 'center' }}>
             <FileText size={32} color="#04552B" style={{ marginBottom: 8 }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Project Documents</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Project Documents</Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
               Centralized file attachment repository for engineering blueprints, customer approvals, and invoices.
             </Typography>

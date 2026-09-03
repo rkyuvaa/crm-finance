@@ -63,11 +63,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [searchQ, setSearchQ] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
 
   const { data: tasks = [], isLoading } = useGetTasksQuery({
     project_id: numericProjectId,
     q: searchQ || undefined,
+  });
+
+  const filteredTasks = tasks.filter((t) => {
+    if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
+    return true;
   });
 
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
@@ -252,6 +258,21 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
         {/* Right Search & Add Task Action */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <Select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              displayEmpty
+              sx={{ height: 32, fontSize: 12, bgcolor: 'background.paper' }}
+            >
+              <MenuItem value="ALL">All Priorities</MenuItem>
+              <MenuItem value="URGENT">Urgent 🚩</MenuItem>
+              <MenuItem value="HIGH">High 🚩</MenuItem>
+              <MenuItem value="NORMAL">Normal 🚩</MenuItem>
+              <MenuItem value="LOW">Low 🚩</MenuItem>
+            </Select>
+          </FormControl>
+
           <TextField
             placeholder="Search tasks..."
             size="small"
@@ -292,7 +313,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           }}
         >
           {activeStatuses.map((st) => {
-            const statusTasks = tasks.filter((t) => (t.status_id || 1) === st.id);
+            const statusTasks = filteredTasks.filter((t) => (t.status_id || 1) === st.id);
 
             return (
               <Box
@@ -506,7 +527,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 </TableRow>
               ) : (
                 activeStatuses.map((status) => {
-                  const statusTasks = tasks.filter((t) => (t.status_id || 1) === status.id);
+                  const statusTasks = filteredTasks.filter((t) => (t.status_id || 1) === status.id);
                   if (statusTasks.length === 0) return null;
                   const isExpanded = expandedGroups[status.id];
 

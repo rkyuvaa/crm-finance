@@ -372,6 +372,7 @@ export default function ProjectConfigurationPage() {
             <Tab icon={<FileCode2 size={15} />} iconPosition="start" label="2. Custom Fields" />
             <Tab icon={<CheckSquare size={15} />} iconPosition="start" label="3. Task Settings" />
             <Tab icon={<FolderCog size={15} />} iconPosition="start" label="4. Project Settings" />
+            <Tab icon={<Zap size={15} />} iconPosition="start" label="5. Automations Rules" />
           </Tabs>
         </Box>
 
@@ -848,6 +849,84 @@ export default function ProjectConfigurationPage() {
                 >
                   Save Project Settings
                 </Button>
+              </Box>
+            </Paper>
+          </CustomTabPanel>
+
+          {/* ────────────────────────────────────────────────────────────────
+              TAB 5: AUTOMATIONS RULES ENGINE
+             ──────────────────────────────────────────────────────────────── */}
+          <CustomTabPanel value={activeTab} index={4}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+                ClickUp Automations Engine
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
+                Set automatic triggers and actions when task statuses, priorities, or checklists change.
+              </Typography>
+            </Box>
+
+            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', p: 3, bgcolor: '#FAFBFD' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[
+                  {
+                    id: 1,
+                    trigger: "When Task Status becomes 'Done'",
+                    action: "Automatically set project progress & notify Project Manager",
+                    active: true,
+                  },
+                  {
+                    id: 2,
+                    trigger: "When Task Priority is set to 'Urgent'",
+                    action: "Flag Red icon 🚩 and send immediate high-priority alert",
+                    active: true,
+                  },
+                  {
+                    id: 3,
+                    trigger: "When all Checklist subtasks are completed",
+                    action: "Automatically update status to 'In Review'",
+                    active: true,
+                  },
+                  {
+                    id: 4,
+                    trigger: "When Target Due Date passes without completion",
+                    action: "Auto-mark task status as 'Blocked'",
+                    active: false,
+                  },
+                ].map((rule) => (
+                  <Paper
+                    key={rule.id}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justify: 'space-between',
+                      borderRadius: '8px',
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Zap size={20} color="#04552B" />
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                          {rule.trigger}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary" sx={{ fontSize: 13 }}>
+                          ⚡ Action: {rule.action}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Switch
+                      defaultChecked={rule.active}
+                      color="success"
+                      onChange={(e) => {
+                        toast.showSuccess(`Automation rule ${e.target.checked ? 'enabled' : 'disabled'}`);
+                      }}
+                    />
+                  </Paper>
+                ))}
               </Box>
             </Paper>
           </CustomTabPanel>
