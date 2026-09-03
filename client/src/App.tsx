@@ -15,6 +15,7 @@ import HRPage from '@/pages/HRPage';
 import PlmPage from '@/pages/PlmPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
+import ProjectConfigurationPage from '@/pages/ProjectConfigurationPage';
 import TasksPage from '@/pages/TasksPage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="/hr" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/projects/configuration" element={<ProjectConfigurationPage />} />
                 <Route path="/projects/:id" element={<ProjectWorkspace />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 

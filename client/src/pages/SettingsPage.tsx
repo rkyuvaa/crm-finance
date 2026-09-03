@@ -169,7 +169,6 @@ export default function SettingsPage() {
           <Tab icon={<Key size={16} />} iconPosition="start" label="Security & Password" />
           {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
           {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
-          {isAdmin && <Tab icon={<Sliders size={16} />} iconPosition="start" label="Workflows & Custom Fields" />}
           <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
           {isAdmin && <Tab icon={<Database size={16} />} iconPosition="start" label="System Data Backup" />}
         </Tabs>
@@ -319,21 +318,14 @@ export default function SettingsPage() {
         </CustomTabPanel>
       )}
 
-      {/* Tab 4: Workflows & Custom Fields */}
-      {isAdmin && (
-        <CustomTabPanel value={activeTab} index={4}>
-          <ProjectWorkflowSettingsCard />
-        </CustomTabPanel>
-      )}
-
-      {/* Tab 5: Mail Server Config */}
-      <CustomTabPanel value={activeTab} index={isAdmin ? 5 : 2}>
+      {/* Tab 4: Mail Server Config */}
+      <CustomTabPanel value={activeTab} index={isAdmin ? 4 : 2}>
         <MailServerConfigCard />
       </CustomTabPanel>
 
-      {/* Tab 6: System Data Backup */}
+      {/* Tab 5: System Data Backup */}
       {isAdmin && (
-        <CustomTabPanel value={activeTab} index={6}>
+        <CustomTabPanel value={activeTab} index={5}>
           <SystemBackupCard />
         </CustomTabPanel>
       )}
