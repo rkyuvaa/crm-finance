@@ -13,6 +13,8 @@ import LeadsPage from '@/pages/LeadsPage';
 import LeadDetailPage from '@/pages/LeadDetailPage';
 import HRPage from '@/pages/HRPage';
 import PlmPage from '@/pages/PlmPage';
+import ProjectsPage from '@/pages/ProjectsPage';
+import TasksPage from '@/pages/TasksPage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
 import NotificationsPage from '@/pages/NotificationsPage';
@@ -59,6 +61,8 @@ export default function App() {
                 <Route path="/opportunities/:id" element={<LeadDetailPage />} />
                 <Route path="/hr" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />
