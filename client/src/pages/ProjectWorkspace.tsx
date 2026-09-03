@@ -24,6 +24,7 @@ import {
   FileText,
   PieChart,
 } from 'lucide-react';
+import ProjectTasksList from '@/components/projects/ProjectTasksList';
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
@@ -138,7 +139,7 @@ export default function ProjectWorkspace() {
           <Typography color="textSecondary">Overview content goes here...</Typography>
         )}
         {tab === 'tasks' && (
-          <Typography color="textSecondary">List / Kanban tasks go here...</Typography>
+          <ProjectTasksList projectId={id!} />
         )}
       </Box>
     </Box>

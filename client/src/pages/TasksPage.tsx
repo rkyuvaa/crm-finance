@@ -40,13 +40,14 @@ import {
   TaskItem,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 
-const COLUMNS: { id: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'BLOCKED'; label: string; color: string }[] = [
-  { id: 'TODO', label: 'To Do', color: '#64748B' },
-  { id: 'IN_PROGRESS', label: 'In Progress', color: '#2563EB' },
-  { id: 'IN_REVIEW', label: 'In Review', color: '#D97706' },
-  { id: 'DONE', label: 'Done', color: '#16A34A' },
-  { id: 'BLOCKED', label: 'Blocked', color: '#DC2626' },
+const COLUMNS: { id: number; label: string; color: string }[] = [
+  { id: 1, label: 'To Do', color: '#64748B' },
+  { id: 2, label: 'In Progress', color: '#2563EB' },
+  { id: 3, label: 'In Review', color: '#D97706' },
+  { id: 4, label: 'Done', color: '#16A34A' },
+  { id: 5, label: 'Blocked', color: '#DC2626' },
 ];
 
 export default function TasksPage() {
@@ -56,6 +57,9 @@ export default function TasksPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [timeLogOpen, setTimeLogOpen] = useState(false);
   const [activeTaskForLog, setActiveTaskForLog] = useState<TaskItem | null>(null);
+  
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
 
   const { showToast } = useToast();
 
@@ -97,7 +101,7 @@ export default function TasksPage() {
         priority,
         due_date: dueDate || undefined,
         estimated_hours: estimatedHours ? Number(estimatedHours) : 0,
-        status: 'TODO',
+        status_id: 1, // TODO
       }).unwrap();
       showToast('Task created successfully', 'success');
       setCreateOpen(false);
@@ -117,11 +121,11 @@ export default function TasksPage() {
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
     const taskId = Number(draggableId);
-    const newStatus = destination.droppableId as TaskItem['status'];
+    const newStatus = Number(destination.droppableId);
 
     try {
-      await updateTask({ id: taskId, body: { status: newStatus } }).unwrap();
-      showToast(`Task moved to ${newStatus.replace('_', ' ')}`, 'success');
+      await updateTask({ id: taskId, body: { status_id: newStatus } }).unwrap();
+      showToast(`Task moved successfully`, 'success');
     } catch {
       showToast('Failed to update task status', 'error');
     }
@@ -261,7 +265,7 @@ export default function TasksPage() {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Grid container spacing={2.5} alignItems="stretch">
             {COLUMNS.map((col) => {
-              const colTasks = tasks.filter((t) => t.status === col.id);
+              const colTasks = tasks.filter((t) => t.status_id === col.id);
               return (
                 <Grid item xs={12} sm={6} md={2.4} key={col.id}>
                   <Paper
@@ -287,7 +291,7 @@ export default function TasksPage() {
                       <Chip label={colTasks.length} size="small" sx={{ height: 20, fontSize: '0.75rem', fontWeight: 700 }} />
                     </Box>
 
-                    <Droppable droppableId={col.id}>
+                    <Droppable droppableId={String(col.id)}>
                       {(provided) => (
                         <Box
                           ref={provided.innerRef}
@@ -307,7 +311,12 @@ export default function TasksPage() {
                                     border: '1px solid #E2E8F0',
                                     borderRadius: '10px',
                                     backgroundColor: '#FFFFFF',
+                                    cursor: 'pointer',
                                     '&:hover': { boxShadow: '0 4px 10px rgba(0,0,0,0.06)' },
+                                  }}
+                                  onClick={() => {
+                                    setSelectedTask(task);
+                                    setPanelOpen(true);
                                   }}
                                 >
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
@@ -324,7 +333,7 @@ export default function TasksPage() {
                                           task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : '#475569',
                                       }}
                                     />
-                                    <IconButton size="small" onClick={() => handleDeleteTask(task.id)} sx={{ color: '#94A3B8' }}>
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} sx={{ color: '#94A3B8' }}>
                                       <Trash2 size={14} />
                                     </IconButton>
                                   </Box>
@@ -350,7 +359,8 @@ export default function TasksPage() {
                                           <Checkbox
                                             size="small"
                                             checked={st.is_completed}
-                                            onChange={() => handleToggleSubtask(st.id)}
+                                            onChange={(e) => { e.stopPropagation(); handleToggleSubtask(st.id); }}
+                                            onClick={(e) => e.stopPropagation()}
                                             sx={{ p: 0.2 }}
                                           />
                                           <Typography
@@ -368,7 +378,8 @@ export default function TasksPage() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                       <IconButton
                                         size="small"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           setActiveTaskForLog(task);
                                           setTimeLogOpen(true);
                                         }}
@@ -412,7 +423,14 @@ export default function TasksPage() {
           </Box>
 
           {tasks.map((task) => (
-            <Box key={task.id} sx={{ p: 2, borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', '&:hover': { bgcolor: '#F8FAFC' } }}>
+            <Box 
+              key={task.id} 
+              sx={{ p: 2, borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: '#F8FAFC' } }}
+              onClick={() => {
+                setSelectedTask(task);
+                setPanelOpen(true);
+              }}
+            >
               <Box sx={{ flex: 3 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0F172A' }}>
                   {task.title}
@@ -424,7 +442,7 @@ export default function TasksPage() {
                 </Typography>
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Chip label={task.status.replace('_', ' ')} size="small" />
+                <Chip label={`Status: ${task.status_id}`} size="small" />
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Chip label={task.priority} size="small" />
@@ -435,7 +453,7 @@ export default function TasksPage() {
                 </Typography>
               </Box>
               <Box sx={{ width: 60, textAlign: 'right' }}>
-                <IconButton size="small" onClick={() => handleDeleteTask(task.id)} sx={{ color: '#EF4444' }}>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} sx={{ color: '#EF4444' }}>
                   <Trash2 size={16} />
                 </IconButton>
               </Box>
@@ -443,6 +461,8 @@ export default function TasksPage() {
           ))}
         </Paper>
       )}
+
+      <TaskDetailPanel open={panelOpen} onClose={() => setPanelOpen(false)} task={selectedTask} />
 
       {/* New Task Dialog */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
