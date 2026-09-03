@@ -142,10 +142,17 @@ def _filtered_query(
     query = db.query(Application)
 
     if module:
+        lead_stage_keys = ["new", "lead", "leads", "contacted", "interested", "not_interested", "not-interested", "qualified"]
         if module.upper() == "LEAD":
-            query = query.filter(Application.status == ApplicationStatus.LEAD)
+            query = query.filter(
+                (Application.status == ApplicationStatus.LEAD)
+                | (func.lower(Application.stage_key).in_(lead_stage_keys))
+            )
         elif module.upper() == "OPPORTUNITY":
-            query = query.filter(Application.status != ApplicationStatus.LEAD)
+            query = query.filter(
+                (Application.status != ApplicationStatus.LEAD)
+                & (~func.lower(Application.stage_key).in_(lead_stage_keys))
+            )
 
     # Apply role-based filtering
     if user.role == UserRole.SALES_EXECUTIVE:
@@ -326,8 +333,9 @@ def create_application(
         )
         db.commit()
         db.refresh(app)
-        evaluate_automove_rules(db, app, user)
-        db.refresh(app)
+        if app.status != ApplicationStatus.LEAD:
+            evaluate_automove_rules(db, app, user)
+            db.refresh(app)
         return _to_out(app)
     except Exception as err:
         db.rollback()
