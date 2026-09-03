@@ -76,7 +76,7 @@ export default function ProjectWorkspace() {
               <Chip size="small" label={project.code} variant="outlined" />
             </Typography>
           </Box>
-          <Button variant="outlined" startIcon={<Settings size={18} />}>
+          <Button variant="outlined" startIcon={<Settings size={18} />} onClick={() => navigate('/projects/configuration')}>
             Settings
           </Button>
         </Box>
