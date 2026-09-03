@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -11,19 +11,30 @@ import {
   CardContent,
   Chip,
   IconButton,
+  CircularProgress,
+  LinearProgress,
+  Paper,
   Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   ArrowLeft,
   Settings,
-  MoreVertical,
-  Activity,
   Briefcase,
   Users,
   Clock,
   FileText,
-  PieChart,
+  DollarSign,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  User,
 } from 'lucide-react';
+import { useGetProjectQuery } from '@/api/projectsApi';
 import ProjectTasksList from '@/components/projects/ProjectTasksList';
 import ProjectMilestonesList from '@/components/projects/ProjectMilestonesList';
 import ProjectTimelineView from '@/components/projects/ProjectTimelineView';
@@ -35,22 +46,39 @@ export default function ProjectWorkspace() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
 
-  // Placeholder for real data fetch
-  const project = {
-    id,
-    name: 'ERP Implementation',
-    code: 'PRJ-1020',
-    progress: 45,
-    health: 'On Track', // On Track, At Risk, Critical
-    budget: 50000,
-    actualCost: 12500,
-    totalTasks: 42,
-    doneTasks: 18,
-  };
+  const numericId = Number(id);
+  const { data: project, isLoading, isError } = useGetProjectQuery(numericId, {
+    skip: !numericId,
+  });
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTab(newValue);
   };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <CircularProgress size={32} />
+      </Box>
+    );
+  }
+
+  if (isError || !project) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <AlertCircle size={40} color="#DC2626" style={{ marginBottom: 12 }} />
+        <Typography variant="h6" color="error">Project not found</Typography>
+        <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate('/projects')}>
+          Back to Projects
+        </Button>
+      </Box>
+    );
+  }
+
+  const projectCode = project.code || `PRJ-${project.id}`;
+  const totalTasks = project.tasks_count?.total || 0;
+  const doneTasks = project.tasks_count?.done || 0;
+  const progressPercent = project.progress ?? (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
 
   return (
     <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
@@ -67,16 +95,22 @@ export default function ProjectWorkspace() {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <IconButton onClick={() => navigate('/projects')}>
+          <IconButton onClick={() => navigate('/projects')} size="small">
             <ArrowLeft size={20} />
           </IconButton>
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5, color: '#0F172A' }}>
               {project.name}
-              <Chip size="small" label={project.code} variant="outlined" />
+              <Chip size="small" label={projectCode} variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
             </Typography>
           </Box>
-          <Button variant="outlined" startIcon={<Settings size={18} />} onClick={() => navigate('/projects/configuration')}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Settings size={16} />}
+            onClick={() => navigate('/projects/configuration')}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
             Settings
           </Button>
         </Box>
@@ -84,40 +118,43 @@ export default function ProjectWorkspace() {
         {/* KPI Strip */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined">
+            <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2">Health</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'success.main' }} />
-                  <Typography variant="h6">{project.health}</Typography>
+                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Health</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#16A34A' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: '#0F172A' }}>On Track</Typography>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined">
+            <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2">Progress</Typography>
-                <Typography variant="h6" sx={{ mt: 1 }}>{project.progress}%</Typography>
+                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Progress</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>{progressPercent}%</Typography>
               </CardContent>
             </Card>
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined">
+            <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2">Tasks Completion</Typography>
-                <Typography variant="h6" sx={{ mt: 1 }}>
-                  {project.doneTasks} / {project.totalTasks}
+                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Tasks Completion</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>
+                  {doneTasks} / {totalTasks}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined">
+            <Card variant="outlined" sx={{ borderRadius: 2 }}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2">Budget Usage</Typography>
-                <Typography variant="h6" sx={{ mt: 1 }}>
-                  ${project.actualCost.toLocaleString()} / ${project.budget.toLocaleString()}
+                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Budget Usage</Typography>
+                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: '#0F172A' }}>
+                  ₹{(project.actual_cost || 0).toLocaleString()} / ₹{(project.budget || 0).toLocaleString()}
                 </Typography>
               </CardContent>
             </Card>
@@ -125,7 +162,24 @@ export default function ProjectWorkspace() {
         </Grid>
 
         {/* Workspace Tabs */}
-        <Tabs value={tab} onChange={handleTabChange} variant="scrollable">
+        <Tabs
+          value={tab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: 13,
+              minHeight: 40,
+              py: 1,
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#04552B',
+              height: 3,
+            },
+          }}
+        >
           <Tab label="Overview" value="overview" />
           <Tab label="Tasks" value="tasks" />
           <Tab label="Milestones" value="milestones" />
@@ -139,23 +193,164 @@ export default function ProjectWorkspace() {
 
       {/* Tab Content Area */}
       <Box sx={{ flex: 1, overflow: 'auto' }}>
+        {/* ── OVERVIEW TAB ────────────────────────────────────────────────── */}
         {tab === 'overview' && (
-          <Typography color="textSecondary">Overview content goes here...</Typography>
+          <Grid container spacing={3}>
+            {/* Project Summary & Details */}
+            <Grid item xs={12} md={8}>
+              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3, mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', mb: 1 }}>
+                  Project Overview
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3, lineHeight: 1.6 }}>
+                  {project.description || 'No detailed description provided for this project yet.'}
+                </Typography>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>CATEGORY</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5 }}>
+                        {project.category || 'Vehicle Customization'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>PROJECT OWNER</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <User size={14} color="#04552B" /> {project.owner_name || 'Admin'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET START DATE</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Calendar size={14} color="#64748B" /> {project.target_start_date || 'Not set'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Calendar size={14} color="#64748B" /> {project.target_end_date || 'Not set'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Progress & Milestone Tracking */}
+              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', mb: 2 }}>
+                  Completion Status
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#475569' }}>Overall Project Progress</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>{progressPercent}%</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progressPercent}
+                    sx={{ height: 8, borderRadius: 4, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Side Column: Linked Lead & Financial Details */}
+            <Grid item xs={12} md={4}>
+              {/* Linked CRM Lead Info */}
+              {project.lead_customer_name && (
+                <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3, mb: 3 }}>
+                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 700, mb: 1 }}>
+                    LINKED CRM APPLICATION
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                    {project.lead_customer_name}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 2 }}>
+                    App No: {project.lead_app_no || 'N/A'}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => navigate(`/leads/${project.lead_id}`)}
+                    sx={{ textTransform: 'none', fontSize: 12 }}
+                  >
+                    View CRM Lead Details
+                  </Button>
+                </Paper>
+              )}
+
+              {/* Financial Breakdown */}
+              <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 3 }}>
+                <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 700, mb: 2 }}>
+                  FINANCIAL SUMMARY
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="textSecondary">Total Budget:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                      ₹{(project.budget || 0).toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="textSecondary">Estimated Cost:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                      ₹{(project.estimated_cost || 0).toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="textSecondary">Actual Cost Logged:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#16A34A' }}>
+                      ₹{(project.actual_cost || 0).toLocaleString()}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#475569' }}>Remaining Budget:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>
+                      ₹{Math.max(0, (project.budget || 0) - (project.actual_cost || 0)).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
         )}
-        {tab === 'tasks' && (
-          <ProjectTasksList projectId={id!} />
+
+        {/* ── OTHER TABS ─────────────────────────────────────────────────── */}
+        {tab === 'tasks' && <ProjectTasksList projectId={id!} />}
+        {tab === 'milestones' && <ProjectMilestonesList projectId={id!} />}
+        {tab === 'timeline' && <ProjectTimelineView />}
+        {tab === 'team' && <ProjectTeamView />}
+        {tab === 'timesheets' && <ProjectTimesheetsView />}
+
+        {tab === 'expenses' && (
+          <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 4, textAlign: 'center' }}>
+            <DollarSign size={32} color="#04552B" style={{ marginBottom: 8 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Project Expenses</Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+              Track purchase orders, vendor invoices, and material costs logged against {project.name}.
+            </Typography>
+          </Paper>
         )}
-        {tab === 'milestones' && (
-          <ProjectMilestonesList projectId={id!} />
-        )}
-        {tab === 'timeline' && (
-          <ProjectTimelineView />
-        )}
-        {tab === 'team' && (
-          <ProjectTeamView />
-        )}
-        {tab === 'timesheets' && (
-          <ProjectTimesheetsView />
+
+        {tab === 'documents' && (
+          <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', p: 4, textAlign: 'center' }}>
+            <FileText size={32} color="#04552B" style={{ marginBottom: 8 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Project Documents</Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+              Centralized file attachment repository for engineering blueprints, customer approvals, and invoices.
+            </Typography>
+          </Paper>
         )}
       </Box>
     </Box>
