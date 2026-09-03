@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import get_db
-from app.models.projects import Task, TaskStatus, TaskPriority, TaskSubtask, TaskTimeLog, TaskComment, Project
+from app.models.projects import Task, TaskStatusDef, TaskPriority, TaskSubtask, TaskTimeLog, TaskComment, Project
 from app.models.user import User
 from app.schemas.projects import (
     TaskCreate,
@@ -33,6 +33,7 @@ def _format_task_out(t: Task) -> TaskOut:
 @router.get("", response_model=List[TaskOut])
 def list_tasks(
     project_id: Optional[int] = None,
+    status_id: Optional[int] = None,
     status: Optional[str] = None,
     priority: Optional[str] = None,
     assignee_id: Optional[int] = None,
@@ -44,8 +45,8 @@ def list_tasks(
     query = db.query(Task)
     if project_id:
         query = query.filter(Task.project_id == project_id)
-    if status:
-        query = query.filter(Task.status == status.upper())
+    if status_id:
+        query = query.filter(Task.status_id == status_id)
     if priority:
         query = query.filter(Task.priority == priority.upper())
     if assignee_id:

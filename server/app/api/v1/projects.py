@@ -95,7 +95,9 @@ def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     total_tasks = db.query(Task).filter(Task.project_id == project.id).count()
-    done_tasks = db.query(Task).filter(Task.project_id == project.id, Task.status == TaskStatus.DONE).count()
+    done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
+        Task.project_id == project.id, TaskStatusDef.is_terminal == True
+    ).count()
 
     p_out = ProjectOut.model_validate(project)
     p_out.owner_name = project.owner.full_name if project.owner else None
@@ -125,7 +127,9 @@ def update_project(
     db.refresh(project)
 
     total_tasks = db.query(Task).filter(Task.project_id == project.id).count()
-    done_tasks = db.query(Task).filter(Task.project_id == project.id, Task.status == TaskStatus.DONE).count()
+    done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
+        Task.project_id == project.id, TaskStatusDef.is_terminal == True
+    ).count()
 
     p_out = ProjectOut.model_validate(project)
     p_out.owner_name = project.owner.full_name if project.owner else None
