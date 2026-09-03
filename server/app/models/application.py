@@ -85,7 +85,7 @@ class Document(Base):
         Enum(DocStatus, name="doc_status"), default=DocStatus.PENDING, index=True
     )
     file_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="documents")
@@ -101,7 +101,7 @@ class Verification(Base):
     )
     verified_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="verifications")
@@ -118,7 +118,7 @@ class FinanceSubmission(Base):
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     query_note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
     application: Mapped["Application"] = relationship(back_populates="finance_submissions")
     company: Mapped["FinanceCompany"] = relationship(lazy="joined")
@@ -130,7 +130,7 @@ class Sanction(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     application_id: Mapped[int] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     status: Mapped[str] = mapped_column(String(40), default="SANCTIONED")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     sanctioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="sanctions")
@@ -144,7 +144,7 @@ class Delivery(Base):
     status: Mapped[DeliveryStatus] = mapped_column(
         Enum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.PENDING
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="deliveries")
@@ -160,7 +160,7 @@ class Disbursement(Base):
     )
     utr_no: Mapped[str | None] = mapped_column(String(64), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     disbursed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     application: Mapped["Application"] = relationship(back_populates="disbursements")

@@ -149,8 +149,12 @@ def _filtered_query(
 
     # Apply role-based filtering
     if user.role == UserRole.SALES_EXECUTIVE:
-        # Sales executives see their assigned applications + leads they created
-        query = query.filter(Application.assigned_to == user.id)
+        # Sales executives see all leads in LEAD status, applications assigned to them, and unassigned items
+        query = query.filter(
+            (Application.status == ApplicationStatus.LEAD)
+            | (Application.assigned_to == user.id)
+            | (Application.assigned_to.is_(None))
+        )
     elif user.role == UserRole.FINANCE_OFFICER:
         # Finance officers see applications in finance-related stages
         finance_stages = [
