@@ -11,8 +11,6 @@ import { AuthPermissionProvider } from '@/context/AuthPermissionContext';
 import LoginPage from '@/pages/LoginPage';
 import LeadsPage from '@/pages/LeadsPage';
 import LeadDetailPage from '@/pages/LeadDetailPage';
-import ProjectsPage from '@/pages/ProjectsPage';
-import TasksPage from '@/pages/TasksPage';
 import HRPage from '@/pages/HRPage';
 import PlmPage from '@/pages/PlmPage';
 import GenericStagePage from '@/pages/GenericStagePage';
@@ -59,8 +57,6 @@ export default function App() {
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/opportunities" element={<LeadsPage />} />
                 <Route path="/opportunities/:id" element={<LeadDetailPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/hr" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />
                 

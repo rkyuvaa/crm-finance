@@ -8,10 +8,7 @@ import {
   ChevronRight,
   Cpu,
   FileText,
-  FolderKanban,
-  Layers,
   LayoutDashboard,
-  ListTodo,
   Settings,
   Settings2,
   Sparkles,
@@ -65,21 +62,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         children: [
           { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
           { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
-        ],
-      },
-    ],
-  },
-  {
-    label: 'Project & Task',
-    items: [
-      {
-        key: 'project-task',
-        label: 'Project & Task',
-        icon: Layers,
-        badge: null,
-        children: [
-          { key: 'projects', label: 'Projects', path: '/projects', icon: FolderKanban, badge: null },
-          { key: 'tasks', label: 'Task', path: '/tasks', icon: ListTodo, badge: null },
         ],
       },
     ],
