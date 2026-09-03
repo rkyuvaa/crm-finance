@@ -847,8 +847,63 @@ export default function TasksPage() {
   };
 
   // ── Task Detail Panel ──
+  // ── Task Detail Panel with Subtask Management ──
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [editingSubtaskIdx, setEditingSubtaskIdx] = useState<number | null>(null);
+
+  const handleToggleSubtask = (subtaskIdx: number) => {
+    if (!selectedTask) return;
+    const updated = {
+      ...selectedTask,
+      subtasks: selectedTask.subtasks.map((sub, idx) => 
+        idx === subtaskIdx ? { ...sub, done: !sub.done } : sub
+      ),
+    };
+    setTasks(tasks.map((t) => (t.id === selectedTask.id ? updated : t)));
+    setSelectedTask(updated);
+    showToast('Subtask toggled', 'info');
+  };
+
+  const handleAddSubtask = () => {
+    if (!selectedTask || !newSubtaskTitle.trim()) return;
+    const updated = {
+      ...selectedTask,
+      subtasks: [...selectedTask.subtasks, { title: newSubtaskTitle, done: false }],
+    };
+    setTasks(tasks.map((t) => (t.id === selectedTask.id ? updated : t)));
+    setSelectedTask(updated);
+    setNewSubtaskTitle('');
+    showToast('Subtask added', 'success');
+  };
+
+  const handleDeleteSubtask = (subtaskIdx: number) => {
+    if (!selectedTask) return;
+    const updated = {
+      ...selectedTask,
+      subtasks: selectedTask.subtasks.filter((_, idx) => idx !== subtaskIdx),
+    };
+    setTasks(tasks.map((t) => (t.id === selectedTask.id ? updated : t)));
+    setSelectedTask(updated);
+    showToast('Subtask deleted', 'info');
+  };
+
+  const handleUpdateTimeTracking = (estimated: number, actual: number) => {
+    if (!selectedTask) return;
+    const updated = {
+      ...selectedTask,
+      estimatedHours: estimated,
+      actualHours: actual,
+    };
+    setTasks(tasks.map((t) => (t.id === selectedTask.id ? updated : t)));
+    setSelectedTask(updated);
+    showToast('Time tracking updated', 'success');
+  };
+
   const renderDetailPanel = () => {
     if (!selectedTask) return null;
+
+    const completedSubtasks = selectedTask.subtasks.filter((s) => s.done).length;
+    const totalSubtasks = selectedTask.subtasks.length;
 
     return (
       <Dialog open={openDetailPanel} onClose={() => setOpenDetailPanel(false)} maxWidth="sm" fullWidth>
@@ -860,7 +915,7 @@ export default function TasksPage() {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '70vh', overflowY: 'auto' }}>
           <Typography sx={{ fontWeight: 700, fontSize: '15px' }}>
             {selectedTask.title}
           </Typography>
@@ -900,35 +955,159 @@ export default function TasksPage() {
               />
             </Grid>
           </Grid>
-          {selectedTask.subtasks.length > 0 && (
-            <Box>
-              <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
-                Subtasks ({selectedTask.subtasks.filter((s) => s.done).length}/
-                {selectedTask.subtasks.length})
+
+          {/* Enhanced Subtasks Section */}
+          <Box sx={{ p: 1.5, bgcolor: '#F9FAFB', borderRadius: '10px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography sx={{ fontSize: '12px', color: '#6B7280', fontWeight: 700 }}>
+                Subtasks ({completedSubtasks}/{totalSubtasks})
               </Typography>
+              {totalSubtasks > 0 && (
+                <LinearProgress
+                  variant="determinate"
+                  value={(completedSubtasks / totalSubtasks) * 100}
+                  sx={{ width: 60, height: 4, borderRadius: '2px' }}
+                />
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1 }}>
               {selectedTask.subtasks.map((sub, idx) => (
-                <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.5 }}>
-                  <input type="checkbox" checked={sub.done} readOnly />
-                  <span style={{ textDecoration: sub.done ? 'line-through' : 'none' }}>
+                <Box
+                  key={idx}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    p: 0.75,
+                    bgcolor: '#FFF',
+                    borderRadius: '6px',
+                    border: '1px solid #E5E7EB',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={sub.done}
+                    onChange={() => handleToggleSubtask(idx)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      fontSize: '12px',
+                      textDecoration: sub.done ? 'line-through' : 'none',
+                      color: sub.done ? '#9CA3AF' : '#1F2937',
+                    }}
+                  >
                     {sub.title}
-                  </span>
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeleteSubtask(idx)}
+                    sx={{ color: '#EF4444' }}
+                  >
+                    <X size={14} />
+                  </IconButton>
                 </Box>
               ))}
             </Box>
-          )}
-          <Box>
-            <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
+
+            {/* Add New Subtask */}
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <TextField
+                size="small"
+                placeholder="Add subtask..."
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddSubtask();
+                }}
+                sx={{ flex: 1, fontSize: '12px' }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleAddSubtask}
+                sx={{ textTransform: 'none' }}
+              >
+                Add
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Enhanced Time Tracking Section */}
+          <Box sx={{ p: 1.5, bgcolor: '#F9FAFB', borderRadius: '10px' }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B7280', fontWeight: 700, mb: 1 }}>
               Time Tracking
             </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={Math.min((selectedTask.actualHours / selectedTask.estimatedHours) * 100, 100)}
-              sx={{ height: 6, borderRadius: '3px', mb: 0.5 }}
-            />
-            <Typography sx={{ fontSize: '12px', color: '#6B7280' }}>
-              {selectedTask.actualHours}h logged / {selectedTask.estimatedHours}h estimated
-            </Typography>
+            <Grid container spacing={1} sx={{ mb: 1 }}>
+              <Grid item xs={6}>
+                <TextField
+                  label="Estimated (h)"
+                  type="number"
+                  size="small"
+                  value={selectedTask.estimatedHours}
+                  onChange={(e) =>
+                    handleUpdateTimeTracking(
+                      parseInt(e.target.value) || 0,
+                      selectedTask.actualHours
+                    )
+                  }
+                  inputProps={{ min: 0, step: 0.5 }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Actual (h)"
+                  type="number"
+                  size="small"
+                  value={selectedTask.actualHours}
+                  onChange={(e) =>
+                    handleUpdateTimeTracking(
+                      selectedTask.estimatedHours,
+                      parseInt(e.target.value) || 0
+                    )
+                  }
+                  inputProps={{ min: 0, step: 0.5 }}
+                />
+              </Grid>
+            </Grid>
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>Progress</Typography>
+                <Typography sx={{ fontSize: '11px', fontWeight: 600 }}>
+                  {selectedTask.estimatedHours > 0
+                    ? Math.round((selectedTask.actualHours / selectedTask.estimatedHours) * 100)
+                    : 0}
+                  %
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(
+                  selectedTask.estimatedHours > 0
+                    ? (selectedTask.actualHours / selectedTask.estimatedHours) * 100
+                    : 0,
+                  100
+                )}
+                sx={{
+                  height: 8,
+                  borderRadius: '4px',
+                  bgcolor: '#E5E7EB',
+                  '& .MuiLinearProgress-bar': {
+                    bgcolor:
+                      selectedTask.actualHours > selectedTask.estimatedHours
+                        ? '#EF4444'
+                        : selectedTask.actualHours >= selectedTask.estimatedHours * 0.8
+                        ? '#FBBF24'
+                        : '#10B981',
+                  },
+                }}
+              />
+            </Box>
           </Box>
+
+          {/* Assignees */}
           <Box>
             <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
               Assignees
@@ -943,6 +1122,16 @@ export default function TasksPage() {
                 </Avatar>
               ))}
             </AvatarGroup>
+          </Box>
+
+          {/* Due Date */}
+          <Box>
+            <Typography sx={{ fontSize: '12px', color: '#6B7280', mb: 0.5 }}>
+              Due Date
+            </Typography>
+            <Typography sx={{ fontWeight: 600, fontSize: '13px' }}>
+              {selectedTask.dueDate}
+            </Typography>
           </Box>
         </DialogContent>
       </Dialog>
