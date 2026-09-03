@@ -11,6 +11,7 @@ from app.models.enums import (
     DisbursementStatus,
     DocStatus,
     FinanceStatus,
+    LeadSource,
     VerificationStatus,
 )
 
@@ -47,6 +48,10 @@ class Application(Base):
         ForeignKey("finance_companies.id"), nullable=True
     )
     assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    lead_source: Mapped[LeadSource | None] = mapped_column(
+        Enum(LeadSource, name="lead_source"), nullable=True, index=True
+    )
+    lead_score: Mapped[int] = mapped_column(default=0, server_default="0", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp(), index=True

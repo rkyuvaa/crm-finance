@@ -59,6 +59,7 @@ const editSchema = z.object({
     .number({ invalid_type_error: 'Loan amount is required' })
     .positive('Loan amount must be positive'),
   finance_company_id: z.string().optional(),
+  lead_source: z.string().optional(),
 });
 
 type EditForm = z.infer<typeof editSchema>;
@@ -141,6 +142,7 @@ export default function LeadDetailPage() {
         down_payment: lead.down_payment ?? 0,
         amount: lead.amount ?? 0,
         finance_company_id: lead.finance_company_id ? String(lead.finance_company_id) : '',
+        lead_source: lead.lead_source || '',
       });
     }
   }, [lead, reset]);
@@ -162,6 +164,7 @@ export default function LeadDetailPage() {
           vehicle_price: values.vehicle_price,
           down_payment: values.down_payment,
           finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
+          lead_source: values.lead_source || null,
         },
       }).unwrap();
       showToast(`Lead ${lead.app_no} updated`, 'success');
@@ -455,6 +458,56 @@ export default function LeadDetailPage() {
                   {errors.finance_company_id.message}
                 </div>
               )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
+                <Select
+                  fullWidth
+                  displayEmpty
+                  size="small"
+                  value={watch('lead_source') || ''}
+                  onChange={(e) => setValue('lead_source', String(e.target.value), { shouldValidate: true })}
+                  sx={{ mb: 0.5 }}
+                  renderValue={(value) =>
+                    value ? value.replace(/_/g, ' ').toUpperCase() : 'Select lead source'
+                  }
+                  inputProps={{ 'aria-label': 'Lead source' }}
+                >
+                  <MenuItem value="">Select lead source</MenuItem>
+                  <MenuItem value="WEBSITE">Website</MenuItem>
+                  <MenuItem value="REFERRAL">Referral</MenuItem>
+                  <MenuItem value="EVENT">Event</MenuItem>
+                  <MenuItem value="SOCIAL_MEDIA">Social Media</MenuItem>
+                  <MenuItem value="COLD_CALL">Cold Call</MenuItem>
+                  <MenuItem value="OTHER">Other</MenuItem>
+                </Select>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: '#F0F4EE',
+                    borderRadius: '8px',
+                    border: '1px solid #E4EBE1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: '#7A8B80', fontWeight: 600 }}>Lead Score</span>
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: '#087A3D',
+                      background: '#FFFFFF',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      minWidth: '50px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {lead.lead_score ?? 0}/100
+                  </span>
+                </div>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                 {lead.status === 'LEAD' && (

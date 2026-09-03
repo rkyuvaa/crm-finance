@@ -31,6 +31,9 @@ from app.schemas.application import (
     ApplicationListResponse,
     ApplicationOut,
     ApplicationUpdate,
+    BulkAssignRequest,
+    BulkDeleteRequest,
+    BulkStatusChangeRequest,
     TabCounts,
 )
 from app.schemas.master import (
@@ -639,3 +642,123 @@ def toggle_document_verification(
         verified_by_name=vname,
         verified_at=rec.verified_at,
     )
+
+
+@router.post("/bulk/assign", status_code=status.HTTP_200_OK)
+def bulk_assign_leads(
+    payload: "BulkAssignRequest",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Bulk assign multiple leads to a user."""
+    from app.schemas.application import BulkAssignRequest
+
+    if user.role not in [UserRole.ADMIN, UserRole.SALES_EXECUTIVE]:
+        raise HTTPException(status_code=403, detail="Not authorized for bulk operations")
+
+    applications = (
+        db.query(Application)
+        .filter(
+            Application.id.in_(payload.application_ids),
+            Application.status == ApplicationStatus.LEAD,
+        )
+        .all()
+    )
+
+    if not applications:
+        raise HTTPException(status_code=404, detail="No leads found with provided IDs")
+
+    for app in applications:
+        old_assigned = app.assigned_to
+        app.assigned_to = payload.assigned_to
+        app.updated_at = datetime.now(timezone.utc)
+
+        ActivityLog.create(
+            db,
+            application_id=app.id,
+            actor_id=user.id,
+            field_name="assigned_to",
+            old_value=str(old_assigned) if old_assigned else None,
+            new_value=str(payload.assigned_to),
+        )
+
+    db.commit()
+    return {"message": f"Successfully assigned {len(applications)} leads", "count": len(applications)}
+
+
+@router.post("/bulk/status", status_code=status.HTTP_200_OK)
+def bulk_change_status(
+    payload: "BulkStatusChangeRequest",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Bulk change status of multiple leads."""
+    from app.schemas.application import BulkStatusChangeRequest
+
+    if user.role not in [UserRole.ADMIN, UserRole.SALES_EXECUTIVE]:
+        raise HTTPException(status_code=403, detail="Not authorized for bulk operations")
+
+    applications = (
+        db.query(Application)
+        .filter(
+            Application.id.in_(payload.application_ids),
+            Application.status == ApplicationStatus.LEAD,
+        )
+        .all()
+    )
+
+    if not applications:
+        raise HTTPException(status_code=404, detail="No leads found with provided IDs")
+
+    for app in applications:
+        old_status = app.status
+        app.status = payload.status
+        app.updated_at = datetime.now(timezone.utc)
+
+        ActivityLog.create(
+            db,
+            application_id=app.id,
+            actor_id=user.id,
+            field_name="status",
+            old_value=old_status.value,
+            new_value=payload.status.value,
+        )
+
+    db.commit()
+    return {"message": f"Successfully updated status for {len(applications)} leads", "count": len(applications)}
+
+
+@router.post("/bulk/delete", status_code=status.HTTP_200_OK)
+def bulk_delete_leads(
+    payload: "BulkDeleteRequest",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Bulk delete multiple leads."""
+    from app.schemas.application import BulkDeleteRequest
+
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can delete leads")
+
+    applications = (
+        db.query(Application)
+        .filter(
+            Application.id.in_(payload.application_ids),
+            Application.status == ApplicationStatus.LEAD,
+        )
+        .all()
+    )
+
+    if not applications:
+        raise HTTPException(status_code=404, detail="No leads found with provided IDs")
+
+    deleted_count = 0
+    for app in applications:
+        try:
+            db.delete(app)
+            deleted_count += 1
+        except Exception as e:
+            logger.error(f"Error deleting application {app.id}: {e}")
+
+    db.commit()
+    return {"message": f"Successfully deleted {deleted_count} leads", "count": deleted_count}

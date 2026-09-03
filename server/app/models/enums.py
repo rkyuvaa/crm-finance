@@ -56,3 +56,12 @@ class DisbursementStatus(enum.StrEnum):
     PENDING_UTR = "PENDING_UTR"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
+
+class LeadSource(enum.StrEnum):
+    WEBSITE = "WEBSITE"
+    REFERRAL = "REFERRAL"
+    EVENT = "EVENT"
+    SOCIAL_MEDIA = "SOCIAL_MEDIA"
+    COLD_CALL = "COLD_CALL"
+    OTHER = "OTHER"

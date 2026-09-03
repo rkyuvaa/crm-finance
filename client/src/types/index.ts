@@ -465,6 +465,8 @@ export interface ApplicationItem {
   amount: number;
   status: ApplicationStatus;
   stage_key?: string | null;
+  lead_source?: string | null;
+  lead_score?: number;
   finance_company_id: number | null;
   finance_company_name: string | null;
   vehicle_model_id: number | null;

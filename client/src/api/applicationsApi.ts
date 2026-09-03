@@ -143,6 +143,39 @@ export const applicationsApi = baseApi.injectEndpoints({
     publicFinancierDocumentView: build.query<PublicFinancierDocumentView, string>({
       query: (token) => ({ url: `/public/financier/documents/${token}` }),
     }),
+    bulkAssignLeads: build.mutation<
+      { message: string; count: number },
+      { application_ids: number[]; assigned_to: number }
+    >({
+      query: (body) => ({
+        url: '/applications/bulk/assign',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Applications', 'Dashboard'],
+    }),
+    bulkChangeStatus: build.mutation<
+      { message: string; count: number },
+      { application_ids: number[]; status: string }
+    >({
+      query: (body) => ({
+        url: '/applications/bulk/status',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Applications', 'Dashboard'],
+    }),
+    bulkDeleteLeads: build.mutation<
+      { message: string; count: number },
+      { application_ids: number[] }
+    >({
+      query: (body) => ({
+        url: '/applications/bulk/delete',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Applications', 'Dashboard'],
+    }),
   }),
 });
 
@@ -163,4 +196,7 @@ export const {
   useFinalSubmissionQuery,
   useSendToFinancierMutation,
   usePublicFinancierDocumentViewQuery,
+  useBulkAssignLeadsMutation,
+  useBulkChangeStatusMutation,
+  useBulkDeleteLeadsMutation,
 } = applicationsApi;

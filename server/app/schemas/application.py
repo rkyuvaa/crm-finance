@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import ApplicationStatus
+from app.models.enums import ApplicationStatus, LeadSource
 
 
 class ApplicationBase(BaseModel):
@@ -12,6 +12,7 @@ class ApplicationBase(BaseModel):
     amount: float = Field(gt=0)
     status: ApplicationStatus = ApplicationStatus.LEAD
     stage_key: str | None = None
+    lead_source: LeadSource | None = None
     finance_company_id: int | None = None
     vehicle_model_id: int | None = None
     vehicle_price: float | None = Field(default=None, gt=0)
@@ -29,6 +30,7 @@ class ApplicationUpdate(BaseModel):
     amount: float | None = Field(default=None, gt=0)
     status: ApplicationStatus | None = None
     stage_key: str | None = None
+    lead_source: LeadSource | None = None
     finance_company_id: int | None = None
     vehicle_model_id: int | None = None
     vehicle_price: float | None = Field(default=None, gt=0)
@@ -44,6 +46,8 @@ class ApplicationOut(BaseModel):
     amount: float
     status: ApplicationStatus
     stage_key: str | None = "new"
+    lead_source: LeadSource | None = None
+    lead_score: int = 0
     finance_company_id: int | None
     finance_company_name: str | None
     vehicle_model_id: int | None
@@ -107,3 +111,23 @@ class PlannedActivityOut(BaseModel):
     completed_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class BulkAssignRequest(BaseModel):
+    application_ids: list[int] = Field(min_items=1, max_items=100)
+    assigned_to: int
+
+
+class BulkStatusChangeRequest(BaseModel):
+    application_ids: list[int] = Field(min_items=1, max_items=100)
+    status: ApplicationStatus
+
+
+class BulkDeleteRequest(BaseModel):
+    application_ids: list[int] = Field(min_items=1, max_items=100)
+
+
+class LeadFilterPreset(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    filters: dict
+    is_default: bool = False

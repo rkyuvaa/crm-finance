@@ -3,11 +3,17 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
   Button,
+  Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Menu,
   MenuItem,
   Paper,
+  Select,
   TablePagination,
   ToggleButton,
   ToggleButtonGroup,
@@ -25,11 +31,20 @@ import {
   Calendar,
   Clock,
   Sparkles,
+  CheckSquare,
+  XCircle,
 } from 'lucide-react';
 
-import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
+import {
+  useApplicationsQuery,
+  useDeleteApplicationMutation,
+  useUpdateApplicationMutation,
+  useBulkAssignLeadsMutation,
+  useBulkChangeStatusMutation,
+  useBulkDeleteLeadsMutation,
+} from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
-import { useStagesByModuleQuery } from '@/api/mastersApi';
+import { useStagesByModuleQuery, useUsersQuery } from '@/api/mastersApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
@@ -57,6 +72,11 @@ export default function LeadsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const [draggedAppId, setDraggedAppId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'assign' | 'status' | 'delete' | null>(null);
+  const [bulkAssigneeId, setBulkAssigneeId] = useState<number | null>(null);
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
 
   const queryParams = {
     page: page + 1,
@@ -68,12 +88,16 @@ export default function LeadsPage() {
   const { data, isFetching, isError, refetch } = useApplicationsQuery(queryParams);
   const { data: dashboard } = useDashboardQuery();
   const { data: moduleStages = [] } = useStagesByModuleQuery(currentModule);
+  const { data: users = [] } = useUsersQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [createOppOpen, setCreateOppOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
   const [updateApplication] = useUpdateApplicationMutation();
+  const [bulkAssignLeads, { isLoading: assigningLeads }] = useBulkAssignLeadsMutation();
+  const [bulkChangeStatus, { isLoading: changingStatus }] = useBulkChangeStatusMutation();
+  const [bulkDeleteLeads, { isLoading: deletingLeads }] = useBulkDeleteLeadsMutation();
   const { showToast } = useToast();
 
   const isLeadStageKey = (key: string, status?: string | null) => {
@@ -248,6 +272,52 @@ export default function LeadsPage() {
     setDraggedAppId(null);
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.size === rows.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(rows.map((r) => r.id)));
+    }
+  };
+
+  const handleSelectRow = (id: number) => {
+    const newSelection = new Set(selectedIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedIds(newSelection);
+  };
+
+  const handleBulkAction = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      showToast('Please select at least one lead', 'warning');
+      return;
+    }
+
+    try {
+      if (bulkActionType === 'assign' && bulkAssigneeId) {
+        await bulkAssignLeads({ application_ids: ids, assigned_to: bulkAssigneeId }).unwrap();
+        showToast(`Assigned ${ids.length} leads`, 'success');
+      } else if (bulkActionType === 'status' && bulkStatusValue) {
+        await bulkChangeStatus({ application_ids: ids, status: bulkStatusValue }).unwrap();
+        showToast(`Updated status for ${ids.length} leads`, 'success');
+      } else if (bulkActionType === 'delete') {
+        await bulkDeleteLeads({ application_ids: ids }).unwrap();
+        showToast(`Deleted ${ids.length} leads`, 'success');
+      }
+      setSelectedIds(new Set());
+      setBulkActionDialogOpen(false);
+      setBulkActionType(null);
+      refetch();
+    } catch (err) {
+      const errMsg = (err as { data?: { detail?: string } })?.data?.detail || 'Bulk operation failed';
+      showToast(errMsg, 'error');
+    }
+  };
+
   return (
     <div>
       {/* 1. Full-width Stage Pills row */}
@@ -264,6 +334,16 @@ export default function LeadsPage() {
       {/* 2. Action row below stage pills */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {selectedIds.size > 0 && !isOpportunityRoute && (
+            <Chip
+              icon={<CheckSquare size={16} />}
+              label={`${selectedIds.size} selected`}
+              size="small"
+              onDelete={() => setSelectedIds(new Set())}
+              color="primary"
+              sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
+            />
+          )}
           {selectedStageKey && (
             <Chip
               label={`Filtered by: ${pipelineStages.find((s) => s.key === selectedStageKey)?.label ?? selectedStageKey}`}
@@ -291,6 +371,47 @@ export default function LeadsPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {selectedIds.size > 0 && !isOpportunityRoute && (
+            <>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Edit size={14} />}
+                onClick={() => {
+                  setBulkActionType('assign');
+                  setBulkActionDialogOpen(true);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Assign
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  setBulkActionType('status');
+                  setBulkActionDialogOpen(true);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Change Status
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={<Trash2 size={14} />}
+                onClick={() => {
+                  setBulkActionType('delete');
+                  setBulkActionDialogOpen(true);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Delete
+              </Button>
+            </>
+          )}
+
           {/* View Switcher: List vs Kanban */}
           <ToggleButtonGroup
             value={viewMode}
@@ -407,6 +528,30 @@ export default function LeadsPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 960 }}>
                   <thead>
                     <tr>
+                      {!isOpportunityRoute && (
+                        <th
+                          style={{
+                            background: '#F2FAF0',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#7A8B80',
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.6,
+                            textAlign: 'center',
+                            padding: '10px 8px',
+                            borderBottom: '1px solid #E4EBE1',
+                            whiteSpace: 'nowrap',
+                            width: '40px',
+                          }}
+                        >
+                          <Checkbox
+                            size="small"
+                            checked={selectedIds.size === rows.length && rows.length > 0}
+                            indeterminate={selectedIds.size > 0 && selectedIds.size < rows.length}
+                            onChange={handleSelectAll}
+                          />
+                        </th>
+                      )}
                       {['App ID', 'Customer', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created', 'Updated On', 'Actions'].map((h) => (
                         <th
                           key={h}
@@ -432,11 +577,23 @@ export default function LeadsPage() {
                     {rows.map((app) => (
                       <tr
                         key={app.id}
-                        onClick={() => navigate(`${detailPrefix}/${app.id}`)}
-                        style={{ cursor: 'pointer', transition: 'background 0.15s ease' }}
+                        onClick={() => !isOpportunityRoute && navigate(`${detailPrefix}/${app.id}`)}
+                        style={{ cursor: isOpportunityRoute ? 'default' : 'pointer', transition: 'background 0.15s ease' }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F9FBF8')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
+                        {!isOpportunityRoute && (
+                          <td style={{ padding: '11px 8px', borderBottom: '1px solid #F0F4EE', textAlign: 'center' }}>
+                            <Checkbox
+                              size="small"
+                              checked={selectedIds.has(app.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectRow(app.id);
+                              }}
+                            />
+                          </td>
+                        )}
                         <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
                           <span className="app-id">{app.app_no}</span>
                         </td>
@@ -797,6 +954,93 @@ export default function LeadsPage() {
         open={createOppOpen}
         onClose={() => setCreateOppOpen(false)}
       />
+
+      {/* Bulk Action Dialog */}
+      <Dialog open={bulkActionDialogOpen} onClose={() => setBulkActionDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: '#023020' }}>
+          {bulkActionType === 'assign' && 'Assign Leads'}
+          {bulkActionType === 'status' && 'Change Lead Status'}
+          {bulkActionType === 'delete' && 'Delete Leads'}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {bulkActionType === 'assign' && (
+            <div>
+              <div style={{ fontSize: 13, color: '#44584C', marginBottom: 12, fontWeight: 600 }}>
+                Assign {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} to:
+              </div>
+              <Select
+                fullWidth
+                displayEmpty
+                value={bulkAssigneeId || ''}
+                onChange={(e) => setBulkAssigneeId(Number(e.target.value))}
+                renderValue={(value) => (value ? users.find((u) => u.id === value)?.full_name ?? 'Select user' : 'Select user')}
+              >
+                <MenuItem value="">Select user</MenuItem>
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.full_name} ({u.role})
+                  </MenuItem>
+                ))}
+              </Select>
+            </div>
+          )}
+          {bulkActionType === 'status' && (
+            <div>
+              <div style={{ fontSize: 13, color: '#44584C', marginBottom: 12, fontWeight: 600 }}>
+                Change status for {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} to:
+              </div>
+              <Select
+                fullWidth
+                displayEmpty
+                value={bulkStatusValue}
+                onChange={(e) => setBulkStatusValue(e.target.value)}
+                renderValue={(value) => (value ? value : 'Select status')}
+              >
+                <MenuItem value="">Select status</MenuItem>
+                <MenuItem value="LEAD">Lead</MenuItem>
+                <MenuItem value="APPLICATION">Application</MenuItem>
+                <MenuItem value="VERIFICATION">Verification</MenuItem>
+                <MenuItem value="FINANCE">Finance</MenuItem>
+                <MenuItem value="REJECTED">Rejected</MenuItem>
+              </Select>
+            </div>
+          )}
+          {bulkActionType === 'delete' && (
+            <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: 8, border: '1px solid #FCE4EC' }}>
+              <div style={{ fontSize: 13, color: '#C62828', fontWeight: 700, marginBottom: 8 }}>
+                ⚠️ Warning
+              </div>
+              <div style={{ fontSize: 12, color: '#D32F2F' }}>
+                This will permanently delete {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''}. This action cannot be undone.
+              </div>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setBulkActionDialogOpen(false)}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color={bulkActionType === 'delete' ? 'error' : 'primary'}
+            onClick={handleBulkAction}
+            disabled={
+              (bulkActionType === 'assign' && !bulkAssigneeId) ||
+              (bulkActionType === 'status' && !bulkStatusValue) ||
+              assigningLeads ||
+              changingStatus ||
+              deletingLeads
+            }
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {assigningLeads || changingStatus || deletingLeads ? 'Processing...' : 'Confirm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
