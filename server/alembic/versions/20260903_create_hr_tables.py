@@ -15,97 +15,81 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create attendance status enum
-    op.execute(
-        sa.text("""
-            CREATE TABLE IF NOT EXISTS hr_attendance (
-                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                attendance_date DATE NOT NULL,
-                check_in_time DATETIME,
-                check_out_time DATETIME,
-                hours_worked FLOAT,
-                status VARCHAR NOT NULL DEFAULT 'ABSENT',
-                notes VARCHAR(500),
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
-            )
-        """)
+    # 1. Create hr_attendance table
+    op.create_table(
+        'hr_attendance',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('attendance_date', sa.Date(), nullable=False),
+        sa.Column('check_in_time', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('check_out_time', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('hours_worked', sa.Float(), nullable=True),
+        sa.Column('status', sa.String(50), server_default='ABSENT', nullable=False),
+        sa.Column('notes', sa.String(500), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.UniqueConstraint('user_id', 'attendance_date', name='uq_user_attendance_date')
     )
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_attendance_user_id ON hr_attendance (user_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_attendance_date ON hr_attendance (attendance_date)")
+    op.create_index('ix_hr_attendance_user_id', 'hr_attendance', ['user_id'])
+    op.create_index('ix_hr_attendance_date', 'hr_attendance', ['attendance_date'])
 
-    # Create leave requests table
-    op.execute(
-        sa.text("""
-            CREATE TABLE IF NOT EXISTS hr_leave_requests (
-                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                leave_type VARCHAR NOT NULL,
-                start_date DATE NOT NULL,
-                end_date DATE NOT NULL,
-                reason VARCHAR(500) NOT NULL,
-                status VARCHAR NOT NULL DEFAULT 'PENDING',
-                approved_by_id INTEGER,
-                approval_date DATETIME,
-                rejection_reason VARCHAR(500),
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-                FOREIGN KEY(approved_by_id) REFERENCES users (id) ON DELETE SET NULL
-            )
-        """)
+    # 2. Create hr_leave_requests table
+    op.create_table(
+        'hr_leave_requests',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('leave_type', sa.String(50), nullable=False),
+        sa.Column('start_date', sa.Date(), nullable=False),
+        sa.Column('end_date', sa.Date(), nullable=False),
+        sa.Column('reason', sa.String(500), nullable=False),
+        sa.Column('status', sa.String(50), server_default='PENDING', nullable=False),
+        sa.Column('approved_by_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='SET NULL'), nullable=True),
+        sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('rejection_reason', sa.String(500), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False)
     )
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_leave_requests_user_id ON hr_leave_requests (user_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_leave_requests_status ON hr_leave_requests (status)")
+    op.create_index('ix_hr_leave_requests_user_id', 'hr_leave_requests', ['user_id'])
+    op.create_index('ix_hr_leave_requests_status', 'hr_leave_requests', ['status'])
 
-    # Create payroll records table
-    op.execute(
-        sa.text("""
-            CREATE TABLE IF NOT EXISTS hr_payroll (
-                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                payroll_month DATE NOT NULL,
-                base_salary FLOAT NOT NULL,
-                allowances FLOAT NOT NULL DEFAULT 0.0,
-                deductions FLOAT NOT NULL DEFAULT 0.0,
-                net_salary FLOAT NOT NULL,
-                status VARCHAR NOT NULL DEFAULT 'DRAFT',
-                remarks VARCHAR(500),
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
-            )
-        """)
+    # 3. Create hr_payroll table
+    op.create_table(
+        'hr_payroll',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('payroll_month', sa.Date(), nullable=False),
+        sa.Column('base_salary', sa.Float(), nullable=False),
+        sa.Column('allowances', sa.Float(), server_default='0.0', nullable=False),
+        sa.Column('deductions', sa.Float(), server_default='0.0', nullable=False),
+        sa.Column('net_salary', sa.Float(), nullable=False),
+        sa.Column('status', sa.String(50), server_default='DRAFT', nullable=False),
+        sa.Column('remarks', sa.String(500), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.UniqueConstraint('user_id', 'payroll_month', name='uq_user_payroll_month')
     )
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_payroll_user_id ON hr_payroll (user_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_payroll_status ON hr_payroll (status)")
+    op.create_index('ix_hr_payroll_user_id', 'hr_payroll', ['user_id'])
+    op.create_index('ix_hr_payroll_status', 'hr_payroll', ['status'])
 
-    # Create performance reviews table
-    op.execute(
-        sa.text("""
-            CREATE TABLE IF NOT EXISTS hr_performance_reviews (
-                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                reviewer_id INTEGER NOT NULL,
-                review_date DATE NOT NULL,
-                rating FLOAT NOT NULL,
-                comments VARCHAR(2000),
-                status VARCHAR NOT NULL DEFAULT 'COMPLETED',
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
-                FOREIGN KEY(reviewer_id) REFERENCES users (id) ON DELETE CASCADE
-            )
-        """)
+    # 4. Create hr_performance_reviews table
+    op.create_table(
+        'hr_performance_reviews',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True, nullable=False),
+        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('reviewer_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('review_date', sa.Date(), nullable=False),
+        sa.Column('rating', sa.Float(), nullable=False),
+        sa.Column('comments', sa.String(2000), nullable=True),
+        sa.Column('status', sa.String(50), server_default='COMPLETED', nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False)
     )
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_performance_reviews_user_id ON hr_performance_reviews (user_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_hr_performance_reviews_reviewer_id ON hr_performance_reviews (reviewer_id)")
+    op.create_index('ix_hr_performance_reviews_user_id', 'hr_performance_reviews', ['user_id'])
+    op.create_index('ix_hr_performance_reviews_reviewer_id', 'hr_performance_reviews', ['reviewer_id'])
 
 
 def downgrade() -> None:
-    op.execute("DROP TABLE IF EXISTS hr_performance_reviews")
-    op.execute("DROP TABLE IF EXISTS hr_payroll")
-    op.execute("DROP TABLE IF EXISTS hr_leave_requests")
-    op.execute("DROP TABLE IF EXISTS hr_attendance")
+    op.drop_table('hr_performance_reviews')
+    op.drop_table('hr_payroll')
+    op.drop_table('hr_leave_requests')
+    op.drop_table('hr_attendance')
