@@ -38,9 +38,9 @@ class CrmTabField(Base):
     stage_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {LEAD: {visible: true, required: true, readonly: false}}
     dependent_rules: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)  # {depends_on_field_id: 12, condition: "equals", value: "YES", action: "show"}
     
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp()
     )
 
     tab: Mapped["CrmTab"] = relationship(back_populates="fields")

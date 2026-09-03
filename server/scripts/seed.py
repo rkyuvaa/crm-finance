@@ -240,15 +240,15 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
     db.flush()
 
     DEFAULT_TABS = [
-        ("LEAD", "All Leads", "all_leads", "All captured leads across pipeline", "Layers", 1, True, "EVERYONE", []),
-        ("LEAD", "Document Upload", "document_upload", "Manage KYC, PAN, Bank Statements and income proofs", "FileText", 2, False, "EVERYONE", []),
-        ("LEAD", "Document Verification", "document_verification", "Synchronized document quality score analysis & manual verification", "CheckSquare", 3, False, "EVERYONE", ["verification"]),
-        ("LEAD", "Final Submission", "final_submission", "Review document readiness and send secure link to financier", "Send", 4, False, "EVERYONE", []),
+        ("LEAD", "Lead Details", "lead_details", "Default lead capture and qualification fields", "UserCheck", 1, True, "EVERYONE", []),
         ("OPPORTUNITY", "All Opportunities", "all_opportunities", "All active opportunities across stages", "Target", 1, True, "EVERYONE", []),
-        ("OPPORTUNITY", "Finance Approval", "finance_approval", "Finance applications under review by financier", "Building2", 2, False, "EVERYONE", ["finance", "query"]),
-        ("OPPORTUNITY", "Loan Sanctioned", "loan_sanctioned", "Approved and sanctioned loan applications", "CheckCircle2", 3, False, "EVERYONE", ["sanctioned"]),
-        ("OPPORTUNITY", "Disbursement", "disbursement", "Disbursement in progress and bank payout", "DollarSign", 4, False, "EVERYONE", ["disburse"]),
-        ("OPPORTUNITY", "Completed", "completed", "Completed and delivered deals", "Truck", 5, False, "EVERYONE", ["completed"]),
+        ("OPPORTUNITY", "Document Upload", "document_upload", "Manage KYC, PAN, Bank Statements and income proofs", "FileText", 2, False, "EVERYONE", []),
+        ("OPPORTUNITY", "Document Verification", "document_verification", "Synchronized document quality score analysis & manual verification", "CheckSquare", 3, False, "EVERYONE", ["verification"]),
+        ("OPPORTUNITY", "Final Submission", "final_submission", "Review document readiness and send secure link to financier", "Send", 4, False, "EVERYONE", []),
+        ("OPPORTUNITY", "Finance Approval", "finance_approval", "Finance applications under review by financier", "Building2", 5, False, "EVERYONE", ["finance", "query"]),
+        ("OPPORTUNITY", "Loan Sanctioned", "loan_sanctioned", "Approved and sanctioned loan applications", "CheckCircle2", 6, False, "EVERYONE", ["sanctioned"]),
+        ("OPPORTUNITY", "Disbursement", "disbursement", "Disbursement in progress and bank payout", "DollarSign", 7, False, "EVERYONE", ["disburse"]),
+        ("OPPORTUNITY", "Completed", "completed", "Completed and delivered deals", "Truck", 8, False, "EVERYONE", ["completed"]),
     ]
 
     for module_id, name, code, desc, icon, order, is_def, vis, stage_keys in DEFAULT_TABS:
@@ -268,6 +268,25 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
                     db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=st.id))
         else:
             tab.module_id = module_id
+            tab.is_default = is_def
+
+    # Ensure Lead Details tab has standard fields
+    lead_tab = db.query(CrmTab).filter_by(code="lead_details").first()
+    if lead_tab and not lead_tab.fields:
+        default_fields = [
+            {"name": "customer_name", "label": "Customer Name", "field_type": "text", "is_required": True, "display_order": 1, "placeholder": "Enter full customer name"},
+            {"name": "customer_phone", "label": "Mobile Number", "field_type": "text", "is_required": True, "display_order": 2, "placeholder": "Enter 10-digit mobile number"},
+            {"name": "vehicle_model_id", "label": "Vehicle Model", "field_type": "dropdown", "is_required": False, "display_order": 3, "placeholder": "Select vehicle model"},
+            {"name": "vehicle_price", "label": "Vehicle Price (INR)", "field_type": "numeric", "is_required": False, "display_order": 4, "placeholder": "Enter vehicle price"},
+            {"name": "down_payment", "label": "Down Payment (INR)", "field_type": "numeric", "is_required": False, "display_order": 5, "placeholder": "Enter down payment"},
+            {"name": "amount", "label": "Loan Amount (INR)", "field_type": "numeric", "is_required": True, "display_order": 6, "placeholder": "Enter requested loan amount"},
+            {"name": "finance_company_id", "label": "Finance Company", "field_type": "dropdown", "is_required": False, "display_order": 7, "placeholder": "Select financier"},
+            {"name": "lead_source", "label": "Lead Source", "field_type": "dropdown", "is_required": False, "display_order": 8, "options": [{"label": "Walk-in", "value": "walk_in"}, {"label": "Website", "value": "website"}, {"label": "Referral", "value": "referral"}, {"label": "Dealer", "value": "dealer"}]},
+            {"name": "notes", "label": "Lead Notes", "field_type": "text", "is_required": False, "display_order": 9, "placeholder": "Enter lead remarks"},
+        ]
+        for df in default_fields:
+            db.add(CrmTabField(tab_id=lead_tab.id, **df))
+
     db.flush()
 
     return companies
