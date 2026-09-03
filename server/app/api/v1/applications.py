@@ -143,9 +143,15 @@ def _filtered_query(
 
     if module:
         if module.upper() == "LEAD":
-            query = query.filter(Application.status == ApplicationStatus.LEAD)
+            query = query.filter(
+                (Application.status == ApplicationStatus.LEAD)
+                | (func.upper(Application.status) == "LEAD")
+            )
         elif module.upper() == "OPPORTUNITY":
-            query = query.filter(Application.status != ApplicationStatus.LEAD)
+            query = query.filter(
+                (Application.status != ApplicationStatus.LEAD)
+                & (func.upper(Application.status) != "LEAD")
+            )
 
     # Apply role-based filtering
     if user.role == UserRole.SALES_EXECUTIVE:

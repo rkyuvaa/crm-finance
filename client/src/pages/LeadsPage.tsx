@@ -113,8 +113,9 @@ export default function LeadsPage() {
 
     return stagesForModule.map((s, idx) => {
       const count = (data?.items ?? []).filter((app) => {
-        if (!isOpportunityRoute && app.status !== 'LEAD') return false;
-        if (isOpportunityRoute && app.status === 'LEAD') return false;
+        const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
+        if (!isOpportunityRoute && appStatusUpper !== 'LEAD') return false;
+        if (isOpportunityRoute && appStatusUpper === 'LEAD') return false;
 
         // If app has an explicit stage_key, match ONLY against that stage's key
         if (app.stage_key) {
@@ -126,13 +127,14 @@ export default function LeadsPage() {
           return idx === 0 || s.key.toLowerCase() === 'new' || s.key.toLowerCase() === 'leads';
         }
 
-        if (s.status && s.status !== 'APPLICATION' && app.status === s.status) {
+        const sStatusUpper = s.status ? String(s.status).toUpperCase() : '';
+        if (sStatusUpper && sStatusUpper !== 'APPLICATION' && appStatusUpper === sStatusUpper) {
           return true;
         }
 
         if (
           isOpportunityRoute &&
-          app.status === 'APPLICATION' &&
+          appStatusUpper === 'APPLICATION' &&
           (idx === 0 || ['applications', 'leads', 'new_opportunity', 'new-opportunity'].includes(s.key.toLowerCase()))
         ) {
           return true;
@@ -172,10 +174,11 @@ export default function LeadsPage() {
   // Filter rows based on route, dynamic tab configuration and search query
   const allRows = data?.items ?? [];
   const rows = allRows.filter((app) => {
-    if (!isOpportunityRoute && app.status !== 'LEAD') {
+    const appStatusUpper = app.status ? String(app.status).toUpperCase() : '';
+    if (!isOpportunityRoute && appStatusUpper !== 'LEAD') {
       return false;
     }
-    if (isOpportunityRoute && app.status === 'LEAD') {
+    if (isOpportunityRoute && appStatusUpper === 'LEAD') {
       return false;
     }
 
@@ -192,12 +195,12 @@ export default function LeadsPage() {
     // Show all records if no tab is active, or tab has no stage restrictions
     if (!activeTabConfig || !activeTabConfig.stage_ids || activeTabConfig.stage_ids.length === 0) return true;
     if (masterStages) {
-      const mappedStatuses = masterStages
+      const mappedStatusesUpper = masterStages
         .filter((s) => activeTabConfig.stage_ids.includes(s.id))
-        .map((s) => s.status)
+        .map((s) => (s.status ? String(s.status).toUpperCase() : ''))
         .filter(Boolean);
-      if (mappedStatuses.length > 0) {
-        return mappedStatuses.includes(app.status);
+      if (mappedStatusesUpper.length > 0) {
+        return mappedStatusesUpper.includes(appStatusUpper);
       }
     }
     return true;
