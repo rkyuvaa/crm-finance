@@ -40,7 +40,8 @@ import {
   CheckSquare,
   Clock,
   Paperclip,
-  Tag,
+  Lock,
+  Zap,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -62,6 +63,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [searchQ, setSearchQ] = useState('');
+  const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
 
   const { data: tasks = [], isLoading } = useGetTasksQuery({
     project_id: numericProjectId,
@@ -121,6 +123,47 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setCreateOpen(true);
   };
 
+  // Inline Quick Task Creation ("Type & Enter")
+  const handleQuickCreateTask = async (targetStatusId: number) => {
+    const taskTitle = quickTaskInputs[targetStatusId]?.trim();
+    if (!taskTitle) return;
+
+    try {
+      await createTask({
+        title: taskTitle,
+        project_id: numericProjectId,
+        status_id: targetStatusId,
+        priority: 'NORMAL',
+      }).unwrap();
+      setQuickTaskInputs((prev) => ({ ...prev, [targetStatusId]: '' }));
+      toast.showSuccess(`Task "${taskTitle}" created!`);
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to create task');
+    }
+  };
+
+  // HTML5 Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent, taskId: number) => {
+    e.dataTransfer.setData('text/plain', String(taskId));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatusId: number) => {
+    e.preventDefault();
+    const taskIdStr = e.dataTransfer.getData('text/plain');
+    if (!taskIdStr) return;
+    const taskId = Number(taskIdStr);
+    try {
+      await updateTask({ id: taskId, body: { status_id: targetStatusId } }).unwrap();
+      toast.showSuccess('Task status updated!');
+    } catch (err: any) {
+      toast.showError('Failed to update task status');
+    }
+  };
+
   const handleSaveTask = async () => {
     if (!title.trim()) {
       toast.showError('Task title is required');
@@ -172,8 +215,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           flexWrap: 'wrap',
           gap: 1.5,
           p: 1.5,
-          bgcolor: '#F8FAFC',
-          border: '1px solid #E2E8F0',
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
           borderRadius: '8px',
         }}
       >
@@ -191,8 +235,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 fontWeight: 600,
                 fontSize: 12,
                 px: 1.5,
-                color: '#64748B',
-                '&.Mui-selected': { bgcolor: '#FFFFFF', color: '#04552B', fontWeight: 700, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
+                '&.Mui-selected': { bgcolor: 'primary.main', color: '#FFFFFF', fontWeight: 700 },
               },
             }}
           >
@@ -204,7 +247,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          <Chip label="Group: Status" size="small" variant="outlined" sx={{ height: 26, fontSize: 11, fontWeight: 600, bgcolor: '#FFFFFF' }} />
+          <Chip label="Group: Status" size="small" variant="outlined" sx={{ height: 26, fontSize: 11, fontWeight: 600 }} />
         </Box>
 
         {/* Right Search & Add Task Action */}
@@ -221,7 +264,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 </InputAdornment>
               ),
             }}
-            sx={{ width: 220, '& .MuiOutlinedInput-root': { height: 32, fontSize: 12, bgcolor: '#FFFFFF' } }}
+            sx={{ width: 220, '& .MuiOutlinedInput-root': { height: 32, fontSize: 12 } }}
           />
 
           <Button
@@ -254,16 +297,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             return (
               <Box
                 key={st.id}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, st.id)}
                 sx={{
                   width: 300,
                   minWidth: 300,
-                  bgcolor: '#F1F5F9',
+                  bgcolor: 'background.default',
                   borderRadius: '10px',
                   p: 1.5,
                   display: 'flex',
                   flexDirection: 'column',
                   maxHeight: 'calc(100vh - 280px)',
-                  border: '1px solid #E2E8F0',
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 {/* Column Header */}
@@ -281,14 +327,14 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         px: 0.5,
                       }}
                     />
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                       {statusTasks.length}
                     </Typography>
                   </Box>
 
                   <Tooltip title="Add Task in this status">
                     <IconButton size="small" onClick={() => handleOpenCreateModal(st.id)} sx={{ p: 0.5 }}>
-                      <Plus size={16} color="#64748B" />
+                      <Plus size={16} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -309,22 +355,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       sx={{
                         p: 3,
                         textAlign: 'center',
-                        border: '2px dashed #CBD5E1',
+                        border: '2px dashed',
+                        borderColor: 'divider',
                         borderRadius: '8px',
-                        bgcolor: '#FFFFFF',
+                        bgcolor: 'background.paper',
                       }}
                     >
                       <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
                         No tasks in {st.name}
                       </Typography>
-                      <Button
-                        size="small"
-                        startIcon={<Plus size={13} />}
-                        onClick={() => handleOpenCreateModal(st.id)}
-                        sx={{ textTransform: 'none', fontSize: 11, color: '#04552B' }}
-                      >
-                        Add Task
-                      </Button>
                     </Box>
                   ) : (
                     statusTasks.map((task) => {
@@ -335,38 +374,41 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         <Paper
                           key={task.id}
                           elevation={0}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task.id)}
                           onClick={() => openTask(task)}
                           sx={{
                             p: 2,
                             borderRadius: '8px',
-                            bgcolor: '#FFFFFF',
-                            border: '1px solid #E2E8F0',
-                            cursor: 'pointer',
+                            bgcolor: 'background.paper',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            cursor: 'grab',
                             transition: 'all 0.15s ease-in-out',
                             '&:hover': {
-                              borderColor: '#04552B',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                              borderColor: 'primary.main',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                               transform: 'translateY(-1px)',
                             },
                           }}
                         >
                           {/* Task Title */}
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', mb: 1.5, lineHeight: 1.4 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mb: 1.5, lineHeight: 1.4 }}>
                             {task.title}
                           </Typography>
 
-                          {/* Subtasks Progress indicator if present */}
+                          {/* Subtasks / Dependencies Progress indicator if present */}
                           {totalSubtasks > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
                               <CheckSquare size={13} color="#64748B" />
-                              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: 11 }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>
                                 {completedSubtasks}/{totalSubtasks} subtasks
                               </Typography>
                             </Box>
                           )}
 
                           {/* Footer Meta Row */}
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: '1px solid #F1F5F9' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               {/* Assignee Avatar */}
                               <Tooltip title={task.assignee_name || 'Unassigned'}>
@@ -384,14 +426,14 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             {/* Due Date or Tracked Hours */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               {task.due_date && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: '#64748B' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'text.secondary' }}>
                                   <Calendar size={12} />
                                   <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 500 }}>
                                     {task.due_date}
                                   </Typography>
                                 </Box>
                               )}
-                              <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11, fontFamily: 'monospace' }}>
                                 {task.actual_hours}h/{task.estimated_hours}h
                               </Typography>
                             </Box>
@@ -402,25 +444,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   )}
                 </Box>
 
-                {/* Inline Add Task at Column Bottom */}
-                <Button
-                  size="small"
-                  startIcon={<Plus size={14} />}
-                  onClick={() => handleOpenCreateModal(st.id)}
-                  sx={{
-                    mt: 1.5,
-                    width: '100%',
-                    justify: 'flex-start',
-                    color: '#64748B',
-                    textTransform: 'none',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    borderRadius: '6px',
-                    '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' },
-                  }}
-                >
-                  Add Task
-                </Button>
+                {/* Inline Fast Task Creation ("Type & Enter") */}
+                <Box sx={{ mt: 1.5 }}>
+                  <TextField
+                    placeholder="+ Add Task (Press Enter)"
+                    size="small"
+                    fullWidth
+                    value={quickTaskInputs[st.id] || ''}
+                    onChange={(e) => setQuickTaskInputs((prev) => ({ ...prev, [st.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleQuickCreateTask(st.id);
+                      }
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        height: 32,
+                        fontSize: 12,
+                        bgcolor: 'background.paper',
+                      },
+                    }}
+                  />
+                </Box>
               </Box>
             );
           })}
@@ -429,16 +474,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
       {/* ── CLICKUP GROUPED LIST VIEW ───────────────────────────────────── */}
       {viewMode === 'list' && (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}>
           <Table size="small">
-            <TableHead sx={{ bgcolor: '#F8FAFC' }}>
+            <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
                 <TableCell width={40}></TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Assignee</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={150}>Due Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={120}>Priority</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#475569' }} width={140}>Tracked Time</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Assignee</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Due Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Priority</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={140}>Tracked Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -468,7 +513,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <React.Fragment key={status.id}>
                       {/* Group Header */}
-                      <TableRow sx={{ bgcolor: '#F8FAFC', cursor: 'pointer', '&:hover': { bgcolor: '#F1F5F9' } }} onClick={() => toggleGroup(status.id)}>
+                      <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(status.id)}>
                         <TableCell>
                           <IconButton size="small">
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -477,7 +522,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         <TableCell colSpan={5}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip label={status.name} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
-                            <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -487,14 +532,14 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         <TableRow 
                           key={task.id} 
                           hover 
-                          sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#F8FAFC' } }}
+                          sx={{ cursor: 'pointer' }}
                           onClick={() => openTask(task)}
                         >
                           <TableCell align="center">
                             <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: `2px solid ${status.color}`, margin: 'auto' }} />
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A' }}>{task.title}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{task.title}</Typography>
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -505,7 +550,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? '#475569' : '#94A3B8' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? 'text.primary' : 'text.secondary' }}>
                               <Calendar size={14} />
                               <Typography variant="body2">{task.due_date || 'None'}</Typography>
                             </Box>
@@ -519,7 +564,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" sx={{ color: '#64748B', fontFamily: 'monospace' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
                               {task.actual_hours}h / {task.estimated_hours}h
                             </Typography>
                           </TableCell>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar, Divider, IconButton, InputAdornment, Menu, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
-import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon, X } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon, X, Sun, Moon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
@@ -9,6 +9,7 @@ import { useLogoutMutation } from '@/api/authApi';
 import { initialsOf } from '@/utils/format';
 import { logout } from '@/auth/authSlice';
 import { useAppDispatch } from '@/app/hooks';
+import { useThemeMode } from '@/context/ThemeModeContext';
 
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/': ['Dashboard', 'Overview'],
@@ -30,6 +31,7 @@ const BREADCRUMBS: Record<string, [string, string]> = {
 };
 
 export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
+  const { mode, toggleThemeMode } = useThemeMode();
   const [searchParams, setSearchParams] = useSearchParams();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
@@ -168,6 +170,16 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
       />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? 6 : 10, flexShrink: 0 }}>
+        <Tooltip title={mode === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"} arrow>
+          <IconButton
+            onClick={toggleThemeMode}
+            aria-label="Toggle theme mode"
+            sx={{ border: '1px solid #E4EBE1', borderRadius: 2, p: 1 }}
+          >
+            {mode === 'dark' ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#64748B" />}
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title="Notifications" arrow>
           <IconButton
             onClick={() => navigate('/notifications')}
