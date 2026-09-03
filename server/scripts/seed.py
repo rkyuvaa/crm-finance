@@ -17,6 +17,7 @@ from app.models import (
     Application,
     ApplicationStatus,
     CrmTab,
+    CrmTabField,
     CrmTabStageMapping,
     Delivery,
     DeliveryStatus,
