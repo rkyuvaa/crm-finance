@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import {
   Box,
   Button,
@@ -11,13 +12,13 @@ import {
   Grid,
   IconButton,
   Paper,
-  TextField,
   Typography,
   Avatar,
   AvatarGroup,
   LinearProgress,
   MenuItem,
   Select,
+  TextField,
 } from '@mui/material';
 import {
   Plus,
@@ -25,6 +26,10 @@ import {
   MoreVertical,
   X,
   ChevronDown,
+  GripVertical,
+  Calendar,
+  BarChart3,
+  Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 
@@ -205,25 +210,14 @@ const PRIORITY_CONFIG = {
 // ── Main Component ──
 export default function TasksPage() {
   const { showToast } = useToast();
-  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'gantt' | 'workload'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'gantt' | 'workload'>('board');
   const [groupBy, setGroupBy] = useState<'status' | 'priority' | 'assignee'>('status');
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
-  const [openTaskDialog, setOpenTaskDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [openDetailPanel, setOpenDetailPanel] = useState(false);
-
-  // New Task Form
-  const [newTask, setNewTask] = useState({
-    title: '',
-    projectId: PROJECTS[0].id,
-    priority: 'Normal' as const,
-    assignees: [] as string[],
-    dueDate: '',
-    description: '',
-  });
 
   // Filtered Tasks
   const filteredTasks = tasks.filter((t) => {
@@ -250,39 +244,32 @@ export default function TasksPage() {
     {} as Record<string, Task[]>
   );
 
-  const handleCreateTask = () => {
-    if (!newTask.title.trim()) {
-      showToast('Please enter task title', 'error');
+  // Handle drag and drop
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+
+    // If dropped outside a droppable area
+    if (!destination) {
       return;
     }
-    const created: Task = {
-      id: `TSK-${Math.floor(1000 + Math.random() * 9000)}`,
-      title: newTask.title,
-      description: newTask.description,
-      projectId: newTask.projectId,
-      projectName: PROJECTS.find((p) => p.id === newTask.projectId)?.name || '',
-      status: 'To Do',
-      priority: newTask.priority,
-      assignees: newTask.assignees,
-      dueDate: newTask.dueDate,
-      subtasks: [],
-      tags: [],
-      estimatedHours: 0,
-      actualHours: 0,
-    };
-    setTasks([created, ...tasks]);
-    setOpenTaskDialog(false);
-    setNewTask({
-      title: '',
-      projectId: PROJECTS[0].id,
-      priority: 'Normal',
-      assignees: [],
-      dueDate: '',
-      description: '',
-    });
-    showToast('Task created successfully!', 'success');
+
+    // If dropped in same position
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
+    }
+
+    const newStatus = destination.droppableId as Task['status'];
+    const taskId = draggableId;
+
+    setTasks(
+      tasks.map((task) =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      )
+    );
+    showToast(`Task moved to ${newStatus}`, 'success');
   };
 
+  // Handle task status update
   const handleTaskStatusChange = (taskId: string, newStatus: Task['status']) => {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
     showToast('Task status updated', 'info');
@@ -402,92 +389,154 @@ export default function TasksPage() {
     </Box>
   );
 
-  // ── Render Board View ──
+  // ── Render Board View with Drag-Drop ──
   const renderBoardView = () => {
     const statuses: (keyof typeof STATUS_CONFIG)[] = ['To Do', 'In Progress', 'In Review', 'Done', 'Blocked'];
+
     return (
-      <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
-        {statuses.map((status) => {
-          const statusTasks = filteredTasks.filter((t) => t.status === status);
-          return (
-            <Box
-              key={status}
-              sx={{
-                minWidth: 280,
-                bgcolor: '#F9FAFB',
-                borderRadius: '12px',
-                p: 1.5,
-                border: '1px solid #E5E7EB',
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
+          {statuses.map((status) => {
+            const statusTasks = filteredTasks.filter((t) => t.status === status);
+            return (
+              <Droppable key={status} droppableId={status} type="TASK">
+                {(provided, snapshot) => (
                   <Box
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
                     sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      bgcolor: STATUS_CONFIG[status].color,
-                    }}
-                  />
-                  <Typography sx={{ fontWeight: 700, fontSize: '13px' }}>
-                    {status}
-                  </Typography>
-                </Box>
-                <Chip label={statusTasks.length} size="small" variant="outlined" />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {statusTasks.map((task) => (
-                  <Card
-                    key={task.id}
-                    onClick={() => {
-                      setSelectedTask(task);
-                      setOpenDetailPanel(true);
-                    }}
-                    sx={{
+                      minWidth: 300,
+                      bgcolor: snapshot.isDraggingOver ? '#F0F9FF' : '#F9FAFB',
+                      borderRadius: '12px',
                       p: 1.5,
-                      borderRadius: '10px',
-                      border: '1px solid #E5E7EB',
-                      cursor: 'pointer',
-                      '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.08)' },
+                      border: snapshot.isDraggingOver ? '2px solid #087A3D' : '1px solid #E5E7EB',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <Typography sx={{ fontWeight: 600, fontSize: '13px', mb: 0.5 }}>
-                      {task.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
-                      {task.tags.map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          size="small"
-                          variant="outlined"
-                          sx={{ height: 20, fontSize: '10px' }}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: STATUS_CONFIG[status].color,
+                          }}
                         />
+                        <Typography sx={{ fontWeight: 700, fontSize: '13px' }}>
+                          {status}
+                        </Typography>
+                      </Box>
+                      <Chip label={statusTasks.length} size="small" variant="outlined" />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {statusTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <Card
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onClick={() => {
+                                setSelectedTask(task);
+                                setOpenDetailPanel(true);
+                              }}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: '10px',
+                                border: '1px solid #E5E7EB',
+                                cursor: 'grab',
+                                backgroundColor: snapshot.isDragging ? '#FFF' : 'inherit',
+                                boxShadow: snapshot.isDragging ? '0 8px 24px rgba(0,0,0,0.15)' : 'none',
+                                transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
+                                '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.08)' },
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', gap: 1, mb: 0.5, alignItems: 'flex-start' }}>
+                                <GripVertical size={14} color="#999" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography sx={{ fontWeight: 600, fontSize: '13px', mb: 0.5 }}>
+                                    {task.id}
+                                  </Typography>
+                                  <Typography sx={{ fontWeight: 600, fontSize: '13px', mb: 0.5 }}>
+                                    {task.title}
+                                  </Typography>
+                                </Box>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                                {task.tags.slice(0, 2).map((tag) => (
+                                  <Chip
+                                    key={tag}
+                                    label={tag}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: '10px' }}
+                                  />
+                                ))}
+                                {task.tags.length > 2 && (
+                                  <Chip
+                                    label={`+${task.tags.length - 2}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ height: 20, fontSize: '10px' }}
+                                  />
+                                )}
+                              </Box>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <AvatarGroup max={2} sx={{ width: 'auto' }}>
+                                  {task.assignees.map((a) => (
+                                    <Avatar key={a} sx={{ width: 20, height: 20, fontSize: '8px' }}>
+                                      {a.split(' ').map((n) => n[0]).join('')}
+                                    </Avatar>
+                                  ))}
+                                </AvatarGroup>
+                                <Chip
+                                  label={PRIORITY_CONFIG[task.priority].label}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: PRIORITY_CONFIG[task.priority].bg,
+                                    color: PRIORITY_CONFIG[task.priority].color,
+                                    fontWeight: 600,
+                                    fontSize: '11px',
+                                    height: 22,
+                                  }}
+                                />
+                              </Box>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
+                                  {task.actualHours}h/{task.estimatedHours}h
+                                </Typography>
+                                <Typography sx={{ fontSize: '10px', color: '#9CA3AF' }}>
+                                  {task.dueDate}
+                                </Typography>
+                              </Box>
+                            </Card>
+                          )}
+                        </Draggable>
                       ))}
+                      {provided.placeholder}
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <AvatarGroup max={2} sx={{ width: 'auto' }}>
-                        {task.assignees.map((a) => (
-                          <Avatar key={a} sx={{ width: 20, height: 20, fontSize: '8px' }}>
-                            {a.split(' ').map((n) => n[0]).join('')}
-                          </Avatar>
-                        ))}
-                      </AvatarGroup>
-                      <Typography sx={{ fontSize: '11px', color: '#6B7280' }}>
-                        {task.actualHours}h/{task.estimatedHours}h
-                      </Typography>
-                    </Box>
-                  </Card>
-                ))}
-                <Button variant="outlined" size="small" fullWidth sx={{ textTransform: 'none', mt: 1 }}>
-                  + Add task
-                </Button>
-              </Box>
-            </Box>
-          );
-        })}
-      </Box>
+
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      startIcon={<Plus size={14} />}
+                      sx={{ textTransform: 'none', mt: 1, fontSize: '12px' }}
+                    >
+                      Add task
+                    </Button>
+                  </Box>
+                )}
+              </Droppable>
+            );
+          })}
+        </Box>
+      </DragDropContext>
     );
   };
 
@@ -714,10 +763,9 @@ export default function TasksPage() {
           <Button
             variant="contained"
             startIcon={<Plus size={16} />}
-            onClick={() => setOpenTaskDialog(true)}
             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
           >
-            New Task
+            New Task (Coming Soon)
           </Button>
         </Box>
       </Box>
@@ -771,59 +819,6 @@ export default function TasksPage() {
           </Typography>
         )}
       </Paper>
-
-      {/* New Task Dialog */}
-      <Dialog open={openTaskDialog} onClose={() => setOpenTaskDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Create New Task</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField
-            label="Task Title"
-            fullWidth
-            value={newTask.title}
-            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-          />
-          <TextField
-            label="Description"
-            fullWidth
-            multiline
-            rows={3}
-            value={newTask.description}
-            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-          />
-          <Select
-            value={newTask.projectId}
-            onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value })}
-          >
-            {PROJECTS.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </Select>
-          <Select
-            value={newTask.priority}
-            onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as any })}
-          >
-            <MenuItem value="Urgent">Urgent</MenuItem>
-            <MenuItem value="High">High</MenuItem>
-            <MenuItem value="Normal">Normal</MenuItem>
-            <MenuItem value="Low">Low</MenuItem>
-          </Select>
-          <TextField
-            label="Due Date"
-            type="date"
-            value={newTask.dueDate}
-            onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenTaskDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateTask}>
-            Create Task
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Task Detail Panel */}
       {renderDetailPanel()}
