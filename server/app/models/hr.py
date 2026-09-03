@@ -2,7 +2,7 @@ from datetime import datetime, date
 from typing import TYPE_CHECKING
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func, Date, Float, Boolean, Integer
+from sqlalchemy import DateTime, Enum, ForeignKey, String, func, Date, Float, Boolean, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -71,8 +71,7 @@ class Attendance(Base):
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], lazy="joined")
 
     __table_args__ = (
-        # Unique constraint: one attendance record per user per day
-        {"sqlite_ignore_constraint": True},
+        UniqueConstraint("user_id", "attendance_date", name="uq_user_attendance_date"),
     )
 
 
@@ -128,8 +127,7 @@ class PayrollRecord(Base):
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], lazy="joined")
 
     __table_args__ = (
-        # Unique constraint: one payroll record per user per month
-        {"sqlite_ignore_constraint": True},
+        UniqueConstraint("user_id", "payroll_month", name="uq_user_payroll_month"),
     )
 
 

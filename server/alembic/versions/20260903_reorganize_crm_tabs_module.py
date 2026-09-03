@@ -31,13 +31,13 @@ def upgrade() -> None:
     if res:
         lead_tab_id = res[0]
         bind.execute(
-            sa.text(f"UPDATE crm_tabs SET module_id = 'LEAD', name = 'Lead Details', code = 'lead_details', is_default = True WHERE id = {lead_tab_id}")
+            sa.text(f"UPDATE crm_tabs SET module_id = 'LEAD', name = 'Lead Details', code = 'lead_details', is_default = TRUE WHERE id = {lead_tab_id}")
         )
     else:
         bind.execute(
             sa.text("""
                 INSERT INTO crm_tabs (module_id, name, code, description, icon, display_order, is_active, is_default, visibility_type, created_at, updated_at)
-                VALUES ('LEAD', 'Lead Details', 'lead_details', 'Default lead capture and qualification fields', 'UserCheck', 1, True, True, 'EVERYONE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                VALUES ('LEAD', 'Lead Details', 'lead_details', 'Default lead capture and qualification fields', 'UserCheck', 1, TRUE, TRUE, 'EVERYONE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """)
         )
         res = bind.execute(sa.text("SELECT id FROM crm_tabs WHERE code = 'lead_details' LIMIT 1")).fetchone()
