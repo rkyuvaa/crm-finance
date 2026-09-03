@@ -221,3 +221,22 @@ class CustomFieldValueOut(CustomFieldValueBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+# --- Status Definitions ---
+class StatusDefinitionBase(BaseModel):
+    name: str
+    color: str = "#E2E8F0"
+    display_order: int = 0
+    is_terminal: bool = False
+
+
+class StatusDefinitionCreate(StatusDefinitionBase):
+    pass
+
+
+class StatusDefinitionOut(StatusDefinitionBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+

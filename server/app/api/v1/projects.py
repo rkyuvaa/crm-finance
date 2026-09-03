@@ -18,6 +18,8 @@ from app.schemas.projects import (
     ProjectMilestoneOut,
     CustomFieldDefinitionCreate,
     CustomFieldDefinitionOut,
+    StatusDefinitionCreate,
+    StatusDefinitionOut,
 )
 from app.core.deps import get_current_user
 
@@ -199,4 +201,29 @@ def create_task_custom_field_definition(
     db.commit()
     db.refresh(field_def)
     return field_def
+
+
+# --- Workflow Status Definitions API ---
+@router.get("/statuses/definitions", response_model=List[StatusDefinitionOut])
+def get_task_status_definitions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List workflow status definitions for tasks"""
+    return db.query(TaskStatusDef).order_by(TaskStatusDef.display_order).all()
+
+
+@router.post("/statuses/definitions", response_model=StatusDefinitionOut, status_code=status.HTTP_201_CREATED)
+def create_task_status_definition(
+    data: StatusDefinitionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new workflow status definition for tasks"""
+    status_def = TaskStatusDef(**data.model_dump())
+    db.add(status_def)
+    db.commit()
+    db.refresh(status_def)
+    return status_def
+
 

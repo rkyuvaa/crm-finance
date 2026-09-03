@@ -79,6 +79,24 @@ export interface TaskCommentItem {
   created_at: string;
 }
 
+export interface StatusDefinitionItem {
+  id: number;
+  name: string;
+  color: string;
+  display_order: number;
+  is_terminal: boolean;
+}
+
+export interface CustomFieldDefinitionItem {
+  id: number;
+  name: string;
+  label: string;
+  field_type: 'Text' | 'Number' | 'Date' | 'Select' | 'Boolean';
+  options?: string;
+  is_required: boolean;
+  display_order: number;
+}
+
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: fetchBaseQuery({
@@ -91,7 +109,7 @@ export const projectsApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -209,6 +227,34 @@ export const projectsApi = createApi({
       query: (taskId) => `/tasks/${taskId}/comments`,
       providesTags: ['Comments'],
     }),
+
+    // Status Definitions
+    getStatusDefinitions: builder.query<StatusDefinitionItem[], void>({
+      query: () => '/projects/statuses/definitions',
+      providesTags: ['StatusDefs'],
+    }),
+    createStatusDefinition: builder.mutation<StatusDefinitionItem, Partial<StatusDefinitionItem>>({
+      query: (body) => ({
+        url: '/projects/statuses/definitions',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['StatusDefs'],
+    }),
+
+    // Custom Field Definitions
+    getCustomFieldDefinitions: builder.query<CustomFieldDefinitionItem[], void>({
+      query: () => '/projects/tasks/custom-fields/definitions',
+      providesTags: ['CustomFieldDefs'],
+    }),
+    createCustomFieldDefinition: builder.mutation<CustomFieldDefinitionItem, Partial<CustomFieldDefinitionItem>>({
+      query: (body) => ({
+        url: '/projects/tasks/custom-fields/definitions',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['CustomFieldDefs'],
+    }),
   }),
 });
 
@@ -229,4 +275,8 @@ export const {
   useGetTaskTimeLogsQuery,
   useAddCommentMutation,
   useGetTaskCommentsQuery,
+  useGetStatusDefinitionsQuery,
+  useCreateStatusDefinitionMutation,
+  useGetCustomFieldDefinitionsQuery,
+  useCreateCustomFieldDefinitionMutation,
 } = projectsApi;
