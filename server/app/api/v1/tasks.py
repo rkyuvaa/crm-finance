@@ -69,6 +69,10 @@ def create_task(
     task = Task(**data.model_dump())
     if not task.assignee_id:
         task.assignee_id = current_user.id
+    if not task.status_id:
+        first_status = db.query(TaskStatusDef).order_by(TaskStatusDef.display_order).first()
+        if first_status:
+            task.status_id = first_status.id
     db.add(task)
     db.commit()
     db.refresh(task)

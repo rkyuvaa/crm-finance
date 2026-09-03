@@ -24,6 +24,25 @@ def _ensure_schema_migrations():
             if "color" not in cols:
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
+
+        if "task_statuses" in inspector.get_table_names():
+            with engine.begin() as conn:
+                res = conn.execute(text("SELECT COUNT(*) FROM task_statuses")).scalar()
+                if res == 0:
+                    conn.execute(
+                        text(
+                            "INSERT INTO task_statuses (id, name, color, display_order, is_terminal) VALUES "
+                            "(1, 'To Do', '#64748B', 1, false), "
+                            "(2, 'In Progress', '#2563EB', 2, false), "
+                            "(3, 'In Review', '#D97706', 3, false), "
+                            "(4, 'Done', '#16A34A', 4, true), "
+                            "(5, 'Blocked', '#DC2626', 5, false)"
+                        )
+                    )
+                    try:
+                        conn.execute(text("SELECT setval(pg_get_serial_sequence('task_statuses', 'id'), 5)"))
+                    except Exception:
+                        pass
     except Exception as err:
         import logging
         logging.error(f"Migration check error: {err}")

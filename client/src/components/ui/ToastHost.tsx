@@ -11,6 +11,8 @@ interface Toast {
 
 interface ToastContextValue {
   showToast: (message: string, severity?: AlertColor) => void;
+  showSuccess: (message: string) => void;
+  showError: (message: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -35,7 +37,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, 3500);
   }, []);
 
-  const value = useMemo(() => ({ showToast }), [showToast]);
+  const showSuccess = useCallback((message: string) => {
+    showToast(message, 'success');
+  }, [showToast]);
+
+  const showError = useCallback((message: string) => {
+    showToast(message, 'error');
+  }, [showToast]);
+
+  const value = useMemo(() => ({ showToast, showSuccess, showError }), [showToast, showSuccess, showError]);
 
   return (
     <ToastContext.Provider value={value}>
