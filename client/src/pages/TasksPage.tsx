@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addDays, eachDayOfInterval } from 'date-fns';
@@ -227,6 +227,43 @@ export default function TasksPage() {
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [bulkStatusUpdate, setBulkStatusUpdate] = useState<Task['status'] | ''>('');
+
+  // Load tasks from localStorage on mount
+  useEffect(() => {
+    const savedTasks = localStorage.getItem('tasks-app-data');
+    if (savedTasks) {
+      try {
+        setTasks(JSON.parse(savedTasks));
+        showToast('Tasks loaded from storage', 'info');
+      } catch (e) {
+        showToast('Failed to load saved tasks', 'error');
+      }
+    }
+  }, []);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('tasks-app-data', JSON.stringify(tasks));
+  }, [tasks]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K: Focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder="Search tasks..."]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      }
+      // Escape: Close detail panel
+      if (e.key === 'Escape' && openDetailPanel) {
+        setOpenDetailPanel(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [openDetailPanel]);
 
   // Filtered Tasks with Enhanced Filtering
   const filteredTasks = tasks.filter((t) => {
