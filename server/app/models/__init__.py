@@ -51,6 +51,17 @@ from app.models.smtp_setting import SmtpSetting
 from app.models.user import User
 from app.models.automove_rule import StageAutomoveRule
 from app.models.vehicle_model import VehicleModel
+from app.models.hr import (
+    Attendance,
+    AttendanceStatus,
+    LeaveRequest,
+    LeaveStatus,
+    LeaveType,
+    PayrollRecord,
+    PayrollStatus,
+    PerformanceReview,
+    PerformanceStatus,
+)
 
 __all__ = [
     "StageAutomoveRule",
@@ -62,6 +73,8 @@ __all__ = [
     "ApplicationSequence",
     "ApplicationStatus",
     "StageModule",
+    "Attendance",
+    "AttendanceStatus",
     "AuditActionType",
     "AuditLog",
     "CrmLeadCustomFieldValue",
@@ -85,8 +98,15 @@ __all__ = [
     "FinancierDocumentAccessLog",
     "FinancierDocumentAccessToken",
     "FinancierDocumentSendItem",
+    "LeaveRequest",
+    "LeaveStatus",
+    "LeaveType",
     "Module",
     "Notification",
+    "PayrollRecord",
+    "PayrollStatus",
+    "PerformanceReview",
+    "PerformanceStatus",
     "Permission",
     "PermissionStatus",
     "PipelineStage",
