@@ -117,6 +117,10 @@ export const mastersApi = baseApi.injectEndpoints({
       query: () => ({ url: '/masters/tabs' }),
       providesTags: ['Tabs'],
     }),
+    tabsByModule: build.query<CrmTabConfig[], 'LEAD' | 'OPPORTUNITY' | string>({
+      query: (module) => ({ url: `/masters/tabs?module=${module}` }),
+      providesTags: ['Tabs'],
+    }),
     createTab: build.mutation<CrmTabConfig, CrmTabInput>({
       query: (body) => ({ url: '/masters/tabs', method: 'POST', body }),
       invalidatesTags: ['Tabs'],
@@ -180,6 +184,7 @@ export const {
   useUpdateActivityTypeMutation,
   useDeleteActivityTypeMutation,
   useTabsQuery,
+  useTabsByModuleQuery,
   useCreateTabMutation,
   useUpdateTabMutation,
   useDeleteTabMutation,

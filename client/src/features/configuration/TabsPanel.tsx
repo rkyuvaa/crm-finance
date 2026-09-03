@@ -28,6 +28,8 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 
@@ -35,7 +37,7 @@ import {
   useCreateTabMutation,
   useDeleteTabMutation,
   useStagesQuery,
-  useTabsQuery,
+  useTabsByModuleQuery,
   useUpdateTabMutation,
 } from '@/api/mastersApi';
 import EmptyState from '@/components/ui/EmptyState';
@@ -52,7 +54,8 @@ const ROLES = [
 ];
 
 export default function TabsPanel() {
-  const { data: tabs, isFetching, isError, refetch } = useTabsQuery();
+  const [activeModule, setActiveModule] = useState<'LEAD' | 'OPPORTUNITY'>('LEAD');
+  const { data: tabs, isFetching, isError, refetch } = useTabsByModuleQuery(activeModule);
   const { data: stages } = useStagesQuery();
   const [deleteTab] = useDeleteTabMutation();
   const [updateTab] = useUpdateTabMutation();
@@ -67,7 +70,7 @@ export default function TabsPanel() {
     try {
       await deleteTab(id).unwrap();
       showToast('Tab deleted successfully', 'success');
-    } catch (err) {
+    } catch {
       showToast('Could not delete tab', 'error');
     }
   };
@@ -83,7 +86,7 @@ export default function TabsPanel() {
 
   const handleSetDefault = async (tab: CrmTabConfig) => {
     try {
-      await updateTab({ id: tab.id, body: { is_default: true } }).unwrap();
+      await updateTab({ id: tab.id, body: { is_default: true, module_id: activeModule } }).unwrap();
       showToast(`"${tab.name}" set as default tab`, 'success');
     } catch {
       showToast('Could not set default tab', 'error');
@@ -99,16 +102,33 @@ export default function TabsPanel() {
             Configure dynamic tabs, stage mappings, custom filter rules, and role visibility.
           </div>
         </div>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={16} />}
-          onClick={() => {
-            setEditingTab(null);
-            setDialogOpen(true);
-          }}
-        >
-          Create Tab Wizard
-        </Button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={activeModule}
+            onChange={(_, val) => {
+              if (val) setActiveModule(val);
+            }}
+          >
+            <ToggleButton value="LEAD" sx={{ textTransform: 'none', fontWeight: 700, px: 2.5 }}>
+              Lead Tabs
+            </ToggleButton>
+            <ToggleButton value="OPPORTUNITY" sx={{ textTransform: 'none', fontWeight: 700, px: 2.5 }}>
+              Opportunity Tabs
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={() => {
+              setEditingTab(null);
+              setDialogOpen(true);
+            }}
+          >
+            Create Tab Wizard
+          </Button>
+        </div>
       </div>
 
       <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
@@ -143,7 +163,7 @@ export default function TabsPanel() {
               ) : tabs?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9}>
-                    <EmptyState title="No dynamic tabs found" hint="Click 'Create Tab Wizard' to add one." />
+                    <EmptyState title={`No dynamic tabs found for ${activeModule === 'LEAD' ? 'Leads' : 'Opportunities'}`} hint="Click 'Create Tab Wizard' to add one." />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -174,7 +194,7 @@ export default function TabsPanel() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip label={`${tab.count} leads`} size="small" sx={{ fontWeight: 700 }} />
+                      <Chip label={`${tab.count} ${activeModule === 'LEAD' ? 'leads' : 'opportunities'}`} size="small" sx={{ fontWeight: 700 }} />
                     </TableCell>
                     <TableCell>
                       <Button
@@ -235,6 +255,7 @@ export default function TabsPanel() {
           open={dialogOpen}
           editing={editingTab}
           stages={stages ?? []}
+          defaultModule={activeModule}
           onClose={() => {
             setDialogOpen(false);
             setEditingTab(null);
@@ -249,11 +270,13 @@ function CreateTabWizardDialog({
   open,
   editing,
   stages,
+  defaultModule,
   onClose,
 }: {
   open: boolean;
   editing: CrmTabConfig | null;
   stages: StageConfig[];
+  defaultModule: 'LEAD' | 'OPPORTUNITY';
   onClose: () => void;
 }) {
   const [activeStep, setActiveStep] = useState(0);
@@ -261,6 +284,7 @@ function CreateTabWizardDialog({
   const [updateTab, { isLoading: updating }] = useUpdateTabMutation();
   const { showToast } = useToast();
 
+  const [selectedModule, setSelectedModule] = useState<'LEAD' | 'OPPORTUNITY'>(defaultModule);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -274,6 +298,7 @@ function CreateTabWizardDialog({
   useEffect(() => {
     if (!open) return;
     if (editing) {
+      setSelectedModule((editing.module_id?.toUpperCase() as 'LEAD' | 'OPPORTUNITY') || defaultModule);
       setName(editing.name);
       setCode(editing.code);
       setDescription(editing.description ?? '');
@@ -284,6 +309,7 @@ function CreateTabWizardDialog({
       setVisibilityType(editing.visibility_type === 'ROLES' ? 'ROLES' : 'EVERYONE');
       setSelectedRoles(editing.allowed_roles ? editing.allowed_roles.split(',') : []);
     } else {
+      setSelectedModule(defaultModule);
       setName('');
       setCode('');
       setDescription('');
@@ -295,7 +321,7 @@ function CreateTabWizardDialog({
       setSelectedRoles([]);
     }
     setActiveStep(0);
-  }, [open, editing]);
+  }, [open, editing, defaultModule]);
 
   const steps = ['Basic Info', 'Stage Mapping', 'Visibility & Roles', 'Review & Save'];
 
@@ -317,6 +343,7 @@ function CreateTabWizardDialog({
 
   const handleSave = async () => {
     const payload = {
+      module_id: selectedModule,
       name,
       code: code.toLowerCase().replace(/[^a-z0-9_-]/g, '_'),
       description,
@@ -343,6 +370,8 @@ function CreateTabWizardDialog({
     }
   };
 
+  const moduleStages = stages.filter((st) => (st.module ?? 'OPPORTUNITY') === selectedModule);
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ fontWeight: 700 }}>
@@ -359,6 +388,27 @@ function CreateTabWizardDialog({
 
         {activeStep === 0 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box>
+              <FormLabel sx={{ fontSize: 12, fontWeight: 700, color: '#44584C', display: 'block', mb: 0.5 }}>
+                Module
+              </FormLabel>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={selectedModule}
+                onChange={(_, val) => {
+                  if (val) setSelectedModule(val);
+                }}
+                disabled={Boolean(editing)}
+              >
+                <ToggleButton value="LEAD" sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
+                  Lead Tab
+                </ToggleButton>
+                <ToggleButton value="OPPORTUNITY" sx={{ textTransform: 'none', fontWeight: 600, px: 3 }}>
+                  Opportunity Tab
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
             <TextField
               label="Tab Name"
               value={name}
@@ -388,7 +438,7 @@ function CreateTabWizardDialog({
               fullWidth
               multiline
               rows={2}
-              placeholder="Describe which leads this tab displays"
+              placeholder="Describe which records this tab displays"
             />
             <TextField
               label="Display Order"
@@ -403,13 +453,13 @@ function CreateTabWizardDialog({
         {activeStep === 1 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <FormLabel sx={{ fontWeight: 700, color: '#16231B' }}>
-              Select Pipeline Stages for this Tab
+              Select Pipeline Stages for this Tab ({selectedModule})
             </FormLabel>
             <div style={{ fontSize: 13, color: '#7A8B80' }}>
-              Leads in any of the selected stages will appear under this tab. If no stages are selected, the tab will display <b>all leads</b>.
+              Records in any of the selected stages will appear under this tab. If no stages are selected, the tab will display <b>all {selectedModule === 'LEAD' ? 'leads' : 'opportunities'}</b>.
             </div>
             <FormGroup>
-              {stages.map((st) => {
+              {moduleStages.map((st) => {
                 const checked = selectedStageIds.includes(st.id);
                 return (
                   <FormControlLabel
@@ -481,7 +531,7 @@ function CreateTabWizardDialog({
 
             <FormControlLabel
               control={<Switch checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />}
-              label="Set as System Default Tab"
+              label={`Set as Default Tab for ${selectedModule === 'LEAD' ? 'Leads' : 'Opportunities'}`}
             />
             <FormControlLabel
               control={<Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />}
@@ -494,6 +544,7 @@ function CreateTabWizardDialog({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#023020' }}>Configuration Summary</div>
             <Paper sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: 2 }}>
+              <div><b>Module:</b> {selectedModule}</div>
               <div><b>Name:</b> {name}</div>
               <div><b>Code:</b> {code}</div>
               <div><b>Description:</b> {description || 'None'}</div>

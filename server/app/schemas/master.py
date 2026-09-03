@@ -132,6 +132,7 @@ class CrmTabFilterOut(BaseModel):
 
 
 class CrmTabCreate(BaseModel):
+    module_id: str = Field(default="LEAD", min_length=1, max_length=40)
     name: str = Field(min_length=2, max_length=60)
     code: str = Field(min_length=2, max_length=40)
     description: str | None = None
@@ -146,6 +147,7 @@ class CrmTabCreate(BaseModel):
 
 
 class CrmTabUpdate(BaseModel):
+    module_id: str | None = None
     name: str | None = None
     code: str | None = None
     description: str | None = None

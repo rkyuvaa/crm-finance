@@ -240,17 +240,22 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
     db.flush()
 
     DEFAULT_TABS = [
-        ("All Leads", "all_leads", "All captured leads across pipeline", "Layers", 0, True, "EVERYONE", []),
-        ("New Leads", "new_leads", "Unassigned and new leads", "UserPlus", 1, False, "EVERYONE", ["leads"]),
-        ("Qualification", "qualification", "Contacted and qualified leads", "CheckCircle2", 2, False, "EVERYONE", ["applications", "verification"]),
-        ("Finance", "finance", "Finance applications under review", "Building2", 3, False, "EVERYONE", ["finance", "query", "sanctioned"]),
-        ("Delivery & Closed", "closed", "Completed and delivered deals", "Truck", 4, False, "EVERYONE", ["delivery", "disburse", "completed"]),
+        ("LEAD", "All Leads", "all_leads", "All captured leads across pipeline", "Layers", 1, True, "EVERYONE", []),
+        ("LEAD", "Document Upload", "document_upload", "Manage KYC, PAN, Bank Statements and income proofs", "FileText", 2, False, "EVERYONE", []),
+        ("LEAD", "Document Verification", "document_verification", "Synchronized document quality score analysis & manual verification", "CheckSquare", 3, False, "EVERYONE", ["verification"]),
+        ("LEAD", "Final Submission", "final_submission", "Review document readiness and send secure link to financier", "Send", 4, False, "EVERYONE", []),
+        ("OPPORTUNITY", "All Opportunities", "all_opportunities", "All active opportunities across stages", "Target", 1, True, "EVERYONE", []),
+        ("OPPORTUNITY", "Finance Approval", "finance_approval", "Finance applications under review by financier", "Building2", 2, False, "EVERYONE", ["finance", "query"]),
+        ("OPPORTUNITY", "Loan Sanctioned", "loan_sanctioned", "Approved and sanctioned loan applications", "CheckCircle2", 3, False, "EVERYONE", ["sanctioned"]),
+        ("OPPORTUNITY", "Disbursement", "disbursement", "Disbursement in progress and bank payout", "DollarSign", 4, False, "EVERYONE", ["disburse"]),
+        ("OPPORTUNITY", "Completed", "completed", "Completed and delivered deals", "Truck", 5, False, "EVERYONE", ["completed"]),
     ]
 
-    for name, code, desc, icon, order, is_def, vis, stage_keys in DEFAULT_TABS:
+    for module_id, name, code, desc, icon, order, is_def, vis, stage_keys in DEFAULT_TABS:
         tab = db.query(CrmTab).filter_by(code=code).first()
         if not tab:
             tab = CrmTab(
+                module_id=module_id,
                 name=name, code=code, description=desc, icon=icon,
                 display_order=order, is_default=is_def, visibility_type=vis,
                 created_at=now, updated_at=now,
@@ -261,6 +266,8 @@ def _ensure_masters(db) -> dict[str, FinanceCompany]:
                 st = db.query(PipelineStage).filter_by(key=s_key).first()
                 if st:
                     db.add(CrmTabStageMapping(tab_id=tab.id, stage_id=st.id))
+        else:
+            tab.module_id = module_id
     db.flush()
 
     return companies

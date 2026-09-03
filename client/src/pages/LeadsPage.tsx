@@ -29,7 +29,7 @@ import {
 
 import { useApplicationsQuery, useDeleteApplicationMutation, useUpdateApplicationMutation } from '@/api/applicationsApi';
 import { useDashboardQuery } from '@/api/dashboardApi';
-import { useStagesQuery, useStagesByModuleQuery, useTabsQuery } from '@/api/mastersApi';
+import { useStagesQuery, useStagesByModuleQuery, useTabsByModuleQuery } from '@/api/mastersApi';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import NewApplicationDialog from '@/components/ui/NewApplicationDialog';
@@ -49,8 +49,8 @@ export default function LeadsPage() {
   const [searchParams] = useSearchParams();
   const searchQ = searchParams.get('q') ?? '';
 
-  const { data: crmTabs } = useTabsQuery();
-  const [activeTabCode, setActiveTabCode] = useState<string>('all_leads');
+  const { data: crmTabs } = useTabsByModuleQuery(currentModule);
+  const [activeTabCode, setActiveTabCode] = useState<string>('');
   const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);

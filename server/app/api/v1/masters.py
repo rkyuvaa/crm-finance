@@ -455,8 +455,19 @@ def _build_tab_out(db: Session, tab: CrmTab, user: User) -> CrmTabOut:
 
 
 @router.get("/tabs", response_model=list[CrmTabOut])
-def list_tabs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    tabs = db.query(CrmTab).order_by(CrmTab.display_order.asc(), CrmTab.id.asc()).all()
+def list_tabs(
+    module: str | None = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = db.query(CrmTab)
+    if module:
+        m = module.upper()
+        if m == "LEAD":
+            query = query.filter(func.upper(CrmTab.module_id).in_(["LEAD", "CRM"]))
+        else:
+            query = query.filter(func.upper(CrmTab.module_id) == m)
+    tabs = query.order_by(CrmTab.display_order.asc(), CrmTab.id.asc()).all()
     filtered_tabs = []
     for tab in tabs:
         if not tab.is_active:
@@ -477,10 +488,12 @@ def create_tab(
 ):
     _ensure_unique(db, CrmTab, CrmTab.code, payload.code)
     
+    target_module = (payload.module_id or "LEAD").upper()
     if payload.is_default:
-        db.query(CrmTab).update({CrmTab.is_default: False})
+        db.query(CrmTab).filter(func.upper(CrmTab.module_id) == target_module).update({CrmTab.is_default: False})
         
     tab = CrmTab(
+        module_id=target_module,
         name=payload.name,
         code=payload.code,
         description=payload.description,
@@ -531,8 +544,9 @@ def update_tab(
     if data.get("code") is not None:
         _ensure_unique(db, CrmTab, CrmTab.code, data["code"], exclude_id=tab_id)
 
+    target_module = (data.get("module_id") or tab.module_id or "LEAD").upper()
     if data.get("is_default") is True:
-        db.query(CrmTab).filter(CrmTab.id != tab_id).update({CrmTab.is_default: False})
+        db.query(CrmTab).filter(CrmTab.id != tab_id, func.upper(CrmTab.module_id) == target_module).update({CrmTab.is_default: False})
 
     for field, value in data.items():
         setattr(tab, field, value)

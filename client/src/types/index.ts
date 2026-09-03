@@ -390,6 +390,7 @@ export interface SmtpSettingInput {
 }
 
 export interface CrmTabInput {
+  module_id?: string;
   name: string;
   code: string;
   description?: string;
