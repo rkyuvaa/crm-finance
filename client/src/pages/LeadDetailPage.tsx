@@ -35,6 +35,7 @@ import {
   useFinanceCompaniesQuery,
   useStagesByModuleQuery,
   useTabsQuery,
+  useTabsByModuleQuery,
   useVehicleModelsQuery,
   useUsersQuery,
 } from '@/api/mastersApi';
@@ -89,8 +90,17 @@ export default function LeadDetailPage() {
 
   const { data: models = [], isFetching: loadingModels } = useVehicleModelsQuery();
   const { data: companies = [] } = useFinanceCompaniesQuery();
-  const { data: crmTabs = [] } = useTabsQuery();
   const { data: users = [] } = useUsersQuery();
+
+  const location = useLocation();
+  const isOpportunity = lead?.status ? lead.status.toUpperCase() !== 'LEAD' : false;
+  const isOppUrl = location.pathname.startsWith('/opportunities');
+  const targetModule = (isOpportunity || isOppUrl) ? 'OPPORTUNITY' : 'LEAD';
+  const backTarget = (isOpportunity || isOppUrl) ? '/opportunities' : '/leads';
+  const backLabel = (isOpportunity || isOppUrl) ? 'Back to Opportunities' : 'Back to Leads';
+  const detailTitle = (isOpportunity || isOppUrl) ? 'Opportunity Details' : 'Lead Details';
+
+  const { data: crmTabs = [] } = useTabsByModuleQuery(targetModule);
 
   const [activeLeadTabCode, setActiveLeadTabCode] = useState<string>('general');
   const [sideTab, setSideTab] = useState(0);
@@ -205,14 +215,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  const location = useLocation();
   const { data: oppStages = [] } = useStagesByModuleQuery('OPPORTUNITY');
-
-  const isOpportunity = lead?.status ? lead.status.toUpperCase() !== 'LEAD' : false;
-  const isOppUrl = location.pathname.startsWith('/opportunities');
-  const backTarget = (isOpportunity || isOppUrl) ? '/opportunities' : '/leads';
-  const backLabel = (isOpportunity || isOppUrl) ? 'Back to Opportunities' : 'Back to Leads';
-  const detailTitle = (isOpportunity || isOppUrl) ? 'Opportunity Details' : 'Lead Details';
 
   const convertToOpportunity = async () => {
     if (!lead) return;
