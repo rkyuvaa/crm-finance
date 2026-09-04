@@ -15,6 +15,7 @@ from app.schemas.projects import (
     ProjectOut,
     ProjectUpdate,
     ProjectMilestoneCreate,
+    ProjectMilestoneUpdate,
     ProjectMilestoneOut,
     CustomFieldDefinitionCreate,
     CustomFieldDefinitionUpdate,
@@ -303,6 +304,73 @@ def delete_task_status_definition(
     db.delete(status_def)
     db.commit()
     return None
+
+
+# --- Project Milestones API ---
+@router.get("/{project_id}/milestones", response_model=List[ProjectMilestoneOut])
+def get_project_milestones(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List milestones for a specific project"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return db.query(ProjectMilestone).filter(ProjectMilestone.project_id == project_id).order_by(ProjectMilestone.id).all()
+
+
+@router.post("/{project_id}/milestones", response_model=ProjectMilestoneOut, status_code=status.HTTP_201_CREATED)
+def create_project_milestone(
+    project_id: int,
+    data: ProjectMilestoneCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new milestone for a project"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    milestone = ProjectMilestone(project_id=project_id, **data.model_dump())
+    db.add(milestone)
+    db.commit()
+    db.refresh(milestone)
+    return milestone
+
+
+@router.patch("/milestones/{milestone_id}", response_model=ProjectMilestoneOut)
+def update_project_milestone(
+    milestone_id: int,
+    data: ProjectMilestoneUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a milestone (title, description, due_date, is_completed)"""
+    milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    update_dict = data.model_dump(exclude_unset=True)
+    for k, v in update_dict.items():
+        setattr(milestone, k, v)
+    db.commit()
+    db.refresh(milestone)
+    return milestone
+
+
+@router.delete("/milestones/{milestone_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_milestone(
+    milestone_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a milestone"""
+    milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    db.delete(milestone)
+    db.commit()
+    return None
+
 
 
 

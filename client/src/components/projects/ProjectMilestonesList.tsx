@@ -13,17 +13,16 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  CircularProgress,
 } from '@mui/material';
-import { Plus, Flag, Calendar, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plus, Flag, Calendar, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
-
-interface Milestone {
-  id: number;
-  title: string;
-  due_date: string;
-  is_completed: boolean;
-  description?: string;
-}
+import {
+  useGetProjectMilestonesQuery,
+  useCreateProjectMilestoneMutation,
+  useUpdateProjectMilestoneMutation,
+  useDeleteProjectMilestoneMutation,
+} from '@/api/projectsApi';
 
 interface ProjectMilestonesListProps {
   projectId: string;
@@ -31,48 +30,72 @@ interface ProjectMilestonesListProps {
 
 export default function ProjectMilestonesList({ projectId }: ProjectMilestonesListProps) {
   const { showToast } = useToast();
+  const numericProjectId = Number(projectId);
+
+  const { data: milestones = [], isLoading } = useGetProjectMilestonesQuery(numericProjectId, {
+    skip: !numericProjectId || isNaN(numericProjectId),
+  });
+
+  const [createMilestone] = useCreateProjectMilestoneMutation();
+  const [updateMilestone] = useUpdateProjectMilestoneMutation();
+  const [deleteMilestoneMutation] = useDeleteProjectMilestoneMutation();
+
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
-
-  const [milestones, setMilestones] = useState<Milestone[]>([
-    { id: 1, title: 'Phase 1 Architecture Approval', due_date: '2026-09-10', is_completed: true, description: 'Finalize overall architecture and specs' },
-    { id: 2, title: 'Backend Schema & Migration', due_date: '2026-09-15', is_completed: true, description: 'Complete database models and migrations' },
-    { id: 3, title: 'Frontend Workspace Shell', due_date: '2026-09-20', is_completed: false, description: 'Build workspace layout and navigation tabs' },
-    { id: 4, title: 'UAT & Production Release', due_date: '2026-10-01', is_completed: false, description: 'Final user acceptance testing' },
-  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const completedCount = milestones.filter((m) => m.is_completed).length;
   const progressPct = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0;
 
-  const toggleMilestone = (id: number) => {
-    setMilestones((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, is_completed: !m.is_completed } : m))
-    );
-    showToast('Milestone status updated', 'success');
+  const handleToggleMilestone = async (id: number, currentStatus: boolean) => {
+    try {
+      await updateMilestone({
+        id,
+        body: { is_completed: !currentStatus },
+      }).unwrap();
+      showToast(!currentStatus ? 'Milestone marked as complete' : 'Milestone marked as pending', 'success');
+    } catch {
+      showToast('Failed to update milestone status', 'error');
+    }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim()) {
       showToast('Milestone title is required', 'error');
       return;
     }
-    const newM: Milestone = {
-      id: Date.now(),
-      title: title.trim(),
-      due_date: dueDate || '2026-10-15',
-      is_completed: false,
-    };
-    setMilestones([...milestones, newM]);
-    showToast('Milestone created', 'success');
-    setCreateOpen(false);
-    setTitle('');
-    setDueDate('');
+    setIsSubmitting(true);
+    try {
+      await createMilestone({
+        projectId: numericProjectId,
+        body: {
+          title: title.trim(),
+          description: description.trim() || undefined,
+          due_date: dueDate || undefined,
+          is_completed: false,
+        },
+      }).unwrap();
+      showToast('Milestone created successfully', 'success');
+      setCreateOpen(false);
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+    } catch {
+      showToast('Failed to create milestone', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const deleteMilestone = (id: number) => {
-    setMilestones((prev) => prev.filter((m) => m.id !== id));
-    showToast('Milestone deleted', 'info');
+  const handleDeleteMilestone = async (id: number) => {
+    try {
+      await deleteMilestoneMutation(id).unwrap();
+      showToast('Milestone deleted', 'info');
+    } catch {
+      showToast('Failed to delete milestone', 'error');
+    }
   };
 
   return (
@@ -85,7 +108,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
               Project Milestones
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Key deliverable checkpoints and release targets
+              Key deliverable checkpoints and release targets for this project
             </Typography>
           </Box>
           <Button
@@ -114,63 +137,100 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
         </Typography>
       </Paper>
 
-      {/* Milestones List */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {milestones.map((m) => (
-          <Paper
-            key={m.id}
-            elevation={0}
-            sx={{
-              p: 2.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              bgcolor: 'background.paper',
-            }}
+      {/* Milestones List / Empty State / Loading */}
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : milestones.length === 0 ? (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 6,
+            textAlign: 'center',
+            border: '1px dashed',
+            borderColor: 'divider',
+            borderRadius: '12px',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Flag size={40} style={{ opacity: 0.4, marginBottom: 12 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
+            No Milestones Yet
+          </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2.5 }}>
+            Create key milestone goals to track major phase completions for this project.
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Plus size={16} />}
+            onClick={() => setCreateOpen(true)}
+            sx={{ color: '#04552B', borderColor: '#04552B' }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Checkbox
-                checked={m.is_completed}
-                onChange={() => toggleMilestone(m.id)}
-                color="success"
-              />
-              <Box>
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: 700,
-                    color: m.is_completed ? 'text.secondary' : 'text.primary',
-                    textDecoration: m.is_completed ? 'line-through' : 'none',
-                  }}
-                >
-                  {m.title}
-                </Typography>
-                {m.description && (
-                  <Typography variant="body2" color="textSecondary">
-                    {m.description}
+            Create First Milestone
+          </Button>
+        </Paper>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {milestones.map((m) => (
+            <Paper
+              key={m.id}
+              elevation={0}
+              sx={{
+                p: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Checkbox
+                  checked={m.is_completed}
+                  onChange={() => handleToggleMilestone(m.id, m.is_completed)}
+                  color="success"
+                />
+                <Box>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 700,
+                      color: m.is_completed ? 'text.secondary' : 'text.primary',
+                      textDecoration: m.is_completed ? 'line-through' : 'none',
+                    }}
+                  >
+                    {m.title}
                   </Typography>
-                )}
+                  {m.description && (
+                    <Typography variant="body2" color="textSecondary">
+                      {m.description}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
-            </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Chip
-                icon={<Calendar size={14} />}
-                label={m.due_date}
-                size="small"
-                variant="outlined"
-                sx={{ fontSize: '0.75rem', fontWeight: 600 }}
-              />
-              <IconButton size="small" onClick={() => deleteMilestone(m.id)} sx={{ color: '#EF4444' }}>
-                <Trash2 size={16} />
-              </IconButton>
-            </Box>
-          </Paper>
-        ))}
-      </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {m.due_date && (
+                  <Chip
+                    icon={<Calendar size={14} />}
+                    label={m.due_date}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+                  />
+                )}
+                <IconButton size="small" onClick={() => handleDeleteMilestone(m.id)} sx={{ color: '#EF4444' }}>
+                  <Trash2 size={16} />
+                </IconButton>
+              </Box>
+            </Paper>
+          ))}
+        </Box>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>
@@ -185,6 +245,15 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
               onChange={(e) => setTitle(e.target.value)}
             />
             <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={2}
+              size="small"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <TextField
               label="Target Due Date"
               type="date"
               fullWidth
@@ -196,12 +265,15 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreate} variant="contained" sx={{ bgcolor: '#04552B' }}>
-            Create
+          <Button onClick={() => setCreateOpen(false)} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreate} variant="contained" disabled={isSubmitting} sx={{ bgcolor: '#04552B' }}>
+            {isSubmitting ? 'Creating...' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
+

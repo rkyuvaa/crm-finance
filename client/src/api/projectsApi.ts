@@ -97,6 +97,16 @@ export interface CustomFieldDefinitionItem {
   display_order: number;
 }
 
+export interface ProjectMilestoneItem {
+  id: number;
+  project_id: number;
+  title: string;
+  description?: string;
+  due_date?: string;
+  is_completed: boolean;
+  created_at: string;
+}
+
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: fetchBaseQuery({
@@ -109,7 +119,7 @@ export const projectsApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -285,6 +295,35 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['CustomFieldDefs'],
     }),
+
+    // Milestones
+    getProjectMilestones: builder.query<ProjectMilestoneItem[], number>({
+      query: (projectId) => `/projects/${projectId}/milestones`,
+      providesTags: (_res, _err, projectId) => [{ type: 'Milestones', id: projectId }, 'Milestones'],
+    }),
+    createProjectMilestone: builder.mutation<ProjectMilestoneItem, { projectId: number; body: Partial<ProjectMilestoneItem> }>({
+      query: ({ projectId, body }) => ({
+        url: `/projects/${projectId}/milestones`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { projectId }) => [{ type: 'Milestones', id: projectId }, 'Milestones'],
+    }),
+    updateProjectMilestone: builder.mutation<ProjectMilestoneItem, { id: number; body: Partial<ProjectMilestoneItem> }>({
+      query: ({ id, body }) => ({
+        url: `/projects/milestones/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Milestones'],
+    }),
+    deleteProjectMilestone: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/projects/milestones/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Milestones'],
+    }),
   }),
 });
 
@@ -313,4 +352,8 @@ export const {
   useCreateCustomFieldDefinitionMutation,
   useUpdateCustomFieldDefinitionMutation,
   useDeleteCustomFieldDefinitionMutation,
+  useGetProjectMilestonesQuery,
+  useCreateProjectMilestoneMutation,
+  useUpdateProjectMilestoneMutation,
+  useDeleteProjectMilestoneMutation,
 } = projectsApi;

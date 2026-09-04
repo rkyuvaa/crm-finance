@@ -123,6 +123,13 @@ class ProjectMilestoneCreate(ProjectMilestoneBase):
     pass
 
 
+class ProjectMilestoneUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[date] = None
+    is_completed: Optional[bool] = None
+
+
 class ProjectMilestoneOut(ProjectMilestoneBase):
     id: int
     project_id: int
