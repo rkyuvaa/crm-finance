@@ -11,8 +11,8 @@ import { logout } from '@/auth/authSlice';
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api/v1',
   credentials: 'include',
-  prepareHeaders: (headers) => {
-    const token = localStorage.getItem('access_token');
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as any)?.auth?.token || localStorage.getItem('access_token');
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -20,7 +20,7 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
   api,
   extraOptions,
