@@ -385,7 +385,7 @@ export default function ProjectWorkspace() {
         {/* ── OTHER TABS ─────────────────────────────────────────────────── */}
         {tab === 'tasks' && <ProjectTasksList projectId={id!} />}
         {tab === 'milestones' && <ProjectMilestonesList projectId={id!} />}
-        {tab === 'timeline' && <ProjectTimelineView />}
+        {tab === 'timeline' && <ProjectTimelineView projectId={id!} />}
         {tab === 'team' && <ProjectTeamView projectId={id!} />}
         {tab === 'timesheets' && <ProjectTimesheetsView projectId={id!} />}
 
