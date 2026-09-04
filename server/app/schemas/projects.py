@@ -192,13 +192,15 @@ class ProjectOut(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+from typing import Any, List, Optional
+
 # --- Custom Fields ---
 class CustomFieldDefinitionBase(BaseModel):
     name: str
     label: str
     field_type: str = "text"  # text, number, select, date, currency
     is_required: bool = False
-    options: Optional[dict] = None
+    options: Optional[Any] = None
     display_order: int = 0
 
 
@@ -211,7 +213,7 @@ class CustomFieldDefinitionUpdate(BaseModel):
     label: Optional[str] = None
     field_type: Optional[str] = None
     is_required: Optional[bool] = None
-    options: Optional[dict] = None
+    options: Optional[Any] = None
     display_order: Optional[int] = None
 
 

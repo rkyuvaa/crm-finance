@@ -32,7 +32,7 @@ class AttendanceUpdate(BaseModel):
 class AttendanceOut(BaseModel):
     id: int
     user_id: int
-    user_name: str
+    user_name: str | None = None
     attendance_date: date
     check_in_time: datetime | None
     check_out_time: datetime | None
@@ -76,14 +76,14 @@ class LeaveRequestReject(BaseModel):
 class LeaveRequestOut(BaseModel):
     id: int
     user_id: int
-    user_name: str
+    user_name: str | None = None
     leave_type: LeaveType
     start_date: date
     end_date: date
     reason: str
     status: LeaveStatus
     approved_by_id: int | None
-    approved_by_name: str | None
+    approved_by_name: str | None = None
     approval_date: datetime | None
     rejection_reason: str | None
     created_at: datetime
@@ -120,7 +120,7 @@ class PayrollRecordProcess(BaseModel):
 class PayrollRecordOut(BaseModel):
     id: int
     user_id: int
-    user_name: str
+    user_name: str | None = None
     payroll_month: date
     base_salary: float
     allowances: float
@@ -156,8 +156,9 @@ class PerformanceReviewUpdate(BaseModel):
 class PerformanceReviewOut(BaseModel):
     id: int
     user_id: int
-    user_name: str
+    user_name: str | None = None
     reviewer_id: int
+    reviewer_name: str | None = None
     reviewer_name: str
     review_date: date
     rating: float

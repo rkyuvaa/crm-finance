@@ -51,15 +51,37 @@ def _log_activity(
 ) -> None:
     """Log activity to audit trail"""
     activity = Activity(
-        user_id=user.id,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        changes=changes or {},
-        timestamp=datetime.now(timezone.utc),
+        actor_id=user.id,
+        action=f"{action} {entity_type} #{entity_id}",
     )
     db.add(activity)
     db.commit()
+
+
+def _format_attendance(rec: Attendance) -> AttendanceOut:
+    out = AttendanceOut.model_validate(rec)
+    out.user_name = rec.user.full_name if rec.user else "Unknown"
+    return out
+
+
+def _format_leave(req: LeaveRequest) -> LeaveRequestOut:
+    out = LeaveRequestOut.model_validate(req)
+    out.user_name = req.user.full_name if req.user else "Unknown"
+    out.approved_by_name = req.approved_by.full_name if req.approved_by else None
+    return out
+
+
+def _format_payroll(rec: PayrollRecord) -> PayrollRecordOut:
+    out = PayrollRecordOut.model_validate(rec)
+    out.user_name = rec.user.full_name if rec.user else "Unknown"
+    return out
+
+
+def _format_performance(rev: PerformanceReview) -> PerformanceReviewOut:
+    out = PerformanceReviewOut.model_validate(rev)
+    out.user_name = rev.user.full_name if rev.user else "Unknown"
+    out.reviewer_name = rev.reviewer.full_name if rev.reviewer else "Unknown"
+    return out
 
 
 # ============================================================================
@@ -106,9 +128,7 @@ def create_attendance(
         {"user_id": payload.user_id, "date": str(payload.attendance_date)},
     )
 
-    return AttendanceOut(
-        **{**attendance.__dict__, "user_name": employee.full_name}
-    )
+    return _format_attendance(attendance)
 
 
 @router.get("/attendance", response_model=list[AttendanceOut])
@@ -134,12 +154,7 @@ def list_attendance(
 
     records = query.order_by(Attendance.attendance_date.desc()).all()
 
-    return [
-        AttendanceOut(
-            **{**rec.__dict__, "user_name": rec.user.full_name}
-        )
-        for rec in records
-    ]
+    return [_format_attendance(rec) for rec in records]
 
 
 @router.get("/attendance/{id}", response_model=AttendanceOut)
@@ -153,9 +168,7 @@ def get_attendance(
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attendance record not found")
 
-    return AttendanceOut(
-        **{**record.__dict__, "user_name": record.user.full_name}
-    )
+    return _format_attendance(record)
 
 
 @router.put("/attendance/{id}", response_model=AttendanceOut)
@@ -186,9 +199,7 @@ def update_attendance(
         update_data,
     )
 
-    return AttendanceOut(
-        **{**record.__dict__, "user_name": record.user.full_name}
-    )
+    return _format_attendance(record)
 
 
 @router.delete("/attendance/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -251,13 +262,7 @@ def create_leave_request(
         {"user_id": payload.user_id, "leave_type": str(payload.leave_type)},
     )
 
-    return LeaveRequestOut(
-        **{
-            **leave_request.__dict__,
-            "user_name": employee.full_name,
-            "approved_by_name": None,
-        }
-    )
+    return _format_leave(leave_request)
 
 
 @router.get("/leave-requests", response_model=list[LeaveRequestOut])
@@ -277,16 +282,7 @@ def list_leave_requests(
 
     requests = query.order_by(LeaveRequest.created_at.desc()).all()
 
-    return [
-        LeaveRequestOut(
-            **{
-                **req.__dict__,
-                "user_name": req.user.full_name,
-                "approved_by_name": req.approved_by.full_name if req.approved_by else None,
-            }
-        )
-        for req in requests
-    ]
+    return [_format_leave(req) for req in requests]
 
 
 @router.post("/leave-requests/{id}/approve", response_model=LeaveRequestOut)
@@ -320,14 +316,7 @@ def approve_leave_request(
         leave_request.id,
     )
 
-    approver = db.query(User).filter(User.id == payload.approved_by_id).first()
-    return LeaveRequestOut(
-        **{
-            **leave_request.__dict__,
-            "user_name": leave_request.user.full_name,
-            "approved_by_name": approver.full_name if approver else None,
-        }
-    )
+    return _format_leave(leave_request)
 
 
 @router.post("/leave-requests/{id}/reject", response_model=LeaveRequestOut)
@@ -360,13 +349,7 @@ def reject_leave_request(
         leave_request.id,
     )
 
-    return LeaveRequestOut(
-        **{
-            **leave_request.__dict__,
-            "user_name": leave_request.user.full_name,
-            "approved_by_name": None,
-        }
-    )
+    return _format_leave(leave_request)
 
 
 # ============================================================================
@@ -405,9 +388,7 @@ def create_payroll_record(
         {"user_id": payload.user_id, "month": str(payload.payroll_month)},
     )
 
-    return PayrollRecordOut(
-        **{**payroll.__dict__, "user_name": employee.full_name}
-    )
+    return _format_payroll(payroll)
 
 
 @router.get("/payroll", response_model=list[PayrollRecordOut])
@@ -433,12 +414,7 @@ def list_payroll_records(
 
     records = query.order_by(PayrollRecord.payroll_month.desc()).all()
 
-    return [
-        PayrollRecordOut(
-            **{**rec.__dict__, "user_name": rec.user.full_name}
-        )
-        for rec in records
-    ]
+    return [_format_payroll(rec) for rec in records]
 
 
 @router.put("/payroll/{id}", response_model=PayrollRecordOut)
@@ -477,9 +453,7 @@ def update_payroll_record(
         update_data,
     )
 
-    return PayrollRecordOut(
-        **{**record.__dict__, "user_name": record.user.full_name}
-    )
+    return _format_payroll(record)
 
 
 # ============================================================================
@@ -516,13 +490,7 @@ def create_performance_review(
         {"user_id": payload.user_id, "rating": payload.rating},
     )
 
-    return PerformanceReviewOut(
-        **{
-            **review.__dict__,
-            "user_name": employee.full_name,
-            "reviewer_name": reviewer.full_name,
-        }
-    )
+    return _format_performance(review)
 
 
 @router.get("/performance-reviews", response_model=list[PerformanceReviewOut])
@@ -542,16 +510,7 @@ def list_performance_reviews(
 
     reviews = query.order_by(PerformanceReview.review_date.desc()).all()
 
-    return [
-        PerformanceReviewOut(
-            **{
-                **rev.__dict__,
-                "user_name": rev.user.full_name,
-                "reviewer_name": rev.reviewer.full_name,
-            }
-        )
-        for rev in reviews
-    ]
+    return [_format_performance(rev) for rev in reviews]
 
 
 @router.get("/performance-reviews/{id}", response_model=PerformanceReviewOut)
@@ -565,10 +524,4 @@ def get_performance_review(
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Performance review not found")
 
-    return PerformanceReviewOut(
-        **{
-            **review.__dict__,
-            "user_name": review.user.full_name,
-            "reviewer_name": review.reviewer.full_name,
-        }
-    )
+    return _format_performance(review)
