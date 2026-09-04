@@ -130,10 +130,10 @@ export default function ProjectWorkflowSettingsCard() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Workflow Statuses */}
-      <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', p: 3 }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', p: 3, bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Task & Project Workflow Statuses</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Task & Project Workflow Statuses</Typography>
             <Typography variant="body2" color="textSecondary">Configure dynamic pipeline statuses and terminal state indicators</Typography>
           </Box>
           <Button
@@ -151,23 +151,23 @@ export default function ProjectWorkflowSettingsCard() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
         ) : (
           <Table size="small">
-            <TableHead sx={{ bgcolor: '#F8FAFC' }}>
+            <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Badge Color</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Terminal State</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ID</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Status Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Badge Color</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Terminal State</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {displayStatuses.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell>{s.id}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{s.name}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{s.id}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>{s.name}</TableCell>
                   <TableCell>
                     <Chip size="small" label={s.color} sx={{ bgcolor: s.color, color: 'white', fontWeight: 600, height: 20 }} />
                   </TableCell>
-                  <TableCell>{s.is_terminal ? <CheckCircle2 size={16} color="#16A34A" /> : 'No'}</TableCell>
+                  <TableCell>{s.is_terminal ? <CheckCircle2 size={16} color="#16A34A" /> : <Typography variant="body2" color="textSecondary">No</Typography>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -176,10 +176,10 @@ export default function ProjectWorkflowSettingsCard() {
       </Paper>
 
       {/* Custom Field Definitions */}
-      <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', p: 3 }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', p: 3, bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>Custom Fields Registry</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Custom Fields Registry</Typography>
             <Typography variant="body2" color="textSecondary">Manage dynamic custom attributes for tasks and projects</Typography>
           </Box>
           <Button
@@ -197,21 +197,21 @@ export default function ProjectWorkflowSettingsCard() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
         ) : (
           <Table size="small">
-            <TableHead sx={{ bgcolor: '#F8FAFC' }}>
+            <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Key Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Display Label</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Field Type</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Required</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Key Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Display Label</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Field Type</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Required</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {displayCustomFields.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell sx={{ fontFamily: 'monospace' }}>{f.name}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{f.label}</TableCell>
-                  <TableCell><Chip size="small" label={f.field_type} sx={{ textTransform: 'capitalize' }} /></TableCell>
-                  <TableCell>{f.is_required ? 'Yes' : 'No'}</TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', color: 'text.primary' }}>{f.name}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>{f.label}</TableCell>
+                  <TableCell><Chip size="small" label={f.field_type} sx={{ textTransform: 'capitalize', bgcolor: 'action.hover' }} /></TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{f.is_required ? 'Yes' : 'No'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

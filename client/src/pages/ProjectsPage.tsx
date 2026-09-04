@@ -111,10 +111,10 @@ export default function ProjectsPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
             Projects & Workspaces
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             Manage vehicle customization projects, delivery milestones, and team tasks
           </Typography>
         </Box>
@@ -140,64 +140,64 @@ export default function ProjectsPage() {
       {/* KPI Cards */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: '#F0FDF4', color: '#16A34A' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: '#16A34A' }}>
                 <Briefcase size={20} />
               </Box>
-              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 Total Projects
               </Typography>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
               {projects.length}
             </Typography>
           </Paper>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: '#EFF6FF', color: '#2563EB' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: '#2563EB' }}>
                 <Clock size={20} />
               </Box>
-              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 In Progress
               </Typography>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
               {projects.filter((p) => p.status_id === 2).length}
             </Typography>
           </Paper>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: '#FDF2F8', color: '#DB2777' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: '#DB2777' }}>
                 <CheckCircle2 size={20} />
               </Box>
-              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 Completed
               </Typography>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
               {totalCompleted}
             </Typography>
           </Paper>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: '#FEF3C7', color: '#D97706' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: '#D97706' }}>
                 <ListTodo size={20} />
               </Box>
-              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 500 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 Total Budget
               </Typography>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
               ₹{totalBudget.toLocaleString()}
             </Typography>
           </Paper>
@@ -205,7 +205,7 @@ export default function ProjectsPage() {
       </Grid>
 
       {/* Filter Tabs & Search */}
-      <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', mb: 3 }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', mb: 3, bgcolor: 'background.paper' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Tabs value={tabValue} onChange={(_e, v) => setTabValue(v)}>
             <Tab label={`All (${projects.length})`} />
@@ -221,7 +221,7 @@ export default function ProjectsPage() {
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
             InputProps={{
-              startAdornment: <Search size={16} style={{ marginRight: 8, color: '#64748B' }} />,
+              startAdornment: <Search size={16} style={{ marginRight: 8, opacity: 0.7 }} />,
             }}
             sx={{ width: 260, my: 1 }}
           />
@@ -240,7 +240,7 @@ export default function ProjectsPage() {
             </Box>
           ) : filteredProjects.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="body1" sx={{ color: '#64748B' }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                 No projects found matching the selected criteria.
               </Typography>
             </Box>
@@ -253,12 +253,14 @@ export default function ProjectsPage() {
                     onClick={() => navigate(`/projects/${project.id}`)}
                     sx={{
                       cursor: 'pointer',
-                      border: '1px solid #E2E8F0',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       borderRadius: '12px',
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
-                      '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderColor: '#CBD5E1' },
+                      bgcolor: 'background.paper',
+                      '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.12)', borderColor: 'text.secondary' },
                     }}
                   >
                     <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -266,56 +268,56 @@ export default function ProjectsPage() {
                         <Chip
                           label={project.category}
                           size="small"
-                          sx={{ backgroundColor: '#F1F5F9', color: '#475569', fontWeight: 600, fontSize: '0.75rem' }}
+                          sx={{ backgroundColor: 'action.hover', color: 'text.primary', fontWeight: 600, fontSize: '0.75rem' }}
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Chip
                             label={project.status_id ? `Status: ${project.status_id}` : 'Planning'}
                             size="small"
                             sx={{
-                              backgroundColor: '#DBEAFE',
-                              color: '#1D4ED8',
+                              backgroundColor: 'action.selected',
+                              color: 'primary.main',
                               fontWeight: 600,
                               fontSize: '0.75rem',
                             }}
                           />
-                          <IconButton size="small" onClick={() => handleDelete(project.id)} sx={{ color: '#EF4444' }}>
+                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} sx={{ color: '#EF4444' }}>
                             <Trash2 size={16} />
                           </IconButton>
                         </Box>
                       </Box>
 
-                      <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A', mb: 0.5 }}>
+                      <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
                         {project.name}
                       </Typography>
 
                       {project.lead_app_no && (
-                        <Typography variant="caption" sx={{ color: '#04552B', fontWeight: 600, mb: 1, display: 'block' }}>
+                        <Typography variant="caption" sx={{ color: '#4ADE80', fontWeight: 600, mb: 1, display: 'block' }}>
                           Ref CRM: {project.lead_app_no} ({project.lead_customer_name || 'Customer'})
                         </Typography>
                       )}
 
                       <Box sx={{ mt: 'auto', pt: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.8 }}>
-                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                             Progress
                           </Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
                             {project.progress}%
                           </Typography>
                         </Box>
                         <LinearProgress
                           variant="determinate"
                           value={project.progress}
-                          sx={{ height: 6, borderRadius: 3, backgroundColor: '#E2E8F0', '& .MuiLinearProgress-bar': { backgroundColor: '#04552B' } }}
+                          sx={{ height: 6, borderRadius: 3, backgroundColor: 'divider', '& .MuiLinearProgress-bar': { backgroundColor: '#087A3D' } }}
                         />
                       </Box>
 
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 2, borderTop: '1px solid #F1F5F9' }}>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           Budget: <strong>₹{project.budget.toLocaleString()}</strong>
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           Tasks: <strong>{project.tasks_count?.done || 0}/{project.tasks_count?.total || 0}</strong>
                         </Typography>
                       </Box>

@@ -176,10 +176,10 @@ export default function TasksPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
             Task Board & Productivity
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             Track project deliverables, drag-and-drop workflow status, checklists, and timesheets
           </Typography>
         </Box>
@@ -203,14 +203,14 @@ export default function TasksPage() {
       </Box>
 
       {/* Filter Controls */}
-      <Paper elevation={0} sx={{ p: 2, border: '1px solid #E2E8F0', borderRadius: '12px', mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+      <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: '12px', mb: 3, bgcolor: 'background.paper', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
           size="small"
           placeholder="Filter by title or description..."
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
           InputProps={{
-            startAdornment: <Search size={16} style={{ marginRight: 8, color: '#64748B' }} />,
+            startAdornment: <Search size={16} style={{ marginRight: 8, opacity: 0.7 }} />,
           }}
           sx={{ width: 280 }}
         />
@@ -235,7 +235,7 @@ export default function TasksPage() {
             variant={viewMode === 'board' ? 'contained' : 'outlined'}
             size="small"
             onClick={() => setViewMode('board')}
-            sx={viewMode === 'board' ? { backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' } } : { color: '#64748B' }}
+            sx={viewMode === 'board' ? { backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' } } : { color: 'text.secondary' }}
           >
             Kanban Board
           </Button>
@@ -243,7 +243,7 @@ export default function TasksPage() {
             variant={viewMode === 'list' ? 'contained' : 'outlined'}
             size="small"
             onClick={() => setViewMode('list')}
-            sx={viewMode === 'list' ? { backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' } } : { color: '#64748B' }}
+            sx={viewMode === 'list' ? { backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' } } : { color: 'text.secondary' }}
           >
             List View
           </Button>
@@ -272,8 +272,9 @@ export default function TasksPage() {
                     elevation={0}
                     sx={{
                       p: 2,
-                      backgroundColor: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
+                      backgroundColor: 'background.default',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       borderRadius: '12px',
                       height: '100%',
                       minHeight: 500,
@@ -284,7 +285,7 @@ export default function TasksPage() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: col.color }} />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                           {col.label}
                         </Typography>
                       </Box>
@@ -308,11 +309,12 @@ export default function TasksPage() {
                                   elevation={0}
                                   sx={{
                                     p: 2,
-                                    border: '1px solid #E2E8F0',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
                                     borderRadius: '10px',
-                                    backgroundColor: '#FFFFFF',
+                                    backgroundColor: 'background.paper',
                                     cursor: 'pointer',
-                                    '&:hover': { boxShadow: '0 4px 10px rgba(0,0,0,0.06)' },
+                                    '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.12)' },
                                   }}
                                   onClick={() => {
                                     setSelectedTask(task);
@@ -327,25 +329,24 @@ export default function TasksPage() {
                                         height: 18,
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        backgroundColor:
-                                          task.priority === 'URGENT' ? '#FEE2E2' : task.priority === 'HIGH' ? '#FEF3C7' : '#E2E8F0',
+                                        backgroundColor: 'action.hover',
                                         color:
-                                          task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : '#475569',
+                                          task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : 'text.secondary',
                                       }}
                                     />
-                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} sx={{ color: '#94A3B8' }}>
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} sx={{ color: 'text.secondary' }}>
                                       <Trash2 size={14} />
                                     </IconButton>
                                   </Box>
 
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A', mb: 0.5 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
                                     {task.title}
                                   </Typography>
 
                                   {task.project_name && (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                                      <Briefcase size={12} style={{ color: '#64748B' }} />
-                                      <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }}>
+                                      <Briefcase size={12} style={{ opacity: 0.7 }} />
+                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                                         {task.project_name}
                                       </Typography>
                                     </Box>
@@ -353,7 +354,7 @@ export default function TasksPage() {
 
                                   {/* Subtasks Checklist */}
                                   {task.subtasks.length > 0 && (
-                                    <Box sx={{ my: 1, pt: 1, borderTop: '1px border #F1F5F9' }}>
+                                    <Box sx={{ my: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
                                       {task.subtasks.map((st) => (
                                         <Box key={st.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                           <Checkbox
@@ -365,7 +366,7 @@ export default function TasksPage() {
                                           />
                                           <Typography
                                             variant="caption"
-                                            sx={{ textDecoration: st.is_completed ? 'line-through' : 'none', color: st.is_completed ? '#94A3B8' : '#334155' }}
+                                            sx={{ textDecoration: st.is_completed ? 'line-through' : 'none', color: st.is_completed ? 'text.secondary' : 'text.primary' }}
                                           >
                                             {st.title}
                                           </Typography>
@@ -374,7 +375,7 @@ export default function TasksPage() {
                                     </Box>
                                   )}
 
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1, borderTop: '1px solid #F8FAFC' }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                       <IconButton
                                         size="small"
@@ -384,15 +385,15 @@ export default function TasksPage() {
                                           setTimeLogOpen(true);
                                         }}
                                         title="Log hours"
-                                        sx={{ color: '#04552B', p: 0.5 }}
+                                        sx={{ color: '#087A3D', p: 0.5 }}
                                       >
                                         <Clock size={14} />
                                       </IconButton>
-                                      <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                                         {task.actual_hours}/{task.estimated_hours}h
                                       </Typography>
                                     </Box>
-                                    <Avatar sx={{ width: 22, height: 22, fontSize: '0.65rem', bgcolor: '#04552B' }}>
+                                    <Avatar sx={{ width: 22, height: 22, fontSize: '0.65rem', bgcolor: '#087A3D', color: '#FFFFFF', fontWeight: 700 }}>
                                       {task.assignee_name ? task.assignee_name[0] : 'U'}
                                     </Avatar>
                                   </Box>
@@ -412,8 +413,8 @@ export default function TasksPage() {
         </DragDropContext>
       ) : (
         /* List View */
-        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', fontWeight: 700, color: '#475569' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', backgroundColor: 'background.default', display: 'flex', fontWeight: 700, color: 'text.secondary' }}>
             <Box sx={{ flex: 3 }}>Task Title</Box>
             <Box sx={{ flex: 2 }}>Project</Box>
             <Box sx={{ flex: 1 }}>Status</Box>
@@ -425,19 +426,19 @@ export default function TasksPage() {
           {tasks.map((task) => (
             <Box 
               key={task.id} 
-              sx={{ p: 2, borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: '#F8FAFC' } }}
+              sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
               onClick={() => {
                 setSelectedTask(task);
                 setPanelOpen(true);
               }}
             >
               <Box sx={{ flex: 3 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0F172A' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                   {task.title}
                 </Typography>
               </Box>
               <Box sx={{ flex: 2 }}>
-                <Typography variant="body2" sx={{ color: '#64748B' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   {task.project_name || 'General'}
                 </Typography>
               </Box>
@@ -448,7 +449,7 @@ export default function TasksPage() {
                 <Chip label={task.priority} size="small" />
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                   {task.actual_hours} / {task.estimated_hours}h
                 </Typography>
               </Box>
@@ -459,7 +460,7 @@ export default function TasksPage() {
               </Box>
             </Box>
           ))}
-        </Paper>
+        </TableContainer>
       )}
 
       <TaskDetailPanel open={panelOpen} onClose={() => setPanelOpen(false)} task={selectedTask} />

@@ -339,7 +339,7 @@ export default function ProjectConfigurationPage() {
     <Box sx={{ p: 3, maxWidth: 1280, margin: '0 auto' }}>
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <Box sx={{ mb: 2.5 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#023020', letterSpacing: -0.4 }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: -0.4 }}>
           Project & Task Configuration
         </Typography>
         <Typography variant="body2" color="textSecondary" sx={{ mt: 0.2 }}>
@@ -348,9 +348,9 @@ export default function ProjectConfigurationPage() {
       </Box>
 
       {/* ── Main ERP Workspace Container ─────────────────────────────────── */}
-      <Paper elevation={0} sx={{ border: '1px solid #CBD5E1', borderRadius: '8px', overflow: 'hidden', bgcolor: '#FFFFFF' }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden', bgcolor: 'background.paper' }}>
         {/* Horizontal Navigation Tabs */}
-        <Box sx={{ borderBottom: '1px solid #E2E8F0', bgcolor: '#F8FAFC', px: 2 }}>
+        <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default', px: 2 }}>
           <Tabs
             value={activeTab}
             onChange={(_, val) => setActiveTab(val)}
@@ -361,10 +361,10 @@ export default function ProjectConfigurationPage() {
                 textTransform: 'none',
                 fontWeight: 600,
                 fontSize: '13px',
-                color: '#64748B',
+                color: 'text.secondary',
                 py: 1,
                 px: 2.5,
-                '&.Mui-selected': { color: '#04552B', fontWeight: 700 },
+                '&.Mui-selected': { color: 'primary.main', fontWeight: 700 },
               },
               '& .MuiTabs-indicator': { backgroundColor: '#04552B', height: 3 },
             }}
@@ -384,7 +384,7 @@ export default function ProjectConfigurationPage() {
           <CustomTabPanel value={activeTab} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
                   Workflow Statuses
                 </Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
@@ -422,34 +422,34 @@ export default function ProjectConfigurationPage() {
             {isLoadingStatuses ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress size={28} /></Box>
             ) : (
-              <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', overflow: 'hidden' }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}>
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: '#F1F5F9' }}>
+                  <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12, width: 60 }}>ID</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Status Name</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Color</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Terminal</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Sort Order</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: '#475569', fontSize: 12, width: 100 }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 60 }}>ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Status Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Color</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Terminal</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Sort Order</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 100 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredStatuses.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#94A3B8', fontSize: 13 }}>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary', fontSize: 13 }}>
                           No workflow statuses found.
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredStatuses.map((s) => (
                         <TableRow key={s.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                          <TableCell sx={{ fontSize: 13, color: '#64748B' }}>{s.id}</TableCell>
-                          <TableCell sx={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{s.name}</TableCell>
+                          <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>{s.id}</TableCell>
+                          <TableCell sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>{s.name}</TableCell>
                           <TableCell sx={{ fontSize: 13 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: s.color, flexShrink: 0 }} />
-                              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 12, color: '#475569' }}>
+                              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
                                 {s.color}
                               </Typography>
                               <Chip
@@ -465,13 +465,13 @@ export default function ProjectConfigurationPage() {
                                 <CheckCircle2 size={15} /> Yes
                               </Box>
                             ) : (
-                              <Typography variant="body2" sx={{ color: '#94A3B8', fontSize: 13 }}>No</Typography>
+                              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>No</Typography>
                             )}
                           </TableCell>
-                          <TableCell sx={{ fontSize: 13, color: '#64748B' }}>{s.display_order}</TableCell>
+                          <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>{s.display_order}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => handleOpenStatusModal(s)} sx={{ color: '#475569', p: 0.5 }}>
+                              <IconButton size="small" onClick={() => handleOpenStatusModal(s)} sx={{ color: 'text.secondary', p: 0.5 }}>
                                 <Pencil size={15} />
                               </IconButton>
                             </Tooltip>
@@ -496,7 +496,7 @@ export default function ProjectConfigurationPage() {
           <CustomTabPanel value={activeTab} index={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
                   Custom Fields
                 </Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
@@ -534,48 +534,48 @@ export default function ProjectConfigurationPage() {
             {isLoadingFields ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress size={28} /></Box>
             ) : (
-              <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', overflow: 'hidden' }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', overflow: 'hidden' }}>
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: '#F1F5F9' }}>
+                  <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Field Name / Key</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Display Label</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Applies To</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Field Type</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Required</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: '#475569', fontSize: 12 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: '#475569', fontSize: 12, width: 100 }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Field Name / Key</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Display Label</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Applies To</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Field Type</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Required</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 100 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredCustomFields.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#94A3B8', fontSize: 13 }}>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary', fontSize: 13 }}>
                           No custom field definitions found.
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredCustomFields.map((f) => (
                         <TableRow key={f.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: '#0F172A', fontWeight: 600 }}>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.primary', fontWeight: 600 }}>
                             {f.name}
                           </TableCell>
-                          <TableCell sx={{ fontSize: 13, color: '#1E293B', fontWeight: 600 }}>{f.label}</TableCell>
+                          <TableCell sx={{ fontSize: 13, color: 'text.primary', fontWeight: 600 }}>{f.label}</TableCell>
                           <TableCell sx={{ fontSize: 13 }}>
-                            <Chip size="small" label="Task" sx={{ height: 20, fontSize: 11, bgcolor: '#E2E8F0', color: '#334155' }} />
+                            <Chip size="small" label="Task" sx={{ height: 20, fontSize: 11, bgcolor: 'action.hover', color: 'text.primary' }} />
                           </TableCell>
                           <TableCell sx={{ fontSize: 13 }}>
-                            <Chip size="small" label={f.field_type} sx={{ height: 20, fontSize: 11, textTransform: 'capitalize', bgcolor: '#F1F5F9', border: '1px solid #CBD5E1' }} />
+                            <Chip size="small" label={f.field_type} sx={{ height: 20, fontSize: 11, textTransform: 'capitalize', bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }} />
                           </TableCell>
-                          <TableCell sx={{ fontSize: 13, color: f.is_required ? '#DC2626' : '#64748B', fontWeight: f.is_required ? 600 : 400 }}>
+                          <TableCell sx={{ fontSize: 13, color: f.is_required ? '#DC2626' : 'text.secondary', fontWeight: f.is_required ? 600 : 400 }}>
                             {f.is_required ? 'Yes' : 'No'}
                           </TableCell>
                           <TableCell sx={{ fontSize: 13 }}>
-                            <Chip size="small" label="Active" sx={{ height: 20, fontSize: 11, bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 600 }} />
+                            <Chip size="small" label="Active" sx={{ height: 20, fontSize: 11, bgcolor: 'action.selected', color: '#16A34A', fontWeight: 600 }} />
                           </TableCell>
                           <TableCell align="right">
                             <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => handleOpenFieldModal(f)} sx={{ color: '#475569', p: 0.5 }}>
+                              <IconButton size="small" onClick={() => handleOpenFieldModal(f)} sx={{ color: 'text.secondary', p: 0.5 }}>
                                 <Pencil size={15} />
                               </IconButton>
                             </Tooltip>
@@ -599,7 +599,7 @@ export default function ProjectConfigurationPage() {
           ──────────────────────────────────────────────────────────────── */}
           <CustomTabPanel value={activeTab} index={2}>
             <Box sx={{ mb: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
                 Task Settings
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
@@ -607,7 +607,7 @@ export default function ProjectConfigurationPage() {
               </Typography>
             </Box>
 
-            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', p: 3, bgcolor: '#FAFBFD' }}>
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, bgcolor: 'background.default' }}>
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth size="small">
@@ -671,7 +671,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Require Due Date on Task Creation</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Require Due Date on Task Creation</Typography>}
                   />
                 </Grid>
 
@@ -685,7 +685,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Allow User Task Assignment</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Allow User Task Assignment</Typography>}
                   />
                 </Grid>
 
@@ -699,7 +699,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Allow Task Reassignment</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Allow Task Reassignment</Typography>}
                   />
                 </Grid>
 
@@ -713,7 +713,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Enable Task Activity Comments</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Enable Task Activity Comments</Typography>}
                   />
                 </Grid>
 
@@ -727,12 +727,12 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Enable Task Dependencies</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Enable Task Dependencies</Typography>}
                   />
                 </Grid>
               </Grid>
 
-              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="contained"
                   onClick={handleSaveTaskSettings}
@@ -749,7 +749,7 @@ export default function ProjectConfigurationPage() {
           ──────────────────────────────────────────────────────────────── */}
           <CustomTabPanel value={activeTab} index={3}>
             <Box sx={{ mb: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
                 Project Settings
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
@@ -757,7 +757,7 @@ export default function ProjectConfigurationPage() {
               </Typography>
             </Box>
 
-            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', p: 3, bgcolor: '#FAFBFD' }}>
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, bgcolor: 'background.default' }}>
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <TextField
@@ -795,7 +795,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Require Project Manager / Owner</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Require Project Manager / Owner</Typography>}
                   />
                 </Grid>
 
@@ -809,7 +809,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Require Target Start Date</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Require Target Start Date</Typography>}
                   />
                 </Grid>
 
@@ -823,7 +823,7 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Enable Financial Budget Tracking</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Enable Financial Budget Tracking</Typography>}
                   />
                 </Grid>
 
@@ -837,12 +837,12 @@ export default function ProjectConfigurationPage() {
                         color="success"
                       />
                     }
-                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Enable Project Document Storage</Typography>}
+                    label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Enable Project Document Storage</Typography>}
                   />
                 </Grid>
               </Grid>
 
-              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="contained"
                   onClick={handleSaveProjectSettings}
@@ -859,7 +859,7 @@ export default function ProjectConfigurationPage() {
              ──────────────────────────────────────────────────────────────── */}
           <CustomTabPanel value={activeTab} index={4}>
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '16px' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
                 ClickUp Automations Engine
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
@@ -867,7 +867,7 @@ export default function ProjectConfigurationPage() {
               </Typography>
             </Box>
 
-            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '6px', p: 3, bgcolor: '#FAFBFD' }}>
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, bgcolor: 'background.default' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {[
                   {
@@ -905,6 +905,7 @@ export default function ProjectConfigurationPage() {
                       justify: 'space-between',
                       borderRadius: '8px',
                       bgcolor: 'background.paper',
+                      borderColor: 'divider',
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -969,8 +970,8 @@ export default function ProjectConfigurationPage() {
           </Box>
 
           {/* Color Preview Badge */}
-          <Box sx={{ p: 1.5, bgcolor: '#F8FAFC', borderRadius: 1, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ color: '#64748B' }}>Badge Preview:</Typography>
+          <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1, border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>Badge Preview:</Typography>
             <Chip
               size="small"
               label={statusName || 'Status Preview'}
@@ -997,7 +998,7 @@ export default function ProjectConfigurationPage() {
                 color="success"
               />
             }
-            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Terminal / Completed State?</Typography>}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Terminal / Completed State?</Typography>}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
