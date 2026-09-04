@@ -75,6 +75,7 @@ class ApplicationListResponse(BaseModel):
     page: int
     page_size: int
     tab_counts: TabCounts
+    stage_counts: dict[str, int] = {}
 
 
 class PlannedActivityCreate(BaseModel):

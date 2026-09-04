@@ -486,6 +486,7 @@ export interface ApplicationListResponse {
   page: number;
   page_size: number;
   tab_counts: TabCounts;
+  stage_counts?: Record<string, number>;
 }
 
 export interface NotificationItem {

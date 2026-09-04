@@ -221,6 +221,36 @@ def _filtered_query(
     return query
 
 
+def _stage_counts(
+    db: Session,
+    user: User,
+    scope: str,
+    tab: str,
+    q: str | None,
+    finance_company_id: int | None,
+    date_from: datetime | None,
+    date_to: datetime | None,
+    module: str | None,
+) -> dict[str, int]:
+    base_query = _filtered_query(
+        db, user, scope, tab, q, status_filter=None, finance_company_id=finance_company_id,
+        date_from=date_from, date_to=date_to, stage_key=None, module=module
+    )
+
+    stage_key_counts = base_query.with_entities(Application.stage_key, func.count(Application.id)).group_by(Application.stage_key).all()
+    status_counts = base_query.with_entities(Application.status, func.count(Application.id)).group_by(Application.status).all()
+
+    res: dict[str, int] = {}
+    for sk, cnt in stage_key_counts:
+        if sk:
+            res[sk.lower().strip()] = cnt
+    for st, cnt in status_counts:
+        if st:
+            st_str = st.value if hasattr(st, "value") else str(st)
+            res[st_str.lower().strip()] = cnt
+    return res
+
+
 @router.get("", response_model=ApplicationListResponse)
 def list_applications(
     page: int = Query(1, ge=1),
@@ -253,6 +283,9 @@ def list_applications(
         page=page,
         page_size=page_size,
         tab_counts=_tab_counts(db, user, scope),
+        stage_counts=_stage_counts(
+            db, user, scope, tab, q, finance_company_id, date_from, date_to, module
+        ),
     )
 
 

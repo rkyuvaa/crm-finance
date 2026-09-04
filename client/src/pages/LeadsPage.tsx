@@ -180,7 +180,15 @@ export default function LeadsPage() {
     }
 
     return stagesForModule.map((s, idx) => {
-      const count = (data?.items ?? []).filter((app) => isAppInStage(app, s as any, idx, isOpportunityRoute)).length;
+      const keyLower = s.key?.toLowerCase().trim() || '';
+      const statusLower = (s.status ? String(s.status) : '').toLowerCase().trim();
+
+      let count = 0;
+      if (data?.stage_counts) {
+        count = data.stage_counts[keyLower] ?? data.stage_counts[statusLower] ?? 0;
+      } else {
+        count = (data?.items ?? []).filter((app) => isAppInStage(app, s as any, idx, isOpportunityRoute)).length;
+      }
 
       return {
         key: s.key,
@@ -191,7 +199,7 @@ export default function LeadsPage() {
         color: s.color,
       };
     });
-  }, [moduleStages, dashboard?.pipeline, data?.items, currentModule, isOpportunityRoute]);
+  }, [moduleStages, dashboard?.pipeline, data?.stage_counts, data?.items, currentModule, isOpportunityRoute]);
 
   const kanbanColumns = useMemo(() => {
     return pipelineStages.map((col) => {
