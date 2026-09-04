@@ -11,6 +11,7 @@ import {
   TextField,
   Button,
   LinearProgress,
+  CircularProgress,
   Paper,
   Select,
   MenuItem,
@@ -690,7 +691,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                           </IconButton>
                         </Box>
                       ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', group: true }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, color: valObj?.value ? 'text.primary' : 'text.secondary' }}>
                             {valObj?.value || 'Not set'}
                           </Typography>
