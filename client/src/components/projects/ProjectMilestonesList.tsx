@@ -78,10 +78,10 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header & Overall Milestone Progress */}
-      <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: '12px', p: 3 }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
               Project Milestones
             </Typography>
             <Typography variant="body2" color="textSecondary">
@@ -103,9 +103,9 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
           <LinearProgress
             variant="determinate"
             value={progressPct}
-            sx={{ flex: 1, height: 8, borderRadius: 4, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+            sx={{ flex: 1, height: 8, borderRadius: 4, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
           />
-          <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 45 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 45, color: 'text.primary' }}>
             {progressPct}%
           </Typography>
         </Box>
@@ -122,12 +122,13 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
             elevation={0}
             sx={{
               p: 2.5,
-              border: '1px solid #E2E8F0',
+              border: '1px solid',
+              borderColor: 'divider',
               borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              bgcolor: m.is_completed ? '#F8FAFC' : '#FFFFFF',
+              bgcolor: 'background.paper',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -141,7 +142,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                   variant="subtitle1"
                   sx={{
                     fontWeight: 700,
-                    color: m.is_completed ? '#64748B' : '#0F172A',
+                    color: m.is_completed ? 'text.secondary' : 'text.primary',
                     textDecoration: m.is_completed ? 'line-through' : 'none',
                   }}
                 >

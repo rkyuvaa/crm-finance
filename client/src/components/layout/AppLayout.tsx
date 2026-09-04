@@ -19,6 +19,7 @@ export default function AppLayout() {
     <Sidebar
       collapsed={isMobile ? false : collapsed}
       onNavigate={() => isMobile && setDrawerOpen(false)}
+      onToggleSidebar={isMobile ? () => setDrawerOpen(false) : () => setCollapsed((c) => !c)}
       isMobile={isMobile}
     />
   );

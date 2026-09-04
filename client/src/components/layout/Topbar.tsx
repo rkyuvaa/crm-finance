@@ -110,25 +110,38 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         top: 0,
         zIndex: 30,
         height: isSmallMobile ? 52 : 58,
-        background: 'rgba(255, 255, 255, 0.94)',
+        background: mode === 'dark' ? '#161B22' : 'rgba(255, 255, 255, 0.94)',
         backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid #E4EBE1',
+        borderBottom: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
         display: 'flex',
         alignItems: 'center',
         gap: isSmallMobile ? 8 : 14,
         padding: isSmallMobile ? '0 10px' : '0 20px',
         flexShrink: 0,
+        transition: 'background 0.2s ease, border-color 0.2s ease',
       }}
     >
-      <IconButton onClick={onToggleSidebar} aria-label="Toggle sidebar" sx={{ border: '1px solid #E4EBE1', borderRadius: 2, p: 1 }}>
-        <MenuIcon size={19} />
-      </IconButton>
+      {/* Mobile-only drawer opener */}
+      {isSmallMobile && (
+        <IconButton
+          onClick={onToggleSidebar}
+          aria-label="Toggle sidebar"
+          sx={{
+            border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+            borderRadius: 2,
+            p: 1,
+            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+          }}
+        >
+          <MenuIcon size={19} />
+        </IconButton>
+      )}
 
       {!isSmallMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', minWidth: 0 }}>
-          {!isTablet && <span style={{ fontSize: 13, color: '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>}
-          {!isTablet && <ChevronRight size={14} color="#9BA99F" />}
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#16231B' }}>{crumb[1]}</span>
+          {!isTablet && <span style={{ fontSize: 13, color: mode === 'dark' ? '#8B949E' : '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>}
+          {!isTablet && <ChevronRight size={14} color={mode === 'dark' ? '#6E7681' : '#9BA99F'} />}
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: mode === 'dark' ? '#F0F6FC' : '#16231B' }}>{crumb[1]}</span>
         </div>
       )}
 
@@ -144,24 +157,29 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           mx: isSmallMobile ? 0 : 'auto',
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
-            background: '#F7F9F5',
+            background: mode === 'dark' ? '#0D1117' : '#F7F9F5',
+            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
             fontSize: isSmallMobile ? 12 : 13.5,
-            '& fieldset': { borderColor: '#E4EBE1' },
-            '&:hover fieldset': { borderColor: '#C9E0C6' },
+            '& fieldset': { borderColor: mode === 'dark' ? '#30363D' : '#E4EBE1' },
+            '&:hover fieldset': { borderColor: mode === 'dark' ? '#8B949E' : '#C9E0C6' },
             '&.Mui-focused fieldset': { borderColor: '#087A3D', borderWidth: 1 },
+          },
+          '& .MuiInputBase-input::placeholder': {
+            color: mode === 'dark' ? '#8B949E' : '#7A8B80',
+            opacity: 1,
           },
         }}
         slotProps={{
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={16} color="#7A8B80" />
+                <Search size={16} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
               </InputAdornment>
             ),
             endAdornment: query ? (
               <InputAdornment position="end">
                 <IconButton size="small" onClick={handleClearSearch} sx={{ p: 0.5 }}>
-                  <X size={14} color="#7A8B80" />
+                  <X size={14} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
                 </IconButton>
               </InputAdornment>
             ) : null,
@@ -174,7 +192,13 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           <IconButton
             onClick={toggleThemeMode}
             aria-label="Toggle theme mode"
-            sx={{ border: '1px solid #E4EBE1', borderRadius: 2, p: 1 }}
+            sx={{
+              border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+              borderRadius: 2,
+              p: 1,
+              color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+              '&:hover': { background: mode === 'dark' ? '#21262D' : undefined },
+            }}
           >
             {mode === 'dark' ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#64748B" />}
           </IconButton>
@@ -184,7 +208,14 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           <IconButton
             onClick={() => navigate('/notifications')}
             aria-label="Notifications"
-            sx={{ border: '1px solid #E4EBE1', borderRadius: 2, position: 'relative', p: 1 }}
+            sx={{
+              border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+              borderRadius: 2,
+              position: 'relative',
+              p: 1,
+              color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+              '&:hover': { background: mode === 'dark' ? '#21262D' : undefined },
+            }}
           >
             <Bell size={18} />
             {unread > 0 && (
@@ -214,8 +245,9 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             gap: isSmallMobile ? 4 : 8,
             padding: isSmallMobile ? '3px 6px' : '4px 10px 4px 5px',
             borderRadius: 24,
-            border: '1px solid #E4EBE1',
-            background: '#fff',
+            border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+            background: mode === 'dark' ? '#161B22' : '#fff',
+            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
             cursor: 'pointer',
             fontFamily: 'inherit',
           }}
@@ -224,12 +256,28 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             {user ? user.initials || initialsOf(user.full_name) : '?'}
           </Avatar>
           {!isSmallMobile && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>{user?.full_name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: mode === 'dark' ? '#F0F6FC' : '#16231B' }}>
+              {user?.full_name}
+            </span>
           )}
-          <ChevronDown size={14} color="#7A8B80" />
+          <ChevronDown size={14} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
         </button>
 
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={() => setAnchorEl(null)}
+          slotProps={{
+            paper: {
+              sx: {
+                bgcolor: mode === 'dark' ? '#161B22' : '#FFFFFF',
+                borderColor: mode === 'dark' ? '#30363D' : '#E4EBE1',
+                color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+                border: '1px solid',
+              },
+            },
+          }}
+        >
           <MenuItem
             onClick={() => {
               setAnchorEl(null);
@@ -248,7 +296,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             <Bell size={15} style={{ marginRight: 9 }} />
             Notifications
           </MenuItem>
-          <Divider />
+          <Divider sx={{ borderColor: mode === 'dark' ? '#30363D' : undefined }} />
           <MenuItem onClick={handleLogout}>
             <LogOut size={15} style={{ marginRight: 9 }} />
             Logout

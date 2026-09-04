@@ -5,12 +5,16 @@ import {
   Bell,
   Briefcase,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Cpu,
   FileText,
   FolderPlus,
   LayoutDashboard,
   ListTodo,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Settings2,
   Sparkles,
@@ -114,10 +118,12 @@ NAV_GROUPS.forEach((group) => {
 export default function Sidebar({
   collapsed,
   onNavigate,
+  onToggleSidebar,
   isMobile = false,
 }: {
   collapsed: boolean;
   onNavigate?: () => void;
+  onToggleSidebar?: () => void;
   isMobile?: boolean;
 }) {
   const user = useAppSelector((state) => state.auth.user);
@@ -189,8 +195,8 @@ export default function Sidebar({
       aria-label="Primary navigation"
       style={{
         width: collapsed ? 76 : 244,
-        background: '#203020',
-        borderRight: '1px solid #2C3E2C',
+        background: '#152518',
+        borderRight: '1px solid #233827',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -203,50 +209,90 @@ export default function Sidebar({
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
-      {/* ── Brand / logo ───────────────────────────────────────────────── */}
+      {/* ── Brand / Header with Hamburger Toggle ───────────────────────── */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: collapsed ? '16px 0' : '16px 16px 14px',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          padding: collapsed ? '14px 8px' : '14px 14px 14px 16px',
           minHeight: 58,
           flexShrink: 0,
-          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
         }}
       >
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            background: '#087A3D',
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            flexShrink: 0,
-          }}
-        >
-          <FileText size={19} />
-        </div>
-        {!collapsed && (
-          <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
-              CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
-            </div>
-            <div
-              style={{
-                fontSize: 9,
-                fontWeight: 600,
-                letterSpacing: 1.4,
-                color: '#819688',
-                textTransform: 'uppercase',
-              }}
-            >
-              KIM
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', minWidth: 0 }}>
+          <div
+            onClick={collapsed && onToggleSidebar ? onToggleSidebar : undefined}
+            title={collapsed ? "Expand sidebar" : undefined}
+            style={{
+              width: 34,
+              height: 34,
+              background: '#087A3D',
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              flexShrink: 0,
+              cursor: collapsed ? 'pointer' : 'default',
+            }}
+          >
+            <FileText size={19} />
           </div>
+          {!collapsed && (
+            <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
+              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+                CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
+              </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: 1.4,
+                  color: '#819688',
+                  textTransform: 'uppercase',
+                }}
+              >
+                KIM
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Hamburger / Sidebar Toggle Icon */}
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+            title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: 7,
+              width: 30,
+              height: 30,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#A0B2A6',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
+              marginLeft: collapsed ? 0 : 8,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
+              e.currentTarget.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.color = '#A0B2A6';
+            }}
+          >
+            {collapsed ? <Menu size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         )}
       </div>
 
