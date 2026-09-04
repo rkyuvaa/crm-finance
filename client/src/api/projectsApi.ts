@@ -38,24 +38,131 @@ export interface TaskSubtaskItem {
   created_at: string;
 }
 
+export interface TaskAssigneeInfo {
+  id: number;
+  user_id: number;
+  full_name: string;
+  email?: string;
+}
+
+export interface TaskFollowerInfo {
+  id: number;
+  user_id: number;
+  full_name: string;
+  email?: string;
+}
+
+export interface TaskTagInfo {
+  id: number;
+  name: string;
+  color?: string;
+}
+
+export interface TaskChecklistItemInfo {
+  id: number;
+  checklist_id: number;
+  title: string;
+  is_completed: boolean;
+  assignee_id?: number;
+  assignee_name?: string;
+  due_date?: string;
+  display_order: number;
+}
+
+export interface TaskChecklistInfo {
+  id: number;
+  task_id: number;
+  title: string;
+  items: TaskChecklistItemInfo[];
+}
+
+export interface TaskTimeEntryInfo {
+  id: number;
+  task_id: number;
+  user_id: number;
+  user_name?: string;
+  duration_minutes: number;
+  started_at?: string;
+  ended_at?: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface TaskDependencyInfo {
+  id: number;
+  task_id: number;
+  depends_on_task_id: number;
+  dependency_type: 'BLOCKS' | 'BLOCKED_BY' | 'WAITING_ON';
+  depends_on_task_number?: string;
+  depends_on_task_title?: string;
+  depends_on_task_status?: string;
+}
+
+export interface TaskRelationshipInfo {
+  id: number;
+  task_id: number;
+  related_task_id: number;
+  relationship_type: 'RELATED' | 'LINKED' | 'DUPLICATE';
+  related_task_number?: string;
+  related_task_title?: string;
+}
+
+export interface TaskActivityInfo {
+  id: number;
+  task_id: number;
+  actor_id?: number;
+  actor_name: string;
+  action_type: string;
+  old_value?: string;
+  new_value?: string;
+  description?: string;
+  created_at: string;
+}
+
 export interface TaskItem {
   id: number;
+  task_number: string;
+  company_id?: number;
+  branch_id?: number;
+  department_id?: number;
+  cost_center_id?: number;
+  cost_center_code?: string;
+  cost_center_name?: string;
   project_id?: number;
   project_name?: string;
+  phase_id?: number;
   parent_task_id?: number;
   title: string;
   description?: string;
-  type_id?: number;
+  task_type: string;
   status_id?: number;
+  status_name?: string;
+  status_category?: string;
+  status_color?: string;
   priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
-  assignee_id?: number;
-  assignee_name?: string;
   start_date?: string;
+  start_time?: string;
   due_date?: string;
-  estimated_hours: number;
-  actual_hours: number;
-  tags?: string;
-  subtasks: TaskSubtaskItem[];
+  due_time?: string;
+  estimated_minutes: number;
+  actual_minutes: number;
+  progress_percentage: number;
+  is_completed: boolean;
+  is_archived: boolean;
+  is_deleted: boolean;
+  created_by?: number;
+  updated_by?: number;
+  completed_by?: number;
+  completed_at?: string;
+  assignees: TaskAssigneeInfo[];
+  followers: TaskFollowerInfo[];
+  tags: TaskTagInfo[];
+  checklists: TaskChecklistInfo[];
+  dependencies: TaskDependencyInfo[];
+  relationships: TaskRelationshipInfo[];
+  time_entries: TaskTimeEntryInfo[];
+  activities: TaskActivityInfo[];
+  subtasks: TaskItem[];
   created_at: string;
   updated_at: string;
 }
@@ -374,6 +481,118 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Milestones'],
     }),
+    // Stopwatch Time Tracking
+    startTimer: builder.mutation<TaskItem, number>({
+      query: (taskId) => ({
+        url: `/tasks/${taskId}/timer/start`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_res, _err, taskId) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    stopTimer: builder.mutation<TaskItem, { taskId: number; description?: string }>({
+      query: ({ taskId, description }) => ({
+        url: `/tasks/${taskId}/timer/stop`,
+        method: 'POST',
+        body: { description },
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+
+    // Checklists
+    addChecklist: builder.mutation<TaskChecklistInfo, { taskId: number; title: string }>({
+      query: ({ taskId, title }) => ({
+        url: `/tasks/${taskId}/checklists`,
+        method: 'POST',
+        body: { title },
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    addChecklistItem: builder.mutation<TaskChecklistItemInfo, { taskId: number; checklistId: number; title: string; assignee_id?: number; due_date?: string }>({
+      query: ({ taskId, checklistId, ...body }) => ({
+        url: `/tasks/${taskId}/checklists/${checklistId}/items`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    toggleChecklistItem: builder.mutation<TaskChecklistItemInfo, { taskId: number; itemId: number }>({
+      query: ({ taskId, itemId }) => ({
+        url: `/tasks/${taskId}/checklists/items/${itemId}`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    convertChecklistItemToSubtask: builder.mutation<TaskItem, { taskId: number; itemId: number }>({
+      query: ({ taskId, itemId }) => ({
+        url: `/tasks/${taskId}/checklists/items/${itemId}/convert-to-subtask`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+
+    // Followers
+    addFollower: builder.mutation<TaskFollowerInfo, { taskId: number; user_id: number }>({
+      query: ({ taskId, user_id }) => ({
+        url: `/tasks/${taskId}/followers`,
+        method: 'POST',
+        body: { user_id },
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    removeFollower: builder.mutation<void, { taskId: number; user_id: number }>({
+      query: ({ taskId, user_id }) => ({
+        url: `/tasks/${taskId}/followers/${user_id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+
+    // Dependencies
+    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; depends_on_task_id: number; dependency_type: string }>({
+      query: ({ taskId, ...body }) => ({
+        url: `/tasks/${taskId}/dependencies`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    removeDependency: builder.mutation<void, { taskId: number; dependencyId: number }>({
+      query: ({ taskId, dependencyId }) => ({
+        url: `/tasks/${taskId}/dependencies/${dependencyId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+
+    // Bulk Actions
+    bulkTaskAction: builder.mutation<{ message: string; affected: number }, { task_ids: number[]; action: string; value?: any }>({
+      query: (body) => ({
+        url: '/tasks/bulk-action',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Tasks', 'Projects'],
+    }),
+
+    // Task Templates
+    getTaskTemplates: builder.query<any[], void>({
+      query: () => '/tasks/templates',
+    }),
+    createTaskTemplate: builder.mutation<any, { name: string; description?: string; task_id?: number }>({
+      query: (body) => ({
+        url: '/tasks/templates',
+        method: 'POST',
+        body,
+      }),
+    }),
+    applyTaskTemplate: builder.mutation<TaskItem, { templateId: number; project_id: number }>({
+      query: ({ templateId, project_id }) => ({
+        url: `/tasks/templates/${templateId}/apply`,
+        method: 'POST',
+        body: { project_id },
+      }),
+      invalidatesTags: ['Tasks', 'Projects'],
+    }),
   }),
 });
 
@@ -412,4 +631,18 @@ export const {
   useDeleteTaskAttachmentMutation,
   useGetTaskCustomFieldsQuery,
   useSaveTaskCustomFieldMutation,
+  useStartTimerMutation,
+  useStopTimerMutation,
+  useAddChecklistMutation,
+  useAddChecklistItemMutation,
+  useToggleChecklistItemMutation,
+  useConvertChecklistItemToSubtaskMutation,
+  useAddFollowerMutation,
+  useRemoveFollowerMutation,
+  useAddDependencyMutation,
+  useRemoveDependencyMutation,
+  useBulkTaskActionMutation,
+  useGetTaskTemplatesQuery,
+  useCreateTaskTemplateMutation,
+  useApplyTaskTemplateMutation,
 } = projectsApi;

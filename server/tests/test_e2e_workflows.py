@@ -106,4 +106,4 @@ def test_full_project_task_lifecycle_workflow(seeded_client, db):
     # 9. Verify Project Details & Metrics
     p_get = seeded_client.get(f"/api/v1/projects/{project_id}", headers=headers)
     assert p_get.status_code == 200
-    assert p_get.json()["tasks_count"]["total"] == 1
+    assert p_get.json()["tasks_count"]["total"] == 3

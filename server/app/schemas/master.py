@@ -359,3 +359,68 @@ class StageAutomoveRuleOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CostCenterCreate(BaseModel):
+    code: str = Field(min_length=2, max_length=50)
+    name: str = Field(min_length=2, max_length=120)
+    description: str | None = None
+    department_id: int | None = None
+    company_id: int | None = None
+    is_active: bool = True
+
+
+class CostCenterUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=2, max_length=50)
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = None
+    department_id: int | None = None
+    company_id: int | None = None
+    is_active: bool | None = None
+
+
+class CostCenterOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: str | None = None
+    department_id: int | None = None
+    department_name: str | None = None
+    company_id: int | None = None
+    company_name: str | None = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BranchCreate(BaseModel):
+    code: str = Field(min_length=2, max_length=50)
+    name: str = Field(min_length=2, max_length=120)
+    company_id: int | None = None
+    address: str | None = None
+    is_active: bool = True
+
+
+class BranchUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=2, max_length=50)
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    company_id: int | None = None
+    address: str | None = None
+    is_active: bool | None = None
+
+
+class BranchOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    company_id: int | None = None
+    company_name: str | None = None
+    address: str | None = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+

@@ -586,3 +586,30 @@ export interface StageAutomoveRuleInput {
   is_enabled: boolean;
 }
 
+export interface CostCenter {
+  id: number;
+  code: string;
+  name: string;
+  description?: string | null;
+  department_id?: number | null;
+  department_name?: string | null;
+  company_id?: number | null;
+  company_name?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Branch {
+  id: number;
+  code: string;
+  name: string;
+  company_id?: number | null;
+  company_name?: string | null;
+  address?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+

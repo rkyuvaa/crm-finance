@@ -16,6 +16,8 @@ from app.models import (
     CrmTabFilter,
     CrmTabStageMapping,
     FinanceCompany,
+    Branch,
+    CostCenter,
     PipelineStage,
     StageAutomoveRule,
     User,
@@ -36,6 +38,12 @@ from app.schemas.master import (
     FinanceCompanyBrief,
     FinanceCompanyCreate,
     FinanceCompanyUpdate,
+    BranchCreate,
+    BranchOut,
+    BranchUpdate,
+    CostCenterCreate,
+    CostCenterOut,
+    CostCenterUpdate,
     StageAutomoveRuleCreate,
     StageAutomoveRuleOut,
     StageAutomoveRuleUpdate,
@@ -844,5 +852,212 @@ def delete_automove_rule(
     db.delete(rule)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Cost Centers Master APIs
+# ---------------------------------------------------------------------------
+
+def _cc_to_out(cc: CostCenter) -> CostCenterOut:
+    return CostCenterOut(
+        id=cc.id,
+        code=cc.code,
+        name=cc.name,
+        description=cc.description,
+        department_id=cc.department_id,
+        department_name=cc.department.name if cc.department else None,
+        company_id=cc.company_id,
+        company_name=cc.company.name if cc.company else None,
+        is_active=cc.is_active,
+        created_at=cc.created_at,
+        updated_at=cc.updated_at,
+    )
+
+
+@router.get("/cost-centers", response_model=list[CostCenterOut])
+def list_cost_centers(
+    department_id: Optional[int] = None,
+    company_id: Optional[int] = None,
+    active_only: bool = True,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = db.query(CostCenter)
+    if active_only:
+        query = query.filter(CostCenter.is_active.is_(True))
+    if department_id:
+        query = query.filter(CostCenter.department_id == department_id)
+    if company_id:
+        query = query.filter(CostCenter.company_id == company_id)
+    centers = query.order_by(CostCenter.code.asc()).all()
+    return [_cc_to_out(c) for c in centers]
+
+
+@router.post("/cost-centers", response_model=CostCenterOut, status_code=status.HTTP_201_CREATED)
+def create_cost_center(
+    payload: CostCenterCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    existing = db.query(CostCenter).filter(CostCenter.code.ilike(payload.code.strip())).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cost center code already exists")
+    
+    cc = CostCenter(
+        code=payload.code.strip().upper(),
+        name=payload.name.strip(),
+        description=payload.description,
+        department_id=payload.department_id,
+        company_id=payload.company_id,
+        is_active=payload.is_active,
+    )
+    db.add(cc)
+    db.commit()
+    db.refresh(cc)
+    return _cc_to_out(cc)
+
+
+@router.get("/cost-centers/{cost_center_id}", response_model=CostCenterOut)
+def get_cost_center(
+    cost_center_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    cc = db.get(CostCenter, cost_center_id)
+    if not cc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cost Center not found")
+    return _cc_to_out(cc)
+
+
+@router.patch("/cost-centers/{cost_center_id}", response_model=CostCenterOut)
+def update_cost_center(
+    cost_center_id: int,
+    payload: CostCenterUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    cc = db.get(CostCenter, cost_center_id)
+    if not cc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cost Center not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "code" in data and data["code"]:
+        data["code"] = data["code"].strip().upper()
+        dup = db.query(CostCenter).filter(CostCenter.code == data["code"], CostCenter.id != cc.id).first()
+        if dup:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cost Center code already exists")
+    for field, val in data.items():
+        setattr(cc, field, val)
+    db.commit()
+    db.refresh(cc)
+    return _cc_to_out(cc)
+
+
+@router.delete("/cost-centers/{cost_center_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_cost_center(
+    cost_center_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    cc = db.get(CostCenter, cost_center_id)
+    if not cc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cost Center not found")
+    db.delete(cc)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Branches Master APIs
+# ---------------------------------------------------------------------------
+
+def _branch_to_out(b: Branch) -> BranchOut:
+    return BranchOut(
+        id=b.id,
+        code=b.code,
+        name=b.name,
+        company_id=b.company_id,
+        company_name=b.company.name if b.company else None,
+        address=b.address,
+        is_active=b.is_active,
+        created_at=b.created_at,
+        updated_at=b.updated_at,
+    )
+
+
+@router.get("/branches", response_model=list[BranchOut])
+def list_branches(
+    company_id: Optional[int] = None,
+    active_only: bool = True,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = db.query(Branch)
+    if active_only:
+        query = query.filter(Branch.is_active.is_(True))
+    if company_id:
+        query = query.filter(Branch.company_id == company_id)
+    branches = query.order_by(Branch.name.asc()).all()
+    return [_branch_to_out(b) for b in branches]
+
+
+@router.post("/branches", response_model=BranchOut, status_code=status.HTTP_201_CREATED)
+def create_branch(
+    payload: BranchCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    existing = db.query(Branch).filter(Branch.code.ilike(payload.code.strip())).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Branch code already exists")
+    
+    branch = Branch(
+        code=payload.code.strip().upper(),
+        name=payload.name.strip(),
+        company_id=payload.company_id,
+        address=payload.address,
+        is_active=payload.is_active,
+    )
+    db.add(branch)
+    db.commit()
+    db.refresh(branch)
+    return _branch_to_out(branch)
+
+
+@router.patch("/branches/{branch_id}", response_model=BranchOut)
+def update_branch(
+    branch_id: int,
+    payload: BranchUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    branch = db.get(Branch, branch_id)
+    if not branch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "code" in data and data["code"]:
+        data["code"] = data["code"].strip().upper()
+        dup = db.query(Branch).filter(Branch.code == data["code"], Branch.id != branch.id).first()
+        if dup:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Branch code already exists")
+    for field, val in data.items():
+        setattr(branch, field, val)
+    db.commit()
+    db.refresh(branch)
+    return _branch_to_out(branch)
+
+
+@router.delete("/branches/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_branch(
+    branch_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.ADMIN)),
+):
+    branch = db.get(Branch, branch_id)
+    if not branch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found")
+    db.delete(branch)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 

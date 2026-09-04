@@ -8,6 +8,7 @@ import {
   Grid,
   Chip,
   Avatar,
+  AvatarGroup,
   TextField,
   Button,
   LinearProgress,
@@ -15,6 +16,7 @@ import {
   Paper,
   Select,
   MenuItem,
+  Tooltip,
 } from '@mui/material';
 import {
   X,
@@ -33,6 +35,11 @@ import {
   Send,
   Edit2,
   Check,
+  UserPlus,
+  Tag as TagIcon,
+  Activity as ActivityIcon,
+  Plus,
+  ArrowRight,
 } from 'lucide-react';
 import {
   TaskItem,
@@ -49,8 +56,18 @@ import {
   useGetCustomFieldDefinitionsQuery,
   useGetTaskCustomFieldsQuery,
   useSaveTaskCustomFieldMutation,
+  useStartTimerMutation,
+  useStopTimerMutation,
+  useAddChecklistMutation,
+  useAddChecklistItemMutation,
+  useToggleChecklistItemMutation,
+  useConvertChecklistItemToSubtaskMutation,
+  useAddFollowerMutation,
+  useRemoveFollowerMutation,
+  useAddDependencyMutation,
+  useRemoveDependencyMutation,
 } from '@/api/projectsApi';
-import { useUsersQuery } from '@/api/mastersApi';
+import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 interface TaskDetailPanelProps {
@@ -62,7 +79,20 @@ interface TaskDetailPanelProps {
 export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanelProps) {
   const [commentText, setCommentText] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  
+
+  // Editable Title & Description State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Failed'>('Saved');
+
+  // Checklist State
+  const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  const [newChecklistItemTitles, setNewChecklistItemTitles] = useState<Record<number, string>>({});
+
+  // Dependency State
+  const [depTaskId, setDepTaskId] = useState<number | ''>('');
+  const [depType, setDepType] = useState<'BLOCKS' | 'BLOCKED_BY' | 'WAITING_ON'>('BLOCKED_BY');
+
   // Stopwatch Timer State
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -80,23 +110,39 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [logTime] = useLogTimeMutation();
   const [addComment, { isLoading: isAddingComment }] = useAddCommentMutation();
 
+  const [startTimerApi] = useStartTimerMutation();
+  const [stopTimerApi] = useStopTimerMutation();
+
+  const [addChecklistApi] = useAddChecklistMutation();
+  const [addChecklistItemApi] = useAddChecklistItemMutation();
+  const [toggleChecklistItemApi] = useToggleChecklistItemMutation();
+  const [convertChecklistItemApi] = useConvertChecklistItemToSubtaskMutation();
+
+  const [addFollowerApi] = useAddFollowerMutation();
+  const [removeFollowerApi] = useRemoveFollowerMutation();
+
+  const [addDependencyApi] = useAddDependencyMutation();
+  const [removeDependencyApi] = useRemoveDependencyMutation();
+
   const { data: users = [] } = useUsersQuery();
+  const { data: costCenters = [] } = useCostCentersQuery();
 
-  const { data: comments = [] } = useGetTaskCommentsQuery(task?.id || 0, {
-    skip: !task?.id,
-  });
-
-  const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(task?.id || 0, {
-    skip: !task?.id,
-  });
+  const { data: comments = [] } = useGetTaskCommentsQuery(task?.id || 0, { skip: !task?.id });
+  const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(task?.id || 0, { skip: !task?.id });
   const [addTaskAttachment] = useAddTaskAttachmentMutation();
   const [deleteTaskAttachment] = useDeleteTaskAttachmentMutation();
 
   const { data: customDefs = [] } = useGetCustomFieldDefinitionsQuery();
-  const { data: customValues = [] } = useGetTaskCustomFieldsQuery(task?.id || 0, {
-    skip: !task?.id,
-  });
+  const { data: customValues = [] } = useGetTaskCustomFieldsQuery(task?.id || 0, { skip: !task?.id });
   const [saveCustomField] = useSaveTaskCustomFieldMutation();
+
+  // Populate local title and description on task change
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title || '');
+      setDescription(task.description || '');
+    }
+  }, [task?.id]);
 
   // Timer Tick Effect
   useEffect(() => {
@@ -120,25 +166,59 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleTitleBlur = async () => {
+    if (!title.trim() || title === task.title) return;
+    setSaveStatus('Saving...');
+    try {
+      await updateTask({ id: task.id, body: { title: title.trim() } }).unwrap();
+      setSaveStatus('Saved');
+      showToast('Title updated', 'success');
+    } catch {
+      setSaveStatus('Failed');
+      showToast('Failed to update title', 'error');
+    }
+  };
+
+  const handleDescriptionBlur = async () => {
+    if (description === task.description) return;
+    setSaveStatus('Saving...');
+    try {
+      await updateTask({ id: task.id, body: { description: description.trim() } }).unwrap();
+      setSaveStatus('Saved');
+      showToast('Description saved', 'success');
+    } catch {
+      setSaveStatus('Failed');
+      showToast('Failed to save description', 'error');
+    }
+  };
+
   const handleToggleTimer = async () => {
     if (!isTimerRunning) {
-      setIsTimerRunning(true);
-      showToast('Stopwatch timer started ⏱️', 'info');
-    } else {
-      setIsTimerRunning(false);
-      const hoursLogged = Math.max(0.1, parseFloat((timerSeconds / 3600).toFixed(2)));
       try {
-        await logTime({
-          taskId: task.id,
-          hours: hoursLogged,
-          log_date: new Date().toISOString().split('T')[0],
-          description: `Timer logged work: ${formatTimer(timerSeconds)}`,
-        }).unwrap();
-        showToast(`Logged ${hoursLogged} hours to timesheet!`, 'success');
-        setTimerSeconds(0);
+        await startTimerApi(task.id).unwrap();
+        setIsTimerRunning(true);
+        showToast('Stopwatch timer started ⏱️', 'info');
       } catch {
-        showToast('Failed to log timer hours', 'error');
+        showToast('Could not start timer', 'error');
       }
+    } else {
+      try {
+        await stopTimerApi({ taskId: task.id, description: `Stopwatch session: ${formatTimer(timerSeconds)}` }).unwrap();
+        setIsTimerRunning(false);
+        setTimerSeconds(0);
+        showToast('Timer stopped & work logged!', 'success');
+      } catch {
+        showToast('Could not stop timer', 'error');
+      }
+    }
+  };
+
+  const handleCostCenterChange = async (ccId: number | '') => {
+    try {
+      await updateTask({ id: task.id, body: { cost_center_id: ccId || undefined } as any }).unwrap();
+      showToast('Cost Center updated', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail?.message || 'Invalid Cost Center', 'error');
     }
   };
 
@@ -173,20 +253,67 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
-  const handleAssigneeChange = async (newAssigneeId: number | '') => {
-    if (!task) return;
+  const handleAddChecklist = async () => {
+    if (!newChecklistTitle.trim()) return;
     try {
-      const selectedUser = users.find((u) => u.id === newAssigneeId);
-      await updateTask({
-        id: task.id,
-        body: { assignee_id: newAssigneeId || undefined },
-      }).unwrap();
-      showToast(
-        newAssigneeId ? `Reassigned task to ${selectedUser?.full_name || 'user'}` : 'Task unassigned',
-        'success'
-      );
+      await addChecklistApi({ taskId: task.id, title: newChecklistTitle.trim() }).unwrap();
+      setNewChecklistTitle('');
+      showToast('Checklist created', 'success');
     } catch {
-      showToast('Failed to update task assignee', 'error');
+      showToast('Failed to create checklist', 'error');
+    }
+  };
+
+  const handleAddChecklistItem = async (checklistId: number) => {
+    const itemTitle = newChecklistItemTitles[checklistId];
+    if (!itemTitle || !itemTitle.trim()) return;
+    try {
+      await addChecklistItemApi({ taskId: task.id, checklistId, title: itemTitle.trim() }).unwrap();
+      setNewChecklistItemTitles((prev) => ({ ...prev, [checklistId]: '' }));
+      showToast('Item added to checklist', 'success');
+    } catch {
+      showToast('Failed to add checklist item', 'error');
+    }
+  };
+
+  const handleToggleChecklistItem = async (itemId: number) => {
+    try {
+      await toggleChecklistItemApi({ taskId: task.id, itemId }).unwrap();
+    } catch {
+      showToast('Failed to toggle item', 'error');
+    }
+  };
+
+  const handleConvertChecklistItemToSubtask = async (itemId: number) => {
+    try {
+      await convertChecklistItemApi({ taskId: task.id, itemId }).unwrap();
+      showToast('Converted checklist item to subtask!', 'success');
+    } catch {
+      showToast('Failed to convert to subtask', 'error');
+    }
+  };
+
+  const handleAddDependency = async () => {
+    if (!depTaskId) return;
+    try {
+      await addDependencyApi({
+        taskId: task.id,
+        depends_on_task_id: Number(depTaskId),
+        dependency_type: depType,
+      }).unwrap();
+      setDepTaskId('');
+      showToast('Dependency added', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail?.message || 'Could not add dependency (anti-circular rule enforced)', 'error');
+    }
+  };
+
+  const handleRemoveDependency = async (depId: number) => {
+    try {
+      await removeDependencyApi({ taskId: task.id, dependencyId: depId }).unwrap();
+      showToast('Dependency removed', 'info');
+    } catch {
+      showToast('Failed to remove dependency', 'error');
     }
   };
 
@@ -198,7 +325,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         content: commentText.trim(),
       }).unwrap();
       setCommentText('');
-      showToast('Comment posted', 'success');
+      showToast('Comment posted with @mention notifications', 'success');
     } catch {
       showToast('Failed to post comment', 'error');
     }
@@ -254,10 +381,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       open={open}
       onClose={onClose}
       PaperProps={{
-        sx: { width: { xs: '100%', sm: 600, md: 840 }, p: 0, bgcolor: 'background.default' },
+        sx: { width: { xs: '100%', sm: 680, md: 940 }, p: 0, bgcolor: 'background.default' },
       }}
     >
-      {/* Header */}
+      {/* Header Toolbar */}
       <Box
         sx={{
           p: 2,
@@ -269,18 +396,27 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           borderColor: 'divider',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Chip
+            label={task.task_number || `TASK-${task.id}`}
+            size="small"
+            sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 700, fontFamily: 'monospace' }}
+          />
           <Chip
             label={task.priority}
             size="small"
-            sx={{ bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}
+            sx={{
+              bgcolor: task.priority === 'URGENT' ? '#FEE2E2' : task.priority === 'HIGH' ? '#FEF3C7' : '#04552B',
+              color: task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : '#FFFFFF',
+              fontWeight: 700,
+            }}
           />
-          <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600 }}>
-            {task.project_name || 'Project Workspace'}
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            {saveStatus === 'Saving...' ? 'Saving...' : saveStatus === 'Saved' ? 'Saved ✓' : 'Save Error'}
           </Typography>
         </Box>
 
-        {/* Live Stopwatch Timer Widget */}
+        {/* Stopwatch Timer Widget */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Paper
             variant="outlined"
@@ -316,69 +452,60 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         </Box>
       </Box>
 
+      {/* Panel Body */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, height: 'calc(100vh - 65px)' }}>
-        {/* Main Body (Left side of panel) */}
+        {/* Left Column (Details, Subtasks, Checklists, Comments) */}
         <Box sx={{ flex: 1, p: 3, overflowY: 'auto', bgcolor: 'background.paper' }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
-            {task.title}
-          </Typography>
+          {/* Editable Title */}
+          <TextField
+            fullWidth
+            variant="standard"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleTitleBlur}
+            placeholder="Task title..."
+            InputProps={{
+              disableUnderline: true,
+              sx: { fontSize: '1.4rem', fontWeight: 700, color: 'text.primary', mb: 2 },
+            }}
+          />
 
-          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-            {task.description || 'No detailed description provided for this task.'}
+          {/* Rich Description */}
+          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+            DESCRIPTION
           </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={handleDescriptionBlur}
+            placeholder="Add detailed task description, scope, requirements, markdown links..."
+            sx={{ mb: 3, '& .MuiOutlinedInput-root': { fontSize: 14 } }}
+          />
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── TASK DEPENDENCIES ─────────────────────────────────── */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Lock size={18} color="#D97706" /> Task Dependencies
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Paper variant="outlined" sx={{ p: 1.5, flex: 1, minWidth: 200, borderRadius: '8px', bgcolor: 'background.default' }}>
-                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
-                  WAITING ON (BLOCKING THIS TASK)
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                  None (Task is unblocked)
-                </Typography>
-              </Paper>
-              <Paper variant="outlined" sx={{ p: 1.5, flex: 1, minWidth: 200, borderRadius: '8px', bgcolor: 'background.default' }}>
-                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
-                  BLOCKING OTHERS
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                  None
-                </Typography>
-              </Paper>
-            </Box>
-          </Box>
-
-          <Divider sx={{ mb: 3 }} />
-
-          {/* ── SUBTASKS ──────────────────── */}
+          {/* ── SUBTASKS (ClickUp Nested 3 Levels) ───────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <ListTree size={18} color="#04552B" />
                 <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700 }}>
-                  Subtasks
+                  Subtasks & Work Breakdown
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                {task.subtasks?.length > 0
-                  ? `${task.subtasks.filter((s) => s.is_completed).length} of ${task.subtasks.length} completed (${Math.round((task.subtasks.filter((s) => s.is_completed).length / task.subtasks.length) * 100)}%)`
-                  : '0 Subtasks'}
+                Progress: {task.progress_percentage || 0}%
               </Typography>
             </Box>
 
-            {task.subtasks?.length > 0 && (
-              <LinearProgress
-                variant="determinate"
-                value={(task.subtasks.filter((s) => s.is_completed).length / task.subtasks.length) * 100}
-                sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
-              />
-            )}
+            <LinearProgress
+              variant="determinate"
+              value={task.progress_percentage || 0}
+              sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+            />
 
             {task.subtasks?.length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
@@ -394,7 +521,6 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       justifyContent: 'space-between',
                       borderRadius: '8px',
                       bgcolor: sub.is_completed ? 'action.hover' : 'background.default',
-                      borderColor: sub.is_completed ? 'divider' : 'action.focus',
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
@@ -404,46 +530,33 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         onChange={() => handleToggleSubtask(sub.id)}
                         style={{ cursor: 'pointer', width: 17, height: 17, accentColor: '#04552B' }}
                       />
+                      <Chip label={sub.task_number || `SUB-${sub.id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace' }} />
                       <Typography
                         variant="body2"
                         sx={{
                           fontWeight: sub.is_completed ? 400 : 600,
                           textDecoration: sub.is_completed ? 'line-through' : 'none',
                           color: sub.is_completed ? 'text.secondary' : 'text.primary',
-                          fontSize: 14,
                         }}
                       >
                         {sub.title}
                       </Typography>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip
-                        label={sub.is_completed ? 'COMPLETED' : 'PENDING'}
-                        size="small"
-                        sx={{
-                          height: 20,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          bgcolor: sub.is_completed ? '#DCFCE7' : '#FEF3C7',
-                          color: sub.is_completed ? '#166534' : '#92400E',
-                        }}
-                      />
-                      <IconButton size="small" onClick={() => handleDeleteSubtask(sub.id)}>
-                        <Trash2 size={15} color="#DC2626" />
-                      </IconButton>
-                    </Box>
+                    <IconButton size="small" onClick={() => handleDeleteSubtask(sub.id)}>
+                      <Trash2 size={15} color="#DC2626" />
+                    </IconButton>
                   </Paper>
                 ))}
               </Box>
             )}
 
-            {/* Add Subtask Input */}
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            {/* Quick Add Subtask */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
                 size="small"
                 fullWidth
-                placeholder="+ Add new subtask title..."
+                placeholder="+ Add subtask title..."
                 value={newSubtaskTitle}
                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
@@ -454,7 +567,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 size="small"
                 onClick={handleAddSubtask}
                 disabled={isAddingSubtask}
-                sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 36, textTransform: 'none', px: 2, fontWeight: 600 }}
+                sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', px: 2 }}
               >
                 Add Subtask
               </Button>
@@ -463,57 +576,173 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── FILE ATTACHMENTS ──────────────────────────────────── */}
+          {/* ── CHECKLISTS ────────────────────────────────────────── */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckSquare size={18} color="#2563EB" />
+                <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700 }}>
+                  Checklists
+                </Typography>
+              </Box>
+            </Box>
+
+            {task.checklists && task.checklists.length > 0 ? (
+              task.checklists.map((chk) => (
+                <Paper key={chk.id} variant="outlined" sx={{ p: 2, mb: 2, borderRadius: '8px', bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                    {chk.title}
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+                    {chk.items.map((item) => (
+                      <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={item.is_completed}
+                            onChange={() => handleToggleChecklistItem(item.id)}
+                            style={{ cursor: 'pointer', width: 16, height: 16, accentColor: '#2563EB' }}
+                          />
+                          <Typography
+                            variant="body2"
+                            sx={{ textDecoration: item.is_completed ? 'line-through' : 'none', color: item.is_completed ? 'text.secondary' : 'text.primary' }}
+                          >
+                            {item.title}
+                          </Typography>
+                        </Box>
+                        <Button
+                          size="small"
+                          onClick={() => handleConvertChecklistItemToSubtask(item.id)}
+                          sx={{ fontSize: 10, textTransform: 'none' }}
+                        >
+                          Convert to Subtask
+                        </Button>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  {/* Add Checklist Item */}
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      placeholder="+ Add checklist item..."
+                      value={newChecklistItemTitles[chk.id] || ''}
+                      onChange={(e) => setNewChecklistItemTitles((prev) => ({ ...prev, [chk.id]: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddChecklistItem(chk.id)}
+                      sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: 12 } }}
+                    />
+                    <Button size="small" variant="outlined" onClick={() => handleAddChecklistItem(chk.id)}>
+                      Add Item
+                    </Button>
+                  </Box>
+                </Paper>
+              ))
+            ) : (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                No checklists added to this task.
+              </Typography>
+            )}
+
+            {/* Create Checklist */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="+ Create new checklist title..."
+                value={newChecklistTitle}
+                onChange={(e) => setNewChecklistTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddChecklist()}
+                sx={{ '& .MuiOutlinedInput-root': { height: 34, fontSize: 13 } }}
+              />
+              <Button variant="outlined" size="small" onClick={handleAddChecklist} sx={{ textTransform: 'none' }}>
+                Add Checklist
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ mb: 3 }} />
+
+          {/* ── DEPENDENCIES ────────────────────────────────────────── */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Lock size={18} color="#D97706" /> Task Dependencies & Relationships
+            </Typography>
+
+            {task.dependencies && task.dependencies.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+                {task.dependencies.map((dep) => (
+                  <Paper key={dep.id} variant="outlined" sx={{ p: 1.25, px: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip label={dep.dependency_type} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {dep.depends_on_task_number}: {dep.depends_on_task_title}
+                      </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
+                      <Trash2 size={14} color="#DC2626" />
+                    </IconButton>
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                No active dependencies. (Anti-circular validation active)
+              </Typography>
+            )}
+
+            {/* Add Dependency Controls */}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Select
+                size="small"
+                displayEmpty
+                value={depType}
+                onChange={(e) => setDepType(e.target.value as any)}
+                sx={{ height: 34, fontSize: 12, minWidth: 130 }}
+              >
+                <MenuItem value="BLOCKED_BY">Blocked By</MenuItem>
+                <MenuItem value="BLOCKS">Blocks</MenuItem>
+                <MenuItem value="WAITING_ON">Waiting On</MenuItem>
+              </Select>
+
+              <TextField
+                size="small"
+                type="number"
+                placeholder="Target Task ID..."
+                value={depTaskId}
+                onChange={(e) => setDepTaskId(e.target.value ? Number(e.target.value) : '')}
+                sx={{ width: 140, '& .MuiOutlinedInput-root': { height: 34, fontSize: 12 } }}
+              />
+
+              <Button variant="outlined" size="small" onClick={handleAddDependency} sx={{ height: 34, textTransform: 'none' }}>
+                Add Dependency
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ mb: 3 }} />
+
+          {/* ── ATTACHMENTS ───────────────────────────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Paperclip size={18} color="#2563EB" /> File Attachments ({attachments.length})
               </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                component="label"
-                startIcon={<UploadCloud size={14} />}
-                sx={{ textTransform: 'none', fontSize: 12, fontWeight: 600 }}
-              >
+              <Button variant="outlined" size="small" component="label" startIcon={<UploadCloud size={14} />}>
                 Upload File
                 <input type="file" hidden multiple onChange={handleFileUpload} />
               </Button>
             </Box>
 
-            {isLoadingAttachments ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : attachments.length === 0 ? (
-              <Typography variant="body2" color="textSecondary">No files attached to this task yet.</Typography>
-            ) : (
+            {attachments.length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {attachments.map((file) => (
-                  <Paper
-                    key={file.id}
-                    variant="outlined"
-                    sx={{
-                      p: 1.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justify: 'space-between',
-                      borderRadius: '8px',
-                      bgcolor: 'background.default',
-                    }}
-                  >
+                  <Paper key={file.id} variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <FileText size={18} color="#04552B" />
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          {file.filename}
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary">
-                          {file.file_size || 'File'} • {new Date(file.created_at).toLocaleDateString()}
-                        </Typography>
-                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{file.filename}</Typography>
                     </Box>
-
                     <IconButton size="small" onClick={() => handleRemoveAttachment(file.id)}>
                       <Trash2 size={15} color="#DC2626" />
                     </IconButton>
@@ -525,197 +754,151 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* Activity / Comments */}
+          {/* ── ACTIVITY & COMMENTS ───────────────────────────────── */}
           <Box>
             <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MessageSquare size={18} color="#64748B" /> Activity & Comments
+              <MessageSquare size={18} color="#64748B" /> Comments & Immutable Audit Log
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#04552B', fontSize: '0.875rem', fontWeight: 700 }}>A</Avatar>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: '#04552B', fontSize: 13, fontWeight: 700 }}>A</Avatar>
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Write a comment..."
+                placeholder="Write comment with @mentions..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
                 multiline
                 rows={2}
               />
-              <IconButton
-                onClick={handlePostComment}
-                disabled={isAddingComment || !commentText.trim()}
-                sx={{ bgcolor: '#04552B', color: '#FFF', '&:hover': { bgcolor: '#034120' }, alignSelf: 'flex-end' }}
-              >
+              <IconButton onClick={handlePostComment} disabled={isAddingComment || !commentText.trim()} sx={{ bgcolor: '#04552B', color: '#FFF' }}>
                 <Send size={16} />
               </IconButton>
             </Box>
 
-            {/* Comments List */}
+            {/* Comments Timeline */}
             {comments.map((c) => (
               <Box key={c.id} sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#64748B' }}>
-                  {c.user_name?.charAt(0) || 'U'}
-                </Avatar>
+                <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: '#64748B' }}>{c.user_name?.charAt(0) || 'U'}</Avatar>
                 <Paper variant="outlined" sx={{ p: 1.5, flex: 1, borderRadius: '8px', bgcolor: 'background.default' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12 }}>
-                    {c.user_name || 'Admin'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.primary', mt: 0.5 }}>
-                    {c.content}
-                  </Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12 }}>{c.user_name || 'User'}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary', mt: 0.5 }}>{c.content}</Typography>
                 </Paper>
               </Box>
             ))}
+
+            {/* Immutable Audit Log */}
+            {task.activities && task.activities.length > 0 && (
+              <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 1 }}>
+                  AUDIT TIMELINE
+                </Typography>
+                {task.activities.map((act) => (
+                  <Box key={act.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+                    <ActivityIcon size={13} color="#64748B" />
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <strong>{act.actor_name}</strong>: {act.description || act.action_type} ({new Date(act.created_at).toLocaleTimeString()})
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         </Box>
 
-        {/* Meta Column (Right side of panel) */}
-        <Box sx={{ width: { xs: '100%', md: 280 }, p: 3, borderLeft: { md: '1px solid' }, borderColor: 'divider', bgcolor: 'background.default' }}>
+        {/* Right Column (Master Data Properties) */}
+        <Box sx={{ width: { xs: '100%', md: 300 }, p: 3, borderLeft: { md: '1px solid' }, borderColor: 'divider', bgcolor: 'background.default' }}>
           <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 2, textTransform: 'uppercase', fontWeight: 700, fontSize: '0.7rem' }}>
-            Properties
+            Work Item Properties
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Cost Center Master Selector */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Assignee</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                Cost Center (Master Data)
+              </Typography>
               <Select
                 size="small"
                 fullWidth
-                value={task.assignee_id || ''}
-                onChange={(e) => handleAssigneeChange(e.target.value ? Number(e.target.value) : '')}
+                value={task.cost_center_id || ''}
+                onChange={(e) => handleCostCenterChange(e.target.value ? Number(e.target.value) : '')}
                 displayEmpty
-                renderValue={(selectedId) => {
-                  if (!selectedId) {
-                    return (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 22, height: 22, fontSize: '0.7rem', bgcolor: '#64748B' }}>?</Avatar>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>
-                          Unassigned
-                        </Typography>
-                      </Box>
-                    );
-                  }
-                  const assignedUser = users.find((u) => u.id === Number(selectedId));
-                  const name = assignedUser?.full_name || task.assignee_name || `User #${selectedId}`;
-                  return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 22, height: 22, fontSize: '0.7rem', bgcolor: '#04552B' }}>
-                        {name.charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-                        {name}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                sx={{
-                  height: 36,
-                  fontSize: 13,
-                  bgcolor: 'background.paper',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
-                }}
+                sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
               >
-                <MenuItem value="">
-                  <Typography variant="body2" color="textSecondary"><em>Unassigned</em></Typography>
-                </MenuItem>
-                {users.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 22, height: 22, fontSize: 11, bgcolor: '#04552B' }}>
-                        {u.full_name.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>{u.full_name}</Typography>
-                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11 }}>{u.email || u.role}</Typography>
-                      </Box>
-                    </Box>
+                <MenuItem value=""><em>None Selected</em></MenuItem>
+                {costCenters.map((cc) => (
+                  <MenuItem key={cc.id} value={cc.id}>
+                    {cc.code} - {cc.name}
                   </MenuItem>
                 ))}
               </Select>
             </Box>
 
+            {/* Assignees */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Priority</Typography>
-              <Chip size="small" label={task.priority} sx={{ fontWeight: 700, height: 24 }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                Assignees
+              </Typography>
+              {task.assignees && task.assignees.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {task.assignees.map((a) => (
+                    <Chip key={a.id} avatar={<Avatar>{a.full_name.charAt(0)}</Avatar>} label={a.full_name} size="small" />
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary">Unassigned</Typography>
+              )}
             </Box>
 
+            {/* Followers */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Due Date</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Calendar size={16} color="#64748B" />
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>{task.due_date || 'None'}</Typography>
-              </Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                Followers / Watchers
+              </Typography>
+              {task.followers && task.followers.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {task.followers.map((f) => (
+                    <Chip key={f.id} label={f.full_name} size="small" variant="outlined" />
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary">No followers</Typography>
+              )}
             </Box>
 
-            <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Time Tracked</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Clock size={16} color="#64748B" />
-                <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                  {task.actual_hours}h / {task.estimated_hours}h
-                </Typography>
-              </Box>
-            </Box>
-
+            {/* Custom Fields */}
             <Divider sx={{ my: 1 }} />
-
             <Typography variant="subtitle2" sx={{ color: 'text.secondary', textTransform: 'uppercase', fontWeight: 700, fontSize: '0.7rem' }}>
               Custom Fields
             </Typography>
+            {customDefs.map((def) => {
+              const valObj = customValues.find((v) => v.field_id === def.id);
+              const isEditing = editingFieldId === def.id;
 
-            {customDefs.length === 0 ? (
-              <Typography variant="caption" color="textSecondary">No custom fields configured for tasks.</Typography>
-            ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {customDefs.map((def) => {
-                  const valObj = customValues.find((v) => v.field_id === def.id);
-                  const isEditing = editingFieldId === def.id;
-
-                  return (
-                    <Box key={def.id}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        {def.label}
-                      </Typography>
-                      {isEditing ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <TextField
-                            size="small"
-                            value={editFieldValue}
-                            onChange={(e) => setEditFieldValue(e.target.value)}
-                            sx={{ '& .MuiOutlinedInput-root': { height: 30, fontSize: 13 } }}
-                          />
-                          <IconButton size="small" onClick={() => handleSaveCustomField(def.id)} sx={{ color: '#16A34A' }}>
-                            <Check size={16} />
-                          </IconButton>
-                        </Box>
-                      ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: valObj?.value ? 'text.primary' : 'text.secondary' }}>
-                            {valObj?.value || 'Not set'}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setEditingFieldId(def.id);
-                              setEditFieldValue(valObj?.value || '');
-                            }}
-                            sx={{ p: 0.5, opacity: 0.7, '&:hover': { opacity: 1 } }}
-                          >
-                            <Edit2 size={13} />
-                          </IconButton>
-                        </Box>
-                      )}
+              return (
+                <Box key={def.id}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{def.label}</Typography>
+                  {isEditing ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                      <TextField size="small" value={editFieldValue} onChange={(e) => setEditFieldValue(e.target.value)} />
+                      <IconButton size="small" onClick={() => handleSaveCustomField(def.id)}><Check size={16} /></IconButton>
                     </Box>
-                  );
-                })}
-              </Box>
-            )}
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{valObj?.value || 'Not set'}</Typography>
+                      <IconButton size="small" onClick={() => { setEditingFieldId(def.id); setEditFieldValue(valObj?.value || ''); }}>
+                        <Edit2 size={13} />
+                      </IconButton>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
           </Box>
         </Box>
       </Box>
     </Drawer>
   );
 }
-

@@ -1,8 +1,77 @@
 from datetime import datetime, date
-from typing import List, Optional
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.projects import TaskPriority
+from app.models.projects import TaskPriority, TaskStatusCategory, DependencyType, RelationshipType
+
+
+# --- Cost Center & Branch Brief Schemas ---
+class CostCenterBrief(BaseModel):
+    id: int
+    code: str
+    name: str
+    department_id: Optional[int] = None
+    company_id: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BranchBrief(BaseModel):
+    id: int
+    code: str
+    name: str
+    company_id: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- User Brief for Task Assignees / Followers ---
+class UserBriefOut(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    initials: Optional[str] = None
+    profile_photo: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Assignee & Follower ---
+class TaskAssigneeOut(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    user: Optional[UserBriefOut] = None
+    assigned_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskFollowerOut(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    user: Optional[UserBriefOut] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Tags ---
+class TaskTagBase(BaseModel):
+    name: str
+    color: str = "#3B82F6"
+
+
+class TaskTagCreate(TaskTagBase):
+    pass
+
+
+class TaskTagOut(TaskTagBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Subtask / Checklist ---
@@ -24,7 +93,51 @@ class TaskSubtaskOut(TaskSubtaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# --- Time Log ---
+# --- Task Checklist & Checklist Items ---
+class TaskChecklistItemBase(BaseModel):
+    title: str
+    is_completed: bool = False
+    assignee_id: Optional[int] = None
+    due_date: Optional[date] = None
+    display_order: int = 0
+
+
+class TaskChecklistItemCreate(TaskChecklistItemBase):
+    pass
+
+
+class TaskChecklistItemOut(TaskChecklistItemBase):
+    id: int
+    checklist_id: int
+    completed_at: Optional[datetime] = None
+    completed_by: Optional[int] = None
+    assignee: Optional[UserBriefOut] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskChecklistBase(BaseModel):
+    title: str
+    display_order: int = 0
+
+
+class TaskChecklistCreate(TaskChecklistBase):
+    items: List[TaskChecklistItemCreate] = []
+
+
+class TaskChecklistOut(TaskChecklistBase):
+    id: int
+    task_id: int
+    items: List[TaskChecklistItemOut] = []
+    completed_count: int = 0
+    total_count: int = 0
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Time Log / Entry ---
 class TaskTimeLogBase(BaseModel):
     hours: float = Field(..., gt=0)
     log_date: date
@@ -36,6 +149,27 @@ class TaskTimeLogCreate(TaskTimeLogBase):
 
 
 class TaskTimeLogOut(TaskTimeLogBase):
+    id: int
+    task_id: int
+    user_id: int
+    user_name: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskTimeEntryBase(BaseModel):
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    duration_minutes: int = 0
+    description: Optional[str] = None
+
+
+class TaskTimeEntryCreate(TaskTimeEntryBase):
+    pass
+
+
+class TaskTimeEntryOut(TaskTimeEntryBase):
     id: int
     task_id: int
     user_id: int
@@ -59,6 +193,80 @@ class TaskCommentOut(TaskCommentBase):
     task_id: int
     user_id: int
     user_name: Optional[str] = None
+    user_photo: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Attachment ---
+class TaskAttachmentBase(BaseModel):
+    filename: str
+    file_size: Optional[str] = None
+    mime_type: Optional[str] = None
+    file_url: Optional[str] = None
+
+
+class TaskAttachmentCreate(TaskAttachmentBase):
+    storage_path: Optional[str] = None
+
+
+class TaskAttachmentOut(TaskAttachmentBase):
+    id: int
+    task_id: int
+    uploaded_by: Optional[int] = None
+    uploader_name: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Dependency & Relationship ---
+class TaskDependencyCreate(BaseModel):
+    depends_on_task_id: int
+    dependency_type: DependencyType = DependencyType.BLOCKS
+
+
+class TaskDependencyOut(BaseModel):
+    id: int
+    task_id: int
+    depends_on_task_id: int
+    depends_on_task_number: Optional[str] = None
+    depends_on_task_title: Optional[str] = None
+    dependency_type: DependencyType
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskRelationshipCreate(BaseModel):
+    related_task_id: int
+    relationship_type: RelationshipType = RelationshipType.RELATED
+
+
+class TaskRelationshipOut(BaseModel):
+    id: int
+    task_id: int
+    related_task_id: int
+    related_task_number: Optional[str] = None
+    related_task_title: Optional[str] = None
+    relationship_type: RelationshipType
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Activity Audit Log ---
+class TaskActivityOut(BaseModel):
+    id: int
+    task_id: int
+    actor_id: Optional[int] = None
+    actor_name: Optional[str] = None
+    action: str
+    field_name: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -73,14 +281,26 @@ class TaskBase(BaseModel):
     priority: TaskPriority = TaskPriority.NORMAL
     assignee_id: Optional[int] = None
     start_date: Optional[date] = None
+    start_time: Optional[str] = None
     due_date: Optional[date] = None
+    due_time: Optional[str] = None
+    estimated_minutes: int = 0
     estimated_hours: float = 0.0
     tags: Optional[str] = None
+    company_id: Optional[int] = None
+    branch_id: Optional[int] = None
+    department_id: Optional[int] = None
+    cost_center_id: Optional[int] = None
+    phase_id: Optional[int] = None
+    recurrence_rule: Optional[dict] = None
 
 
 class TaskCreate(TaskBase):
     project_id: Optional[int] = None
     parent_task_id: Optional[int] = None
+    assignee_ids: Optional[List[int]] = None
+    follower_ids: Optional[List[int]] = None
+    tag_ids: Optional[List[int]] = None
 
 
 class TaskUpdate(BaseModel):
@@ -90,28 +310,129 @@ class TaskUpdate(BaseModel):
     status_id: Optional[int] = None
     priority: Optional[TaskPriority] = None
     assignee_id: Optional[int] = None
+    assignee_ids: Optional[List[int]] = None
+    follower_ids: Optional[List[int]] = None
     start_date: Optional[date] = None
+    start_time: Optional[str] = None
     due_date: Optional[date] = None
+    due_time: Optional[str] = None
+    estimated_minutes: Optional[int] = None
     estimated_hours: Optional[float] = None
+    actual_minutes: Optional[int] = None
     actual_hours: Optional[float] = None
     tags: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+    company_id: Optional[int] = None
+    branch_id: Optional[int] = None
+    department_id: Optional[int] = None
+    cost_center_id: Optional[int] = None
+    phase_id: Optional[int] = None
+    parent_task_id: Optional[int] = None
+    is_completed: Optional[bool] = None
+    is_archived: Optional[bool] = None
+    is_deleted: Optional[bool] = None
+    recurrence_rule: Optional[dict] = None
 
 
 class TaskOut(TaskBase):
     id: int
+    task_number: str
     project_id: Optional[int] = None
     project_name: Optional[str] = None
     parent_task_id: Optional[int] = None
+    actual_minutes: int = 0
     actual_hours: float = 0.0
+    progress_percentage: float = 0.0
+    is_completed: bool = False
+    is_archived: bool = False
+    is_deleted: bool = False
+    completed_at: Optional[datetime] = None
+    completed_by: Optional[int] = None
+
     assignee_name: Optional[str] = None
-    subtasks: List[TaskSubtaskOut] = []
+    cost_center_code: Optional[str] = None
+    cost_center_name: Optional[str] = None
+    department_name: Optional[str] = None
+    status_name: Optional[str] = None
+    status_color: Optional[str] = None
+    status_category: Optional[str] = None
+
+    assignees: List[TaskAssigneeOut] = []
+    followers: List[TaskFollowerOut] = []
+    checklists: List[TaskChecklistOut] = []
+    time_entries: List[TaskTimeEntryOut] = []
+    dependencies: List[TaskDependencyOut] = []
+    relationships: List[TaskRelationshipOut] = []
+    tags_list: List[TaskTagOut] = []
+    subtask_count: int = 0
+    completed_subtask_count: int = 0
+    nested_subtasks: List["TaskOut"] = []
+
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-# --- Project Milestone ---
+# --- Bulk Action Schemas ---
+class BulkTaskActionRequest(BaseModel):
+    task_ids: List[int] = Field(..., min_length=1)
+    action: str  # assign, change_status, set_priority, set_dates, add_tags, remove_tags, archive, delete
+    assignee_id: Optional[int] = None
+    assignee_ids: Optional[List[int]] = None
+    status_id: Optional[int] = None
+    priority: Optional[TaskPriority] = None
+    start_date: Optional[date] = None
+    due_date: Optional[date] = None
+    tag_ids: Optional[List[int]] = None
+
+
+class BulkTaskActionResponse(BaseModel):
+    success: bool
+    affected_count: int
+    message: str
+
+
+# --- Task Template Schemas ---
+class TaskTemplateCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    template_data: dict
+
+
+class TaskTemplateOut(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    template_data: dict
+    created_by: Optional[int] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Automation Schemas ---
+class TaskAutomationRuleCreate(BaseModel):
+    project_id: Optional[int] = None
+    trigger_event: str
+    conditions: Optional[dict] = None
+    actions: dict
+    is_active: bool = True
+
+
+class TaskAutomationRuleOut(BaseModel):
+    id: int
+    project_id: Optional[int] = None
+    trigger_event: str
+    conditions: Optional[dict] = None
+    actions: dict
+    is_active: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Project Milestone & Project Schemas ---
 class ProjectMilestoneBase(BaseModel):
     title: str
     description: Optional[str] = None
@@ -138,7 +459,6 @@ class ProjectMilestoneOut(ProjectMilestoneBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# --- Project ---
 class ProjectBase(BaseModel):
     name: str
     code: Optional[str] = None
@@ -192,8 +512,6 @@ class ProjectOut(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-from typing import Any, List, Optional
-
 # --- Custom Fields ---
 class CustomFieldDefinitionBase(BaseModel):
     name: str
@@ -240,30 +558,11 @@ class CustomFieldValueOut(CustomFieldValueBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# --- Task Attachment ---
-class TaskAttachmentBase(BaseModel):
-    filename: str
-    file_size: Optional[str] = None
-    file_url: Optional[str] = None
-
-
-class TaskAttachmentCreate(TaskAttachmentBase):
-    pass
-
-
-class TaskAttachmentOut(TaskAttachmentBase):
-    id: int
-    task_id: int
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-
 # --- Status Definitions ---
 class StatusDefinitionBase(BaseModel):
     name: str
     color: str = "#E2E8F0"
+    category: TaskStatusCategory = TaskStatusCategory.ACTIVE
     display_order: int = 0
     is_terminal: bool = False
 
@@ -275,6 +574,7 @@ class StatusDefinitionCreate(StatusDefinitionBase):
 class StatusDefinitionUpdate(BaseModel):
     name: Optional[str] = None
     color: Optional[str] = None
+    category: Optional[TaskStatusCategory] = None
     display_order: Optional[int] = None
     is_terminal: Optional[bool] = None
 
@@ -283,6 +583,3 @@ class StatusDefinitionOut(StatusDefinitionBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
-
-
-

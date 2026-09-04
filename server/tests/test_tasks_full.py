@@ -1,6 +1,9 @@
 import pytest
 from app.models.enums import UserRole
+from app.models.cost_center import CostCenter
+from app.models.notification import Notification
 from tests.conftest import DEFAULT_PASSWORD, auth_headers, login
+
 
 def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
@@ -24,6 +27,7 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     task_id = task_data["id"]
     assert task_data["title"] == "Configure OAuth Authentication"
     assert task_data["priority"] == "HIGH"
+    assert task_data["task_number"].startswith("TASK-")
 
     # 3. READ List Tasks
     t_list_resp = seeded_client.get("/api/v1/tasks", headers=headers)
@@ -46,7 +50,6 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     assert t_update_resp.json()["priority"] == "URGENT"
 
     # 6. SUBTASK Operations
-    # Create Subtask
     st_resp = seeded_client.post(
         f"/api/v1/tasks/{task_id}/subtasks",
         json={"title": "Setup JWT keypair"},
@@ -76,7 +79,7 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
 
     # 8. ATTACHMENT Operations
     att_resp = seeded_client.post(
-        f"/api/v1/tasks/{task_id}/attachments",
+        f"/api/v1/tasks/{task_id}/attachments/meta",
         json={"filename": "architecture_diagram.pdf", "file_size": "1.0 MB", "file_url": "/uploads/architecture_diagram.pdf"},
         headers=headers,
     )
@@ -106,7 +109,6 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     assert tl_list_resp.json()[0]["hours"] == 3.5
 
     # 10. CUSTOM FIELDS FOR TASKS
-    # Create Definition
     cfd_resp = seeded_client.post(
         "/api/v1/projects/tasks/custom-fields/definitions",
         json={"name": "risk_level", "label": "Risk Level", "field_type": "select", "options": ["Low", "Medium", "High"]},
@@ -115,7 +117,6 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     assert cfd_resp.status_code == 201, cfd_resp.text
     cfd_id = cfd_resp.json()["id"]
 
-    # Save Custom Field Value for Task
     cfv_resp = seeded_client.post(
         f"/api/v1/tasks/{task_id}/custom-fields",
         json={"field_id": cfd_id, "value": "Medium"},
@@ -124,7 +125,6 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     assert cfv_resp.status_code == 200, cfv_resp.text
     assert cfv_resp.json()["value"] == "Medium"
 
-    # Get Custom Fields for Task
     cfv_list = seeded_client.get(f"/api/v1/tasks/{task_id}/custom-fields", headers=headers)
     assert cfv_list.status_code == 200
     assert len(cfv_list.json()) == 1
@@ -133,6 +133,181 @@ def test_tasks_subtasks_comments_attachments_full_crud(seeded_client, db):
     del_t_resp = seeded_client.delete(f"/api/v1/tasks/{task_id}", headers=headers)
     assert del_t_resp.status_code == 204
 
-    # Verify Task Deletion
     get_del = seeded_client.get(f"/api/v1/tasks/{task_id}", headers=headers)
     assert get_del.status_code == 404
+
+
+def test_clickup_nested_subtasks_depth_and_progress(seeded_client, db):
+    """Test 3-level nested subtasks depth limits and parent progress calculation"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    # Level 1: Root Task
+    t1 = seeded_client.post("/api/v1/tasks", json={"title": "Root Task Level 1"}, headers=headers)
+    assert t1.status_code == 201
+    task1_id = t1.json()["id"]
+
+    # Level 2: Subtask
+    t2 = seeded_client.post(f"/api/v1/tasks/{task1_id}/subtasks", json={"title": "Subtask Level 2"}, headers=headers)
+    assert t2.status_code == 201
+    task2_id = t2.json()["id"]
+
+    # Level 3: Nested Subtask
+    t3 = seeded_client.post(f"/api/v1/tasks/{task2_id}/subtasks", json={"title": "Nested Subtask Level 3"}, headers=headers)
+    assert t3.status_code == 201
+    task3_id = t3.json()["id"]
+
+    # Level 4: Exceeds 3 level max depth -> Must fail 400
+    t4 = seeded_client.post(f"/api/v1/tasks/{task3_id}/subtasks", json={"title": "Level 4 Subtask"}, headers=headers)
+    assert t4.status_code == 400, t4.text
+    assert "depth" in t4.text.lower()
+
+    # Complete Level 3 -> check progress calculation
+    seeded_client.patch(f"/api/v1/tasks/{task3_id}", json={"is_completed": True}, headers=headers)
+    
+    t2_check = seeded_client.get(f"/api/v1/tasks/{task2_id}", headers=headers)
+    assert t2_check.json()["progress_percentage"] == 100.0
+
+
+def test_cost_center_master_validation(seeded_client, db):
+    """Test Cost Center master data creation and task validation"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    # 1. Create a Cost Center in Master Data
+    cc_resp = seeded_client.post(
+        "/api/v1/masters/cost-centers",
+        json={"code": "CC-ENG-2026", "name": "Engineering Operations", "is_active": True},
+        headers=headers,
+    )
+    assert cc_resp.status_code == 201, cc_resp.text
+    cc_id = cc_resp.json()["id"]
+    assert cc_resp.json()["code"] == "CC-ENG-2026"
+
+    # 2. Create task with valid cost_center_id -> 201
+    t_valid = seeded_client.post(
+        "/api/v1/tasks",
+        json={"title": "Task with valid Cost Center", "cost_center_id": cc_id},
+        headers=headers,
+    )
+    assert t_valid.status_code == 201
+    assert t_valid.json()["cost_center_id"] == cc_id
+    assert t_valid.json()["cost_center_code"] == "CC-ENG-2026"
+
+    # 3. Create task with invalid cost_center_id -> 400 Bad Request
+    t_invalid = seeded_client.post(
+        "/api/v1/tasks",
+        json={"title": "Task with bogus Cost Center", "cost_center_id": 999999},
+        headers=headers,
+    )
+    assert t_invalid.status_code == 400, t_invalid.text
+    assert "INVALID_COST_CENTER" in t_invalid.text
+
+
+def test_task_dependencies_and_anti_circular_check(seeded_client, db):
+    """Test task dependency creation and circular dependency rejection"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    tA = seeded_client.post("/api/v1/tasks", json={"title": "Task A"}, headers=headers).json()
+    tB = seeded_client.post("/api/v1/tasks", json={"title": "Task B"}, headers=headers).json()
+    tC = seeded_client.post("/api/v1/tasks", json={"title": "Task C"}, headers=headers).json()
+
+    # A blocks B
+    dep1 = seeded_client.post(
+        f"/api/v1/tasks/{tA['id']}/dependencies",
+        json={"depends_on_task_id": tB["id"], "dependency_type": "BLOCKS"},
+        headers=headers,
+    )
+    assert dep1.status_code == 201
+
+    # B blocks C
+    dep2 = seeded_client.post(
+        f"/api/v1/tasks/{tB['id']}/dependencies",
+        json={"depends_on_task_id": tC["id"], "dependency_type": "BLOCKS"},
+        headers=headers,
+    )
+    assert dep2.status_code == 201
+
+    # C blocks A -> Causes cycle (A->B->C->A) -> Must be rejected 400
+    dep3 = seeded_client.post(
+        f"/api/v1/tasks/{tC['id']}/dependencies",
+        json={"depends_on_task_id": tA["id"], "dependency_type": "BLOCKS"},
+        headers=headers,
+    )
+    assert dep3.status_code == 400, dep3.text
+    assert "circular" in dep3.text.lower()
+
+
+def test_task_stopwatch_timer_and_time_tracking(seeded_client, db):
+    """Test live stopwatch timer start, double-timer prevention, and stop"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    t = seeded_client.post("/api/v1/tasks", json={"title": "Time Tracked Task"}, headers=headers).json()
+
+    # Start timer
+    timer1 = seeded_client.post(f"/api/v1/tasks/{t['id']}/timer/start", headers=headers)
+    assert timer1.status_code == 200, timer1.text
+
+    # Try starting second timer while active -> 400 Bad Request
+    timer2 = seeded_client.post(f"/api/v1/tasks/{t['id']}/timer/start", headers=headers)
+    assert timer2.status_code == 400, timer2.text
+
+    # Stop timer
+    stop_timer = seeded_client.post(f"/api/v1/tasks/{t['id']}/timer/stop?description=Tested%20feature", headers=headers)
+    assert stop_timer.status_code == 200
+    assert stop_timer.json()["duration_minutes"] >= 1
+
+
+def test_checklists_and_conversion_to_subtask(seeded_client, db):
+    """Test checklists creation, item toggling, and conversion to subtask"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    t = seeded_client.post("/api/v1/tasks", json={"title": "Task with Checklist"}, headers=headers).json()
+
+    # Create Checklist
+    cl_resp = seeded_client.post(
+        f"/api/v1/tasks/{t['id']}/checklists",
+        json={"title": "Deployment Steps", "items": [{"title": "Backup DB"}, {"title": "Migrate schema"}]},
+        headers=headers,
+    )
+    assert cl_resp.status_code == 201, cl_resp.text
+    cl_data = cl_resp.json()
+    assert len(cl_data["items"]) == 2
+    item_id = cl_data["items"][0]["id"]
+
+    # Toggle item
+    tog = seeded_client.put(f"/api/v1/tasks/checklist-items/{item_id}/toggle", headers=headers)
+    assert tog.status_code == 200
+    assert tog.json()["is_completed"] is True
+
+    # Convert second item to subtask
+    item2_id = cl_data["items"][1]["id"]
+    conv = seeded_client.post(f"/api/v1/tasks/checklist-items/{item2_id}/convert-to-subtask", headers=headers)
+    assert conv.status_code == 201
+    assert conv.json()["parent_task_id"] == t["id"]
+    assert conv.json()["title"] == "Migrate schema"
+
+
+def test_bulk_task_actions(seeded_client, db):
+    """Test bulk actions (status change, priority change, archive)"""
+    token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
+    headers = auth_headers(token)
+
+    t1 = seeded_client.post("/api/v1/tasks", json={"title": "Bulk Task 1"}, headers=headers).json()["id"]
+    t2 = seeded_client.post("/api/v1/tasks", json={"title": "Bulk Task 2"}, headers=headers).json()["id"]
+
+    # Bulk set priority to URGENT
+    bulk_p = seeded_client.post(
+        "/api/v1/tasks/bulk-action",
+        json={"task_ids": [t1, t2], "action": "set_priority", "priority": "URGENT"},
+        headers=headers,
+    )
+    assert bulk_p.status_code == 200
+    assert bulk_p.json()["affected_count"] == 2
+
+    # Verify task 1 priority updated
+    get_t1 = seeded_client.get(f"/api/v1/tasks/{t1}", headers=headers).json()
+    assert get_t1["priority"] == "URGENT"

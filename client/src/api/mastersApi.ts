@@ -157,6 +157,14 @@ export const mastersApi = baseApi.injectEndpoints({
       query: () => ({ url: '/masters/users' }),
       providesTags: ['Users'],
     }),
+    costCenters: build.query<CostCenter[], void>({
+      query: () => ({ url: '/masters/cost-centers' }),
+      providesTags: ['CostCenters'],
+    }),
+    branches: build.query<Branch[], void>({
+      query: () => ({ url: '/masters/branches' }),
+      providesTags: ['Branches'],
+    }),
   }),
 });
 
@@ -194,5 +202,7 @@ export const {
   useDeleteTabFieldMutation,
   useReorderTabFieldsMutation,
   useUsersQuery,
+  useCostCentersQuery,
+  useBranchesQuery,
 } = mastersApi;
 
