@@ -171,6 +171,21 @@ def toggle_subtask(
     return TaskSubtaskOut.model_validate(subtask)
 
 
+@router.delete("/subtasks/{subtask_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_subtask(
+    subtask_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a subtask"""
+    subtask = db.query(TaskSubtask).filter(TaskSubtask.id == subtask_id).first()
+    if not subtask:
+        raise HTTPException(status_code=404, detail="Subtask not found")
+    db.delete(subtask)
+    db.commit()
+    return None
+
+
 @router.post("/{task_id}/timelogs", response_model=TaskTimeLogOut, status_code=status.HTTP_201_CREATED)
 def log_time(
     task_id: int,

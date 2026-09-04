@@ -217,6 +217,13 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Tasks'],
     }),
+    deleteSubtask: builder.mutation<void, number>({
+      query: (subtaskId) => ({
+        url: `/tasks/subtasks/${subtaskId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
 
     // Time Logs
     logTime: builder.mutation<TaskTimeLogItem, { taskId: number; hours?: number; log_date?: string; description?: string; body?: { hours: number; log_date: string; description?: string } }>({
@@ -383,6 +390,7 @@ export const {
   useDeleteTaskMutation,
   useAddSubtaskMutation,
   useToggleSubtaskMutation,
+  useDeleteSubtaskMutation,
   useLogTimeMutation,
   useGetTaskTimeLogsQuery,
   useAddCommentMutation,
