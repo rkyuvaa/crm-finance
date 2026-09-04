@@ -65,6 +65,8 @@ body {
 }
 
 body.dark-mode {
+  --primary-light: #163824;
+  --primary-lighter: #12281b;
   --page-bg: #0d1117;
   --card-bg: #161b22;
   --border: #30363d;
@@ -80,6 +82,69 @@ body.dark-mode select,
 body.dark-mode textarea {
   background-color: #0d1117 !important;
   color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode table,
+body.dark-mode thead,
+body.dark-mode th {
+  background-color: #161b22 !important;
+  color: #8b949e !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode tbody tr {
+  background-color: #0d1117 !important;
+  color: #f0f6fc !important;
+}
+
+body.dark-mode tbody tr:hover {
+  background-color: #21262d !important;
+}
+
+body.dark-mode td {
+  border-color: #30363d !important;
+  color: #f0f6fc !important;
+}
+
+body.dark-mode .MuiPaper-root {
+  background-color: #161b22 !important;
+  color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode .MuiTableCell-root {
+  color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode .MuiTableCell-head {
+  background-color: #161b22 !important;
+  color: #8b949e !important;
+}
+
+body.dark-mode .MuiToggleButtonGroup-root {
+  background-color: #161b22 !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode .MuiToggleButton-root {
+  color: #8b949e !important;
+}
+
+body.dark-mode .MuiToggleButton-root.Mui-selected {
+  background-color: #21262d !important;
+  color: #4ade80 !important;
+}
+
+body.dark-mode .MuiDialog-paper,
+body.dark-mode .MuiMenu-paper {
+  background-color: #161b22 !important;
+  color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode .MuiChip-root {
   border-color: #30363d !important;
 }
 

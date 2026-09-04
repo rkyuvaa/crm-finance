@@ -483,9 +483,9 @@ export default function LeadsPage() {
       </div>
 
       {viewMode === 'list' ? (
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #E4EBE1' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>
+        <Paper sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
               {isOpportunityRoute ? 'All Opportunities' : 'All Records'} ({rows.length})
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -494,11 +494,11 @@ export default function LeadsPage() {
                 aria-label="Previous page"
                 onClick={() => handleChangePage(null, Math.max(0, page - 1))}
                 disabled={page === 0}
-                sx={{ color: page === 0 ? '#B0B8B0' : '#023020' }}
+                sx={{ color: page === 0 ? 'var(--text-muted)' : 'text.primary' }}
               >
                 <ChevronLeft size={18} />
               </IconButton>
-              <span style={{ fontSize: 12, color: '#7A8B80', minWidth: 60, textAlign: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 60, textAlign: 'center' }}>
                 Page {page + 1} of {Math.ceil((data?.total ?? 0) / rowsPerPage) || 1}
               </span>
               <IconButton
@@ -506,7 +506,7 @@ export default function LeadsPage() {
                 aria-label="Next page"
                 onClick={() => handleChangePage(null, Math.min(Math.ceil((data?.total ?? 0) / rowsPerPage) - 1, page + 1))}
                 disabled={page >= Math.ceil((data?.total ?? 0) / rowsPerPage) - 1}
-                sx={{ color: page >= Math.ceil((data?.total ?? 0) / rowsPerPage) - 1 ? '#B0B8B0' : '#023020' }}
+                sx={{ color: page >= Math.ceil((data?.total ?? 0) / rowsPerPage) - 1 ? 'var(--text-muted)' : 'text.primary' }}
               >
                 <ChevronRight size={18} />
               </IconButton>
@@ -531,15 +531,15 @@ export default function LeadsPage() {
                       {!isOpportunityRoute && (
                         <th
                           style={{
-                            background: '#F2FAF0',
+                            background: 'var(--primary-lighter)',
                             fontSize: 10,
                             fontWeight: 700,
-                            color: '#7A8B80',
+                            color: 'var(--text-muted)',
                             textTransform: 'uppercase',
                             letterSpacing: 0.6,
                             textAlign: 'center',
                             padding: '10px 8px',
-                            borderBottom: '1px solid #E4EBE1',
+                            borderBottom: '1px solid var(--border)',
                             whiteSpace: 'nowrap',
                             width: '40px',
                           }}
@@ -556,15 +556,15 @@ export default function LeadsPage() {
                         <th
                           key={h}
                           style={{
-                            background: '#F2FAF0',
+                            background: 'var(--primary-lighter)',
                             fontSize: 10,
                             fontWeight: 700,
-                            color: '#7A8B80',
+                            color: 'var(--text-muted)',
                             textTransform: 'uppercase',
                             letterSpacing: 0.6,
                             textAlign: 'left',
                             padding: '10px 16px',
-                            borderBottom: '1px solid #E4EBE1',
+                            borderBottom: '1px solid var(--border)',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -579,11 +579,11 @@ export default function LeadsPage() {
                         key={app.id}
                         onClick={() => !isOpportunityRoute && navigate(`${detailPrefix}/${app.id}`)}
                         style={{ cursor: isOpportunityRoute ? 'default' : 'pointer', transition: 'background 0.15s ease' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#F9FBF8')}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--primary-light)')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
                         {!isOpportunityRoute && (
-                          <td style={{ padding: '11px 8px', borderBottom: '1px solid #F0F4EE', textAlign: 'center' }}>
+                          <td style={{ padding: '11px 8px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
                             <Checkbox
                               size="small"
                               checked={selectedIds.has(app.id)}
@@ -594,39 +594,39 @@ export default function LeadsPage() {
                             />
                           </td>
                         )}
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)' }}>
                           <span className="app-id">{app.app_no}</span>
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <Avatar
-                              sx={{ width: 30, height: 30, bgcolor: '#EAF6E8', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
+                              sx={{ width: 30, height: 30, bgcolor: 'var(--primary-light)', color: '#04552B', fontSize: 11.5, fontWeight: 700 }}
                             >
                               {initialsOf(app.customer_name)}
                             </Avatar>
                             <div>
-                              <div style={{ fontWeight: 600, color: '#16231B', fontSize: 13 }}>{app.customer_name}</div>
-                              <div style={{ fontSize: 11, color: '#7A8B80' }}>{app.customer_phone}</div>
+                              <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{app.customer_name}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{app.customer_phone}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C' }}>{app.vehicle}</td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', fontWeight: 700 }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-soft)' }}>{app.vehicle}</td>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, color: 'var(--text)' }}>
                           {formatAmount(app.amount)}
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE' }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)' }}>
                           <StatusBadge status={app.status} />
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#44584C', fontSize: 12 }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-soft)', fontSize: 12 }}>
                           {app.aging_label}
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 12 }}>
                           {formatDate(app.created_at)}
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', color: '#7A8B80', fontSize: 12 }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 12 }}>
                           {formatDate(app.updated_at)}
                         </td>
-                        <td style={{ padding: '11px 16px', borderBottom: '1px solid #F0F4EE', textAlign: 'right' }}>
+                        <td style={{ padding: '11px 16px', borderBottom: '1px solid var(--border)', textAlign: 'right' }}>
                           <IconButton
                             size="small"
                             aria-label={`More actions for ${app.app_no}`}
