@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import get_db
-from app.models.projects import Task, TaskStatusDef, TaskPriority, TaskSubtask, TaskTimeLog, TaskComment, Project
+from app.models.projects import (
+    Task, TaskStatusDef, TaskPriority, TaskSubtask, TaskTimeLog, TaskComment,
+    TaskAttachment, TaskCustomFieldDefinition, TaskCustomFieldValue, Project
+)
 from app.models.user import User
 from app.schemas.projects import (
     TaskCreate,
@@ -16,6 +19,10 @@ from app.schemas.projects import (
     TaskTimeLogOut,
     TaskCommentCreate,
     TaskCommentOut,
+    TaskAttachmentCreate,
+    TaskAttachmentOut,
+    CustomFieldValueCreate,
+    CustomFieldValueOut,
 )
 from app.core.deps import get_current_user
 
@@ -247,3 +254,115 @@ def get_task_comments(
         out.user_name = c.user.full_name if c.user else None
         results.append(out)
     return results
+
+
+# --- Task Attachments API ---
+@router.get("/{task_id}/attachments", response_model=List[TaskAttachmentOut])
+def get_task_attachments(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all file attachments for a task"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return db.query(TaskAttachment).filter(TaskAttachment.task_id == task_id).order_by(TaskAttachment.created_at.desc()).all()
+
+
+@router.post("/{task_id}/attachments", response_model=TaskAttachmentOut, status_code=status.HTTP_201_CREATED)
+def add_task_attachment(
+    task_id: int,
+    data: TaskAttachmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a file attachment record to a task"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    attachment = TaskAttachment(task_id=task.id, **data.model_dump())
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return TaskAttachmentOut.model_validate(attachment)
+
+
+@router.delete("/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a task attachment"""
+    attachment = db.query(TaskAttachment).filter(TaskAttachment.id == attachment_id).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    db.delete(attachment)
+    db.commit()
+    return None
+
+
+# --- Task Custom Fields Values API ---
+@router.get("/{task_id}/custom-fields", response_model=List[CustomFieldValueOut])
+def get_task_custom_fields(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get custom field values for a specific task"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    values = db.query(TaskCustomFieldValue).filter(TaskCustomFieldValue.task_id == task_id).all()
+    results = []
+    for val in values:
+        field_def = db.query(TaskCustomFieldDefinition).filter(TaskCustomFieldDefinition.id == val.field_id).first()
+        out = CustomFieldValueOut(
+            id=val.id,
+            field_id=val.field_id,
+            field_label=field_def.label if field_def else f"Field {val.field_id}",
+            value=val.value
+        )
+        results.append(out)
+    return results
+
+
+@router.post("/{task_id}/custom-fields", response_model=CustomFieldValueOut)
+def save_task_custom_field(
+    task_id: int,
+    data: CustomFieldValueCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Set or update a custom field value for a task"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    field_def = db.query(TaskCustomFieldDefinition).filter(TaskCustomFieldDefinition.id == data.field_id).first()
+    if not field_def:
+        raise HTTPException(status_code=404, detail="Custom field definition not found")
+
+    val = db.query(TaskCustomFieldValue).filter(
+        TaskCustomFieldValue.task_id == task_id,
+        TaskCustomFieldValue.field_id == data.field_id
+    ).first()
+
+    if val:
+        val.value = data.value
+    else:
+        val = TaskCustomFieldValue(task_id=task_id, field_id=data.field_id, value=data.value)
+        db.add(val)
+
+    db.commit()
+    db.refresh(val)
+    return CustomFieldValueOut(
+        id=val.id,
+        field_id=val.field_id,
+        field_label=field_def.label,
+        value=val.value
+    )
+

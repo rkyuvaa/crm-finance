@@ -108,10 +108,26 @@ export interface ProjectMilestoneItem {
   created_at: string;
 }
 
+export interface TaskAttachmentItem {
+  id: number;
+  task_id: number;
+  filename: string;
+  file_size?: string;
+  file_url?: string;
+  created_at: string;
+}
+
+export interface TaskCustomFieldValueItem {
+  id: number;
+  field_id: number;
+  field_label?: string;
+  value?: string;
+}
+
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -186,11 +202,11 @@ export const projectsApi = createApi({
     }),
 
     // Subtasks
-    addSubtask: builder.mutation<TaskSubtaskItem, { taskId: number; title: string }>({
-      query: ({ taskId, title }) => ({
+    addSubtask: builder.mutation<TaskSubtaskItem, { taskId: number; title?: string; body?: { title: string } }>({
+      query: ({ taskId, title, body }) => ({
         url: `/tasks/${taskId}/subtasks`,
         method: 'POST',
-        body: { title },
+        body: { title: title || body?.title || '' },
       }),
       invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
     }),
@@ -203,11 +219,11 @@ export const projectsApi = createApi({
     }),
 
     // Time Logs
-    logTime: builder.mutation<TaskTimeLogItem, { taskId: number; hours: number; log_date: string; description?: string }>({
-      query: ({ taskId, ...body }) => ({
+    logTime: builder.mutation<TaskTimeLogItem, { taskId: number; hours?: number; log_date?: string; description?: string; body?: { hours: number; log_date: string; description?: string } }>({
+      query: ({ taskId, hours, log_date, description, body }) => ({
         url: `/tasks/${taskId}/timelogs`,
         method: 'POST',
-        body,
+        body: body || { hours, log_date, description },
       }),
       invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks', 'TimeLogs'],
     }),
@@ -217,17 +233,52 @@ export const projectsApi = createApi({
     }),
 
     // Comments
-    addComment: builder.mutation<TaskCommentItem, { taskId: number; content: string }>({
-      query: ({ taskId, content }) => ({
+    addComment: builder.mutation<TaskCommentItem, { taskId: number; content?: string; body?: { content: string } }>({
+      query: ({ taskId, content, body }) => ({
         url: `/tasks/${taskId}/comments`,
         method: 'POST',
-        body: { content },
+        body: { content: content || body?.content || '' },
       }),
       invalidatesTags: ['Comments'],
     }),
     getTaskComments: builder.query<TaskCommentItem[], number>({
       query: (taskId) => `/tasks/${taskId}/comments`,
       providesTags: ['Comments'],
+    }),
+
+    // Task Attachments
+    getTaskAttachments: builder.query<TaskAttachmentItem[], number>({
+      query: (taskId) => `/tasks/${taskId}/attachments`,
+      providesTags: (_res, _err, taskId) => [{ type: 'Attachments', id: taskId }, 'Attachments'],
+    }),
+    addTaskAttachment: builder.mutation<TaskAttachmentItem, { taskId: number; filename: string; file_size?: string; file_url?: string }>({
+      query: ({ taskId, ...body }) => ({
+        url: `/tasks/${taskId}/attachments`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Attachments', id: taskId }, 'Attachments'],
+    }),
+    deleteTaskAttachment: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/tasks/attachments/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Attachments'],
+    }),
+
+    // Task Custom Fields
+    getTaskCustomFields: builder.query<TaskCustomFieldValueItem[], number>({
+      query: (taskId) => `/tasks/${taskId}/custom-fields`,
+      providesTags: (_res, _err, taskId) => [{ type: 'TaskCustomFields', id: taskId }, 'TaskCustomFields'],
+    }),
+    saveTaskCustomField: builder.mutation<TaskCustomFieldValueItem, { taskId: number; field_id: number; value?: string }>({
+      query: ({ taskId, field_id, value }) => ({
+        url: `/tasks/${taskId}/custom-fields`,
+        method: 'POST',
+        body: { field_id, value },
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'TaskCustomFields', id: taskId }, 'TaskCustomFields'],
     }),
 
     // Status Definitions
@@ -348,4 +399,9 @@ export const {
   useCreateProjectMilestoneMutation,
   useUpdateProjectMilestoneMutation,
   useDeleteProjectMilestoneMutation,
+  useGetTaskAttachmentsQuery,
+  useAddTaskAttachmentMutation,
+  useDeleteTaskAttachmentMutation,
+  useGetTaskCustomFieldsQuery,
+  useSaveTaskCustomFieldMutation,
 } = projectsApi;

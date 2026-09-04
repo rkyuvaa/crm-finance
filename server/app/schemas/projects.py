@@ -238,6 +238,25 @@ class CustomFieldValueOut(CustomFieldValueBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+# --- Task Attachment ---
+class TaskAttachmentBase(BaseModel):
+    filename: str
+    file_size: Optional[str] = None
+    file_url: Optional[str] = None
+
+
+class TaskAttachmentCreate(TaskAttachmentBase):
+    pass
+
+
+class TaskAttachmentOut(TaskAttachmentBase):
+    id: int
+    task_id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 
 # --- Status Definitions ---
 class StatusDefinitionBase(BaseModel):

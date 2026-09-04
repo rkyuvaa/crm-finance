@@ -12,7 +12,7 @@ import {
   Button,
   LinearProgress,
   Paper,
-  Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import {
   X,
@@ -20,8 +20,6 @@ import {
   Calendar,
   CheckSquare,
   MessageSquare,
-  AlertCircle,
-  Plus,
   Paperclip,
   Lock,
   FileText,
@@ -30,6 +28,8 @@ import {
   Play,
   Square,
   Send,
+  Edit2,
+  Check,
 } from 'lucide-react';
 import {
   TaskItem,
@@ -38,6 +38,12 @@ import {
   useLogTimeMutation,
   useAddCommentMutation,
   useGetTaskCommentsQuery,
+  useGetTaskAttachmentsQuery,
+  useAddTaskAttachmentMutation,
+  useDeleteTaskAttachmentMutation,
+  useGetCustomFieldDefinitionsQuery,
+  useGetTaskCustomFieldsQuery,
+  useSaveTaskCustomFieldMutation,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
 
@@ -55,22 +61,32 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
 
+  // Custom Field editing state
+  const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
+  const [editFieldValue, setEditFieldValue] = useState('');
+
+  const { showToast } = useToast();
+
   const [toggleSubtask] = useToggleSubtaskMutation();
   const [addSubtask, { isLoading: isAddingSubtask }] = useAddSubtaskMutation();
-  const [logTime, { isLoading: isLoggingTime }] = useLogTimeMutation();
+  const [logTime] = useLogTimeMutation();
   const [addComment, { isLoading: isAddingComment }] = useAddCommentMutation();
 
   const { data: comments = [] } = useGetTaskCommentsQuery(task?.id || 0, {
     skip: !task?.id,
   });
 
-  const { showToast } = useToast();
+  const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(task?.id || 0, {
+    skip: !task?.id,
+  });
+  const [addTaskAttachment] = useAddTaskAttachmentMutation();
+  const [deleteTaskAttachment] = useDeleteTaskAttachmentMutation();
 
-  const [attachments, setAttachments] = useState<
-    Array<{ id: number; name: string; size: string; date: string }>
-  >([
-    { id: 1, name: 'engineering_blueprint_v2.pdf', size: '2.4 MB', date: '2026-09-02' },
-  ]);
+  const { data: customDefs = [] } = useGetCustomFieldDefinitionsQuery();
+  const { data: customValues = [] } = useGetTaskCustomFieldsQuery(task?.id || 0, {
+    skip: !task?.id,
+  });
+  const [saveCustomField] = useSaveTaskCustomFieldMutation();
 
   // Timer Tick Effect
   useEffect(() => {
@@ -104,11 +120,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       try {
         await logTime({
           taskId: task.id,
-          body: {
-            hours: hoursLogged,
-            log_date: new Date().toISOString().split('T')[0],
-            description: `Timer logged work: ${formatTimer(timerSeconds)}`,
-          },
+          hours: hoursLogged,
+          log_date: new Date().toISOString().split('T')[0],
+          description: `Timer logged work: ${formatTimer(timerSeconds)}`,
         }).unwrap();
         showToast(`Logged ${hoursLogged} hours to timesheet!`, 'success');
         setTimerSeconds(0);
@@ -131,7 +145,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     try {
       await addSubtask({
         taskId: task.id,
-        body: { title: newSubtaskTitle.trim() },
+        title: newSubtaskTitle.trim(),
       }).unwrap();
       setNewSubtaskTitle('');
       showToast('Subtask added', 'success');
@@ -145,7 +159,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     try {
       await addComment({
         taskId: task.id,
-        body: { content: commentText.trim() },
+        content: commentText.trim(),
       }).unwrap();
       setCommentText('');
       showToast('Comment posted', 'success');
@@ -154,23 +168,48 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const newItems = Array.from(files).map((f, i) => ({
-        id: Date.now() + i,
-        name: f.name,
-        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-        date: new Date().toISOString().split('T')[0],
-      }));
-      setAttachments((prev) => [...prev, ...newItems]);
-      showToast('File attached successfully', 'success');
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+        try {
+          await addTaskAttachment({
+            taskId: task.id,
+            filename: file.name,
+            file_size: fileSizeFormatted,
+          }).unwrap();
+          showToast(`Attached ${file.name}`, 'success');
+        } catch {
+          showToast(`Failed to attach ${file.name}`, 'error');
+        }
+      }
     }
   };
 
-  const handleRemoveAttachment = (id: number) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-    showToast('Attachment removed', 'info');
+  const handleRemoveAttachment = async (id: number) => {
+    try {
+      await deleteTaskAttachment(id).unwrap();
+      showToast('Attachment removed', 'info');
+    } catch {
+      showToast('Failed to remove attachment', 'error');
+    }
+  };
+
+  const handleSaveCustomField = async (fieldId: number) => {
+    try {
+      await saveCustomField({
+        taskId: task.id,
+        field_id: fieldId,
+        value: editFieldValue.trim() || undefined,
+      }).unwrap();
+      showToast('Custom field saved', 'success');
+      setEditingFieldId(null);
+      setEditFieldValue('');
+    } catch {
+      showToast('Failed to save custom field value', 'error');
+    }
   };
 
   return (
@@ -188,7 +227,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -254,7 +293,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── CLICKUP TASK DEPENDENCIES ─────────────────────────────────── */}
+          {/* ── TASK DEPENDENCIES ─────────────────────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Lock size={18} color="#D97706" /> Task Dependencies
@@ -281,7 +320,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── CLICKUP CHECKLISTS & INTERACTIVE SUBTASKS ──────────────────── */}
+          {/* ── CHECKLISTS & SUBTASKS ──────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -348,7 +387,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── CLICKUP FILE ATTACHMENTS ──────────────────────────────────── */}
+          {/* ── FILE ATTACHMENTS ──────────────────────────────────── */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -366,7 +405,11 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Button>
             </Box>
 
-            {attachments.length === 0 ? (
+            {isLoadingAttachments ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : attachments.length === 0 ? (
               <Typography variant="body2" color="textSecondary">No files attached to this task yet.</Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -387,10 +430,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       <FileText size={18} color="#04552B" />
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          {file.name}
+                          {file.filename}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          {file.size} • Uploaded {file.date}
+                          {file.file_size || 'File'} • {new Date(file.created_at).toLocaleDateString()}
                         </Typography>
                       </Box>
                     </Box>
@@ -498,19 +541,57 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               Custom Fields
             </Typography>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Cost Center</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>CC-OPS-2026</Typography>
+            {customDefs.length === 0 ? (
+              <Typography variant="caption" color="textSecondary">No custom fields configured for tasks.</Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {customDefs.map((def) => {
+                  const valObj = customValues.find((v) => v.field_id === def.id);
+                  const isEditing = editingFieldId === def.id;
+
+                  return (
+                    <Box key={def.id}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                        {def.label}
+                      </Typography>
+                      {isEditing ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                          <TextField
+                            size="small"
+                            value={editFieldValue}
+                            onChange={(e) => setEditFieldValue(e.target.value)}
+                            sx={{ '& .MuiOutlinedInput-root': { height: 30, fontSize: 13 } }}
+                          />
+                          <IconButton size="small" onClick={() => handleSaveCustomField(def.id)} sx={{ color: '#16A34A' }}>
+                            <Check size={16} />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', group: true }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: valObj?.value ? 'text.primary' : 'text.secondary' }}>
+                            {valObj?.value || 'Not set'}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setEditingFieldId(def.id);
+                              setEditFieldValue(valObj?.value || '');
+                            }}
+                            sx={{ p: 0.5, opacity: 0.7, '&:hover': { opacity: 1 } }}
+                          >
+                            <Edit2 size={13} />
+                          </IconButton>
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Risk Level</Typography>
-                <Chip size="small" label="Medium" sx={{ height: 20, fontSize: '0.7rem', bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 700 }} />
-              </Box>
-            </Box>
+            )}
           </Box>
         </Box>
       </Box>
     </Drawer>
   );
 }
+
