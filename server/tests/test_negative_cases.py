@@ -10,9 +10,9 @@ def test_negative_cases_and_validations(seeded_client, db):
     no_auth_resp = seeded_client.get("/api/v1/projects")
     assert no_auth_resp.status_code == 401
 
-    # 2. Permission Denied (Sales executive trying to access admin endpoint)
-    forbidden_resp = seeded_client.post("/api/v1/admin/roles", json={"name": "Fake Role", "code": "FAKE"}, headers=sales_headers)
-    assert forbidden_resp.status_code in (401, 403)
+    # 2. Permission Denied (Sales executive trying to access admin-only endpoint)
+    forbidden_resp = seeded_client.post("/api/v1/masters/vehicle-models", json={"name": "Fake Vehicle", "vehicle_price": 100, "down_payment": 10, "loan_amount": 90}, headers=sales_headers)
+    assert forbidden_resp.status_code == 403
 
     # 3. Invalid ID / 404 Not Found
     not_found_proj = seeded_client.get("/api/v1/projects/999999", headers=sales_headers)
