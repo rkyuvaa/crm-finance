@@ -198,11 +198,32 @@ def upgrade() -> None:
     op.create_index('ix_task_time_entries_task_id', 'task_time_entries', ['task_id'])
     op.create_index('ix_task_time_entries_user_id', 'task_time_entries', ['user_id'])
 
-    # 13. Alter task_attachments table
-    with op.batch_alter_table('task_attachments', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('uploaded_by', sa.Integer(), sa.ForeignKey('users.id', name='fk_tatt_uploaded_by', ondelete='SET NULL'), nullable=True))
-        batch_op.add_column(sa.Column('mime_type', sa.String(100), nullable=True))
-        batch_op.add_column(sa.Column('storage_path', sa.String(500), nullable=True))
+    # 13. task_attachments table (Create if missing, or alter if table exists)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if not inspector.has_table('task_attachments'):
+        op.create_table(
+            'task_attachments',
+            sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
+            sa.Column('task_id', sa.Integer(), sa.ForeignKey('tasks.id', name='fk_tatt_task_id', ondelete='CASCADE'), nullable=False),
+            sa.Column('uploaded_by', sa.Integer(), sa.ForeignKey('users.id', name='fk_tatt_uploaded_by', ondelete='SET NULL'), nullable=True),
+            sa.Column('filename', sa.String(255), nullable=False),
+            sa.Column('file_size', sa.String(50), nullable=True),
+            sa.Column('mime_type', sa.String(100), nullable=True),
+            sa.Column('storage_path', sa.String(500), nullable=True),
+            sa.Column('file_url', sa.String(500), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False)
+        )
+        op.create_index('ix_task_attachments_task_id', 'task_attachments', ['task_id'])
+    else:
+        existing_cols = [c['name'] for c in inspector.get_columns('task_attachments')]
+        with op.batch_alter_table('task_attachments', schema=None) as batch_op:
+            if 'uploaded_by' not in existing_cols:
+                batch_op.add_column(sa.Column('uploaded_by', sa.Integer(), sa.ForeignKey('users.id', name='fk_tatt_uploaded_by', ondelete='SET NULL'), nullable=True))
+            if 'mime_type' not in existing_cols:
+                batch_op.add_column(sa.Column('mime_type', sa.String(100), nullable=True))
+            if 'storage_path' not in existing_cols:
+                batch_op.add_column(sa.Column('storage_path', sa.String(500), nullable=True))
 
     # 14. Alter task_comments table
     with op.batch_alter_table('task_comments', schema=None) as batch_op:
@@ -286,10 +307,20 @@ def downgrade() -> None:
         batch_op.drop_column('deleted_at')
         batch_op.drop_column('updated_at')
 
-    with op.batch_alter_table('task_attachments', schema=None) as batch_op:
-        batch_op.drop_column('storage_path')
-        batch_op.drop_column('mime_type')
-        batch_op.drop_column('uploaded_by')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if inspector.has_table('task_attachments'):
+        existing_cols = [c['name'] for c in inspector.get_columns('task_attachments')]
+        if 'filename' in existing_cols:
+            with op.batch_alter_table('task_attachments', schema=None) as batch_op:
+                if 'storage_path' in existing_cols:
+                    batch_op.drop_column('storage_path')
+                if 'mime_type' in existing_cols:
+                    batch_op.drop_column('mime_type')
+                if 'uploaded_by' in existing_cols:
+                    batch_op.drop_column('uploaded_by')
+        else:
+            op.drop_table('task_attachments')
 
     op.drop_table('task_time_entries')
     op.drop_table('task_checklist_items')

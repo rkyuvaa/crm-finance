@@ -135,8 +135,21 @@ def upgrade() -> None:
     )
     op.create_index('ix_task_comments_task_id', 'task_comments', ['task_id'])
 
+    # 9. task_attachments
+    op.create_table(
+        'task_attachments',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True, nullable=False),
+        sa.Column('task_id', sa.Integer(), sa.ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('filename', sa.String(255), nullable=False),
+        sa.Column('file_size', sa.String(50), nullable=True),
+        sa.Column('file_url', sa.String(500), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.current_timestamp(), nullable=False)
+    )
+    op.create_index('ix_task_attachments_task_id', 'task_attachments', ['task_id'])
+
 
 def downgrade() -> None:
+    op.drop_table('task_attachments')
     op.drop_table('task_comments')
     op.drop_table('task_time_logs')
     op.drop_table('task_subtasks')
@@ -145,3 +158,4 @@ def downgrade() -> None:
     op.drop_table('projects')
     op.drop_table('project_spaces')
     op.drop_table('project_workspaces')
+
