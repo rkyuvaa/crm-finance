@@ -152,7 +152,7 @@ export default function TasksPage() {
     : tasks;
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1600, margin: '0 auto' }}>
+    <Box sx={{ p: 3, width: '100%' }}>
       {/* Top Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>

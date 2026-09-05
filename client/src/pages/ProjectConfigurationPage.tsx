@@ -336,7 +336,7 @@ export default function ProjectConfigurationPage() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1280, margin: '0 auto' }}>
+    <Box sx={{ p: 3, width: '100%' }}>
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <Box sx={{ mb: 2.5 }}>
         <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: -0.4 }}>
