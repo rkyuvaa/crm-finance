@@ -6,7 +6,11 @@ import {
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
 
-import { logout } from '@/auth/authSlice';
+import { Mutex } from 'async-mutex';
+import { setCredentials, logout } from '@/auth/authSlice';
+
+// Create a single mutex instance to prevent concurrent refresh calls
+const mutex = new Mutex();
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api/v1',
@@ -25,20 +29,34 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
   api,
   extraOptions,
 ) => {
+  // Wait until any active refresh has unlocked mutex before issuing request
+  await mutex.waitForUnlock();
   let result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
-    const refreshResult = await rawBaseQuery(
-      { url: '/auth/refresh', method: 'POST' },
-      api,
-      extraOptions,
-    );
-    if (refreshResult.data) {
-      const data = refreshResult.data as { access_token: string };
-      localStorage.setItem('access_token', data.access_token);
-      result = await rawBaseQuery(args, api, extraOptions);
+    if (!mutex.isLocked()) {
+      const release = await mutex.acquire();
+      try {
+        const refreshResult = await rawBaseQuery(
+          { url: '/auth/refresh', method: 'POST' },
+          api,
+          extraOptions,
+        );
+        if (refreshResult.data) {
+          const data = refreshResult.data as { access_token: string; user?: any };
+          const currentUser = (api.getState() as any)?.auth?.user;
+          api.dispatch(setCredentials({ token: data.access_token, user: data.user || currentUser }));
+          result = await rawBaseQuery(args, api, extraOptions);
+        } else {
+          api.dispatch(logout());
+        }
+      } finally {
+        release();
+      }
     } else {
-      api.dispatch(logout());
+      // If mutex is locked by another request, wait for it to finish and retry
+      await mutex.waitForUnlock();
+      result = await rawBaseQuery(args, api, extraOptions);
     }
   }
   return result;

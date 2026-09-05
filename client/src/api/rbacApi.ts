@@ -18,11 +18,13 @@ import type {
   UserDetail,
 } from '../types/rbac';
 
+import { baseQueryWithReauth } from './baseApi';
+
 const rawRbacQuery = fetchBaseQuery({
   baseUrl: '/api/v1/admin',
   credentials: 'include',
-  prepareHeaders: (headers) => {
-    const token = localStorage.getItem('access_token');
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as any)?.auth?.token || localStorage.getItem('access_token');
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -35,23 +37,11 @@ const rbacQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions,
 ) => {
-  let result = await rawRbacQuery(args, api, extraOptions);
-
-  if (result.error && result.error.status === 401) {
-    const refreshResult = await fetchBaseQuery({ baseUrl: '/api/v1', credentials: 'include' })(
-      { url: '/auth/refresh', method: 'POST' },
-      api,
-      extraOptions,
-    );
-    if (refreshResult.data) {
-      const data = refreshResult.data as { access_token: string };
-      localStorage.setItem('access_token', data.access_token);
-      result = await rawRbacQuery(args, api, extraOptions);
-    } else {
-      api.dispatch(logout());
-    }
-  }
-  return result;
+  return baseQueryWithReauth(
+    typeof args === 'string' ? `admin${args.startsWith('/') ? '' : '/'}${args}` : { ...args, url: `admin${args.url.startsWith('/') ? '' : '/'}${args.url}` },
+    api,
+    extraOptions,
+  );
 };
 
 export const rbacApi = createApi({
