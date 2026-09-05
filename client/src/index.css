@@ -190,8 +190,16 @@ body.dark-mode ::-webkit-scrollbar-thumb {
 }
 
 #root {
+  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+/* Global ERP Workspace Layout Guarantee */
+.app-main {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
 }
 
 .word-break-all {

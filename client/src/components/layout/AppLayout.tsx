@@ -45,7 +45,7 @@ export default function AppLayout() {
           </Drawer>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <Topbar onToggleSidebar={() => setDrawerOpen(true)} />
-            <main className="app-main" style={{ flex: 1, padding: '22px 24px 12px', minWidth: 0 }}>
+            <main className="app-main" style={{ flex: 1, padding: '20px 24px 16px', minWidth: 0, width: '100%' }}>
               <Outlet />
             </main>
           </div>
@@ -59,10 +59,14 @@ export default function AppLayout() {
               transition: 'padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
               minHeight: '100vh',
               willChange: 'padding-left',
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             <Topbar onToggleSidebar={() => setCollapsed((c) => !c)} />
-            <main className="app-main" style={{ padding: '22px 24px 12px', minWidth: 0 }}>
+            <main className="app-main" style={{ flex: 1, padding: '20px 24px 16px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
               <Outlet />
             </main>
           </div>
