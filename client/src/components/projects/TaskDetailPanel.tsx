@@ -66,6 +66,8 @@ import {
   useRemoveFollowerMutation,
   useAddDependencyMutation,
   useRemoveDependencyMutation,
+  useGetTaskQuery,
+  useGetStatusDefinitionsQuery,
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -127,22 +129,35 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const { data: users = [] } = useUsersQuery();
   const { data: costCenters = [] } = useCostCentersQuery();
 
-  const { data: comments = [] } = useGetTaskCommentsQuery(task?.id || 0, { skip: !task?.id });
-  const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(task?.id || 0, { skip: !task?.id });
+  const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (task) {
+      setActiveTaskId(task.id);
+    }
+  }, [task?.id]);
+
+  const currentTaskId = activeTaskId || task?.id || 0;
+  const { data: liveTask } = useGetTaskQuery(currentTaskId, { skip: !currentTaskId });
+  const { data: statuses = [] } = useGetStatusDefinitionsQuery();
+  const currentTask = liveTask || task;
+
+  const { data: comments = [] } = useGetTaskCommentsQuery(currentTaskId, { skip: !currentTaskId });
+  const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(currentTaskId, { skip: !currentTaskId });
   const [addTaskAttachment] = useAddTaskAttachmentMutation();
   const [deleteTaskAttachment] = useDeleteTaskAttachmentMutation();
 
   const { data: customDefs = [] } = useGetCustomFieldDefinitionsQuery();
-  const { data: customValues = [] } = useGetTaskCustomFieldsQuery(task?.id || 0, { skip: !task?.id });
+  const { data: customValues = [] } = useGetTaskCustomFieldsQuery(currentTaskId, { skip: !currentTaskId });
   const [saveCustomField] = useSaveTaskCustomFieldMutation();
 
   // Populate local title and description on task change
   useEffect(() => {
-    if (task) {
-      setTitle(task.title || '');
-      setDescription(task.description || '');
+    if (currentTask) {
+      setTitle(currentTask.title || '');
+      setDescription(currentTask.description || '');
     }
-  }, [task?.id]);
+  }, [currentTask?.id, currentTask?.title, currentTask?.description]);
 
   // Timer Tick Effect
   useEffect(() => {
@@ -213,9 +228,54 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
+  const handleStatusChange = async (statusId: number) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { status_id: statusId } }).unwrap();
+      showToast('Status updated', 'success');
+    } catch {
+      showToast('Failed to update status', 'error');
+    }
+  };
+
+  const handlePriorityChange = async (priority: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { priority: priority as any } }).unwrap();
+      showToast('Priority updated', 'success');
+    } catch {
+      showToast('Failed to update priority', 'error');
+    }
+  };
+
+  const handleStartDateChange = async (d: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { start_date: d || undefined as any } }).unwrap();
+      showToast('Start date updated', 'success');
+    } catch {
+      showToast('Failed to update start date', 'error');
+    }
+  };
+
+  const handleDueDateChange = async (d: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { due_date: d || undefined as any } }).unwrap();
+      showToast('Due date updated', 'success');
+    } catch {
+      showToast('Failed to update due date', 'error');
+    }
+  };
+
+  const handleEstimatedHoursChange = async (hrs: number) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { estimated_hours: hrs, estimated_minutes: Math.round(hrs * 60) } }).unwrap();
+      showToast('Estimated time updated', 'success');
+    } catch {
+      showToast('Failed to update estimated time', 'error');
+    }
+  };
+
   const handleCostCenterChange = async (ccId: number | '') => {
     try {
-      await updateTask({ id: task.id, body: { cost_center_id: ccId || undefined } as any }).unwrap();
+      await updateTask({ id: currentTaskId, body: { cost_center_id: ccId || undefined } as any }).unwrap();
       showToast('Cost Center updated', 'success');
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to update cost center', 'error');
@@ -224,7 +284,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleAssigneeChange = async (selectedUserIds: number[]) => {
     try {
-      await updateTask({ id: task.id, body: { assignee_ids: selectedUserIds } as any }).unwrap();
+      await updateTask({ id: currentTaskId, body: { assignee_ids: selectedUserIds } as any }).unwrap();
       showToast('Assignees updated', 'success');
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to update assignees', 'error');
@@ -233,7 +293,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleFollowerChange = async (selectedUserIds: number[]) => {
     try {
-      await updateTask({ id: task.id, body: { follower_ids: selectedUserIds } as any }).unwrap();
+      await updateTask({ id: currentTaskId, body: { follower_ids: selectedUserIds } as any }).unwrap();
       showToast('Followers updated', 'success');
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to update followers', 'error');
@@ -415,17 +475,27 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {currentTask?.parent_task_id && (
+            <Button
+              size="small"
+              startIcon={<ArrowRight style={{ transform: 'rotate(180deg)' }} size={13} />}
+              onClick={() => setActiveTaskId(currentTask.parent_task_id!)}
+              sx={{ textTransform: 'none', fontSize: 12, py: 0.25, px: 1, color: '#04552B', fontWeight: 700, bgcolor: '#F0FDF4' }}
+            >
+              Parent Task
+            </Button>
+          )}
           <Chip
-            label={task.task_number || `TASK-${task.id}`}
+            label={currentTask?.task_number || `TASK-${currentTask?.id}`}
             size="small"
             sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 700, fontFamily: 'monospace' }}
           />
           <Chip
-            label={task.priority}
+            label={currentTask?.priority || 'NORMAL'}
             size="small"
             sx={{
-              bgcolor: task.priority === 'URGENT' ? '#FEE2E2' : task.priority === 'HIGH' ? '#FEF3C7' : '#04552B',
-              color: task.priority === 'URGENT' ? '#DC2626' : task.priority === 'HIGH' ? '#D97706' : '#FFFFFF',
+              bgcolor: currentTask?.priority === 'URGENT' ? '#FEE2E2' : currentTask?.priority === 'HIGH' ? '#FEF3C7' : '#04552B',
+              color: currentTask?.priority === 'URGENT' ? '#DC2626' : currentTask?.priority === 'HIGH' ? '#D97706' : '#FFFFFF',
               fontWeight: 700,
             }}
           />
@@ -515,19 +585,19 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                Progress: {task.progress_percentage || 0}%
+                {currentTask.completed_subtask_count || 0} / {currentTask.subtask_count || 0} Completed ({currentTask.progress_percentage || 0}%)
               </Typography>
             </Box>
 
             <LinearProgress
               variant="determinate"
-              value={task.progress_percentage || 0}
+              value={currentTask.progress_percentage || 0}
               sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
             />
 
-            {task.subtasks?.length > 0 && (
+            {((currentTask as any).nested_subtasks || currentTask.subtasks || []).length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                {task.subtasks.map((sub) => (
+                {((currentTask as any).nested_subtasks || currentTask.subtasks || []).map((sub: any) => (
                   <Paper
                     key={sub.id}
                     variant="outlined"
@@ -539,31 +609,66 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       justifyContent: 'space-between',
                       borderRadius: '8px',
                       bgcolor: sub.is_completed ? 'action.hover' : 'background.default',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: 'action.hover', borderColor: '#04552B' },
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, overflow: 'hidden' }}>
                       <input
                         type="checkbox"
                         checked={sub.is_completed}
-                        onChange={() => handleToggleSubtask(sub.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToggleSubtask(sub.id);
+                        }}
                         style={{ cursor: 'pointer', width: 17, height: 17, accentColor: '#04552B' }}
                       />
-                      <Chip label={sub.task_number || `SUB-${sub.id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace' }} />
+                      <Chip
+                        label={sub.task_number || `SUB-${sub.id}`}
+                        size="small"
+                        sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }}
+                      />
                       <Typography
                         variant="body2"
+                        onClick={() => setActiveTaskId(sub.id)}
                         sx={{
+                          cursor: 'pointer',
                           fontWeight: sub.is_completed ? 400 : 600,
                           textDecoration: sub.is_completed ? 'line-through' : 'none',
                           color: sub.is_completed ? 'text.secondary' : 'text.primary',
+                          '&:hover': { color: '#04552B', textDecoration: 'underline' },
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
                         {sub.title}
                       </Typography>
                     </Box>
 
-                    <IconButton size="small" onClick={() => handleDeleteSubtask(sub.id)}>
-                      <Trash2 size={15} color="#DC2626" />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {sub.priority && (
+                        <Chip
+                          label={sub.priority}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.6rem',
+                            fontWeight: 700,
+                            bgcolor: sub.priority === 'URGENT' ? '#FEE2E2' : sub.priority === 'HIGH' ? '#FEF3C7' : '#F1F5F9',
+                            color: sub.priority === 'URGENT' ? '#DC2626' : sub.priority === 'HIGH' ? '#D97706' : '#475569',
+                          }}
+                        />
+                      )}
+                      <Tooltip title="Open subtask">
+                        <IconButton size="small" onClick={() => setActiveTaskId(sub.id)}>
+                          <ArrowRight size={15} color="#04552B" />
+                        </IconButton>
+                      </Tooltip>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(sub.id); }}>
+                        <Trash2 size={15} color="#DC2626" />
+                      </IconButton>
+                    </Box>
                   </Paper>
                 ))}
               </Box>
@@ -832,6 +937,98 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Status Selector */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Status
+              </Typography>
+              <Select
+                size="small"
+                fullWidth
+                value={currentTask.status_id || ''}
+                onChange={(e) => handleStatusChange(Number(e.target.value))}
+                displayEmpty
+                sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
+              >
+                <MenuItem value=""><em>Select Status</em></MenuItem>
+                {(statuses as any[]).map((st) => (
+                  <MenuItem key={st.id} value={st.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: st.color || '#64748B' }} />
+                      {st.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Priority Selector */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Priority
+              </Typography>
+              <Select
+                size="small"
+                fullWidth
+                value={currentTask.priority || 'NORMAL'}
+                onChange={(e) => handlePriorityChange(e.target.value)}
+                sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
+              >
+                <MenuItem value="URGENT">🔴 URGENT</MenuItem>
+                <MenuItem value="HIGH">🟠 HIGH</MenuItem>
+                <MenuItem value="NORMAL">🟢 NORMAL</MenuItem>
+                <MenuItem value="LOW">🔵 LOW</MenuItem>
+              </Select>
+            </Box>
+
+            {/* Start & Due Dates */}
+            <Grid container spacing={1}>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Start Date
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  value={currentTask.start_date || ''}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Due Date
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  value={currentTask.due_date || ''}
+                  onChange={(e) => handleDueDateChange(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Estimated Time */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Estimated Hours
+              </Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                placeholder="e.g. 8.0"
+                value={currentTask.estimated_hours || ''}
+                onChange={(e) => handleEstimatedHoursChange(Number(e.target.value))}
+                sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+              />
+            </Box>
+
             {/* Cost Center Master Selector */}
             <Box>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
@@ -840,7 +1037,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               <Select
                 size="small"
                 fullWidth
-                value={task.cost_center_id || ''}
+                value={currentTask.cost_center_id || ''}
                 onChange={(e) => handleCostCenterChange(e.target.value ? Number(e.target.value) : '')}
                 displayEmpty
                 sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
