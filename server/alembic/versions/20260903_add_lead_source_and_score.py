@@ -18,6 +18,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_cols = [c["name"] for c in inspector.get_columns("applications")]
+
     # Create the lead_source enum type
     lead_source_enum = sa.Enum(
         "WEBSITE",
@@ -28,45 +32,54 @@ def upgrade() -> None:
         "OTHER",
         name="lead_source",
     )
-    lead_source_enum.create(op.get_bind(), checkfirst=True)
+    lead_source_enum.create(bind, checkfirst=True)
 
-    # Add lead_source column
-    op.add_column(
-        "applications",
-        sa.Column(
-            "lead_source",
-            lead_source_enum,
-            nullable=True,
-        ),
-    )
+    # Add lead_source column if missing
+    if "lead_source" not in existing_cols:
+        op.add_column(
+            "applications",
+            sa.Column(
+                "lead_source",
+                lead_source_enum,
+                nullable=True,
+            ),
+        )
+        op.create_index(
+            op.f("ix_applications_lead_source"),
+            "applications",
+            ["lead_source"],
+            unique=False,
+        )
 
-    # Add lead_score column
-    op.add_column(
-        "applications",
-        sa.Column(
-            "lead_score",
-            sa.Integer(),
-            nullable=False,
-            server_default="0",
-        ),
-    )
-
-    # Add index on lead_source
-    op.create_index(
-        op.f("ix_applications_lead_source"),
-        "applications",
-        ["lead_source"],
-        unique=False,
-    )
+    # Add lead_score column if missing
+    if "lead_score" not in existing_cols:
+        op.add_column(
+            "applications",
+            sa.Column(
+                "lead_score",
+                sa.Integer(),
+                nullable=False,
+                server_default="0",
+            ),
+        )
 
 
 def downgrade() -> None:
-    # Drop index
-    op.drop_index(op.f("ix_applications_lead_source"), table_name="applications")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_cols = [c["name"] for c in inspector.get_columns("applications")]
 
-    # Drop columns
-    op.drop_column("applications", "lead_score")
-    op.drop_column("applications", "lead_source")
+    if "lead_source" in existing_cols:
+        try:
+            op.drop_index(op.f("ix_applications_lead_source"), table_name="applications")
+        except Exception:
+            pass
+        op.drop_column("applications", "lead_source")
 
-    # Drop enum type
-    sa.Enum(name="lead_source").drop(op.get_bind(), checkfirst=True)
+    if "lead_score" in existing_cols:
+        op.drop_column("applications", "lead_score")
+
+    try:
+        sa.Enum(name="lead_source").drop(bind, checkfirst=True)
+    except Exception:
+        pass
