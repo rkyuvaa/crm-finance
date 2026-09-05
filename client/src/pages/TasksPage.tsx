@@ -153,16 +153,8 @@ export default function TasksPage() {
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
-      {/* Top Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.02em' }}>
-            Enterprise Task Management & Workflows
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            ClickUp-inspired task execution module with multi-level subtasks, stopwatch timers, cost centers, & custom fields
-          </Typography>
-        </Box>
+      {/* Top Header Action Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5 }}>
 
         <Button
           variant="contained"

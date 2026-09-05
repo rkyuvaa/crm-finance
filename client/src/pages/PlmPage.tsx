@@ -289,34 +289,24 @@ export default function PlmPage() {
 
   return (
     <Box sx={{ pb: 6 }}>
-      {/* 1. Page Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <div>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#023020' }}>
-            Product Lifecycle Management (PLM)
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#7A8B80' }}>
-            Manage EV vehicle models, Bill of Materials (BOM), and Engineering Change Orders (ECO).
-          </Typography>
-        </div>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            variant="outlined"
-            startIcon={<GitBranch size={16} />}
-            onClick={() => setOpenNewEco(true)}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, borderColor: '#087A3D', color: '#087A3D' }}
-          >
-            Raise ECO Request
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Plus size={16} />}
-            onClick={() => setOpenNewModel(true)}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, backgroundColor: '#087A3D', '&:hover': { backgroundColor: '#023020' } }}
-          >
-            Add New Vehicle Model
-          </Button>
-        </Box>
+      {/* 1. Page Header Action Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5, gap: 1.5 }}>
+        <Button
+          variant="outlined"
+          startIcon={<GitBranch size={16} />}
+          onClick={() => setOpenNewEco(true)}
+          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, borderColor: '#087A3D', color: '#087A3D' }}
+        >
+          Raise ECO Request
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Plus size={16} />}
+          onClick={() => setOpenNewModel(true)}
+          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, backgroundColor: '#087A3D', '&:hover': { backgroundColor: '#023020' } }}
+        >
+          Add New Vehicle Model
+        </Button>
       </Box>
 
       {/* 2. KPI Cards */}

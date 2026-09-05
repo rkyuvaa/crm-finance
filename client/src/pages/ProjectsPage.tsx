@@ -108,16 +108,8 @@ export default function ProjectsPage() {
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Projects & Workspaces
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Manage vehicle customization projects, delivery milestones, and team tasks
-          </Typography>
-        </Box>
+      {/* Header Action Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5 }}>
 
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button

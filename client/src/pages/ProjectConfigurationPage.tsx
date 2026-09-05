@@ -337,15 +337,7 @@ export default function ProjectConfigurationPage() {
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <Box sx={{ mb: 2.5 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: -0.4 }}>
-          Project & Task Configuration
-        </Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ mt: 0.2 }}>
-          Configure project and task master data and system behavior.
-        </Typography>
-      </Box>
+
 
       {/* ── Main ERP Workspace Container ─────────────────────────────────── */}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden', bgcolor: 'background.paper' }}>

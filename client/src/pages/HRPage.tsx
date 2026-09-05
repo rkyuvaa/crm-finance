@@ -327,17 +327,8 @@ export default function HRPage() {
 
   return (
     <Box sx={{ p: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
-      {/* Top Page Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Users size={30} style={{ color: '#087A3D' }} />
-            HR & Employee Management
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
-            Manage workforce onboarding, employee profiles, attendance, leaves, payroll, self-service, and system configuration.
-          </Typography>
-        </Box>
+      {/* Top Action Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
         <Stack direction="row" spacing={1.5}>
           {tabValue === 0 && (
             <Button

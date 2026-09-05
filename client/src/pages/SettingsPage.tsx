@@ -49,14 +49,7 @@ export default function SettingsPage() {
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Box sx={{ mb: 2.5 }}>
-        <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.4, color: '#023020' }}>
-          System Settings & Preferences
-        </Typography>
-        <Typography sx={{ fontSize: 13, color: '#7A8B80', mt: 0.5 }}>
-          Manage organization users & roles, departments, mail server, and data backups.
-        </Typography>
-      </Box>
+
 
       {/* ERP Style Navigation Tabs */}
       <Paper
