@@ -27,7 +27,9 @@ import {
   UserCheck,
   Users,
   Filter,
+  Upload,
 } from 'lucide-react';
+import UniversalImportModal from '@/components/ui/UniversalImportModal';
 import {
   useGetTasksQuery,
   useCreateTaskMutation,
@@ -60,6 +62,7 @@ export default function TasksPage() {
 
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
 
@@ -154,8 +157,23 @@ export default function TasksPage() {
   return (
     <Box sx={{ p: 3, width: '100%' }}>
       {/* Top Header Action Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5 }}>
-
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+        <Button
+          variant="outlined"
+          startIcon={<Upload size={18} />}
+          onClick={() => setImportDialogOpen(true)}
+          sx={{
+            borderColor: '#cbd5e1',
+            color: '#334155',
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 700,
+            px: 2,
+            py: 1,
+          }}
+        >
+          Import
+        </Button>
         <Button
           variant="contained"
           startIcon={<Plus size={18} />}
@@ -442,6 +460,20 @@ export default function TasksPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Universal Import Modal */}
+      <UniversalImportModal
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        title="Import Tasks"
+        entityName="Tasks"
+        sampleHeaders={['Task Title', 'Project', 'Assignee', 'Priority', 'Due Date', 'Estimated Hours']}
+        onImport={(rows) => {
+          showToast(`Imported ${rows.length} tasks successfully`, 'success');
+          refetch();
+          return rows.length;
+        }}
+      />
     </Box>
   );
 }

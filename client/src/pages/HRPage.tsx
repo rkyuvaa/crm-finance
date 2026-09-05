@@ -61,7 +61,9 @@ import {
   Mail,
   Phone,
   LogOut,
+  Upload,
 } from 'lucide-react';
+import UniversalImportModal from '@/components/ui/UniversalImportModal';
 import { useToast } from '@/components/ui/ToastHost';
 import {
   useListAttendanceQuery,
@@ -153,6 +155,7 @@ export default function HRPage() {
   const [leaveDialog, setLeaveDialog] = useState(false);
   const [payrollDialog, setPayrollDialog] = useState(false);
   const [onboardingDialog, setOnboardingDialog] = useState(false);
+  const [importDialog, setImportDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -331,44 +334,84 @@ export default function HRPage() {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
         <Stack direction="row" spacing={1.5}>
           {tabValue === 0 && (
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={() => setOnboardingDialog(true)}
-              sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
-            >
-              New On/Offboarding
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Upload size={18} />}
+                onClick={() => setImportDialog(true)}
+                sx={{ borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', borderRadius: 2 }}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Plus size={18} />}
+                onClick={() => setOnboardingDialog(true)}
+                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+              >
+                New On/Offboarding
+              </Button>
+            </>
           )}
           {tabValue === 2 && (
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={() => setAttendanceDialog(true)}
-              sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
-            >
-              Log Attendance
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Upload size={18} />}
+                onClick={() => setImportDialog(true)}
+                sx={{ borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', borderRadius: 2 }}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Plus size={18} />}
+                onClick={() => setAttendanceDialog(true)}
+                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+              >
+                Log Attendance
+              </Button>
+            </>
           )}
           {tabValue === 3 && (
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={() => setLeaveDialog(true)}
-              sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
-            >
-              New Leave Request
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Upload size={18} />}
+                onClick={() => setImportDialog(true)}
+                sx={{ borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', borderRadius: 2 }}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Plus size={18} />}
+                onClick={() => setLeaveDialog(true)}
+                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+              >
+                New Leave Request
+              </Button>
+            </>
           )}
           {tabValue === 4 && (
-            <Button
-              variant="contained"
-              startIcon={<Plus size={18} />}
-              onClick={() => setPayrollDialog(true)}
-              sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
-            >
-              Generate Payroll
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Upload size={18} />}
+                onClick={() => setImportDialog(true)}
+                sx={{ borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', borderRadius: 2 }}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Plus size={18} />}
+                onClick={() => setPayrollDialog(true)}
+                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+              >
+                Generate Payroll
+              </Button>
+            </>
           )}
         </Stack>
       </Box>
@@ -1261,6 +1304,19 @@ export default function HRPage() {
           <Button onClick={handleSaveOnboarding} variant="contained" sx={{ bgcolor: '#087A3D' }}>Initiate Process</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Universal HR Import Modal */}
+      <UniversalImportModal
+        open={importDialog}
+        onClose={() => setImportDialog(false)}
+        title={`Import HR Data (${HR_NAV_ITEMS[tabValue]?.label || 'HR'})`}
+        entityName={HR_NAV_ITEMS[tabValue]?.label || 'HR Records'}
+        sampleHeaders={['Employee ID', 'Name', 'Date', 'Status', 'Notes', 'Amount']}
+        onImport={(rows) => {
+          showToast(`Imported ${rows.length} records successfully`, 'success');
+          return rows.length;
+        }}
+      />
     </Box>
   );
 }

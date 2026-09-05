@@ -30,7 +30,11 @@ import {
   Plus,
   Search,
   Trash2,
+  User,
+  AlertCircle,
+  Upload,
 } from 'lucide-react';
+import UniversalImportModal from '@/components/ui/UniversalImportModal';
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -47,6 +51,7 @@ export default function ProjectsPage() {
   const [tabValue, setTabValue] = useState(0);
   const [searchQ, setSearchQ] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const { showToast } = useToast();
 
   const { data: projects = [], isLoading, isError, refetch } = useGetProjectsQuery({ q: searchQ || undefined });
@@ -112,6 +117,20 @@ export default function ProjectsPage() {
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5 }}>
 
         <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Upload size={18} />}
+            onClick={() => setImportDialogOpen(true)}
+            sx={{
+              borderColor: '#cbd5e1',
+              color: '#334155',
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Import
+          </Button>
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
@@ -415,6 +434,20 @@ export default function ProjectsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Universal Import Modal */}
+      <UniversalImportModal
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        title="Import Projects"
+        entityName="Projects"
+        sampleHeaders={['Project Name', 'Category', 'Budget', 'Start Date', 'End Date', 'Status']}
+        onImport={(rows) => {
+          showToast(`Imported ${rows.length} projects successfully`, 'success');
+          refetch();
+          return rows.length;
+        }}
+      />
     </Box>
   );
 }

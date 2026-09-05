@@ -41,6 +41,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
+import UniversalImportModal from '@/components/ui/UniversalImportModal';
 
 export interface EmployeeRecord {
   id: string;
@@ -928,23 +929,39 @@ export default function EmployeeMaster() {
         </DialogActions>
       </Dialog>
 
-      {/* CSV Import Modal */}
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Import Employees</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Box sx={{ border: '2px dashed #cbd5e1', borderRadius: 3, p: 4, textAlign: 'center', bgcolor: '#f8fafc', mb: 2 }}>
-            <FileSpreadsheet size={40} style={{ color: '#087A3D', margin: '0 auto 12px' }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Drag & drop CSV or Excel file</Typography>
-            <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>Supported formats: .csv, .xlsx</Typography>
-            <Button variant="outlined" sx={{ textTransform: 'none', borderColor: '#087A3D', color: '#087A3D' }}>
-              Browse File
-            </Button>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setImportDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {/* CSV/Excel Import Modal */}
+      <UniversalImportModal
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        title="Import Employees"
+        entityName="Employees"
+        sampleHeaders={['Employee ID', 'Full Name', 'Email', 'Phone', 'Designation', 'Department Name', 'Branch Name', 'Manager Name', 'Shift Name', 'Date of Joining', 'UAN', 'ESI Number', 'Status']}
+        onImport={(rows) => {
+          const newEmps: EmployeeRecord[] = rows.map((r, i) => ({
+            id: String(Date.now() + i),
+            emp_id: r['Employee ID'] || r['emp_id'] || `EMP-${Math.floor(100 + Math.random() * 900)}`,
+            name: r['Full Name'] || r['Name'] || r['name'] || 'Imported Employee',
+            email: r['Email'] || r['email'] || '',
+            phone: r['Phone'] || r['phone'] || '',
+            designation: r['Designation'] || r['designation'] || 'Staff',
+            department: r['Department Name'] || r['Department'] || r['department'] || 'Accounts',
+            branch: r['Branch Name'] || r['Branch'] || r['branch'] || 'Coimbatore Office',
+            shift: r['Shift Name'] || r['Shift'] || r['shift'] || 'KIM Office',
+            status: (r['Status'] || r['status']) === 'Inactive' ? 'Inactive' : 'Active',
+            joining_date: r['Date of Joining'] || r['joining_date'] || new Date().toISOString().split('T')[0],
+            biometric_id: r['biometric_id'] || '',
+            gross_salary: r['gross_salary'] || '50000',
+            uan: r['UAN'] || r['uan'] || '',
+            esi_number: r['ESI Number'] || r['esi_number'] || '',
+            reporting_manager: r['Manager Name'] || r['reporting_manager'] || 'Nickendra M',
+            cc_persons: '',
+            linked_user: '',
+            salary_category: 'Staff',
+          }));
+          setEmployees((prev) => [...newEmps, ...prev]);
+          return newEmps.length;
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       <Dialog open={Boolean(deleteConfirmId)} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>

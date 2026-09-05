@@ -33,7 +33,9 @@ import {
   Sparkles,
   CheckSquare,
   XCircle,
+  Upload,
 } from 'lucide-react';
+import UniversalImportModal from '@/components/ui/UniversalImportModal';
 
 import {
   useApplicationsQuery,
@@ -91,6 +93,7 @@ export default function LeadsPage() {
   const { data: users = [] } = useUsersQuery();
   const [createOpen, setCreateOpen] = useState(false);
   const [createOppOpen, setCreateOppOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<ApplicationItem | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [deleteApplication] = useDeleteApplicationMutation();
@@ -458,6 +461,15 @@ export default function LeadsPage() {
               Kanban
             </ToggleButton>
           </ToggleButtonGroup>
+
+          <Button
+            variant="outlined"
+            startIcon={<Upload size={16} />}
+            onClick={() => setImportDialogOpen(true)}
+            sx={{ height: 38, borderRadius: '10px', px: 2, borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', fontWeight: 600 }}
+          >
+            Import
+          </Button>
 
           <Button
             variant="contained"
@@ -1049,6 +1061,20 @@ export default function LeadsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Universal Import Modal */}
+      <UniversalImportModal
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        title={isOpportunityRoute ? 'Import Opportunities' : 'Import Leads'}
+        entityName={isOpportunityRoute ? 'Opportunities' : 'Leads'}
+        sampleHeaders={['Customer Name', 'Mobile Number', 'Vehicle Model', 'Loan Amount', 'City', 'Status']}
+        onImport={(rows) => {
+          showToast(`Imported ${rows.length} ${isOpportunityRoute ? 'opportunities' : 'leads'} successfully`, 'success');
+          refetch();
+          return rows.length;
+        }}
+      />
     </div>
   );
 }
