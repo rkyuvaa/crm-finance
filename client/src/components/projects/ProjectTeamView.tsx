@@ -54,7 +54,7 @@ export default function ProjectTeamView({ projectId }: ProjectTeamViewProps) {
             <Grid item xs={12} sm={6} md={4} key={m.name}>
               <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: '12px', textAlign: 'center', bgcolor: 'background.paper' }}>
                 <Avatar sx={{ width: 56, height: 56, margin: '0 auto 12px', bgcolor: '#04552B', fontSize: '1.2rem', fontWeight: 700 }}>
-                  {m.name.charAt(0)}
+                  {(m.name || '?').charAt(0)}
                 </Avatar>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>{m.name}</Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5 }}>Project Team Member</Typography>

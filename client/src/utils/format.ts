@@ -61,8 +61,8 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-export function initialsOf(name: string): string {
-  return (name.trim().charAt(0) || '?').toUpperCase();
+export function initialsOf(name?: string | null): string {
+  return ((name || '').trim().charAt(0) || '?').toUpperCase();
 }
 
 export const ROLE_LABELS: Record<string, string> = {

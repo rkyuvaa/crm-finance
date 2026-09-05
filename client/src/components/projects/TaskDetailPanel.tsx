@@ -844,7 +844,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               {task.assignees && task.assignees.length > 0 ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {task.assignees.map((a) => (
-                    <Chip key={a.id} avatar={<Avatar>{a.full_name.charAt(0)}</Avatar>} label={a.full_name} size="small" />
+                    <Chip key={a.id} avatar={<Avatar>{(a.full_name || 'U').charAt(0)}</Avatar>} label={a.full_name || 'User'} size="small" />
                   ))}
                 </Box>
               ) : (
@@ -860,7 +860,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               {task.followers && task.followers.length > 0 ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {task.followers.map((f) => (
-                    <Chip key={f.id} label={f.full_name} size="small" variant="outlined" />
+                    <Chip key={f.id} label={f.full_name || 'Follower'} size="small" variant="outlined" />
                   ))}
                 </Box>
               ) : (

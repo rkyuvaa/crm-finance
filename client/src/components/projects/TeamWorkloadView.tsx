@@ -62,7 +62,7 @@ export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                     <Avatar sx={{ width: 40, height: 40, bgcolor: '#04552B', fontWeight: 700 }}>
-                      {user.full_name.charAt(0)}
+                      {(user.full_name || '?').charAt(0)}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
