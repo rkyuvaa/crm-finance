@@ -1,11 +1,6 @@
 import { useState } from 'react';
-import { Alert, Box, Button, Paper, Tab, Tabs, TextField, Typography } from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Box, Paper, Tab, Tabs, Typography } from '@mui/material';
 import {
-  User as UserIcon,
-  Key,
   Mail,
   Database,
   Users as UsersIcon,
@@ -13,40 +8,16 @@ import {
   Building2,
   KeyRound,
   ShieldAlert,
-  Sliders,
 } from 'lucide-react';
 
-import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { useChangePasswordMutation, useUpdateProfileMutation } from '@/api/authApi';
-import { setUser } from '@/auth/authSlice';
-import { useToast } from '@/components/ui/ToastHost';
+import { useAppSelector } from '@/app/hooks';
 import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
 import SystemBackupCard from '@/components/settings/SystemBackupCard';
-import ProjectWorkflowSettingsCard from '@/components/settings/ProjectWorkflowSettingsCard';
 import UserManagementPage from '@/pages/admin/UserManagementPage';
 import RoleManagementPage from '@/pages/admin/RoleManagementPage';
 import DepartmentManagementPage from '@/pages/admin/DepartmentManagementPage';
 import PermissionRegistryPage from '@/pages/admin/PermissionRegistryPage';
 import AccessAuditLogPage from '@/pages/admin/AccessAuditLogPage';
-import { ROLE_LABELS } from '@/utils/format';
-
-const profileSchema = z.object({
-  full_name: z.string().min(2, 'Name must be at least 2 characters'),
-});
-
-const passwordSchema = z
-  .object({
-    current_password: z.string().min(6, 'Current password is required'),
-    new_password: z.string().min(8, 'New password must be at least 8 characters'),
-    confirm: z.string().min(1, 'Please confirm the new password'),
-  })
-  .refine((data) => data.new_password === data.confirm, {
-    message: 'Passwords do not match',
-    path: ['confirm'],
-  });
-
-type ProfileForm = z.infer<typeof profileSchema>;
-type PasswordForm = z.infer<typeof passwordSchema>;
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -70,48 +41,9 @@ function CustomTabPanel(props: TabPanelProps) {
 }
 
 export default function SettingsPage() {
-  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
-  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState(0);
   const [userRoleSubTab, setUserRoleSubTab] = useState(0);
-
-  const [updateProfile, { isLoading: savingProfile }] = useUpdateProfileMutation();
-  const [changePassword, { isLoading: changingPassword }] = useChangePasswordMutation();
-
-  const profileForm = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: { full_name: user?.full_name ?? '' },
-  });
-
-  const passwordForm = useForm<PasswordForm>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: { current_password: '', new_password: '', confirm: '' },
-  });
-
-  const onSaveProfile = async (values: ProfileForm) => {
-    try {
-      const updated = await updateProfile(values).unwrap();
-      dispatch(setUser(updated));
-      showToast('Profile updated', 'success');
-    } catch {
-      showToast('Could not update profile', 'error');
-    }
-  };
-
-  const onChangePassword = async (values: PasswordForm) => {
-    try {
-      await changePassword({
-        current_password: values.current_password,
-        new_password: values.new_password,
-      }).unwrap();
-      showToast('Password changed', 'success');
-      passwordForm.reset();
-    } catch (err) {
-      const detail = (err as { data?: { detail?: string } })?.data?.detail;
-      showToast(detail ?? 'Could not change password', 'error');
-    }
-  };
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -122,7 +54,7 @@ export default function SettingsPage() {
           System Settings & Preferences
         </Typography>
         <Typography sx={{ fontSize: 13, color: '#7A8B80', mt: 0.5 }}>
-          Manage account security, organization users & roles, departments, mail server, and data backups.
+          Manage organization users & roles, departments, mail server, and data backups.
         </Typography>
       </Box>
 
@@ -165,8 +97,6 @@ export default function SettingsPage() {
             },
           }}
         >
-          <Tab icon={<UserIcon size={16} />} iconPosition="start" label="My Profile" />
-          <Tab icon={<Key size={16} />} iconPosition="start" label="Security & Password" />
           {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
           {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
           <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
@@ -174,159 +104,54 @@ export default function SettingsPage() {
         </Tabs>
       </Paper>
 
-      {/* Tab 0: My Profile */}
-      <CustomTabPanel value={activeTab} index={0}>
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3.5, maxWidth: 680 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: 16, color: '#023020', mb: 0.5 }}>Profile Details</Typography>
-          <Typography sx={{ fontSize: 13, color: '#7A8B80', mb: 3 }}>
-            Primary account credentials and display details.
-          </Typography>
+      {isAdmin ? (
+        <>
+          {/* Tab 0: Users & Roles */}
+          <CustomTabPanel value={activeTab} index={0}>
+            <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
+              <Tabs
+                value={userRoleSubTab}
+                onChange={(_, val) => setUserRoleSubTab(val)}
+                sx={{
+                  borderBottom: 1,
+                  borderColor: '#E4EBE1',
+                  mb: 2,
+                  '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 13 },
+                }}
+              >
+                <Tab icon={<UsersIcon size={15} />} iconPosition="start" label="Users Management" />
+                <Tab icon={<Shield size={15} />} iconPosition="start" label="Roles & Access" />
+                <Tab icon={<KeyRound size={15} />} iconPosition="start" label="Permission Matrix" />
+                <Tab icon={<ShieldAlert size={15} />} iconPosition="start" label="Access Audit Logs" />
+              </Tabs>
+              {userRoleSubTab === 0 && <UserManagementPage />}
+              {userRoleSubTab === 1 && <RoleManagementPage />}
+              {userRoleSubTab === 2 && <PermissionRegistryPage />}
+              {userRoleSubTab === 3 && <AccessAuditLogPage />}
+            </Paper>
+          </CustomTabPanel>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, p: 2, mb: 3, backgroundColor: '#F8FAF7', borderRadius: '10px', border: '1px solid #E4EBE1' }}>
-            <Box>
-              <Typography sx={{ fontSize: 11, color: '#7A8B80', fontWeight: 700, textTransform: 'uppercase' }}>Email Address</Typography>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#023020' }}>{user?.email}</Typography>
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: 11, color: '#7A8B80', fontWeight: 700, textTransform: 'uppercase' }}>Assigned Role</Typography>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#023020' }}>
-                {user ? ROLE_LABELS[user.role] ?? user.role : ''}
-              </Typography>
-            </Box>
-          </Box>
+          {/* Tab 1: Departments */}
+          <CustomTabPanel value={activeTab} index={1}>
+            <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
+              <DepartmentManagementPage />
+            </Paper>
+          </CustomTabPanel>
 
-          <form onSubmit={profileForm.handleSubmit(onSaveProfile)}>
-            <TextField
-              fullWidth
-              label="Full Name"
-              margin="normal"
-              error={Boolean(profileForm.formState.errors.full_name)}
-              helperText={profileForm.formState.errors.full_name?.message}
-              {...profileForm.register('full_name')}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={savingProfile}
-              sx={{
-                mt: 2.5,
-                backgroundColor: '#023020',
-                '&:hover': { backgroundColor: '#012015' },
-                fontWeight: 700,
-                textTransform: 'none',
-                px: 3,
-              }}
-            >
-              Save Profile Changes
-            </Button>
-          </form>
-        </Paper>
-      </CustomTabPanel>
+          {/* Tab 2: Mail Server (SMTP) */}
+          <CustomTabPanel value={activeTab} index={2}>
+            <MailServerConfigCard />
+          </CustomTabPanel>
 
-      {/* Tab 1: Security & Password */}
-      <CustomTabPanel value={activeTab} index={1}>
-        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3.5, maxWidth: 680 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: 16, color: '#023020', mb: 0.5 }}>Change Password</Typography>
-          <Typography sx={{ fontSize: 13, color: '#7A8B80', mb: 2 }}>
-            Ensure your account uses a strong, unique password.
-          </Typography>
-
-          <Alert severity="info" sx={{ mb: 3, borderRadius: '10px' }}>
-            You will stay signed in on this device after changing your password.
-          </Alert>
-
-          <form onSubmit={passwordForm.handleSubmit(onChangePassword)}>
-            <TextField
-              fullWidth
-              label="Current Password"
-              type="password"
-              margin="normal"
-              error={Boolean(passwordForm.formState.errors.current_password)}
-              helperText={passwordForm.formState.errors.current_password?.message}
-              {...passwordForm.register('current_password')}
-            />
-            <TextField
-              fullWidth
-              label="New Password"
-              type="password"
-              margin="normal"
-              error={Boolean(passwordForm.formState.errors.new_password)}
-              helperText={passwordForm.formState.errors.new_password?.message}
-              {...passwordForm.register('new_password')}
-            />
-            <TextField
-              fullWidth
-              label="Confirm New Password"
-              type="password"
-              margin="normal"
-              error={Boolean(passwordForm.formState.errors.confirm)}
-              helperText={passwordForm.formState.errors.confirm?.message}
-              {...passwordForm.register('confirm')}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={changingPassword}
-              sx={{
-                mt: 2.5,
-                backgroundColor: '#023020',
-                '&:hover': { backgroundColor: '#012015' },
-                fontWeight: 700,
-                textTransform: 'none',
-                px: 3,
-              }}
-            >
-              Update Password
-            </Button>
-          </form>
-        </Paper>
-      </CustomTabPanel>
-
-      {/* Tab 2: Users & Roles */}
-      {isAdmin && (
-        <CustomTabPanel value={activeTab} index={2}>
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
-            <Tabs
-              value={userRoleSubTab}
-              onChange={(_, val) => setUserRoleSubTab(val)}
-              sx={{
-                borderBottom: 1,
-                borderColor: '#E4EBE1',
-                mb: 2,
-                '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 13 },
-              }}
-            >
-              <Tab icon={<UsersIcon size={15} />} iconPosition="start" label="Users Management" />
-              <Tab icon={<Shield size={15} />} iconPosition="start" label="Roles & Access" />
-              <Tab icon={<KeyRound size={15} />} iconPosition="start" label="Permission Matrix" />
-              <Tab icon={<ShieldAlert size={15} />} iconPosition="start" label="Access Audit Logs" />
-            </Tabs>
-            {userRoleSubTab === 0 && <UserManagementPage />}
-            {userRoleSubTab === 1 && <RoleManagementPage />}
-            {userRoleSubTab === 2 && <PermissionRegistryPage />}
-            {userRoleSubTab === 3 && <AccessAuditLogPage />}
-          </Paper>
-        </CustomTabPanel>
-      )}
-
-      {/* Tab 3: Departments */}
-      {isAdmin && (
-        <CustomTabPanel value={activeTab} index={3}>
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
-            <DepartmentManagementPage />
-          </Paper>
-        </CustomTabPanel>
-      )}
-
-      {/* Tab 4: Mail Server Config */}
-      <CustomTabPanel value={activeTab} index={isAdmin ? 4 : 2}>
-        <MailServerConfigCard />
-      </CustomTabPanel>
-
-      {/* Tab 5: System Data Backup */}
-      {isAdmin && (
-        <CustomTabPanel value={activeTab} index={5}>
-          <SystemBackupCard />
+          {/* Tab 3: System Data Backup */}
+          <CustomTabPanel value={activeTab} index={3}>
+            <SystemBackupCard />
+          </CustomTabPanel>
+        </>
+      ) : (
+        /* Non-admin view */
+        <CustomTabPanel value={activeTab} index={0}>
+          <MailServerConfigCard />
         </CustomTabPanel>
       )}
     </Box>
