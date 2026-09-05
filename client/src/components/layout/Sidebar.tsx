@@ -58,7 +58,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Main',
     items: [
-      { key: 'dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
       { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
     ],
   },
@@ -71,8 +70,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: Briefcase,
         badge: null,
         children: [
+          { key: 'crm_dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
           { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
           { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
+          { key: 'crm_reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
           { key: 'crm_configuration', label: 'Configuration', path: '/configuration', icon: Settings2, badge: null },
         ],
       },
@@ -118,7 +119,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Other',
     items: [
-      { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
       { key: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell, badge: 'notifications' },
       { key: 'settings', label: 'Settings', path: '/settings', icon: Settings, badge: null },
     ],
