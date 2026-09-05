@@ -226,6 +226,7 @@ class TaskAttachmentOut(TaskAttachmentBase):
 class TaskDependencyCreate(BaseModel):
     depends_on_task_id: int
     dependency_type: DependencyType = DependencyType.BLOCKS
+    direction: Optional[str] = "BLOCKED_BY"  # "BLOCKED_BY" or "BLOCKING"
 
 
 class TaskDependencyOut(BaseModel):
@@ -234,6 +235,11 @@ class TaskDependencyOut(BaseModel):
     depends_on_task_id: int
     depends_on_task_number: Optional[str] = None
     depends_on_task_title: Optional[str] = None
+    depends_on_status_name: Optional[str] = None
+    depends_on_priority: Optional[str] = None
+    depends_on_due_date: Optional[date] = None
+    depends_on_is_completed: Optional[bool] = None
+    direction: str = "BLOCKED_BY"  # "BLOCKING" or "BLOCKED_BY"
     dependency_type: DependencyType
     created_at: datetime
 
@@ -301,6 +307,7 @@ class TaskCreate(TaskBase):
     assignee_ids: Optional[List[int]] = None
     follower_ids: Optional[List[int]] = None
     tag_ids: Optional[List[int]] = None
+    sort_order: Optional[int] = 0
 
 
 class TaskUpdate(BaseModel):
@@ -331,7 +338,9 @@ class TaskUpdate(BaseModel):
     is_completed: Optional[bool] = None
     is_archived: Optional[bool] = None
     is_deleted: Optional[bool] = None
+    sort_order: Optional[int] = None
     recurrence_rule: Optional[dict] = None
+    override_dependencies: Optional[bool] = False
 
 
 class TaskOut(TaskBase):
@@ -340,12 +349,14 @@ class TaskOut(TaskBase):
     project_id: Optional[int] = None
     project_name: Optional[str] = None
     parent_task_id: Optional[int] = None
+    sort_order: int = 0
     actual_minutes: int = 0
     actual_hours: float = 0.0
     progress_percentage: float = 0.0
     is_completed: bool = False
     is_archived: bool = False
     is_deleted: bool = False
+    is_blocked: bool = False
     completed_at: Optional[datetime] = None
     completed_by: Optional[int] = None
 
@@ -372,6 +383,18 @@ class TaskOut(TaskBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TaskConvertRequest(BaseModel):
+    target_parent_id: Optional[int] = None
+
+
+class TaskReorderRequest(BaseModel):
+    sibling_ids: List[int]
+
+
+class RescheduleDependenciesRequest(BaseModel):
+    days_shift: int
 
 
 # --- Bulk Action Schemas ---

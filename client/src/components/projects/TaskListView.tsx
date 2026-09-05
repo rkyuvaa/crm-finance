@@ -148,10 +148,29 @@ export default function TaskListView({
                 {task.title}
               </Typography>
 
+              {task.is_blocked && (
+                <Chip
+                  label="BLOCKED"
+                  size="small"
+                  sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#FEE2E2', color: '#DC2626' }}
+                />
+              )}
+
+              {task.subtask_count !== undefined && task.subtask_count > 0 && (
+                <Chip
+                  label={`${task.completed_subtask_count || 0}/${task.subtask_count} subtasks`}
+                  size="small"
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569' }}
+                />
+              )}
+
               {task.dependencies && task.dependencies.length > 0 && (
                 <Tooltip title={`${task.dependencies.length} task dependencies`}>
-                  <Box sx={{ display: 'inline-flex', ml: 0.5 }}>
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, ml: 0.5 }}>
                     <Lock size={13} color="#D97706" />
+                    <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 700, color: '#D97706' }}>
+                      {task.dependencies.length}
+                    </Typography>
                   </Box>
                 </Tooltip>
               )}

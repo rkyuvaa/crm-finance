@@ -95,7 +95,11 @@ export interface TaskDependencyInfo {
   dependency_type: 'BLOCKS' | 'BLOCKED_BY' | 'WAITING_ON';
   depends_on_task_number?: string;
   depends_on_task_title?: string;
-  depends_on_task_status?: string;
+  depends_on_status_name?: string;
+  depends_on_priority?: string;
+  depends_on_due_date?: string;
+  depends_on_is_completed?: boolean;
+  direction?: 'BLOCKING' | 'BLOCKED_BY';
 }
 
 export interface TaskRelationshipInfo {
@@ -132,6 +136,7 @@ export interface TaskItem {
   project_name?: string;
   phase_id?: number;
   parent_task_id?: number;
+  sort_order?: number;
   title: string;
   description?: string;
   task_type: string;
@@ -150,6 +155,7 @@ export interface TaskItem {
   is_completed: boolean;
   is_archived: boolean;
   is_deleted: boolean;
+  is_blocked?: boolean;
   created_by?: number;
   updated_by?: number;
   completed_by?: number;
@@ -163,6 +169,9 @@ export interface TaskItem {
   time_entries: TaskTimeEntryInfo[];
   activities: TaskActivityInfo[];
   subtasks: TaskItem[];
+  nested_subtasks?: TaskItem[];
+  subtask_count?: number;
+  completed_subtask_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -548,7 +557,7 @@ export const projectsApi = createApi({
     }),
 
     // Dependencies
-    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; depends_on_task_id: number; dependency_type: string }>({
+    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; depends_on_task_id: number; dependency_type?: string; direction?: string }>({
       query: ({ taskId, ...body }) => ({
         url: `/tasks/${taskId}/dependencies`,
         method: 'POST',
@@ -562,6 +571,39 @@ export const projectsApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+
+    // Subtask & Dependency Advanced Actions
+    convertSubtaskToTask: builder.mutation<TaskItem, number>({
+      query: (taskId) => ({
+        url: `/tasks/${taskId}/convert-to-task`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+    convertTaskToSubtask: builder.mutation<TaskItem, { taskId: number; target_parent_id: number }>({
+      query: ({ taskId, target_parent_id }) => ({
+        url: `/tasks/${taskId}/convert-to-subtask`,
+        method: 'POST',
+        body: { target_parent_id },
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+    reorderSubtasks: builder.mutation<void, { taskId: number; sibling_ids: number[] }>({
+      query: ({ taskId, sibling_ids }) => ({
+        url: `/tasks/${taskId}/reorder-subtasks`,
+        method: 'POST',
+        body: { sibling_ids },
+      }),
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    rescheduleDependencies: builder.mutation<TaskItem, { taskId: number; days_shift: number }>({
+      query: ({ taskId, days_shift }) => ({
+        url: `/tasks/${taskId}/reschedule-dependencies`,
+        method: 'POST',
+        body: { days_shift },
+      }),
+      invalidatesTags: ['Tasks'],
     }),
 
     // Bulk Actions
@@ -641,6 +683,10 @@ export const {
   useRemoveFollowerMutation,
   useAddDependencyMutation,
   useRemoveDependencyMutation,
+  useConvertSubtaskToTaskMutation,
+  useConvertTaskToSubtaskMutation,
+  useReorderSubtasksMutation,
+  useRescheduleDependenciesMutation,
   useBulkTaskActionMutation,
   useGetTaskTemplatesQuery,
   useCreateTaskTemplateMutation,

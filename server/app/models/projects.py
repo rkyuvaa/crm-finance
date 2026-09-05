@@ -210,6 +210,7 @@ class Task(Base):
     estimated_hours: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     actual_hours: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     progress_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
 
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)

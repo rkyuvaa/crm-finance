@@ -17,6 +17,13 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Menu,
+  InputAdornment,
 } from '@mui/material';
 import {
   X,
@@ -40,6 +47,10 @@ import {
   Activity as ActivityIcon,
   Plus,
   ArrowRight,
+  Search,
+  Link2,
+  MoreVertical,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   TaskItem,
@@ -67,7 +78,10 @@ import {
   useAddDependencyMutation,
   useRemoveDependencyMutation,
   useGetTaskQuery,
+  useGetTasksQuery,
   useGetStatusDefinitionsQuery,
+  useConvertSubtaskToTaskMutation,
+  useConvertTaskToSubtaskMutation,
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -787,60 +801,124 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
           <Divider sx={{ mb: 3 }} />
 
-          {/* ── DEPENDENCIES ────────────────────────────────────────── */}
+          {/* ── DEPENDENCIES & RELATIONSHIPS ───────────────────────── */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Lock size={18} color="#D97706" /> Task Dependencies & Relationships
-            </Typography>
-
-            {task.dependencies && task.dependencies.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                {task.dependencies.map((dep) => (
-                  <Paper key={dep.id} variant="outlined" sx={{ p: 1.25, px: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip label={dep.dependency_type} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {dep.depends_on_task_number}: {dep.depends_on_task_title}
-                      </Typography>
-                    </Box>
-                    <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
-                      <Trash2 size={14} color="#DC2626" />
-                    </IconButton>
-                  </Paper>
-                ))}
-              </Box>
-            ) : (
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                No active dependencies. (Anti-circular validation active)
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Lock size={18} color="#D97706" /> Task Dependencies & Relationships
               </Typography>
-            )}
-
-            {/* Add Dependency Controls */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Select
+              <Button
+                variant="outlined"
                 size="small"
-                displayEmpty
-                value={depType}
-                onChange={(e) => setDepType(e.target.value as any)}
-                sx={{ height: 34, fontSize: 12, minWidth: 130 }}
+                startIcon={<Plus size={14} />}
+                onClick={() => setIsAddDepDialogOpen(true)}
+                sx={{ textTransform: 'none', height: 30, fontSize: 12, borderColor: '#D97706', color: '#D97706' }}
               >
-                <MenuItem value="BLOCKED_BY">Blocked By</MenuItem>
-                <MenuItem value="BLOCKS">Blocks</MenuItem>
-                <MenuItem value="WAITING_ON">Waiting On</MenuItem>
-              </Select>
-
-              <TextField
-                size="small"
-                type="number"
-                placeholder="Target Task ID..."
-                value={depTaskId}
-                onChange={(e) => setDepTaskId(e.target.value ? Number(e.target.value) : '')}
-                sx={{ width: 140, '& .MuiOutlinedInput-root': { height: 34, fontSize: 12 } }}
-              />
-
-              <Button variant="outlined" size="small" onClick={handleAddDependency} sx={{ height: 34, textTransform: 'none' }}>
                 Add Dependency
               </Button>
+            </Box>
+
+            {/* BLOCKING SECTION */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1, letterSpacing: 0.5 }}>
+                BLOCKING (Tasks blocked by this task)
+              </Typography>
+              {task.dependencies && task.dependencies.filter((d) => d.direction === 'BLOCKING').length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {task.dependencies.filter((d) => d.direction === 'BLOCKING').map((dep) => (
+                    <Paper
+                      key={dep.id}
+                      variant="outlined"
+                      sx={{ p: 1.25, px: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '8px', bgcolor: 'background.default' }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Chip label="BLOCKING" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#FEF3C7', color: '#D97706' }} />
+                        <Chip label={dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                        <Typography
+                          variant="body2"
+                          onClick={() => setActiveTaskId(dep.depends_on_task_id)}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                        >
+                          {dep.depends_on_task_title}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {dep.depends_on_status_name && (
+                          <Chip label={dep.depends_on_status_name} size="small" sx={{ height: 18, fontSize: '0.6rem' }} />
+                        )}
+                        <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
+                          <Trash2 size={14} color="#DC2626" />
+                        </IconButton>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ fontSize: 13, fontStyle: 'italic', pl: 1 }}>
+                  No tasks are blocked by this task.
+                </Typography>
+              )}
+            </Box>
+
+            {/* BLOCKED BY SECTION */}
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1, letterSpacing: 0.5 }}>
+                BLOCKED BY (Tasks blocking this task)
+              </Typography>
+              {task.dependencies && task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {task.dependencies.filter((d) => d.direction !== 'BLOCKING').map((dep) => (
+                    <Paper
+                      key={dep.id}
+                      variant="outlined"
+                      sx={{
+                        p: 1.25,
+                        px: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderRadius: '8px',
+                        bgcolor: dep.depends_on_is_completed ? '#F0FDF4' : '#FEF2F2',
+                        borderColor: dep.depends_on_is_completed ? '#BBF7D0' : '#FECACA',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Chip
+                          label={dep.depends_on_is_completed ? 'SATISFIED' : 'WAITING ON'}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            bgcolor: dep.depends_on_is_completed ? '#DCFCE7' : '#FEE2E2',
+                            color: dep.depends_on_is_completed ? '#166534' : '#DC2626',
+                          }}
+                        />
+                        <Chip label={dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                        <Typography
+                          variant="body2"
+                          onClick={() => setActiveTaskId(dep.depends_on_task_id)}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                        >
+                          {dep.depends_on_task_title}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {dep.depends_on_status_name && (
+                          <Chip label={dep.depends_on_status_name} size="small" sx={{ height: 18, fontSize: '0.6rem' }} />
+                        )}
+                        <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
+                          <Trash2 size={14} color="#DC2626" />
+                        </IconButton>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ fontSize: 13, fontStyle: 'italic', pl: 1 }}>
+                  This task is not blocked by any tasks.
+                </Typography>
+              )}
             </Box>
           </Box>
 
@@ -1178,6 +1256,153 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           </Box>
         </Box>
       </Box>
+
+      {/* ── ADD DEPENDENCY SEARCH MODAL ───────────────────────── */}
+      <Dialog
+        open={isAddDepDialogOpen}
+        onClose={() => setIsAddDepDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Lock size={20} color="#D97706" /> Add Task Dependency
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Specify the relationship between this task and another task:
+          </Typography>
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+              RELATIONSHIP DIRECTION
+            </Typography>
+            <Select
+              fullWidth
+              size="small"
+              value={depDirection}
+              onChange={(e) => setDepDirection(e.target.value as any)}
+            >
+              <MenuItem value="BLOCKED_BY">This task is BLOCKED BY (waiting on target task)</MenuItem>
+              <MenuItem value="BLOCKING">This task BLOCKS (target task must wait on this task)</MenuItem>
+            </Select>
+          </Box>
+
+          <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+            SEARCH TARGET TASK
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search by Task ID (e.g. TASK-000004) or Task Title..."
+            value={depSearchQuery}
+            onChange={(e) => setDepSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          <Box sx={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {searchTasksResult.filter((t: any) => t.id !== currentTask.id).map((t: any) => (
+              <Paper
+                key={t.id}
+                variant="outlined"
+                onClick={async () => {
+                  try {
+                    await addDependencyApi({
+                      taskId: currentTask.id,
+                      depends_on_task_id: t.id,
+                      direction: depDirection,
+                    }).unwrap();
+                    showToast('Dependency created successfully', 'success');
+                    setIsAddDepDialogOpen(false);
+                    setDepSearchQuery('');
+                  } catch (err: any) {
+                    showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to create dependency', 'error');
+                  }
+                }}
+                sx={{
+                  p: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  '&:hover': { bgcolor: 'action.hover', borderColor: '#04552B' },
+                }}
+              >
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip label={t.task_number || `TASK-${t.id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {t.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11 }}>
+                    {t.project_name || 'General Project'} • {t.assignee_name || 'Unassigned'} • Due: {t.due_date || 'No Date'}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={t.priority || 'NORMAL'}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.6rem',
+                    fontWeight: 700,
+                    bgcolor: t.priority === 'URGENT' ? '#FEE2E2' : t.priority === 'HIGH' ? '#FEF3C7' : '#F1F5F9',
+                    color: t.priority === 'URGENT' ? '#DC2626' : t.priority === 'HIGH' ? '#D97706' : '#475569',
+                  }}
+                />
+              </Paper>
+            ))}
+            {searchTasksResult.filter((t: any) => t.id !== currentTask.id).length === 0 && (
+              <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 3 }}>
+                No matching tasks found. Type a title or task number above.
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsAddDepDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── BLOCKED TASK WARNING DIALOG ───────────────────────── */}
+      <Dialog
+        open={blockedWarning.open}
+        onClose={() => setBlockedWarning({ open: false, blockingTasks: [] })}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AlertTriangle size={22} color="#DC2626" /> Warning: Task is Blocked
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2, color: 'text.primary' }}>
+            This task is currently blocked by incomplete tasks:
+          </DialogContentText>
+          <Box sx={{ bgcolor: '#FEF2F2', p: 1.5, borderRadius: '8px', border: '1px solid #FECACA', mb: 2 }}>
+            {blockedWarning.blockingTasks.map((tn) => (
+              <Typography key={tn} variant="body2" sx={{ fontWeight: 700, color: '#991B1B', fontFamily: 'monospace' }}>
+                • {tn}
+              </Typography>
+            ))}
+          </Box>
+          <DialogContentText fontSize={13}>
+            Completing this task before its prerequisites may break your project schedule. Are you sure you want to complete it anyway?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setBlockedWarning({ open: false, blockingTasks: [] })} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmOverrideCompletion} variant="contained" color="error" sx={{ textTransform: 'none' }}>
+            Complete Anyway
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Drawer>
   );
 }

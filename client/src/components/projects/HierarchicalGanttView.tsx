@@ -13,6 +13,8 @@ import {
   MenuItem,
   Select,
   InputAdornment,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   ChevronRight,
@@ -22,8 +24,10 @@ import {
   Maximize2,
   Plus,
   ArrowRight,
+  RefreshCw,
+  Lock,
 } from 'lucide-react';
-import { TaskItem, useUpdateTaskMutation, useAddSubtaskMutation } from '@/api/projectsApi';
+import { TaskItem, useUpdateTaskMutation, useAddSubtaskMutation, useRescheduleDependenciesMutation } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 type TimeScale = 'DAY' | 'WEEK' | 'MONTH';
@@ -50,6 +54,7 @@ export default function HierarchicalGanttView({
   const { showToast } = useToast();
   const [updateTask] = useUpdateTaskMutation();
   const [addSubtask] = useAddSubtaskMutation();
+  const [rescheduleDependenciesApi] = useRescheduleDependenciesMutation();
 
   // Gantt State
   const [scale, setScale] = useState<TimeScale>('WEEK');
@@ -58,6 +63,7 @@ export default function HierarchicalGanttView({
   const [expandedTaskIds, setExpandedTaskIds] = useState<Record<number, boolean>>({});
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(360);
   const [isResizingLeft, setIsResizingLeft] = useState<boolean>(false);
+  const [autoRescheduleDependencies, setAutoRescheduleDependencies] = useState<boolean>(false);
 
   // Quick inline add subtask state
   const [inlineSubtaskParentId, setInlineSubtaskParentId] = useState<number | null>(null);
@@ -429,6 +435,9 @@ export default function HierarchicalGanttView({
       const dStr = draggingState.currentDueDate.toISOString().split('T')[0];
       const targetId = draggingState.taskId;
 
+      const diffMs = draggingState.currentDueDate.getTime() - draggingState.initialDueDate.getTime();
+      const daysShift = Math.round(diffMs / (1000 * 3600 * 24));
+
       setDraggingState(null);
 
       try {
@@ -437,6 +446,11 @@ export default function HierarchicalGanttView({
           body: { start_date: sStr as any, due_date: dStr as any },
         }).unwrap();
         showToast('Schedule updated & saved ✓', 'success');
+
+        if (autoRescheduleDependencies && daysShift !== 0) {
+          await rescheduleDependenciesApi({ taskId: targetId, days_shift: daysShift }).unwrap();
+          showToast(`Auto-shifted downstream dependent tasks by ${daysShift} day(s)`, 'info');
+        }
       } catch {
         showToast('Failed to save updated schedule dates', 'error');
       }
@@ -471,19 +485,46 @@ export default function HierarchicalGanttView({
     };
   }, [isResizingLeft]);
 
-  // Today Indicator Left Position Px
-  const todayPx = useMemo(() => {
-    const today = new Date();
-    const msPerDay = 1000 * 3600 * 24;
-    if (scale === 'DAY') {
-      return ((today.getTime() - timelineStart.getTime()) / msPerDay) * columnWidthPx;
-    } else if (scale === 'WEEK') {
-      return ((today.getTime() - timelineStart.getTime()) / (msPerDay * 7)) * columnWidthPx;
-    } else if (scale === 'MONTH') {
-      return ((today.getFullYear() - timelineStart.getFullYear()) * 12 + (today.getMonth() - timelineStart.getMonth()) + today.getDate() / 30) * columnWidthPx;
-    }
-    return 0;
-  }, [scale, timelineStart, columnWidthPx]);
+  // Compute SVG Dependency Arrow Lines
+  const dependencyLines = useMemo(() => {
+    const lines: Array<{
+      id: number;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      blockerTitle: string;
+      blockedTitle: string;
+    }> = [];
+
+    visibleNodes.forEach((node, nodeIdx) => {
+      if (node.dependencies && node.dependencies.length > 0) {
+        node.dependencies.forEach((dep) => {
+          if (dep.direction === 'BLOCKING') {
+            const targetNodeIdx = visibleNodes.findIndex((n) => n.id === dep.depends_on_task_id);
+            if (targetNodeIdx >= 0) {
+              const targetNode = visibleNodes[targetNodeIdx];
+              const coordsA = getBarPixelCoords(node);
+              const coordsB = getBarPixelCoords(targetNode);
+              if (coordsA && coordsB) {
+                lines.push({
+                  id: dep.id,
+                  x1: coordsA.leftPx + coordsA.widthPx,
+                  y1: nodeIdx * 44 + 22,
+                  x2: coordsB.leftPx,
+                  y2: targetNodeIdx * 44 + 22,
+                  blockerTitle: node.title,
+                  blockedTitle: targetNode.title,
+                });
+              }
+            }
+          }
+        });
+      }
+    });
+
+    return lines;
+  }, [visibleNodes, scale, timelineStart, columnWidthPx]);
 
   if (isLoading) {
     return (
@@ -543,6 +584,23 @@ export default function HierarchicalGanttView({
 
         {/* Right Scale, Zoom, Today & Fit Controls */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={autoRescheduleDependencies}
+                onChange={(e) => setAutoRescheduleDependencies(e.target.checked)}
+                color="success"
+              />
+            }
+            label={
+              <Typography variant="caption" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <RefreshCw size={12} /> Auto Reschedule
+              </Typography>
+            }
+            sx={{ mr: 0 }}
+          />
+
           <Button
             size="small"
             variant="outlined"
@@ -827,37 +885,48 @@ export default function HierarchicalGanttView({
               ))}
             </Box>
 
-            {/* Today Line Indicator */}
-            {todayPx > 0 && todayPx < totalColumns * columnWidthPx && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  left: todayPx,
-                  width: 2,
-                  bgcolor: '#DC2626',
-                  zIndex: 8,
-                  pointerEvents: 'none',
-                }}
-              >
-                <Box
-                  sx={{
-                    bgcolor: '#DC2626',
-                    color: '#FFFFFF',
-                    fontSize: '0.6rem',
-                    fontWeight: 700,
-                    px: 0.5,
-                    borderRadius: '2px',
-                    position: 'absolute',
-                    top: 2,
-                    left: -14,
-                  }}
+            {/* SVG OVERLAY FOR DEPENDENCY ARROWS */}
+            <svg
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: totalColumns * columnWidthPx,
+                height: visibleNodes.length * 44,
+                pointerEvents: 'none',
+                zIndex: 7,
+              }}
+            >
+              <defs>
+                <marker
+                  id="gantt-arrow"
+                  viewBox="0 0 10 10"
+                  refX="6"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
                 >
-                  TODAY
-                </Box>
-              </Box>
-            )}
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#D97706" />
+                </marker>
+              </defs>
+              {dependencyLines.map((line) => {
+                const controlOffset = Math.max(20, Math.abs(line.x2 - line.x1) / 2);
+                const pathD = `M ${line.x1} ${line.y1} C ${line.x1 + controlOffset} ${line.y1}, ${line.x2 - controlOffset} ${line.y2}, ${line.x2} ${line.y2}`;
+                return (
+                  <g key={line.id} style={{ pointerEvents: 'stroke' }}>
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke="#D97706"
+                      strokeWidth="2"
+                      strokeDasharray={line.y1 > line.y2 ? '4 2' : 'none'}
+                      markerEnd="url(#gantt-arrow)"
+                    />
+                  </g>
+                );
+              })}
+            </svg>
 
             {/* Render Row Bars for Visible Hierarchy Nodes */}
             {visibleNodes.map((node) => {

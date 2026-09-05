@@ -1,7 +1,7 @@
 import os
 import re
 import uuid
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form, status, Response
@@ -54,6 +54,9 @@ from app.schemas.projects import (
     TaskTemplateOut,
     TaskTagOut,
     UserBriefOut,
+    TaskConvertRequest,
+    TaskReorderRequest,
+    RescheduleDependenciesRequest,
 )
 from app.core.deps import get_current_user
 
@@ -274,17 +277,52 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
         ) for te in t.time_entries
     ]
 
-    out.dependencies = [
-        TaskDependencyOut(
-            id=dep.id,
-            task_id=dep.task_id,
-            depends_on_task_id=dep.depends_on_task_id,
-            depends_on_task_number=dep.depends_on_task.task_number if dep.depends_on_task else None,
-            depends_on_task_title=dep.depends_on_task.title if dep.depends_on_task else None,
-            dependency_type=dep.dependency_type,
-            created_at=dep.created_at,
-        ) for dep in db.query(TaskDependency).filter(TaskDependency.task_id == t.id).all()
-    ]
+    dependencies_out = []
+    # 1. BLOCKED_BY dependencies (task t is blocked by depends_on_task_id)
+    blocked_by_deps = db.query(TaskDependency).filter(TaskDependency.task_id == t.id).all()
+    is_blocked = False
+    for dep in blocked_by_deps:
+        blocker = dep.depends_on_task
+        if blocker and not blocker.is_deleted:
+            if not blocker.is_completed:
+                is_blocked = True
+            dependencies_out.append(TaskDependencyOut(
+                id=dep.id,
+                task_id=dep.task_id,
+                depends_on_task_id=dep.depends_on_task_id,
+                depends_on_task_number=blocker.task_number,
+                depends_on_task_title=blocker.title,
+                depends_on_status_name=blocker.status_def.name if blocker.status_def else None,
+                depends_on_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                depends_on_due_date=blocker.due_date,
+                depends_on_is_completed=blocker.is_completed,
+                direction="BLOCKED_BY",
+                dependency_type=dep.dependency_type,
+                created_at=dep.created_at,
+            ))
+
+    # 2. BLOCKING dependencies (task t blocks task_id)
+    blocking_deps = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == t.id).all()
+    for dep in blocking_deps:
+        blocked_task = dep.task
+        if blocked_task and not blocked_task.is_deleted:
+            dependencies_out.append(TaskDependencyOut(
+                id=dep.id,
+                task_id=dep.task_id,
+                depends_on_task_id=dep.depends_on_task_id,
+                depends_on_task_number=blocked_task.task_number,
+                depends_on_task_title=blocked_task.title,
+                depends_on_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                depends_on_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                depends_on_due_date=blocked_task.due_date,
+                depends_on_is_completed=blocked_task.is_completed,
+                direction="BLOCKING",
+                dependency_type=dep.dependency_type,
+                created_at=dep.created_at,
+            ))
+
+    out.dependencies = dependencies_out
+    out.is_blocked = is_blocked
 
     out.relationships = [
         TaskRelationshipOut(
@@ -298,7 +336,10 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
         ) for rel in db.query(TaskRelationship).filter(or_(TaskRelationship.task_id == t.id, TaskRelationship.related_task_id == t.id)).all()
     ]
 
-    subtasks = db.query(Task).filter(Task.parent_task_id == t.id, Task.is_deleted.is_(False)).all()
+    subtasks = db.query(Task).filter(
+        Task.parent_task_id == t.id,
+        Task.is_deleted.is_(False)
+    ).order_by(Task.sort_order.asc(), Task.id.asc()).all()
     out.subtask_count = len(subtasks)
     out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
     out.nested_subtasks = [_format_task_out(st, db) for st in subtasks]
@@ -552,21 +593,65 @@ def update_task(
                     detail="Subtask depth exceeds maximum allowed limit of 3 levels"
                 )
 
-    # Status change logic
-    if "status_id" in update_dict and update_dict["status_id"] != task.status_id:
+    # Status & completion change logic
+    is_completion_requested = False
+    if "is_completed" in update_dict and update_dict["is_completed"] is True:
+        is_completion_requested = True
+    elif "status_id" in update_dict and update_dict["status_id"] != task.status_id:
+        new_status = db.get(TaskStatusDef, update_dict["status_id"])
+        if new_status and (new_status.category in [TaskStatusCategory.DONE, TaskStatusCategory.CLOSED] or new_status.is_terminal):
+            is_completion_requested = True
+
+    if is_completion_requested and not task.is_completed:
+        # Check if task is blocked by incomplete tasks
+        blocking_deps = db.query(TaskDependency).filter(TaskDependency.task_id == task.id).all()
+        incomplete_blockers = []
+        for dep in blocking_deps:
+            if dep.depends_on_task and not dep.depends_on_task.is_deleted and not dep.depends_on_task.is_completed:
+                incomplete_blockers.append(dep.depends_on_task.task_number)
+
+        if incomplete_blockers and not data.override_dependencies:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "TASK_BLOCKED",
+                    "message": f"Task is blocked by incomplete tasks: {', '.join(incomplete_blockers)}.",
+                    "blocking_tasks": incomplete_blockers
+                }
+            )
+
+        task.is_completed = True
+        task.completed_at = datetime.now(timezone.utc)
+        task.completed_by = current_user.id
+
+        # Notify downstream dependent tasks that they are unblocked
+        dependents = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == task.id).all()
+        for dep in dependents:
+            blocked_t = dep.task
+            if blocked_t and not blocked_t.is_deleted and blocked_t.assignee_id:
+                other_blockers = db.query(TaskDependency).filter(
+                    TaskDependency.task_id == blocked_t.id,
+                    TaskDependency.depends_on_task_id != task.id
+                ).all()
+                still_blocked = any(d.depends_on_task and not d.depends_on_task.is_completed for d in other_blockers)
+                if not still_blocked:
+                    db.add(Notification(
+                        user_id=blocked_t.assignee_id,
+                        message=f"Task {blocked_t.task_number}: {blocked_t.title} is now UNBLOCKED!"
+                    ))
+
+    elif "is_completed" in update_dict and update_dict["is_completed"] is False:
+        task.is_completed = False
+        task.completed_at = None
+        task.completed_by = None
+    elif "status_id" in update_dict and update_dict["status_id"] != task.status_id:
         new_status = db.get(TaskStatusDef, update_dict["status_id"])
         old_status_name = task.status_def.name if task.status_def else None
         new_status_name = new_status.name if new_status else None
-        
-        if new_status and (new_status.category in [TaskStatusCategory.DONE, TaskStatusCategory.CLOSED] or new_status.is_terminal):
-            task.is_completed = True
-            task.completed_at = datetime.now(timezone.utc)
-            task.completed_by = current_user.id
-        else:
+        if new_status and not (new_status.category in [TaskStatusCategory.DONE, TaskStatusCategory.CLOSED] or new_status.is_terminal):
             task.is_completed = False
             task.completed_at = None
             task.completed_by = None
-
         _log_activity(db, task.id, current_user.id, "STATUS_CHANGED", old_val=old_status_name, new_val=new_status_name)
 
     if "priority" in update_dict and update_dict["priority"] != task.priority:
@@ -1216,19 +1301,38 @@ def create_task_dependency(
     current_user: User = Depends(get_current_user),
 ):
     task = db.get(Task, task_id)
-    depends_on = db.get(Task, data.depends_on_task_id)
-    if not task or not depends_on:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task or dependent task not found")
+    target_task = db.get(Task, data.depends_on_task_id)
+    if not task or not target_task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task or target task not found")
 
-    _detect_circular_dependency(db, task_id, data.depends_on_task_id)
+    if data.direction == "BLOCKING":
+        # task_id BLOCKS target_task
+        blocked_id = target_task.id
+        blocking_id = task.id
+        target_display = target_task
+    else:
+        # task_id IS BLOCKED BY target_task
+        blocked_id = task.id
+        blocking_id = target_task.id
+        target_display = target_task
+
+    _detect_circular_dependency(db, blocked_id, blocking_id)
+
+    existing_dep = db.query(TaskDependency).filter(
+        TaskDependency.task_id == blocked_id,
+        TaskDependency.depends_on_task_id == blocking_id
+    ).first()
+
+    if existing_dep:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Dependency relationship already exists")
 
     dep = TaskDependency(
-        task_id=task.id,
-        depends_on_task_id=data.depends_on_task_id,
+        task_id=blocked_id,
+        depends_on_task_id=blocking_id,
         dependency_type=data.dependency_type
     )
     db.add(dep)
-    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=depends_on.task_number)
+    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=target_display.task_number)
     db.commit()
     db.refresh(dep)
 
@@ -1236,8 +1340,13 @@ def create_task_dependency(
         id=dep.id,
         task_id=dep.task_id,
         depends_on_task_id=dep.depends_on_task_id,
-        depends_on_task_number=depends_on.task_number,
-        depends_on_task_title=depends_on.title,
+        depends_on_task_number=target_display.task_number,
+        depends_on_task_title=target_display.title,
+        depends_on_status_name=target_display.status_def.name if target_display.status_def else None,
+        depends_on_priority=target_display.priority.value if hasattr(target_display.priority, 'value') else str(target_display.priority),
+        depends_on_due_date=target_display.due_date,
+        depends_on_is_completed=target_display.is_completed,
+        direction=data.direction or "BLOCKED_BY",
         dependency_type=dep.dependency_type,
         created_at=dep.created_at,
     )
@@ -1389,3 +1498,146 @@ def save_task_custom_field(
         field_label=field_def.label,
         value=val.value
     )
+
+
+# --- Subtask & Dependency Workflow Endpoints ---
+
+@router.post("/{task_id}/convert-to-task", response_model=TaskOut)
+def convert_subtask_to_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Convert a subtask to a top-level task (parent_task_id = None)"""
+    task = db.get(Task, task_id)
+    if not task or task.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    old_parent_id = task.parent_task_id
+    task.parent_task_id = None
+    task.updated_by = current_user.id
+    db.add(task)
+    _log_activity(db, task.id, current_user.id, "CONVERTED_TO_TOP_LEVEL_TASK")
+    db.commit()
+    db.refresh(task)
+
+    if old_parent_id:
+        _update_parent_progress(db, old_parent_id)
+
+    return _format_task_out(task, db)
+
+
+@router.post("/{task_id}/convert-to-subtask", response_model=TaskOut)
+def convert_task_to_subtask(
+    task_id: int,
+    data: TaskConvertRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Convert a task to a subtask under target_parent_id"""
+    task = db.get(Task, task_id)
+    if not task or task.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    if not data.target_parent_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_parent_id is required")
+
+    target_parent = db.get(Task, data.target_parent_id)
+    if not target_parent or target_parent.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target parent task not found")
+
+    # Anti-circular parent check
+    if task_id == data.target_parent_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A task cannot be its own parent")
+
+    curr_id = data.target_parent_id
+    visited = set()
+    depth = 1
+    while curr_id:
+        if curr_id == task_id or curr_id in visited:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot make task a subtask because it would create a circular parent hierarchy"
+            )
+        visited.add(curr_id)
+        parent = db.get(Task, curr_id)
+        if not parent:
+            break
+        depth += 1
+        if depth > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Exceeded maximum nesting depth of 5 levels"
+            )
+        curr_id = parent.parent_task_id
+
+    old_parent_id = task.parent_task_id
+    task.parent_task_id = data.target_parent_id
+    task.updated_by = current_user.id
+    db.add(task)
+    _log_activity(db, task.id, current_user.id, "CONVERTED_TO_SUBTASK", new_val=target_parent.task_number)
+    db.commit()
+    db.refresh(task)
+
+    if old_parent_id:
+        _update_parent_progress(db, old_parent_id)
+    _update_parent_progress(db, data.target_parent_id)
+
+    return _format_task_out(task, db)
+
+
+@router.post("/{task_id}/reorder-subtasks", status_code=status.HTTP_200_OK)
+def reorder_subtasks(
+    task_id: int,
+    data: TaskReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reorder subtasks within parent task_id"""
+    for idx, sib_id in enumerate(data.sibling_ids):
+        sub = db.get(Task, sib_id)
+        if sub and sub.parent_task_id == task_id:
+            sub.sort_order = idx
+            db.add(sub)
+    db.commit()
+    return {"message": "Subtasks reordered successfully"}
+
+
+@router.post("/{task_id}/reschedule-dependencies", response_model=TaskOut)
+def reschedule_dependencies(
+    task_id: int,
+    data: RescheduleDependenciesRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Shift start_date and due_date for downstream dependent tasks"""
+    task = db.get(Task, task_id)
+    if not task or task.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    if data.days_shift == 0:
+        return _format_task_out(task, db)
+
+    visited = set()
+
+    def _shift_downstream(tid: int, shift: int):
+        if tid in visited:
+            return
+        visited.add(tid)
+        deps = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == tid).all()
+        for d in deps:
+            blocked_t = d.task
+            if blocked_t and not blocked_t.is_deleted:
+                if blocked_t.start_date:
+                    blocked_t.start_date = blocked_t.start_date + timedelta(days=shift)
+                if blocked_t.due_date:
+                    blocked_t.due_date = blocked_t.due_date + timedelta(days=shift)
+                db.add(blocked_t)
+                _log_activity(db, blocked_t.id, current_user.id, "AUTO_RESCHEDULED", new_val=f"shifted {shift} days")
+                _shift_downstream(blocked_t.id, shift)
+
+    _shift_downstream(task.id, data.days_shift)
+    db.commit()
+    db.refresh(task)
+    return _format_task_out(task, db)
+
