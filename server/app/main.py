@@ -11,47 +11,68 @@ from app.core.logging import get_logger, setup_logging
 
 def _ensure_schema_migrations():
     try:
+        import app.models  # Ensures all SQLAlchemy models register on Base.metadata
         from sqlalchemy import inspect, text
         from app.db.base import Base
         from app.db.session import engine
 
-        # Ensure all tables (e.g. application_sequences) exist
+        # 1. Create missing tables
         Base.metadata.create_all(bind=engine)
 
+        # 2. Inspect database and auto-add missing columns to existing tables
         inspector = inspect(engine)
-        if "applications" in inspector.get_table_names():
-            app_cols = [c["name"] for c in inspector.get_columns("applications")]
-            with engine.begin() as conn:
-                if "stage_key" not in app_cols:
-                    try:
-                        conn.execute(text("ALTER TABLE applications ADD COLUMN stage_key VARCHAR(40) DEFAULT 'new'"))
-                    except Exception:
-                        pass
-                if "lead_source" not in app_cols:
-                    try:
-                        conn.execute(text("CREATE TYPE lead_source AS ENUM ('WEBSITE', 'REFERRAL', 'EVENT', 'SOCIAL_MEDIA', 'COLD_CALL', 'OTHER')"))
-                    except Exception:
-                        pass
-                    try:
-                        conn.execute(text("ALTER TABLE applications ADD COLUMN lead_source lead_source"))
-                    except Exception:
+        existing_tables = set(inspector.get_table_names())
+
+        with engine.begin() as conn:
+            for table_name, table_obj in Base.metadata.tables.items():
+                if table_name not in existing_tables:
+                    continue
+
+                db_cols = {c["name"] for c in inspector.get_columns(table_name)}
+                for col in table_obj.columns:
+                    if col.name not in db_cols:
+                        col_name = col.name
+                        # Determine column type DDL
                         try:
-                            conn.execute(text("ALTER TABLE applications ADD COLUMN lead_source VARCHAR(50)"))
+                            if hasattr(col.type, "name") and col.type.name:
+                                enum_name = col.type.name
+                                try:
+                                    enum_vals = "', '".join([str(getattr(e, 'value', e)) for e in col.type.enums])
+                                    conn.execute(text(f"CREATE TYPE {enum_name} AS ENUM ('{enum_vals}')"))
+                                except Exception:
+                                    pass
+                                col_type_sql = enum_name
+                            else:
+                                col_type_sql = str(col.type.compile(engine.dialect))
                         except Exception:
-                            pass
-                if "lead_score" not in app_cols:
-                    try:
-                        conn.execute(text("ALTER TABLE applications ADD COLUMN lead_score INTEGER DEFAULT 0 NOT NULL"))
-                    except Exception:
-                        pass
+                            col_type_sql = "VARCHAR(255)"
 
-        if "pipeline_stages" in inspector.get_table_names():
-            cols = [c["name"] for c in inspector.get_columns("pipeline_stages")]
-            if "color" not in cols:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE pipeline_stages ADD COLUMN color VARCHAR(30)"))
+                        # Build default SQL if present
+                        default_sql = ""
+                        if col.server_default is not None and hasattr(col.server_default, "arg"):
+                            default_sql = f" DEFAULT {col.server_default.arg}"
+                        elif col.default is not None and not callable(getattr(col.default, 'arg', None)):
+                            default_sql = f" DEFAULT '{col.default.arg}'"
 
-        if "task_statuses" in inspector.get_table_names():
+                        try:
+                            conn.execute(
+                                text(
+                                    f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" {col_type_sql}{default_sql}'
+                                )
+                            )
+                        except Exception:
+                            try:
+                                conn.execute(
+                                    text(
+                                        f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" VARCHAR(255)'
+                                    )
+                                )
+                            except Exception as col_err:
+                                import logging
+                                logging.error(f"Failed to auto-add column {table_name}.{col_name}: {col_err}")
+
+        # 3. Seed default task statuses if empty
+        if "task_statuses" in existing_tables:
             with engine.begin() as conn:
                 res = conn.execute(text("SELECT COUNT(*) FROM task_statuses")).scalar()
                 if res == 0:
