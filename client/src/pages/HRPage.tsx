@@ -16,8 +16,6 @@ import {
   IconButton,
   MenuItem,
   Paper,
-  Tab,
-  Tabs,
   TextField,
   Typography,
   Table,
@@ -384,42 +382,8 @@ export default function HRPage() {
         </Stack>
       </Box>
 
-      {/* Tabs Container */}
+      {/* Content Container */}
       <Card sx={{ bgcolor: '#ffffff', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, pt: 1 }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                color: '#64748b',
-                minHeight: 48,
-                px: 2,
-              },
-              '& .Mui-selected': { color: '#087A3D' },
-              '& .MuiTabs-indicator': { backgroundColor: '#087A3D', height: 3, borderRadius: '3px 3px 0 0' },
-            }}
-          >
-            {HR_NAV_ITEMS.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <Tab
-                  key={item.key}
-                  icon={<Icon size={18} />}
-                  iconPosition="start"
-                  label={item.label}
-                  id={`hr-tab-${index}`}
-                  aria-controls={`hr-tabpanel-${index}`}
-                />
-              );
-            })}
-          </Tabs>
-        </Box>
 
         {/* 1. Employee On/off boarding Tab */}
         <TabPanel value={tabValue} index={0}>
