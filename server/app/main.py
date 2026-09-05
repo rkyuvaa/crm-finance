@@ -23,73 +23,85 @@ def _ensure_schema_migrations():
         inspector = inspect(engine)
         existing_tables = set(inspector.get_table_names())
 
-        with engine.begin() as conn:
-            for table_name, table_obj in Base.metadata.tables.items():
-                if table_name not in existing_tables:
-                    continue
+        for table_name, table_obj in Base.metadata.tables.items():
+            if table_name not in existing_tables:
+                continue
 
-                db_cols = {c["name"] for c in inspector.get_columns(table_name)}
-                for col in table_obj.columns:
-                    if col.name not in db_cols:
-                        col_name = col.name
-                        # Determine column type DDL
+            db_cols = {c["name"] for c in inspector.get_columns(table_name)}
+            for col in table_obj.columns:
+                if col.name not in db_cols:
+                    col_name = col.name
+                    # Determine column type DDL
+                    col_type_sql = None
+                    if hasattr(col.type, "name") and col.type.name:
+                        enum_name = col.type.name
                         try:
-                            if hasattr(col.type, "name") and col.type.name:
-                                enum_name = col.type.name
-                                try:
-                                    enum_vals = "', '".join([str(getattr(e, 'value', e)) for e in col.type.enums])
-                                    conn.execute(text(f"CREATE TYPE {enum_name} AS ENUM ('{enum_vals}')"))
-                                except Exception:
-                                    pass
-                                col_type_sql = enum_name
-                            else:
-                                col_type_sql = str(col.type.compile(engine.dialect))
+                            with engine.begin() as conn:
+                                enum_vals = "', '".join([str(getattr(e, 'value', e)) for e in col.type.enums])
+                                conn.execute(text(f"CREATE TYPE {enum_name} AS ENUM ('{enum_vals}')"))
+                        except Exception:
+                            pass
+                        col_type_sql = enum_name
+
+                    if not col_type_sql:
+                        try:
+                            col_type_sql = str(col.type.compile(engine.dialect))
                         except Exception:
                             col_type_sql = "VARCHAR(255)"
 
-                        # Build default SQL if present
-                        default_sql = ""
-                        if col.server_default is not None and hasattr(col.server_default, "arg"):
-                            default_sql = f" DEFAULT {col.server_default.arg}"
-                        elif col.default is not None and not callable(getattr(col.default, 'arg', None)):
-                            default_sql = f" DEFAULT '{col.default.arg}'"
+                    # Build default SQL if present
+                    default_sql = ""
+                    if col.server_default is not None and hasattr(col.server_default, "arg"):
+                        default_sql = f" DEFAULT {col.server_default.arg}"
+                    elif col.default is not None and not callable(getattr(col.default, 'arg', None)):
+                        default_sql = f" DEFAULT '{col.default.arg}'"
 
-                        try:
+                    added = False
+                    try:
+                        with engine.begin() as conn:
                             conn.execute(
                                 text(
                                     f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" {col_type_sql}{default_sql}'
                                 )
                             )
-                        except Exception:
-                            try:
+                        added = True
+                    except Exception:
+                        pass
+
+                    if not added:
+                        try:
+                            with engine.begin() as conn:
                                 conn.execute(
                                     text(
                                         f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" VARCHAR(255)'
                                     )
                                 )
-                            except Exception as col_err:
-                                import logging
-                                logging.error(f"Failed to auto-add column {table_name}.{col_name}: {col_err}")
+                        except Exception as col_err:
+                            import logging
+                            logging.error(f"Failed to auto-add column {table_name}.{col_name}: {col_err}")
 
         # 3. Seed default task statuses if empty
         if "task_statuses" in existing_tables:
-            with engine.begin() as conn:
-                res = conn.execute(text("SELECT COUNT(*) FROM task_statuses")).scalar()
-                if res == 0:
-                    conn.execute(
-                        text(
-                            "INSERT INTO task_statuses (id, name, color, display_order, is_terminal, category, is_active) VALUES "
-                            "(1, 'To Do', '#64748B', 1, false, 'ACTIVE', true), "
-                            "(2, 'In Progress', '#2563EB', 2, false, 'ACTIVE', true), "
-                            "(3, 'In Review', '#D97706', 3, false, 'ACTIVE', true), "
-                            "(4, 'Done', '#16A34A', 4, true, 'ACTIVE', true), "
-                            "(5, 'Blocked', '#DC2626', 5, false, 'ACTIVE', true)"
+            try:
+                with engine.begin() as conn:
+                    res = conn.execute(text("SELECT COUNT(*) FROM task_statuses")).scalar()
+                    if res == 0:
+                        conn.execute(
+                            text(
+                                "INSERT INTO task_statuses (id, name, color, display_order, is_terminal, category, is_active) VALUES "
+                                "(1, 'To Do', '#64748B', 1, false, 'ACTIVE', true), "
+                                "(2, 'In Progress', '#2563EB', 2, false, 'ACTIVE', true), "
+                                "(3, 'In Review', '#D97706', 3, false, 'ACTIVE', true), "
+                                "(4, 'Done', '#16A34A', 4, true, 'ACTIVE', true), "
+                                "(5, 'Blocked', '#DC2626', 5, false, 'ACTIVE', true)"
+                            )
                         )
-                    )
-                    try:
-                        conn.execute(text("SELECT setval(pg_get_serial_sequence('task_statuses', 'id'), 5)"))
-                    except Exception:
-                        pass
+                        try:
+                            conn.execute(text("SELECT setval(pg_get_serial_sequence('task_statuses', 'id'), 5)"))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
     except Exception as err:
         import logging
         logging.error(f"Migration check error: {err}")
