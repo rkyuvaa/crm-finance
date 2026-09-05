@@ -66,7 +66,7 @@ export default function AppLayout() {
             }}
           >
             <Topbar onToggleSidebar={() => setCollapsed((c) => !c)} />
-            <main className="app-main" style={{ flex: 1, padding: '20px 24px 16px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+            <main className="app-main" style={{ flex: 1, padding: '16px 20px', minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
               <Outlet />
             </main>
           </div>

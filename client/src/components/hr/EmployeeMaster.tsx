@@ -516,7 +516,7 @@ export default function EmployeeMaster() {
   };
 
   return (
-    <Box sx={{ width: '100%', bgcolor: '#ffffff', borderRadius: 2 }}>
+    <Box sx={{ width: '100%' }}>
       {/* Header Bar */}
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>

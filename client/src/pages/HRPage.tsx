@@ -98,7 +98,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`hr-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: 1, px: 0 }}>{children}</Box>}
     </div>
   );
 }
@@ -326,7 +326,7 @@ export default function HRPage() {
   });
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
+    <Box sx={{ width: '100%' }}>
       {/* Top Action Buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
         <Stack direction="row" spacing={1.5}>
@@ -373,8 +373,8 @@ export default function HRPage() {
         </Stack>
       </Box>
 
-      {/* Content Container */}
-      <Card sx={{ bgcolor: '#ffffff', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
+      {/* Content Region */}
+      <Box sx={{ width: '100%' }}>
 
         {/* 1. Employee On/off boarding Tab */}
         <TabPanel value={tabValue} index={0}>
@@ -1026,7 +1026,7 @@ export default function HRPage() {
             </Grid>
           </Grid>
         </TabPanel>
-      </Card>
+      </Box>
 
       {/* Dialog: Log Attendance */}
       <Dialog open={attendanceDialog} onClose={() => setAttendanceDialog(false)} maxWidth="sm" fullWidth>
