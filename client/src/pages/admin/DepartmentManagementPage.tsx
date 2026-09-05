@@ -126,7 +126,7 @@ export default function DepartmentManagementPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
         {/* Department Hierarchy Tree Card */}
         <div style={{ background: '#FFFFFF', padding: 20, borderRadius: 14, border: '1px solid #E4EBE1' }}>
           <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: '#023020' }}>Organization Tree</h3>
