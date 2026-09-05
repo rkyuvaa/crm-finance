@@ -467,11 +467,18 @@ export default function TasksPage() {
         onClose={() => setImportDialogOpen(false)}
         title="Import Tasks"
         entityName="Tasks"
-        sampleHeaders={['Task Title', 'Project', 'Assignee', 'Priority', 'Due Date', 'Estimated Hours']}
-        onImport={(rows) => {
-          showToast(`Imported ${rows.length} tasks successfully`, 'success');
+        erpFields={[
+          { key: 'title', label: 'Task Title', required: true },
+          { key: 'project_id', label: 'Project' },
+          { key: 'assignee_id', label: 'Assignee' },
+          { key: 'priority', label: 'Priority' },
+          { key: 'due_date', label: 'Due Date' },
+          { key: 'estimated_hours', label: 'Estimated Hours' },
+        ]}
+        onImport={(mappedRows) => {
+          showToast(`Imported ${mappedRows.length} tasks successfully`, 'success');
           refetch();
-          return rows.length;
+          return mappedRows.length;
         }}
       />
     </Box>

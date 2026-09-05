@@ -1311,10 +1311,17 @@ export default function HRPage() {
         onClose={() => setImportDialog(false)}
         title={`Import HR Data (${HR_NAV_ITEMS[tabValue]?.label || 'HR'})`}
         entityName={HR_NAV_ITEMS[tabValue]?.label || 'HR Records'}
-        sampleHeaders={['Employee ID', 'Name', 'Date', 'Status', 'Notes', 'Amount']}
-        onImport={(rows) => {
-          showToast(`Imported ${rows.length} records successfully`, 'success');
-          return rows.length;
+        erpFields={[
+          { key: 'emp_id', label: 'Employee ID', required: true },
+          { key: 'name', label: 'Employee Name', required: true },
+          { key: 'date', label: 'Date' },
+          { key: 'status', label: 'Status' },
+          { key: 'notes', label: 'Notes / Remarks' },
+          { key: 'amount', label: 'Amount' },
+        ]}
+        onImport={(mappedRows) => {
+          showToast(`Imported ${mappedRows.length} records successfully`, 'success');
+          return mappedRows.length;
         }}
       />
     </Box>

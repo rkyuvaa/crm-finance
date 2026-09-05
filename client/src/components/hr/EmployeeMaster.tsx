@@ -956,25 +956,39 @@ export default function EmployeeMaster() {
         onClose={() => setImportDialogOpen(false)}
         title="Import Employees"
         entityName="Employees"
-        sampleHeaders={['Employee ID', 'Full Name', 'Email', 'Phone', 'Designation', 'Department Name', 'Branch Name', 'Manager Name', 'Shift Name', 'Date of Joining', 'UAN', 'ESI Number', 'Status']}
-        onImport={(rows) => {
-          const newEmps: EmployeeRecord[] = rows.map((r, i) => ({
+        erpFields={[
+          { key: 'emp_id', label: 'Employee ID', required: true },
+          { key: 'name', label: 'Full Name', required: true },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'designation', label: 'Designation' },
+          { key: 'department', label: 'Department Name' },
+          { key: 'branch', label: 'Branch Name' },
+          { key: 'reporting_manager', label: 'Manager Name' },
+          { key: 'shift', label: 'Shift Name' },
+          { key: 'joining_date', label: 'Date of Joining' },
+          { key: 'uan', label: 'UAN' },
+          { key: 'esi_number', label: 'ESI Number' },
+          { key: 'status', label: 'Status' },
+        ]}
+        onImport={(mappedRows) => {
+          const newEmps: EmployeeRecord[] = mappedRows.map((r, i) => ({
             id: String(Date.now() + i),
-            emp_id: r['Employee ID'] || r['emp_id'] || `EMP-${Math.floor(100 + Math.random() * 900)}`,
-            name: r['Full Name'] || r['Name'] || r['name'] || 'Imported Employee',
-            email: r['Email'] || r['email'] || '',
-            phone: r['Phone'] || r['phone'] || '',
-            designation: r['Designation'] || r['designation'] || 'Staff',
-            department: r['Department Name'] || r['Department'] || r['department'] || 'Accounts',
-            branch: r['Branch Name'] || r['Branch'] || r['branch'] || 'Coimbatore Office',
-            shift: r['Shift Name'] || r['Shift'] || r['shift'] || 'KIM Office',
-            status: (r['Status'] || r['status']) === 'Inactive' ? 'Inactive' : 'Active',
-            joining_date: r['Date of Joining'] || r['joining_date'] || new Date().toISOString().split('T')[0],
-            biometric_id: r['biometric_id'] || '',
-            gross_salary: r['gross_salary'] || '50000',
-            uan: r['UAN'] || r['uan'] || '',
-            esi_number: r['ESI Number'] || r['esi_number'] || '',
-            reporting_manager: r['Manager Name'] || r['reporting_manager'] || 'Nickendra M',
+            emp_id: r.emp_id || `EMP-${Math.floor(100 + Math.random() * 900)}`,
+            name: r.name || 'Imported Employee',
+            email: r.email || '',
+            phone: r.phone || '',
+            designation: r.designation || 'Staff',
+            department: r.department || 'Accounts',
+            branch: r.branch || 'Coimbatore Office',
+            shift: r.shift || 'KIM Office',
+            status: r.status === 'Inactive' ? 'Inactive' : 'Active',
+            joining_date: r.joining_date || new Date().toISOString().split('T')[0],
+            biometric_id: r.biometric_id || '',
+            gross_salary: r.gross_salary || '50000',
+            uan: r.uan || '',
+            esi_number: r.esi_number || '',
+            reporting_manager: r.reporting_manager || 'Nickendra M',
             cc_persons: '',
             linked_user: '',
             salary_category: 'Staff',

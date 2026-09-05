@@ -1068,11 +1068,18 @@ export default function LeadsPage() {
         onClose={() => setImportDialogOpen(false)}
         title={isOpportunityRoute ? 'Import Opportunities' : 'Import Leads'}
         entityName={isOpportunityRoute ? 'Opportunities' : 'Leads'}
-        sampleHeaders={['Customer Name', 'Mobile Number', 'Vehicle Model', 'Loan Amount', 'City', 'Status']}
-        onImport={(rows) => {
-          showToast(`Imported ${rows.length} ${isOpportunityRoute ? 'opportunities' : 'leads'} successfully`, 'success');
+        erpFields={[
+          { key: 'customer_name', label: 'Customer Name', required: true },
+          { key: 'phone', label: 'Mobile Number', required: true },
+          { key: 'vehicle_model', label: 'Vehicle Model' },
+          { key: 'loan_amount', label: 'Loan Amount' },
+          { key: 'city', label: 'City' },
+          { key: 'status', label: 'Status' },
+        ]}
+        onImport={(mappedRows) => {
+          showToast(`Imported ${mappedRows.length} ${isOpportunityRoute ? 'opportunities' : 'leads'} successfully`, 'success');
           refetch();
-          return rows.length;
+          return mappedRows.length;
         }}
       />
     </div>

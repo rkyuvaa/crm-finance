@@ -441,11 +441,18 @@ export default function ProjectsPage() {
         onClose={() => setImportDialogOpen(false)}
         title="Import Projects"
         entityName="Projects"
-        sampleHeaders={['Project Name', 'Category', 'Budget', 'Start Date', 'End Date', 'Status']}
-        onImport={(rows) => {
-          showToast(`Imported ${rows.length} projects successfully`, 'success');
+        erpFields={[
+          { key: 'name', label: 'Project Name', required: true },
+          { key: 'category', label: 'Category' },
+          { key: 'budget', label: 'Budget' },
+          { key: 'start_date', label: 'Start Date' },
+          { key: 'end_date', label: 'End Date' },
+          { key: 'status', label: 'Status' },
+        ]}
+        onImport={(mappedRows) => {
+          showToast(`Imported ${mappedRows.length} projects successfully`, 'success');
           refetch();
-          return rows.length;
+          return mappedRows.length;
         }}
       />
     </Box>
