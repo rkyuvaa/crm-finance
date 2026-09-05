@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, Building2, Edit2 } from 'lucide-react';
+import { Plus, Building2, Edit2, Trash2 } from 'lucide-react';
 import {
   useGetDepartmentsQuery,
   useGetDepartmentTreeQuery,
   useCreateDepartmentMutation,
   useUpdateDepartmentMutation,
+  useDeleteDepartmentMutation,
 } from '../../api/rbacApi';
 import type { Department, DepartmentTreeNode, PermissionStatus } from '../../types/rbac';
 
@@ -14,6 +15,7 @@ export default function DepartmentManagementPage() {
 
   const [createDept] = useCreateDepartmentMutation();
   const [updateDept] = useUpdateDepartmentMutation();
+  const [deleteDept] = useDeleteDepartmentMutation();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
@@ -56,8 +58,18 @@ export default function DepartmentManagementPage() {
     }
   };
 
+  const handleDeleteDepartment = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete department "${name}"?`)) return;
+    try {
+      await deleteDept(id).unwrap();
+      refetch();
+    } catch (err: any) {
+      alert(err?.data?.detail || 'Failed to delete department');
+    }
+  };
+
   const renderTreeNode = (node: DepartmentTreeNode, depth: number = 0) => (
-    <div key={node.id} style={{ marginLeft: depth * 24, marginTop: 8 }}>
+    <div key={node.id} style={{ marginLeft: depth * 20, marginTop: 8 }}>
       <div
         style={{
           display: 'flex',
@@ -82,15 +94,15 @@ export default function DepartmentManagementPage() {
   );
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ width: '100%', padding: '12px 0' }}>
       {/* Banner */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#023020', margin: 0, letterSpacing: -0.3 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#023020', margin: 0, letterSpacing: -0.3 }}>
             Hierarchical Department Management
           </h1>
           <p style={{ fontSize: 13, color: '#7A8B80', margin: '4px 0 0' }}>
-            Configure unlimited department hierarchy tree, manager assignments, and employee counts.
+            Configure department hierarchy tree, manager assignments, and employee counts.
           </p>
         </div>
         <button
@@ -114,7 +126,7 @@ export default function DepartmentManagementPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: 20 }}>
         {/* Department Hierarchy Tree Card */}
         <div style={{ background: '#FFFFFF', padding: 20, borderRadius: 14, border: '1px solid #E4EBE1' }}>
           <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: '#023020' }}>Organization Tree</h3>
@@ -157,15 +169,25 @@ export default function DepartmentManagementPage() {
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => {
-                        setEditingDept(d);
-                        setForm({ name: d.name, code: d.code, description: d.description || '', parent_id: d.parent_id || undefined, status: d.status });
-                      }}
-                      style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#0369A1' }}
-                    >
-                      <Edit2 size={15} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                      <button
+                        onClick={() => {
+                          setEditingDept(d);
+                          setForm({ name: d.name, code: d.code, description: d.description || '', parent_id: d.parent_id || undefined, status: d.status });
+                        }}
+                        title="Edit Department"
+                        style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#0369A1' }}
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDepartment(d.id, d.name)}
+                        title="Delete Department"
+                        style={{ padding: 6, borderRadius: 6, border: '1px solid #FCA5A5', background: '#FEF2F2', cursor: 'pointer', color: '#DC2626' }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

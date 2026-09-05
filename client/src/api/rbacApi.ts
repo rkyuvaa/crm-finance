@@ -191,6 +191,14 @@ export const rbacApi = createApi({
       invalidatesTags: ['Departments'],
     }),
 
+    deleteDepartment: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/departments/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Departments'],
+    }),
+
     // Permissions & Audit Logs
     getPermissionsRegistry: builder.query<Module[], void>({
       query: () => '/permissions',
@@ -240,6 +248,7 @@ export const {
   useGetDepartmentTreeQuery,
   useCreateDepartmentMutation,
   useUpdateDepartmentMutation,
+  useDeleteDepartmentMutation,
   useGetPermissionsRegistryQuery,
   useCreateCustomActionMutation,
   useGetAuditLogsQuery,

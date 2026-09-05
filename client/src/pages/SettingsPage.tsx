@@ -48,7 +48,7 @@ export default function SettingsPage() {
   const isAdmin = user?.role === 'ADMIN';
 
   return (
-    <Box sx={{ maxWidth: 1200 }}>
+    <Box sx={{ width: '100%' }}>
       <Box sx={{ mb: 2.5 }}>
         <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.4, color: '#023020' }}>
           System Settings & Preferences

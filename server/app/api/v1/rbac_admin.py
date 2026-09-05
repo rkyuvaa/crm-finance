@@ -1,5 +1,5 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -789,6 +789,32 @@ def update_department(
     )
 
     return next((d for d in list_departments(db, current_user) if d.id == dept.id), None)
+
+
+@router.delete("/departments/{dept_id}", status_code=204)
+def delete_department(
+    dept_id: int,
+    req: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a department."""
+    if not can_user(db, current_user, "delete", "departments") and not can_user(db, current_user, "edit", "departments"):
+        raise HTTPException(status_code=403, detail="Permission denied to delete departments")
+
+    dept = db.get(Department, dept_id)
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    # Check if department has child departments
+    child_count = db.query(Department).filter(Department.parent_id == dept_id).count()
+    if child_count > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete department with child sub-departments. Please reassign or delete sub-departments first.")
+
+    db.delete(dept)
+    db.commit()
+
+    return Response(status_code=204)
 
 
 # ---------------------------------------------------------------------------
