@@ -726,7 +726,7 @@ export default function EmployeeMaster() {
                 size="small"
                 value={formData.emp_id}
                 onChange={(e) => setFormData({ ...formData, emp_id: e.target.value })}
-                placeholder="EMP-28"
+                placeholder="EMP-001"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -769,7 +769,7 @@ export default function EmployeeMaster() {
               />
             </Grid>
 
-            {/* Row 3: Designation & Date of Joining */}
+            {/* Row 3: Designation & Department Name */}
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
                 Designation
@@ -784,75 +784,7 @@ export default function EmployeeMaster() {
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Date of Joining
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                value={formData.joining_date}
-                onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-
-            {/* Row 4: Biometric ID & Gross Salary */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Biometric ID (eSSL)
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={formData.biometric_id}
-                onChange={(e) => setFormData({ ...formData, biometric_id: e.target.value })}
-                placeholder="Biometric ID"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Gross Salary (₹)
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="number"
-                value={formData.gross_salary}
-                onChange={(e) => setFormData({ ...formData, gross_salary: e.target.value })}
-                placeholder="Gross Salary"
-              />
-            </Grid>
-
-            {/* Row 5: UAN & ESI Number */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                UAN (Universal Account Number)
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={formData.uan}
-                onChange={(e) => setFormData({ ...formData, uan: e.target.value })}
-                placeholder="UAN Number"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                ESI Number
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={formData.esi_number}
-                onChange={(e) => setFormData({ ...formData, esi_number: e.target.value })}
-                placeholder="ESI Number"
-              />
-            </Grid>
-
-            {/* Row 6: Department & Branch */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Department
+                Department Name
               </Typography>
               <Select
                 fullWidth
@@ -871,9 +803,11 @@ export default function EmployeeMaster() {
                 <MenuItem value="IT">IT</MenuItem>
               </Select>
             </Grid>
+
+            {/* Row 4: Branch Name & Manager Name */}
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Branch
+                Branch Name
               </Typography>
               <Select
                 fullWidth
@@ -887,11 +821,28 @@ export default function EmployeeMaster() {
                 <MenuItem value="Chennai Branch">Chennai Branch</MenuItem>
               </Select>
             </Grid>
-
-            {/* Row 7: Shift & Status */}
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Shift
+                Manager Name
+              </Typography>
+              <Select
+                fullWidth
+                size="small"
+                value={formData.reporting_manager}
+                onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}
+              >
+                <MenuItem value="— Select Manager —">— Select Manager —</MenuItem>
+                <MenuItem value="Nickendra M">Nickendra M</MenuItem>
+                <MenuItem value="Edwin Ezhilarasu">Edwin Ezhilarasu</MenuItem>
+                <MenuItem value="Akshay Jith P P">Akshay Jith P P</MenuItem>
+                <MenuItem value="Harish A">Harish A</MenuItem>
+              </Select>
+            </Grid>
+
+            {/* Row 5: Shift Name & Date of Joining */}
+            <Grid item xs={12} sm={6}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
+                Shift Name
               </Typography>
               <Select
                 fullWidth
@@ -907,6 +858,47 @@ export default function EmployeeMaster() {
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
+                Date of Joining
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                value={formData.joining_date}
+                onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            {/* Row 6: UAN & ESI Number */}
+            <Grid item xs={12} sm={6}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
+                UAN
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={formData.uan}
+                onChange={(e) => setFormData({ ...formData, uan: e.target.value })}
+                placeholder="Universal Account Number"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
+                ESI Number
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={formData.esi_number}
+                onChange={(e) => setFormData({ ...formData, esi_number: e.target.value })}
+                placeholder="ESI Number"
+              />
+            </Grid>
+
+            {/* Row 7: Status */}
+            <Grid item xs={12} sm={6}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
                 Status
               </Typography>
               <Select
@@ -917,71 +909,6 @@ export default function EmployeeMaster() {
               >
                 <MenuItem value="Active">Active</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
-              </Select>
-            </Grid>
-
-            {/* Row 8: Reporting Manager & CC Persons */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Reporting Manager (L1)
-              </Typography>
-              <Select
-                fullWidth
-                size="small"
-                value={formData.reporting_manager}
-                onChange={(e) => setFormData({ ...formData, reporting_manager: e.target.value })}
-              >
-                <MenuItem value="— Select L1 Manager —">— Select L1 Manager —</MenuItem>
-                <MenuItem value="Nickendra M (CEO)">Nickendra M (CEO)</MenuItem>
-                <MenuItem value="Edwin Ezhilarasu (COO)">Edwin Ezhilarasu (COO)</MenuItem>
-                <MenuItem value="Akshay Jith P P (NPD Manager)">Akshay Jith P P (NPD Manager)</MenuItem>
-                <MenuItem value="Harish A (Sales Manager)">Harish A (Sales Manager)</MenuItem>
-              </Select>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                CC Persons (Informational Notification on Leave Request)
-              </Typography>
-              <Select
-                fullWidth
-                size="small"
-                value={formData.cc_persons || '+ Add CC Person...'}
-                onChange={(e) => setFormData({ ...formData, cc_persons: e.target.value })}
-              >
-                <MenuItem value="+ Add CC Person...">+ Add CC Person...</MenuItem>
-                <MenuItem value="nickendra.m@kim.com">Nickendra M (nickendra.m@kim.com)</MenuItem>
-                <MenuItem value="hr@kim.com">HR Dept (hr@kim.com)</MenuItem>
-              </Select>
-            </Grid>
-
-            {/* Row 9: Linked User Account & Salary Category */}
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Linked User Account (for App Login & Tasks)
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={formData.linked_user}
-                onChange={(e) => setFormData({ ...formData, linked_user: e.target.value })}
-                placeholder="Linked User Account"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
-                Salary Category
-              </Typography>
-              <Select
-                fullWidth
-                size="small"
-                value={formData.salary_category}
-                onChange={(e) => setFormData({ ...formData, salary_category: e.target.value })}
-              >
-                <MenuItem value="— Select Category —">— Select Category —</MenuItem>
-                <MenuItem value="Executive">Executive</MenuItem>
-                <MenuItem value="Management">Management</MenuItem>
-                <MenuItem value="Staff">Staff</MenuItem>
-                <MenuItem value="Worker">Worker</MenuItem>
               </Select>
             </Grid>
           </Grid>
