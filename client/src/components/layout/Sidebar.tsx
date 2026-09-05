@@ -73,6 +73,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         children: [
           { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
           { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
+          { key: 'crm_configuration', label: 'Configuration', path: '/configuration', icon: Settings2, badge: null },
         ],
       },
     ],
@@ -120,7 +121,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { key: 'reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
       { key: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell, badge: 'notifications' },
       { key: 'settings', label: 'Settings', path: '/settings', icon: Settings, badge: null },
-      { key: 'configuration', label: 'Configuration', path: '/configuration', icon: Settings2, badge: null },
     ],
   },
 ];
