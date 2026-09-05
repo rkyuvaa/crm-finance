@@ -218,7 +218,25 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       await updateTask({ id: task.id, body: { cost_center_id: ccId || undefined } as any }).unwrap();
       showToast('Cost Center updated', 'success');
     } catch (err: any) {
-      showToast(err?.data?.detail?.message || 'Invalid Cost Center', 'error');
+      showToast(err?.data?.detail || 'Failed to update cost center', 'error');
+    }
+  };
+
+  const handleAssigneeChange = async (selectedUserIds: number[]) => {
+    try {
+      await updateTask({ id: task.id, body: { assignee_ids: selectedUserIds } as any }).unwrap();
+      showToast('Assignees updated', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail || 'Failed to update assignees', 'error');
+    }
+  };
+
+  const handleFollowerChange = async (selectedUserIds: number[]) => {
+    try {
+      await updateTask({ id: task.id, body: { follower_ids: selectedUserIds } as any }).unwrap();
+      showToast('Followers updated', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail || 'Failed to update followers', 'error');
     }
   };
 
@@ -838,34 +856,98 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
             {/* Assignees */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
                 Assignees
               </Typography>
-              {task.assignees && task.assignees.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {task.assignees.map((a) => (
-                    <Chip key={a.id} avatar={<Avatar>{(a.full_name || 'U').charAt(0)}</Avatar>} label={a.full_name || 'User'} size="small" />
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="textSecondary">Unassigned</Typography>
-              )}
+              <Select
+                multiple
+                size="small"
+                fullWidth
+                displayEmpty
+                value={(task.assignees || []).map((a) => a.user_id || a.id)}
+                onChange={(e) => {
+                  const vals = typeof e.target.value === 'string' ? e.target.value.split(',').map(Number) : (e.target.value as number[]);
+                  handleAssigneeChange(vals);
+                }}
+                renderValue={(selected) => {
+                  if (!selected || selected.length === 0) {
+                    return <Typography variant="body2" color="textSecondary">Select Assignees...</Typography>;
+                  }
+                  return (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((uid) => {
+                        const u = (users as any[]).find((usr) => usr.id === uid) || (task.assignees || []).find((a) => (a.user_id || a.id) === uid);
+                        const name = u ? (u.full_name || u.username || 'User') : `User ${uid}`;
+                        return (
+                          <Chip
+                            key={uid}
+                            avatar={<Avatar sx={{ width: 18, height: 18, fontSize: 10 }}>{(name || 'U').charAt(0)}</Avatar>}
+                            label={name}
+                            size="small"
+                            sx={{ height: 22, fontSize: 11 }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  );
+                }}
+                sx={{ bgcolor: 'background.paper', borderRadius: '8px', minHeight: 36 }}
+              >
+                {(users as any[]).map((u) => (
+                  <MenuItem key={u.id} value={u.id} sx={{ fontSize: 13 }}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: 11, mr: 1 }}>{(u.full_name || u.username || 'U').charAt(0)}</Avatar>
+                    {u.full_name || u.username}
+                  </MenuItem>
+                ))}
+              </Select>
             </Box>
 
-            {/* Followers */}
+            {/* Followers / Watchers */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
                 Followers / Watchers
               </Typography>
-              {task.followers && task.followers.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {task.followers.map((f) => (
-                    <Chip key={f.id} label={f.full_name || 'Follower'} size="small" variant="outlined" />
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="textSecondary">No followers</Typography>
-              )}
+              <Select
+                multiple
+                size="small"
+                fullWidth
+                displayEmpty
+                value={(task.followers || []).map((f) => f.user_id || f.id)}
+                onChange={(e) => {
+                  const vals = typeof e.target.value === 'string' ? e.target.value.split(',').map(Number) : (e.target.value as number[]);
+                  handleFollowerChange(vals);
+                }}
+                renderValue={(selected) => {
+                  if (!selected || selected.length === 0) {
+                    return <Typography variant="body2" color="textSecondary">Select Followers...</Typography>;
+                  }
+                  return (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((uid) => {
+                        const u = (users as any[]).find((usr) => usr.id === uid) || (task.followers || []).find((f) => (f.user_id || f.id) === uid);
+                        const name = u ? (u.full_name || u.username || 'Follower') : `User ${uid}`;
+                        return (
+                          <Chip
+                            key={uid}
+                            label={name}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 22, fontSize: 11 }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  );
+                }}
+                sx={{ bgcolor: 'background.paper', borderRadius: '8px', minHeight: 36 }}
+              >
+                {(users as any[]).map((u) => (
+                  <MenuItem key={u.id} value={u.id} sx={{ fontSize: 13 }}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: 11, mr: 1 }}>{(u.full_name || u.username || 'U').charAt(0)}</Avatar>
+                    {u.full_name || u.username}
+                  </MenuItem>
+                ))}
+              </Select>
             </Box>
 
             {/* Custom Fields */}
