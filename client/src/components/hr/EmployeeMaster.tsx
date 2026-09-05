@@ -402,14 +402,15 @@ export default function EmployeeMaster() {
   const filteredEmployees = useMemo(() => {
     return employees
       .filter((emp) => {
-        const query = searchTerm.toLowerCase();
+        if (!emp) return false;
+        const query = (searchTerm || '').toLowerCase();
         return (
-          emp.emp_id.toLowerCase().includes(query) ||
-          emp.name.toLowerCase().includes(query) ||
-          emp.email.toLowerCase().includes(query) ||
-          emp.designation.toLowerCase().includes(query) ||
-          emp.department.toLowerCase().includes(query) ||
-          emp.branch.toLowerCase().includes(query)
+          (emp.emp_id || '').toLowerCase().includes(query) ||
+          (emp.name || '').toLowerCase().includes(query) ||
+          (emp.email || '').toLowerCase().includes(query) ||
+          (emp.designation || '').toLowerCase().includes(query) ||
+          (emp.department || '').toLowerCase().includes(query) ||
+          (emp.branch || '').toLowerCase().includes(query)
         );
       })
       .sort((a, b) => {

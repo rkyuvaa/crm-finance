@@ -122,7 +122,11 @@ export default function HRPage() {
   const navigate = useNavigate();
 
   // Determine active tab based on current URL path
-  const currentTab = HR_NAV_ITEMS.findIndex((item) => location.pathname.startsWith(item.path));
+  const currentTab = HR_NAV_ITEMS.findIndex(
+    (item) =>
+      location.pathname.startsWith(item.path) ||
+      (item.key === 'master' && (location.pathname.startsWith('/hr/management') || location.pathname.startsWith('/hr/employees')))
+  );
   const tabValue = currentTab >= 0 ? currentTab : 0;
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -313,10 +317,13 @@ export default function HRPage() {
 
   // Filtering users for Employee Management
   const filteredUsers = usersList.filter((user) => {
+    const nameStr = user?.name || '';
+    const emailStr = user?.email || '';
+    const query = (searchTerm || '').toLowerCase();
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = departmentFilter === 'All' || user.department?.name === departmentFilter;
+      nameStr.toLowerCase().includes(query) ||
+      emailStr.toLowerCase().includes(query);
+    const matchesDept = departmentFilter === 'All' || user?.department?.name === departmentFilter;
     return matchesSearch && matchesDept;
   });
 
