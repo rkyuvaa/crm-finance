@@ -82,6 +82,7 @@ import {
   type PayrollRecord,
 } from '@/api/hrApi';
 import { useGetUsersQuery } from '@/api/rbacApi';
+import EmployeeMaster from '@/components/hr/EmployeeMaster';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -106,7 +107,7 @@ function TabPanel(props: TabPanelProps) {
 
 const HR_NAV_ITEMS = [
   { key: 'onboarding', label: 'Employee On/off boarding', path: '/hr/onboarding', icon: UserPlus },
-  { key: 'management', label: 'Employee Management', path: '/hr/management', icon: Users },
+  { key: 'master', label: 'Employee Master', path: '/hr/master', icon: Users },
   { key: 'attendance', label: 'Attendance', path: '/hr/attendance', icon: Clock },
   { key: 'leave', label: 'Leave Management', path: '/hr/leave', icon: Calendar },
   { key: 'payroll', label: 'Payroll', path: '/hr/payroll', icon: DollarSign },
@@ -548,80 +549,9 @@ export default function HRPage() {
           </TableContainer>
         </TabPanel>
 
-        {/* 2. Employee Management Tab */}
+        {/* 2. Employee Master Tab */}
         <TabPanel value={tabValue} index={1}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <TextField
-              size="small"
-              placeholder="Search employee by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{ startAdornment: <Search size={18} style={{ marginRight: 8, color: '#64748b' }} /> }}
-              sx={{ width: 300 }}
-            />
-            <FormControl size="small" sx={{ width: 200 }}>
-              <InputLabel>Department</InputLabel>
-              <Select
-                value={departmentFilter}
-                label="Department"
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-              >
-                <MenuItem value="All">All Departments</MenuItem>
-                <MenuItem value="Engineering">Engineering</MenuItem>
-                <MenuItem value="Sales">Sales</MenuItem>
-                <MenuItem value="HR">HR</MenuItem>
-                <MenuItem value="Finance">Finance</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-
-          {usersLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-              <Table>
-                <TableHead sx={{ bgcolor: '#f8fafc' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Employee Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Department</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredUsers.map((u) => (
-                    <TableRow key={u.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: '#087A3D', fontSize: 13 }}>
-                            {u.name.charAt(0)}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{u.name}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>{u.department?.name || 'General'}</TableCell>
-                      <TableCell>
-                        <Chip label={u.role || 'Employee'} size="small" variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={u.is_active ? 'Active' : 'Inactive'} size="small" color={u.is_active ? 'success' : 'default'} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Button size="small" variant="text" sx={{ color: '#087A3D', textTransform: 'none' }}>
-                          View Profile
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+          <EmployeeMaster />
         </TabPanel>
 
         {/* 3. Attendance Tab */}

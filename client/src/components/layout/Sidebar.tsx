@@ -103,7 +103,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         badge: null,
         children: [
           { key: 'hr_onboarding', label: 'Employee On/off boarding', path: '/hr/onboarding', icon: UserPlus, badge: null },
-          { key: 'hr_management', label: 'Employee Management', path: '/hr/management', icon: Users, badge: null },
+          { key: 'hr_master', label: 'Employee Master', path: '/hr/master', icon: Users, badge: null },
           { key: 'hr_attendance', label: 'Attendance', path: '/hr/attendance', icon: Clock, badge: null },
           { key: 'hr_leave', label: 'Leave Management', path: '/hr/leave', icon: Calendar, badge: null },
           { key: 'hr_payroll', label: 'Payroll', path: '/hr/payroll', icon: DollarSign, badge: null },
