@@ -105,17 +105,27 @@ def _build_pipeline(db: Session, counts: dict[ApplicationStatus, int]) -> list[P
     stages = []
     if configured:
         for s in configured:
-            st = s.status or STATUS_KEY_MAP.get(s.key.lower()) or STATUS_KEY_MAP.get(s.label.lower())
+            s_key = s.key or "stage"
+            s_label = s.label or s_key
+            st = s.status or STATUS_KEY_MAP.get(s_key.lower()) or STATUS_KEY_MAP.get(s_label.lower())
             count = counts.get(st, 0) if st else 0
-            tip = DEFAULT_TIPS.get(s.key, "{n} applications in this stage").format(n=count)
+            tip_tmpl = DEFAULT_TIPS.get(s_key, "{n} applications in this stage")
+            try:
+                tip = tip_tmpl.format(n=count)
+            except Exception:
+                tip = f"{count} applications in this stage"
             color = getattr(s, "color", None)
             stages.append(
-                PipelineStage(key=s.key, status=st, count=count, tip=tip, label=s.label, color=color)
+                PipelineStage(key=s_key, status=st, count=count, tip=tip, label=s_label, color=color)
             )
     else:
         for status, key, label, _tip in PIPELINE:
             count = counts.get(status, 0)
-            tip = DEFAULT_TIPS.get(key, "{n} applications in this stage").format(n=count)
+            tip_tmpl = DEFAULT_TIPS.get(key, "{n} applications in this stage")
+            try:
+                tip = tip_tmpl.format(n=count)
+            except Exception:
+                tip = f"{count} applications in this stage"
             stages.append(
                 PipelineStage(key=key, status=status, count=count, tip=tip, label=label, color=None)
             )
@@ -423,10 +433,10 @@ def get_dashboard(db: Session, user: User) -> dict:
             RecentApplication(
                 id=a.id,
                 app_no=a.app_no,
-                customer_name=a.customer_name,
-                customer_phone=a.customer_phone,
-                vehicle=a.vehicle,
-                amount=float(a.amount),
+                customer_name=a.customer_name or "",
+                customer_phone=a.customer_phone or "",
+                vehicle=a.vehicle or "",
+                amount=float(a.amount) if a.amount is not None else 0.0,
                 status=a.status,
                 aging_label=format_aging(duration_between(a.updated_at)),
                 aging_tone=aging_tone(duration_between(a.updated_at)),
@@ -436,12 +446,12 @@ def get_dashboard(db: Session, user: User) -> dict:
         "recent_total": recent_total,
         "tab_counts": tab_counts,
         "needs_attention": [
-            AttentionItem(**{k: v for k, v in i.items() if k != "sort"})
+            AttentionItem(**{k: (v if v is not None else "") for k, v in i.items() if k != "sort"})
             for i in attention[:3]
         ],
         "needs_attention_total": len(attention),
         "waiting_on": [
-            WaitingItem(**{k: v for k, v in i.items() if k != "sort"})
+            WaitingItem(**{k: (v if v is not None else "") for k, v in i.items() if k != "sort"})
             for i in waiting[:3]
         ],
         "waiting_on_total": len(waiting),

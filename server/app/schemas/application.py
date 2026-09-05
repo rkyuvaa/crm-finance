@@ -40,25 +40,25 @@ class ApplicationUpdate(BaseModel):
 class ApplicationOut(BaseModel):
     id: int
     app_no: str
-    customer_name: str
-    customer_phone: str
-    vehicle: str
-    amount: float
+    customer_name: str | None = ""
+    customer_phone: str | None = ""
+    vehicle: str | None = ""
+    amount: float = 0.0
     status: ApplicationStatus
     stage_key: str | None = "new"
     lead_source: LeadSource | None = None
     lead_score: int = 0
-    finance_company_id: int | None
-    finance_company_name: str | None
-    vehicle_model_id: int | None
-    vehicle_price: float | None
-    down_payment: float | None
-    assigned_to: int | None
-    assigned_to_name: str | None
+    finance_company_id: int | None = None
+    finance_company_name: str | None = None
+    vehicle_model_id: int | None = None
+    vehicle_price: float | None = None
+    down_payment: float | None = None
+    assigned_to: int | None = None
+    assigned_to_name: str | None = None
     created_at: datetime
     updated_at: datetime
-    aging_label: str
-    aging_tone: str
+    aging_label: str = "0h"
+    aging_tone: str = "neutral"
 
     model_config = {"from_attributes": True}
 

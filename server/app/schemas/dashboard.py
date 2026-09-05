@@ -31,32 +31,32 @@ class PipelineStage(BaseModel):
 class RecentApplication(BaseModel):
     id: int
     app_no: str
-    customer_name: str
-    customer_phone: str
-    vehicle: str
-    amount: float
+    customer_name: str | None = ""
+    customer_phone: str | None = ""
+    vehicle: str | None = ""
+    amount: float = 0.0
     status: ApplicationStatus
-    aging_label: str
-    aging_tone: str
+    aging_label: str = "0h"
+    aging_tone: str = "neutral"
 
 
 class AttentionItem(BaseModel):
     id: int
     app_no: str
-    customer_name: str
+    customer_name: str | None = ""
     issue: str
-    wait_label: str
-    urgent: bool
-    action: str
+    wait_label: str = "0h"
+    urgent: bool = False
+    action: str = ""
 
 
 class WaitingItem(BaseModel):
     id: int
     app_no: str
-    customer_name: str
-    who: str
-    wait_label: str
-    hot: bool
+    customer_name: str | None = ""
+    who: str = ""
+    wait_label: str = "0h"
+    hot: bool = False
 
 
 class FinanceCompanyOut(BaseModel):
