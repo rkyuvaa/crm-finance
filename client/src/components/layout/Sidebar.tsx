@@ -20,6 +20,11 @@ import {
   Sparkles,
   Users,
   UserPlus,
+  UserCheck,
+  Clock,
+  Calendar,
+  DollarSign,
+  User,
 } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
@@ -91,7 +96,22 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'People',
     items: [
-      { key: 'hr', label: 'HR & Employee', path: '/hr', icon: Users, badge: null },
+      {
+        key: 'hr_employee',
+        label: 'HR & Employee',
+        icon: Users,
+        badge: null,
+        children: [
+          { key: 'hr_onboarding', label: 'Employee On/off boarding', path: '/hr/onboarding', icon: UserPlus, badge: null },
+          { key: 'hr_management', label: 'Employee Management', path: '/hr/management', icon: Users, badge: null },
+          { key: 'hr_attendance', label: 'Attendance', path: '/hr/attendance', icon: Clock, badge: null },
+          { key: 'hr_leave', label: 'Leave Management', path: '/hr/leave', icon: Calendar, badge: null },
+          { key: 'hr_payroll', label: 'Payroll', path: '/hr/payroll', icon: DollarSign, badge: null },
+          { key: 'hr_self_service', label: 'Self Service', path: '/hr/self-service', icon: UserCheck, badge: null },
+          { key: 'hr_reports', label: 'Reports', path: '/hr/reports', icon: BarChart3, badge: null },
+          { key: 'hr_configuration', label: 'HR Configuration', path: '/hr/configuration', icon: Settings2, badge: null },
+        ],
+      },
     ],
   },
   {

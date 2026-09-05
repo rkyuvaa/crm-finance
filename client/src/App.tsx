@@ -62,6 +62,7 @@ export default function App() {
                 <Route path="/opportunities" element={<LeadsPage />} />
                 <Route path="/opportunities/:id" element={<LeadDetailPage />} />
                 <Route path="/hr" element={<HRPage />} />
+                <Route path="/hr/*" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/configuration" element={<ProjectConfigurationPage />} />
