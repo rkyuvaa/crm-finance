@@ -11,14 +11,40 @@ from app.core.logging import get_logger, setup_logging
 
 def _ensure_schema_migrations():
     try:
+        from sqlalchemy import inspect, text
         from app.db.base import Base
         from app.db.session import engine
 
         # Ensure all tables (e.g. application_sequences) exist
         Base.metadata.create_all(bind=engine)
 
-        from sqlalchemy import inspect, text
         inspector = inspect(engine)
+        if "applications" in inspector.get_table_names():
+            app_cols = [c["name"] for c in inspector.get_columns("applications")]
+            with engine.begin() as conn:
+                if "stage_key" not in app_cols:
+                    try:
+                        conn.execute(text("ALTER TABLE applications ADD COLUMN stage_key VARCHAR(40) DEFAULT 'new'"))
+                    except Exception:
+                        pass
+                if "lead_source" not in app_cols:
+                    try:
+                        conn.execute(text("CREATE TYPE lead_source AS ENUM ('WEBSITE', 'REFERRAL', 'EVENT', 'SOCIAL_MEDIA', 'COLD_CALL', 'OTHER')"))
+                    except Exception:
+                        pass
+                    try:
+                        conn.execute(text("ALTER TABLE applications ADD COLUMN lead_source lead_source"))
+                    except Exception:
+                        try:
+                            conn.execute(text("ALTER TABLE applications ADD COLUMN lead_source VARCHAR(50)"))
+                        except Exception:
+                            pass
+                if "lead_score" not in app_cols:
+                    try:
+                        conn.execute(text("ALTER TABLE applications ADD COLUMN lead_score INTEGER DEFAULT 0 NOT NULL"))
+                    except Exception:
+                        pass
+
         if "pipeline_stages" in inspector.get_table_names():
             cols = [c["name"] for c in inspector.get_columns("pipeline_stages")]
             if "color" not in cols:
@@ -31,12 +57,12 @@ def _ensure_schema_migrations():
                 if res == 0:
                     conn.execute(
                         text(
-                            "INSERT INTO task_statuses (id, name, color, display_order, is_terminal) VALUES "
-                            "(1, 'To Do', '#64748B', 1, false), "
-                            "(2, 'In Progress', '#2563EB', 2, false), "
-                            "(3, 'In Review', '#D97706', 3, false), "
-                            "(4, 'Done', '#16A34A', 4, true), "
-                            "(5, 'Blocked', '#DC2626', 5, false)"
+                            "INSERT INTO task_statuses (id, name, color, display_order, is_terminal, category, is_active) VALUES "
+                            "(1, 'To Do', '#64748B', 1, false, 'ACTIVE', true), "
+                            "(2, 'In Progress', '#2563EB', 2, false, 'ACTIVE', true), "
+                            "(3, 'In Review', '#D97706', 3, false, 'ACTIVE', true), "
+                            "(4, 'Done', '#16A34A', 4, true, 'ACTIVE', true), "
+                            "(5, 'Blocked', '#DC2626', 5, false, 'ACTIVE', true)"
                         )
                     )
                     try:
