@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -385,7 +385,28 @@ const DEFAULT_FORM: Omit<EmployeeRecord, 'id'> = {
 
 export default function EmployeeMaster() {
   const { showToast } = useToast();
-  const [employees, setEmployees] = useState<EmployeeRecord[]>(INITIAL_EMPLOYEES);
+
+  // Load employees from localStorage if available so deletions and additions persist on page refresh
+  const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_employee_master_data');
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // Fallback if parsing fails
+    }
+    return INITIAL_EMPLOYEES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_employee_master_data', JSON.stringify(employees));
+    } catch {
+      // Ignore write errors
+    }
+  }, [employees]);
+
   const [searchTerm, setSearchTerm] = useState('');
   
   // Dialog States
