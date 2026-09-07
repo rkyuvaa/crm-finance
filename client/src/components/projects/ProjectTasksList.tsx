@@ -52,6 +52,7 @@ import {
   useGetStatusDefinitionsQuery,
   TaskItem,
 } from '@/api/projectsApi';
+import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 
@@ -62,6 +63,7 @@ interface ProjectTasksListProps {
 export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const toast = useToast();
   const numericProjectId = Number(projectId);
+  const { data: users = [] } = useUsersQuery();
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [searchQ, setSearchQ] = useState('');
@@ -106,6 +108,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [description, setDescription] = useState('');
   const [statusId, setStatusId] = useState<number>(1);
   const [priority, setPriority] = useState<'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'>('NORMAL');
+  const [assigneeId, setAssigneeId] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
 
@@ -172,6 +175,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setDescription('');
     setStatusId(defaultStatusId);
     setPriority('NORMAL');
+    setAssigneeId('');
     setDueDate('');
     setEstimatedHours(0);
     setCreateOpen(true);
@@ -230,9 +234,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         project_id: numericProjectId,
         status_id: statusId,
         priority,
+        assignee_id: assigneeId ? Number(assigneeId) : undefined,
+        assignee_ids: assigneeId ? [Number(assigneeId)] : [],
         due_date: dueDate || undefined,
         estimated_hours: Number(estimatedHours) || 0,
-      }).unwrap();
+      } as any).unwrap();
       toast.showSuccess(`Task "${title}" created successfully!`);
       setCreateOpen(false);
     } catch (err: any) {
@@ -984,6 +990,20 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               <MenuItem value="HIGH">High 🚩</MenuItem>
               <MenuItem value="NORMAL">Normal 🚩</MenuItem>
               <MenuItem value="LOW">Low 🚩</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" fullWidth required>
+            <Select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value === '' ? '' : Number(e.target.value))}
+              displayEmpty
+            >
+              <MenuItem value="">Select Assignee (Required) *</MenuItem>
+              {users.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.full_name} ({u.role_name || u.email || 'User'})
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           <TextField
