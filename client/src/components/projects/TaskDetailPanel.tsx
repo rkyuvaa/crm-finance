@@ -231,10 +231,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   };
 
   const handleTitleBlur = async () => {
-    if (!title.trim() || title === task.title) return;
+    if (!title.trim() || title === currentTask?.title) return;
     setSaveStatus('Saving...');
     try {
-      await updateTask({ id: task.id, body: { title: title.trim() } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { title: title.trim() } }).unwrap();
       setSaveStatus('Saved');
       showToast('Title updated', 'success');
     } catch {
@@ -244,10 +244,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   };
 
   const handleDescriptionBlur = async () => {
-    if (description === task.description) return;
+    if (description === currentTask?.description) return;
     setSaveStatus('Saving...');
     try {
-      await updateTask({ id: task.id, body: { description: description.trim() } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { description: description.trim() } }).unwrap();
       setSaveStatus('Saved');
       showToast('Description saved', 'success');
     } catch {

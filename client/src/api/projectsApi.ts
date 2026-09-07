@@ -288,11 +288,18 @@ export const projectsApi = createApi({
         url: '/tasks',
         params: params || undefined,
       }),
-      providesTags: ['Tasks'],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Tasks' as const, id })),
+              { type: 'Tasks', id: 'LIST' },
+              'Tasks',
+            ]
+          : [{ type: 'Tasks', id: 'LIST' }, 'Tasks'],
     }),
     getTask: builder.query<TaskItem, number>({
       query: (id) => `/tasks/${id}`,
-      providesTags: (_res, _err, id) => [{ type: 'Tasks', id }],
+      providesTags: (_res, _err, id) => [{ type: 'Tasks', id }, 'Tasks'],
     }),
     createTask: builder.mutation<TaskItem, Partial<TaskItem>>({
       query: (body) => ({
@@ -325,21 +332,21 @@ export const projectsApi = createApi({
         method: 'POST',
         body: { title: title || body?.title || '' },
       }),
-      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks', 'Projects'],
     }),
     toggleSubtask: builder.mutation<TaskSubtaskItem, number>({
       query: (subtaskId) => ({
         url: `/tasks/subtasks/${subtaskId}/toggle`,
         method: 'PUT',
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: ['Tasks', 'Projects'],
     }),
     deleteSubtask: builder.mutation<void, number>({
       query: (subtaskId) => ({
         url: `/tasks/subtasks/${subtaskId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Tasks'],
+      invalidatesTags: ['Tasks', 'Projects'],
     }),
 
     // Time Logs
@@ -402,7 +409,7 @@ export const projectsApi = createApi({
         method: 'POST',
         body: { field_id, value },
       }),
-      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'TaskCustomFields', id: taskId }, 'TaskCustomFields'],
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'TaskCustomFields', id: taskId }, 'TaskCustomFields', { type: 'Tasks', id: taskId }, 'Tasks'],
     }),
 
     // Status Definitions
