@@ -26,6 +26,8 @@ import {
   Tooltip,
   Stack,
   Divider,
+  Checkbox,
+  Menu,
 } from '@mui/material';
 import {
   Search,
@@ -39,6 +41,10 @@ import {
   ArrowUpDown,
   FileSpreadsheet,
   CheckCircle2,
+  Download,
+  Building2,
+  UserCheck,
+  CheckSquare,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
@@ -409,6 +415,10 @@ export default function EmployeeMaster() {
 
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Multi-Selection State
+  const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+
   // Dialog States
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -451,6 +461,112 @@ export default function EmployeeMaster() {
       setSortField(field);
       setSortOrder('asc');
     }
+  };
+
+  // Selection Handlers
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedEmpIds(filteredEmployees.map((emp) => emp.id));
+    } else {
+      setSelectedEmpIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedEmpIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk Actions
+  const handleBulkChangeStatus = (newStatus: 'Active' | 'Inactive') => {
+    if (selectedEmpIds.length === 0) return;
+    setEmployees((prev) =>
+      prev.map((emp) => (selectedEmpIds.includes(emp.id) ? { ...emp, status: newStatus } : emp))
+    );
+    showToast(`Updated status to ${newStatus} for ${selectedEmpIds.length} employee(s)`, 'success');
+  };
+
+  const handleBulkChangeDepartment = (dept: string) => {
+    if (selectedEmpIds.length === 0 || !dept) return;
+    setEmployees((prev) =>
+      prev.map((emp) => (selectedEmpIds.includes(emp.id) ? { ...emp, department: dept } : emp))
+    );
+    showToast(`Updated department to ${dept} for ${selectedEmpIds.length} employee(s)`, 'success');
+  };
+
+  const handleBulkChangeBranch = (branch: string) => {
+    if (selectedEmpIds.length === 0 || !branch) return;
+    setEmployees((prev) =>
+      prev.map((emp) => (selectedEmpIds.includes(emp.id) ? { ...emp, branch } : emp))
+    );
+    showToast(`Updated branch to ${branch} for ${selectedEmpIds.length} employee(s)`, 'success');
+  };
+
+  const handleBulkChangeShift = (shift: string) => {
+    if (selectedEmpIds.length === 0 || !shift) return;
+    setEmployees((prev) =>
+      prev.map((emp) => (selectedEmpIds.includes(emp.id) ? { ...emp, shift } : emp))
+    );
+    showToast(`Updated shift to ${shift} for ${selectedEmpIds.length} employee(s)`, 'success');
+  };
+
+  const handleExportSelected = () => {
+    const selectedEmps = employees.filter((emp) => selectedEmpIds.includes(emp.id));
+    if (selectedEmps.length === 0) return;
+
+    const headers = [
+      'Employee ID',
+      'Name',
+      'Email',
+      'Phone',
+      'Designation',
+      'Department',
+      'Branch',
+      'Shift',
+      'Status',
+      'Joining Date',
+      'UAN',
+      'ESI Number',
+      'Reporting Manager',
+    ];
+
+    const rows = selectedEmps.map((emp) => [
+      emp.emp_id,
+      emp.name,
+      emp.email,
+      emp.phone,
+      emp.designation,
+      emp.department,
+      emp.branch,
+      emp.shift,
+      emp.status,
+      emp.joining_date,
+      emp.uan,
+      emp.esi_number,
+      emp.reporting_manager,
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.map((val) => `"${val || ''}"`).join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `employees_bulk_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast(`Exported ${selectedEmps.length} selected employees to CSV`, 'success');
+  };
+
+  const handleConfirmBulkDelete = () => {
+    setEmployees((prev) => prev.filter((emp) => !selectedEmpIds.includes(emp.id)));
+    showToast(`Deleted ${selectedEmpIds.length} employee records`, 'success');
+    setSelectedEmpIds([]);
+    setBulkDeleteConfirmOpen(false);
   };
 
   // Open Modal for Create
@@ -601,11 +717,180 @@ export default function EmployeeMaster() {
         />
       </Box>
 
+      {/* Bulk Action Toolbar */}
+      {selectedEmpIds.length > 0 && (
+        <Paper
+          elevation={4}
+          sx={{
+            mx: 2,
+            mb: 2,
+            p: 1.5,
+            bgcolor: '#152518',
+            color: '#FFFFFF',
+            borderRadius: 2.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            border: '1px solid #087A3D',
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Chip
+              label={`${selectedEmpIds.length} Selected`}
+              size="small"
+              sx={{ bgcolor: '#087A3D', color: '#FFF', fontWeight: 700, fontSize: 12 }}
+            />
+            <Button
+              size="small"
+              onClick={() => setSelectedEmpIds([])}
+              sx={{ textTransform: 'none', color: '#A0B2A6', fontSize: 12, '&:hover': { color: '#FFF' } }}
+            >
+              Clear Selection
+            </Button>
+          </Stack>
+
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            {/* Set Status Dropdown */}
+            <Select
+              size="small"
+              displayEmpty
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleBulkChangeStatus(e.target.value as any);
+              }}
+              renderValue={() => 'Set Status'}
+              sx={{
+                bgcolor: '#233827',
+                color: '#FFF',
+                fontSize: 12.5,
+                fontWeight: 600,
+                borderRadius: 1.5,
+                minWidth: 120,
+                '& .MuiSelect-icon': { color: '#4ADE80' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+              }}
+            >
+              <MenuItem value="" disabled>Select Status</MenuItem>
+              <MenuItem value="Active">Set Active</MenuItem>
+              <MenuItem value="Inactive">Set Inactive</MenuItem>
+            </Select>
+
+            {/* Set Department Dropdown */}
+            <Select
+              size="small"
+              displayEmpty
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleBulkChangeDepartment(e.target.value);
+              }}
+              renderValue={() => 'Set Department'}
+              sx={{
+                bgcolor: '#233827',
+                color: '#FFF',
+                fontSize: 12.5,
+                fontWeight: 600,
+                borderRadius: 1.5,
+                minWidth: 140,
+                '& .MuiSelect-icon': { color: '#4ADE80' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+              }}
+            >
+              <MenuItem value="" disabled>Select Department</MenuItem>
+              <MenuItem value="Management">Management</MenuItem>
+              <MenuItem value="NPD">NPD</MenuItem>
+              <MenuItem value="Accounts">Accounts</MenuItem>
+              <MenuItem value="Service">Service</MenuItem>
+              <MenuItem value="Stores">Stores</MenuItem>
+              <MenuItem value="SCM">SCM</MenuItem>
+              <MenuItem value="Sales">Sales</MenuItem>
+              <MenuItem value="IT">IT</MenuItem>
+            </Select>
+
+            {/* Set Branch Dropdown */}
+            <Select
+              size="small"
+              displayEmpty
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleBulkChangeBranch(e.target.value);
+              }}
+              renderValue={() => 'Set Branch'}
+              sx={{
+                bgcolor: '#233827',
+                color: '#FFF',
+                fontSize: 12.5,
+                fontWeight: 600,
+                borderRadius: 1.5,
+                minWidth: 130,
+                '& .MuiSelect-icon': { color: '#4ADE80' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+              }}
+            >
+              <MenuItem value="" disabled>Select Branch</MenuItem>
+              <MenuItem value="Coimbatore Office">Coimbatore Office</MenuItem>
+              <MenuItem value="Bangalore Office">Bangalore Office</MenuItem>
+              <MenuItem value="Chennai Branch">Chennai Branch</MenuItem>
+            </Select>
+
+            {/* Export Selected Button */}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<Download size={15} />}
+              onClick={handleExportSelected}
+              sx={{
+                textTransform: 'none',
+                color: '#4ADE80',
+                borderColor: '#233827',
+                fontWeight: 600,
+                fontSize: 12.5,
+                bgcolor: '#233827',
+                '&:hover': { bgcolor: '#2C442E', borderColor: '#087A3D' },
+              }}
+            >
+              Export Selected
+            </Button>
+
+            {/* Delete Selected Button */}
+            <Button
+              size="small"
+              variant="contained"
+              color="error"
+              startIcon={<Trash2 size={15} />}
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: 12.5,
+                borderRadius: 1.5,
+              }}
+            >
+              Delete Selected ({selectedEmpIds.length})
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
       {/* Main Employee Table */}
       <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
         <Table sx={{ minWidth: 900 }}>
           <TableHead sx={{ bgcolor: '#f8fafc' }}>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={
+                    selectedEmpIds.length > 0 && selectedEmpIds.length < filteredEmployees.length
+                  }
+                  checked={
+                    filteredEmployees.length > 0 && selectedEmpIds.length === filteredEmployees.length
+                  }
+                  onChange={handleSelectAll}
+                  size="small"
+                  sx={{ color: '#64748b', '&.Mui-checked': { color: '#087A3D' }, '&.MuiCheckbox-indeterminate': { color: '#087A3D' } }}
+                />
+              </TableCell>
               <TableCell onClick={() => handleSort('emp_id')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   EMP ID {sortField === 'emp_id' && (sortOrder === 'asc' ? '▲' : '▼')}
@@ -649,13 +934,21 @@ export default function EmployeeMaster() {
           <TableBody>
             {filteredEmployees.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#64748b' }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4, color: '#64748b' }}>
                   No employee records found matching "{searchTerm}"
                 </TableCell>
               </TableRow>
             ) : (
               filteredEmployees.map((emp) => (
-                <TableRow key={emp.id} hover sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                <TableRow key={emp.id} hover selected={selectedEmpIds.includes(emp.id)} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedEmpIds.includes(emp.id)}
+                      onChange={() => handleSelectOne(emp.id)}
+                      size="small"
+                      sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#087A3D' } }}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#087A3D', fontSize: 13 }}>
                     {emp.emp_id}
                   </TableCell>
@@ -998,7 +1291,7 @@ export default function EmployeeMaster() {
         }}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Single Item Delete Confirmation Modal */}
       <Dialog open={Boolean(deleteConfirmId)} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Delete Employee Record?</DialogTitle>
         <DialogContent>
@@ -1010,6 +1303,22 @@ export default function EmployeeMaster() {
           <Button onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
           <Button onClick={handleDeleteConfirm} variant="contained" color="error">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog open={bulkDeleteConfirmOpen} onClose={() => setBulkDeleteConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Delete Selected Employees?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#64748b' }}>
+            Are you sure you want to delete {selectedEmpIds.length} employee records? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setBulkDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmBulkDelete} variant="contained" color="error">
+            Delete {selectedEmpIds.length} Records
           </Button>
         </DialogActions>
       </Dialog>
