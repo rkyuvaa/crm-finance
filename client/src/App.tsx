@@ -90,6 +90,7 @@ export default function App() {
                 <Route path="/renewal/dashboard" element={<RenewalTrackerPage />} />
                 <Route path="/renewal/tracker" element={<RenewalTrackerPage />} />
                 <Route path="/renewal/reports" element={<RenewalTrackerPage />} />
+                <Route path="/renewal/configuration" element={<RenewalTrackerPage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />
