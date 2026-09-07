@@ -103,13 +103,31 @@ export default function ProjectsPage() {
     }
   };
 
+  const totalBudget = projects.reduce((acc, p) => acc + (p.budget || 0), 0);
+  const totalCompleted = projects.filter((p) => p.status_id === 4 || p.progress === 100 || p.status_name === 'Completed').length;
+
+  const getStatusInfo = (p: ProjectItem) => {
+    const st = p.status_name || (p.status_id === 4 || p.progress === 100 ? 'Completed' : p.status_id === 2 ? 'In Progress' : p.status_id === 3 ? 'On Hold' : 'Planning');
+    switch (st) {
+      case 'In Progress':
+        return { label: 'In Progress', bg: '#E0F2FE', color: '#0369A1' };
+      case 'On Hold':
+        return { label: 'On Hold', bg: '#FEF3C7', color: '#D97706' };
+      case 'Completed':
+        return { label: 'Completed', bg: '#DCFCE7', color: '#15803D' };
+      default:
+        return { label: 'Planning', bg: '#F1F5F9', color: '#475569' };
+    }
+  };
+
   const filteredProjects = projects.filter((p) => {
-    // Basic filter until dynamic statuses are fetched
+    const stName = getStatusInfo(p).label;
+    if (tabValue === 1) return stName === 'In Progress';
+    if (tabValue === 2) return stName === 'Planning';
+    if (tabValue === 3) return stName === 'On Hold';
+    if (tabValue === 4) return stName === 'Completed';
     return true;
   });
-
-  const totalBudget = projects.reduce((acc, p) => acc + (p.budget || 0), 0);
-  const totalCompleted = projects.filter((p) => p.status_id === 4).length; // Assuming 4 is completed for now
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
@@ -282,16 +300,21 @@ export default function ProjectsPage() {
                           sx={{ backgroundColor: 'action.hover', color: 'text.primary', fontWeight: 600, fontSize: '0.75rem' }}
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Chip
-                            label={project.status_id ? `Status: ${project.status_id}` : 'Planning'}
-                            size="small"
-                            sx={{
-                              backgroundColor: 'action.selected',
-                              color: 'primary.main',
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                            }}
-                          />
+                          {(() => {
+                            const stInfo = getStatusInfo(project);
+                            return (
+                              <Chip
+                                label={stInfo.label}
+                                size="small"
+                                sx={{
+                                  backgroundColor: stInfo.bg,
+                                  color: stInfo.color,
+                                  fontWeight: 700,
+                                  fontSize: '0.72rem',
+                                }}
+                              />
+                            );
+                          })()}
                           <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} sx={{ color: '#EF4444' }}>
                             <Trash2 size={16} />
                           </IconButton>

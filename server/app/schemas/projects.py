@@ -527,6 +527,7 @@ class ProjectOut(ProjectBase):
     owner_name: Optional[str] = None
     lead_app_no: Optional[str] = None
     lead_customer_name: Optional[str] = None
+    status_name: Optional[str] = None
     tasks_count: dict = {"total": 0, "done": 0}
     milestones: List[ProjectMilestoneOut] = []
     created_at: datetime

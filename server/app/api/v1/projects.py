@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.db.session import get_db
 from app.models.projects import (
@@ -29,6 +29,53 @@ from app.core.deps import get_current_user
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
+def _format_project_out(p: Project, db: Session) -> ProjectOut:
+    total_tasks = db.query(Task).filter(
+        Task.project_id == p.id,
+        Task.is_deleted.is_(False)
+    ).count()
+
+    done_tasks = db.query(Task).outerjoin(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
+        Task.project_id == p.id,
+        Task.is_deleted.is_(False),
+        or_(
+            Task.is_completed.is_(True),
+            TaskStatusDef.is_terminal.is_(True),
+            func.lower(TaskStatusDef.name).in_(["done", "completed"])
+        )
+    ).count()
+
+    calc_progress = round((done_tasks / total_tasks) * 100) if total_tasks > 0 else (p.progress or 0)
+
+    if p.progress != calc_progress:
+        p.progress = calc_progress
+        db.add(p)
+        db.commit()
+        db.refresh(p)
+
+    status_name = p.status_def.name if p.status_def else None
+    if not status_name:
+        if p.status_id == 1:
+            status_name = "Planning"
+        elif p.status_id == 2:
+            status_name = "In Progress"
+        elif p.status_id == 3:
+            status_name = "On Hold"
+        elif p.status_id == 4 or calc_progress == 100:
+            status_name = "Completed"
+        else:
+            status_name = "Planning"
+
+    p_out = ProjectOut.model_validate(p)
+    p_out.owner_name = p.owner.full_name if p.owner else None
+    p_out.lead_app_no = p.lead.app_no if p.lead else None
+    p_out.lead_customer_name = p.lead.customer_name if p.lead else None
+    p_out.tasks_count = {"total": total_tasks, "done": done_tasks}
+    p_out.progress = calc_progress
+    p_out.status_name = status_name
+    return p_out
+
+
 @router.get("", response_model=List[ProjectOut])
 def list_projects(
     status: Optional[str] = None,
@@ -48,22 +95,7 @@ def list_projects(
         query = query.filter(Project.name.ilike(like) | Project.code.ilike(like))
 
     projects = query.order_by(Project.created_at.desc()).all()
-    results = []
-    for p in projects:
-        total_tasks = db.query(Task).filter(Task.project_id == p.id).count()
-        done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
-            Task.project_id == p.id,
-            TaskStatusDef.is_terminal == True
-        ).count()
-
-        p_out = ProjectOut.model_validate(p)
-        p_out.owner_name = p.owner.full_name if p.owner else None
-        p_out.lead_app_no = p.lead.app_no if p.lead else None
-        p_out.lead_customer_name = p.lead.customer_name if p.lead else None
-        p_out.tasks_count = {"total": total_tasks, "done": done_tasks}
-        results.append(p_out)
-
-    return results
+    return [_format_project_out(p, db) for p in projects]
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
@@ -80,12 +112,7 @@ def create_project(
     db.commit()
     db.refresh(project)
 
-    p_out = ProjectOut.model_validate(project)
-    p_out.owner_name = project.owner.full_name if project.owner else None
-    p_out.lead_app_no = project.lead.app_no if project.lead else None
-    p_out.lead_customer_name = project.lead.customer_name if project.lead else None
-    p_out.tasks_count = {"total": 0, "done": 0}
-    return p_out
+    return _format_project_out(project, db)
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -99,17 +126,7 @@ def get_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    total_tasks = db.query(Task).filter(Task.project_id == project.id).count()
-    done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
-        Task.project_id == project.id, TaskStatusDef.is_terminal == True
-    ).count()
-
-    p_out = ProjectOut.model_validate(project)
-    p_out.owner_name = project.owner.full_name if project.owner else None
-    p_out.lead_app_no = project.lead.app_no if project.lead else None
-    p_out.lead_customer_name = project.lead.customer_name if project.lead else None
-    p_out.tasks_count = {"total": total_tasks, "done": done_tasks}
-    return p_out
+    return _format_project_out(project, db)
 
 
 @router.put("/{project_id}", response_model=ProjectOut)
@@ -131,17 +148,7 @@ def update_project(
     db.commit()
     db.refresh(project)
 
-    total_tasks = db.query(Task).filter(Task.project_id == project.id).count()
-    done_tasks = db.query(Task).join(TaskStatusDef, Task.status_id == TaskStatusDef.id).filter(
-        Task.project_id == project.id, TaskStatusDef.is_terminal == True
-    ).count()
-
-    p_out = ProjectOut.model_validate(project)
-    p_out.owner_name = project.owner.full_name if project.owner else None
-    p_out.lead_app_no = project.lead.app_no if project.lead else None
-    p_out.lead_customer_name = project.lead.customer_name if project.lead else None
-    p_out.tasks_count = {"total": total_tasks, "done": done_tasks}
-    return p_out
+    return _format_project_out(project, db)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

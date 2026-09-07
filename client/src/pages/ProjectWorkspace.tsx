@@ -133,7 +133,7 @@ export default function ProjectWorkspace() {
   const projectCode = project.code || `PRJ-${project.id}`;
   const totalTasks = project.tasks_count?.total || 0;
   const doneTasks = project.tasks_count?.done || 0;
-  const progressPercent = project.progress ?? (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
+  const progressPercent = project.progress > 0 ? project.progress : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
 
   return (
     <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>

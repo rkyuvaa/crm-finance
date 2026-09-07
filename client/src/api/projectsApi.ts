@@ -14,6 +14,7 @@ export interface ProjectItem {
   category: string;
   type_id?: number;
   status_id?: number;
+  status_name?: string;
   progress: number;
   budget: float;
   estimated_cost: float;
