@@ -1353,8 +1353,10 @@ def create_task_dependency(
 
 
 @router.delete("/dependencies/{dependency_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{task_id}/dependencies/{dependency_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task_dependency(
     dependency_id: int,
+    task_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1362,6 +1364,7 @@ def delete_task_dependency(
     if not dep:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dependency not found")
 
+    _log_activity(db, dep.task_id, current_user.id, "DEPENDENCY_REMOVED")
     db.delete(dep)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -111,6 +111,11 @@ def test_dependencies_bidirectional_and_anti_circular(seeded_client: TestClient,
     assert comp_override.status_code == 200
     assert comp_override.json()["is_completed"] is True
 
+    # Delete dependency via /tasks/{task_id}/dependencies/{dep_id}
+    dep_id = dep_resp.json()["id"]
+    del_resp = seeded_client.delete(f"/api/v1/tasks/{tA['id']}/dependencies/{dep_id}", headers=headers)
+    assert del_resp.status_code == 204
+
 
 def test_dependency_rescheduling(seeded_client: TestClient, db: Session):
     token = login(seeded_client, "admin@kim.com", DEFAULT_PASSWORD)
