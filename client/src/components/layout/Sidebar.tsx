@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Bell,
@@ -12,6 +12,7 @@ import {
   ListTodo,
   Menu,
   PanelLeftClose,
+  Search,
   Settings,
   Settings2,
   Sparkles,
@@ -22,6 +23,7 @@ import {
   Calendar,
   DollarSign,
   Lock,
+  X,
 } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
@@ -55,12 +57,6 @@ interface NavItem {
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
-    label: 'Main',
-    items: [
-      { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
-    ],
-  },
-  {
     label: 'CRM',
     items: [
       {
@@ -79,7 +75,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'Projects',
+    label: 'Projects & Operations',
     items: [
       {
         key: 'project_task',
@@ -92,6 +88,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
           { key: 'project_configuration', label: 'Configuration', path: '/projects/configuration', icon: Settings2, badge: null },
         ],
       },
+      { key: 'plm', label: 'PLM', path: '/plm', icon: Cpu, badge: null },
     ],
   },
   {
@@ -165,10 +162,59 @@ export default function Sidebar({
   const { can } = usePermission();
   const { showError } = useToast();
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Exactly one open section allowed at a time (string key or null)
   const [openSection, setOpenSection] = useState<string | null>(() =>
     getParentForPath(location.pathname),
   );
+
+  // Filtered menu items based on search query
+  const filteredNavGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return NAV_GROUPS;
+
+    return NAV_GROUPS.map((group) => {
+      const matchingItems = group.items
+        .map((item) => {
+          const parentMatch = item.label.toLowerCase().includes(query);
+          if (item.children) {
+            const matchingChildren = item.children.filter((child) =>
+              child.label.toLowerCase().includes(query),
+            );
+            if (parentMatch || matchingChildren.length > 0) {
+              return {
+                ...item,
+                children: parentMatch ? item.children : matchingChildren,
+              };
+            }
+            return null;
+          } else {
+            return parentMatch ? item : null;
+          }
+        })
+        .filter(Boolean) as NavItem[];
+
+      return {
+        ...group,
+        items: matchingItems,
+      };
+    }).filter((group) => group.items.length > 0);
+  }, [searchQuery]);
+
+  // Auto-expand sections that have matching children when searching
+  useEffect(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      filteredNavGroups.forEach((group) => {
+        group.items.forEach((item) => {
+          if (item.children && item.children.length > 0) {
+            setOpenSection(item.key);
+          }
+        });
+      });
+    }
+  }, [searchQuery, filteredNavGroups]);
 
   // Restore state on route change (Rule 5)
   useEffect(() => {
@@ -277,6 +323,24 @@ export default function Sidebar({
         .sb-chevron {
           transition: transform 200ms ease;
         }
+        .sb-search-input {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 7px 28px 7px 30px;
+          color: #ffffff;
+          font-size: 12.5px;
+          outline: none;
+          transition: all 0.15s ease;
+        }
+        .sb-search-input:focus {
+          background: rgba(255, 255, 255, 0.10);
+          border-color: #5fcf87;
+        }
+        .sb-search-input::placeholder {
+          color: rgba(255, 255, 255, 0.40);
+        }
       `}</style>
 
       {/* Header */}
@@ -357,219 +421,289 @@ export default function Sidebar({
         )}
       </div>
 
+      {/* Search Input Bar */}
+      <div style={{ padding: collapsed ? '8px 8px 4px' : '10px 12px 4px', flexShrink: 0 }}>
+        {!collapsed ? (
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search
+              size={14}
+              style={{
+                position: 'absolute',
+                left: 9,
+                color: 'rgba(255, 255, 255, 0.45)',
+                pointerEvents: 'none',
+              }}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search menu..."
+              className="sb-search-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255, 255, 255, 0.50)',
+                  cursor: 'pointer',
+                  padding: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            title="Expand to search"
+            style={{
+              width: '100%',
+              padding: '8px 0',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.10)',
+              borderRadius: 8,
+              color: 'rgba(255, 255, 255, 0.60)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <Search size={15} />
+          </button>
+        )}
+      </div>
+
       {/* Navigation */}
-      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 12px 12px' }}>
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={group.label} style={{ marginTop: gi === 0 ? 0 : 6 }}>
-            {group.items.map((item) => {
-              const Icon = item.icon;
+      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
+        {filteredNavGroups.length === 0 ? (
+          <div style={{ padding: '20px 8px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.40)', fontSize: 12 }}>
+            No matching menu items
+          </div>
+        ) : (
+          filteredNavGroups.map((group, gi) => (
+            <div key={group.label} style={{ marginTop: gi === 0 ? 0 : 6 }}>
+              {group.items.map((item) => {
+                const Icon = item.icon;
 
-              /* ── Accordion parent item with children ───────────────── */
-              if (item.children) {
-                const isExpanded = openSection === item.key;
-                const isAnyChildActive = item.children.some((c) =>
-                  c.path === '/'
-                    ? location.pathname === '/'
-                    : location.pathname.startsWith(c.path),
-                );
+                /* ── Accordion parent item with children ───────────────── */
+                if (item.children) {
+                  const isExpanded = openSection === item.key;
+                  const isAnyChildActive = item.children.some((c) =>
+                    c.path === '/'
+                      ? location.pathname === '/'
+                      : location.pathname.startsWith(c.path),
+                  );
 
-                return (
-                  <div key={item.key}>
-                    <button
-                      onClick={() => toggleSection(item.key)}
-                      className={`sb-parent-btn ${isExpanded || isAnyChildActive ? 'open-state' : ''}`}
+                  return (
+                    <div key={item.key}>
+                      <button
+                        onClick={() => toggleSection(item.key)}
+                        className={`sb-parent-btn ${isExpanded || isAnyChildActive ? 'open-state' : ''}`}
+                        style={{
+                          justifyContent: collapsed ? 'center' : 'flex-start',
+                          padding: collapsed ? '10px 0' : '8.5px 10px',
+                        }}
+                      >
+                        <span style={{ display: 'flex', flexShrink: 0 }}>
+                          <Icon
+                            size={17}
+                            color={isExpanded || isAnyChildActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                            style={{ flexShrink: 0 }}
+                          />
+                        </span>
+                        {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                        {!collapsed && (
+                          <span
+                            className="sb-chevron"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                              color: 'rgba(255, 255, 255, 0.70)',
+                            }}
+                          >
+                            <ChevronDown size={14} />
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Submenu with CSS max-height + opacity transition */}
+                      <div
+                        className="sb-submenu"
+                        style={{
+                          maxHeight: isExpanded && !collapsed ? '600px' : '0px',
+                          opacity: isExpanded && !collapsed ? 1 : 0,
+                        }}
+                      >
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
+                          const isChildPermitted =
+                            child.key === 'crm_dashboard' ? true : can('view', child.key);
+
+                          if (!isChildPermitted) {
+                            return (
+                              <div
+                                key={child.key}
+                                onClick={() =>
+                                  showError(`Access Restricted: Permission required to view ${child.label}.`)
+                                }
+                                className="sb-sub-item"
+                                style={{
+                                  paddingLeft: collapsed ? 10 : 42,
+                                  color: 'rgba(255, 255, 255, 0.35)',
+                                  cursor: 'not-allowed',
+                                }}
+                                title={`Permission required for ${child.label}`}
+                              >
+                                <span style={{ display: 'flex', flexShrink: 0 }}>
+                                  <ChildIcon size={15} color="rgba(255, 255, 255, 0.35)" />
+                                </span>
+                                <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>
+                                  {child.label}
+                                </span>
+                                <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <NavLink
+                              key={child.key}
+                              to={child.path}
+                              end={child.path === '/'}
+                              onClick={() => onNavigate?.()}
+                              className={({ isActive }) =>
+                                `sb-sub-item ${isActive ? 'active' : ''}`
+                              }
+                              style={!collapsed ? { paddingLeft: 42 } : { paddingLeft: 10, justifyContent: 'center' }}
+                            >
+                              {({ isActive }) => (
+                                <>
+                                  <span style={{ display: 'flex', flexShrink: 0 }}>
+                                    <ChildIcon
+                                      size={15}
+                                      color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                                    />
+                                  </span>
+                                  {!collapsed && <span style={{ flex: 1 }}>{child.label}</span>}
+                                  {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        background: 'rgba(95, 207, 135, 0.20)',
+                                        color: '#5fcf87',
+                                        padding: '2px 7px',
+                                        borderRadius: 20,
+                                        minWidth: 20,
+                                        textAlign: 'center',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {badgeCount}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
+                /* ── Leaf nav item (PLM, Notifications, Settings) ─────── */
+                const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
+                const isLeafPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
+
+                if (!isLeafPermitted) {
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() =>
+                        showError(`Access Restricted: Permission required to view ${item.label}.`)
+                      }
+                      className="sb-parent-btn"
                       style={{
                         justifyContent: collapsed ? 'center' : 'flex-start',
                         padding: collapsed ? '10px 0' : '8.5px 10px',
+                        color: 'rgba(255, 255, 255, 0.35)',
+                        cursor: 'not-allowed',
                       }}
+                      title={`Permission required for ${item.label}`}
                     >
                       <span style={{ display: 'flex', flexShrink: 0 }}>
-                        <Icon
-                          size={17}
-                          color={isExpanded || isAnyChildActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
-                          style={{ flexShrink: 0 }}
-                        />
+                        <Icon size={17} color="rgba(255, 255, 255, 0.35)" />
                       </span>
                       {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                      {!collapsed && (
-                        <span
-                          className="sb-chevron"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                            color: 'rgba(255, 255, 255, 0.70)',
-                          }}
-                        >
-                          <ChevronDown size={14} />
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Submenu with CSS max-height + opacity transition */}
-                    <div
-                      className="sb-submenu"
-                      style={{
-                        maxHeight: isExpanded && !collapsed ? '600px' : '0px',
-                        opacity: isExpanded && !collapsed ? 1 : 0,
-                      }}
-                    >
-                      {item.children.map((child) => {
-                        const ChildIcon = child.icon;
-                        const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
-                        const isChildPermitted =
-                          child.key === 'crm_dashboard' ? true : can('view', child.key);
-
-                        if (!isChildPermitted) {
-                          return (
-                            <div
-                              key={child.key}
-                              onClick={() =>
-                                showError(`Access Restricted: Permission required to view ${child.label}.`)
-                              }
-                              className="sb-sub-item"
-                              style={{
-                                paddingLeft: collapsed ? 10 : 42,
-                                color: 'rgba(255, 255, 255, 0.35)',
-                                cursor: 'not-allowed',
-                              }}
-                              title={`Permission required for ${child.label}`}
-                            >
-                              <span style={{ display: 'flex', flexShrink: 0 }}>
-                                <ChildIcon size={15} color="rgba(255, 255, 255, 0.35)" />
-                              </span>
-                              <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>
-                                {child.label}
-                              </span>
-                              <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <NavLink
-                            key={child.key}
-                            to={child.path}
-                            end={child.path === '/'}
-                            onClick={() => onNavigate?.()}
-                            className={({ isActive }) =>
-                              `sb-sub-item ${isActive ? 'active' : ''}`
-                            }
-                            style={!collapsed ? { paddingLeft: 42 } : { paddingLeft: 10, justifyContent: 'center' }}
-                          >
-                            {({ isActive }) => (
-                              <>
-                                <span style={{ display: 'flex', flexShrink: 0 }}>
-                                  <ChildIcon
-                                    size={15}
-                                    color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
-                                  />
-                                </span>
-                                {!collapsed && <span style={{ flex: 1 }}>{child.label}</span>}
-                                {!collapsed && badgeCount !== null && badgeCount > 0 && (
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      fontWeight: 700,
-                                      background: 'rgba(95, 207, 135, 0.20)',
-                                      color: '#5fcf87',
-                                      padding: '2px 7px',
-                                      borderRadius: 20,
-                                      minWidth: 20,
-                                      textAlign: 'center',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {badgeCount}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </NavLink>
-                        );
-                      })}
+                      {!collapsed && <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />}
                     </div>
-                  </div>
-                );
-              }
+                  );
+                }
 
-              /* ── Leaf nav item (PLM, Notifications, Settings) ─────── */
-              const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-              const isLeafPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
-
-              if (!isLeafPermitted) {
                 return (
-                  <div
+                  <NavLink
                     key={item.key}
-                    onClick={() =>
-                      showError(`Access Restricted: Permission required to view ${item.label}.`)
+                    to={item.path!}
+                    end={item.path === '/'}
+                    onClick={handleLeafClick}
+                    className={({ isActive }) =>
+                      `sb-parent-btn ${isActive ? 'open-state' : ''}`
                     }
-                    className="sb-parent-btn"
                     style={{
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       padding: collapsed ? '10px 0' : '8.5px 10px',
-                      color: 'rgba(255, 255, 255, 0.35)',
-                      cursor: 'not-allowed',
                     }}
-                    title={`Permission required for ${item.label}`}
                   >
-                    <span style={{ display: 'flex', flexShrink: 0 }}>
-                      <Icon size={17} color="rgba(255, 255, 255, 0.35)" />
-                    </span>
-                    {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                    {!collapsed && <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />}
-                  </div>
-                );
-              }
-
-              return (
-                <NavLink
-                  key={item.key}
-                  to={item.path!}
-                  end={item.path === '/'}
-                  onClick={handleLeafClick}
-                  className={({ isActive }) =>
-                    `sb-parent-btn ${isActive ? 'open-state' : ''}`
-                  }
-                  style={{
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    padding: collapsed ? '10px 0' : '8.5px 10px',
-                  }}
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span style={{ display: 'flex', flexShrink: 0 }}>
-                        <Icon
-                          size={17}
-                          color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
-                          style={{ flexShrink: 0 }}
-                        />
-                      </span>
-                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                      {!collapsed && badgeCount !== null && badgeCount > 0 && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            background: 'rgba(95, 207, 135, 0.20)',
-                            color: '#5fcf87',
-                            padding: '2px 7px',
-                            borderRadius: 20,
-                            minWidth: 20,
-                            textAlign: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {badgeCount}
+                    {({ isActive }) => (
+                      <>
+                        <span style={{ display: 'flex', flexShrink: 0 }}>
+                          <Icon
+                            size={17}
+                            color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                            style={{ flexShrink: 0 }}
+                          />
                         </span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        ))}
+                        {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                        {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              background: 'rgba(95, 207, 135, 0.20)',
+                              color: '#5fcf87',
+                              padding: '2px 7px',
+                              borderRadius: 20,
+                              minWidth: 20,
+                              textAlign: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {badgeCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))
+        )}
       </nav>
 
       {/* User Footer */}
