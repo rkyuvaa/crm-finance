@@ -25,10 +25,14 @@ def seed_rbac_data(db: Session) -> None:
     """Populate default RBAC structure if not present."""
     # 1. Modules
     modules_data = [
-        {"name": "CRM Management", "code": "crm", "display_order": 1, "icon": "Users"},
-        {"name": "Administration", "code": "administration", "display_order": 2, "icon": "ShieldCheck"},
-        {"name": "Reports & Analytics", "code": "reports", "display_order": 3, "icon": "BarChart3"},
-        {"name": "System Configuration", "code": "configuration", "display_order": 4, "icon": "Settings2"},
+        {"name": "PLM", "code": "plm", "display_order": 1, "icon": "Cpu"},
+        {"name": "CRM Management", "code": "crm", "display_order": 2, "icon": "Users"},
+        {"name": "Project & Task Management", "code": "project_task", "display_order": 3, "icon": "FolderPlus"},
+        {"name": "HR & Employee Management", "code": "hr_employee", "display_order": 4, "icon": "Users"},
+        {"name": "Administration", "code": "administration", "display_order": 5, "icon": "ShieldCheck"},
+        {"name": "Reports & Analytics", "code": "reports", "display_order": 6, "icon": "BarChart3"},
+        {"name": "System Configuration", "code": "configuration", "display_order": 7, "icon": "Settings2"},
+        {"name": "Other", "code": "other", "display_order": 8, "icon": "Settings"},
     ]
 
     modules_map = {}
@@ -48,18 +52,50 @@ def seed_rbac_data(db: Session) -> None:
 
     # 2. Resources
     resources_data = [
-        {"module_code": "crm", "name": "Leads", "code": "leads", "display_order": 1},
-        {"module_code": "crm", "name": "Customers", "code": "customers", "display_order": 2},
-        {"module_code": "crm", "name": "Opportunities", "code": "opportunities", "display_order": 3},
-        {"module_code": "crm", "name": "Activities", "code": "activities", "display_order": 4},
+        # PLM
+        {"module_code": "plm", "name": "PLM Dashboard", "code": "plm", "display_order": 1},
+
+        # CRM
+        {"module_code": "crm", "name": "CRM Dashboard", "code": "crm_dashboard", "display_order": 1},
+        {"module_code": "crm", "name": "Leads", "code": "leads", "display_order": 2},
+        {"module_code": "crm", "name": "Customers", "code": "customers", "display_order": 3},
+        {"module_code": "crm", "name": "Opportunities", "code": "opportunities", "display_order": 4},
+        {"module_code": "crm", "name": "Activities", "code": "activities", "display_order": 5},
+        {"module_code": "crm", "name": "CRM Reports", "code": "crm_reports", "display_order": 6},
+        {"module_code": "crm", "name": "CRM Configuration", "code": "crm_configuration", "display_order": 7},
+
+        # Project & Task
+        {"module_code": "project_task", "name": "Projects", "code": "projects", "display_order": 1},
+        {"module_code": "project_task", "name": "Tasks", "code": "tasks", "display_order": 2},
+        {"module_code": "project_task", "name": "Project Configuration", "code": "project_configuration", "display_order": 3},
+
+        # HR & Employee
+        {"module_code": "hr_employee", "name": "Employee On/off boarding", "code": "hr_onboarding", "display_order": 1},
+        {"module_code": "hr_employee", "name": "Employee Master", "code": "hr_master", "display_order": 2},
+        {"module_code": "hr_employee", "name": "Attendance", "code": "hr_attendance", "display_order": 3},
+        {"module_code": "hr_employee", "name": "Leave Management", "code": "hr_leave", "display_order": 4},
+        {"module_code": "hr_employee", "name": "Payroll", "code": "hr_payroll", "display_order": 5},
+        {"module_code": "hr_employee", "name": "Self Service", "code": "hr_self_service", "display_order": 6},
+        {"module_code": "hr_employee", "name": "HR Reports", "code": "hr_reports", "display_order": 7},
+        {"module_code": "hr_employee", "name": "HR Configuration", "code": "hr_configuration", "display_order": 8},
+
+        # Administration
         {"module_code": "administration", "name": "Users", "code": "users", "display_order": 1},
         {"module_code": "administration", "name": "Roles", "code": "roles", "display_order": 2},
         {"module_code": "administration", "name": "Departments", "code": "departments", "display_order": 3},
         {"module_code": "administration", "name": "Permissions", "code": "permissions", "display_order": 4},
         {"module_code": "administration", "name": "Access Audit Log", "code": "audit_logs", "display_order": 5},
+
+        # Reports
         {"module_code": "reports", "name": "Reports Summary", "code": "summary_reports", "display_order": 1},
+
+        # System Configuration
         {"module_code": "configuration", "name": "System Masters", "code": "masters", "display_order": 1},
         {"module_code": "configuration", "name": "Automove Rules", "code": "automove_rules", "display_order": 2},
+
+        # Other
+        {"module_code": "other", "name": "Notifications", "code": "notifications", "display_order": 1},
+        {"module_code": "other", "name": "System Settings", "code": "settings", "display_order": 2},
     ]
 
     resources_map = {}

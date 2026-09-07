@@ -58,18 +58,35 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
   const canAccessRoute = (path: string): boolean => {
     if (!user) return false;
     if (isSuperAdmin) return true;
-    if (path.startsWith('/admin/users') || path.startsWith('/admin/roles') || path.startsWith('/admin/departments')) {
-      return can('view', 'users') || can('view', 'roles') || can('view', 'departments');
-    }
-    if (path.startsWith('/admin/audit-logs')) {
-      return can('view', 'audit_logs');
-    }
-    if (path.startsWith('/admin/permissions')) {
-      return can('view', 'permissions');
-    }
-    if (path.startsWith('/reports')) {
-      return can('view', 'summary_reports');
-    }
+
+    if (path === '/plm') return can('view', 'plm');
+    if (path.startsWith('/leads')) return can('view', 'leads');
+    if (path.startsWith('/opportunities')) return can('view', 'opportunities');
+    if (path === '/configuration') return can('view', 'crm_configuration');
+    
+    if (path === '/projects/configuration') return can('view', 'project_configuration');
+    if (path.startsWith('/projects')) return can('view', 'projects');
+    if (path.startsWith('/tasks')) return can('view', 'tasks');
+
+    if (path === '/hr/onboarding') return can('view', 'hr_onboarding');
+    if (path === '/hr/master') return can('view', 'hr_master');
+    if (path === '/hr/attendance') return can('view', 'hr_attendance');
+    if (path === '/hr/leave') return can('view', 'hr_leave');
+    if (path === '/hr/payroll') return can('view', 'hr_payroll');
+    if (path === '/hr/self-service') return can('view', 'hr_self_service');
+    if (path === '/hr/reports') return can('view', 'hr_reports');
+    if (path === '/hr/configuration') return can('view', 'hr_configuration');
+
+    if (path.startsWith('/admin/users')) return can('view', 'users');
+    if (path.startsWith('/admin/roles')) return can('view', 'roles');
+    if (path.startsWith('/admin/departments')) return can('view', 'departments');
+    if (path.startsWith('/admin/audit-logs')) return can('view', 'audit_logs');
+    if (path.startsWith('/admin/permissions')) return can('view', 'permissions');
+
+    if (path.startsWith('/reports')) return can('view', 'summary_reports') || can('view', 'crm_reports');
+    if (path.startsWith('/notifications')) return can('view', 'notifications');
+    if (path.startsWith('/settings')) return can('view', 'settings');
+
     return true;
   };
 

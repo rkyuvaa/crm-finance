@@ -102,6 +102,16 @@ def _ensure_schema_migrations():
                             pass
             except Exception:
                 pass
+
+        # 4. Auto-seed RBAC permissions matrix
+        try:
+            from app.db.session import SessionLocal
+            from app.db.seed_rbac import seed_rbac_data
+            with SessionLocal() as db:
+                seed_rbac_data(db)
+        except Exception as seed_err:
+            import logging
+            logging.error(f"RBAC seed error: {seed_err}")
     except Exception as err:
         import logging
         logging.error(f"Migration check error: {err}")

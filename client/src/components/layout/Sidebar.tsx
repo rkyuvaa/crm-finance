@@ -25,6 +25,7 @@ import {
   Calendar,
   DollarSign,
   User,
+  Lock,
 } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
@@ -33,6 +34,8 @@ import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import { ROLE_LABELS, initialsOf } from '@/utils/format';
 import type { NavCounts } from '@/types';
+import { usePermission } from '@/context/AuthPermissionContext';
+import { useToast } from '@/components/ui/ToastHost';
 
 type NavBadgeKey = Exclude<keyof NavCounts, 'stages'>;
 
@@ -150,6 +153,8 @@ export default function Sidebar({
   const { data: dashboard } = useDashboardQuery();
   const counts = dashboard?.nav_counts;
   const location = useLocation();
+  const { can } = usePermission();
+  const { showError } = useToast();
 
   // Which expandable nav items are open (keyed by NavItem.key).
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
@@ -375,6 +380,37 @@ export default function Sidebar({
                         {item.children.map((child) => {
                           const ChildIcon = child.icon;
                           const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
+                          const isChildPermitted = child.key === 'crm_dashboard' ? true : can('view', child.key);
+
+                          if (!isChildPermitted) {
+                            return (
+                              <div
+                                key={child.key}
+                                onClick={() => showError(`Access Restricted: Permission required to view ${child.label}.`)}
+                                style={{
+                                  ...navItemStyle,
+                                  padding: '7px 10px',
+                                  marginBottom: 1,
+                                  fontSize: 12.5,
+                                  color: '#5B6E5F',
+                                  opacity: 0.65,
+                                  cursor: 'not-allowed',
+                                }}
+                                title={`Permission required for ${child.label}`}
+                              >
+                                <span style={{ display: 'flex', flexShrink: 0 }}>
+                                  <ChildIcon
+                                    size={15}
+                                    color="#5B6E5F"
+                                    style={{ flexShrink: 0 }}
+                                  />
+                                </span>
+                                <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>{child.label}</span>
+                                <Lock size={13} color="#6B7E6F" style={{ flexShrink: 0 }} />
+                              </div>
+                            );
+                          }
+
                           return (
                             <NavLink
                               key={child.key}
@@ -431,6 +467,36 @@ export default function Sidebar({
 
               /* ── Regular nav item (leaf) ───────────────────────────── */
               const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
+              const isLeafPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
+
+              if (!isLeafPermitted) {
+                return (
+                  <div
+                    key={item.key}
+                    onClick={() => showError(`Access Restricted: Permission required to view ${item.label}.`)}
+                    style={{
+                      ...navItemStyle,
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      padding: collapsed ? '10px 0' : '8.5px 10px',
+                      color: '#5B6E5F',
+                      opacity: 0.65,
+                      cursor: 'not-allowed',
+                    }}
+                    title={`Permission required for ${item.label}`}
+                  >
+                    <span style={{ display: 'flex', flexShrink: 0 }}>
+                      <Icon
+                        size={17}
+                        color="#5B6E5F"
+                        style={{ flexShrink: 0 }}
+                      />
+                    </span>
+                    {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+                    {!collapsed && <Lock size={13} color="#6B7E6F" style={{ flexShrink: 0 }} />}
+                  </div>
+                );
+              }
+
               return (
                 <NavLink
                   key={item.key}

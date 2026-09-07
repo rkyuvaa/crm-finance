@@ -6,7 +6,9 @@ import { ToastProvider } from '@/components/ui/ToastHost';
 import AppLayout from '@/components/layout/AppLayout';
 import RequireAuth from '@/auth/RequireAuth';
 
-import { AuthPermissionProvider } from '@/context/AuthPermissionContext';
+import { AuthPermissionProvider, usePermission } from '@/context/AuthPermissionContext';
+import { useLocation } from 'react-router-dom';
+import AccessDeniedPage from '@/pages/AccessDeniedPage';
 
 import LoginPage from '@/pages/LoginPage';
 import LeadsPage from '@/pages/LeadsPage';
@@ -40,6 +42,17 @@ function RouteFallback() {
   );
 }
 
+function RequirePermission({ children }: { children: React.ReactNode }) {
+  const { canAccessRoute } = usePermission();
+  const location = useLocation();
+
+  if (!canAccessRoute(location.pathname)) {
+    return <AccessDeniedPage />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -52,7 +65,9 @@ export default function App() {
               <Route
                 element={
                   <RequireAuth>
-                    <AppLayout />
+                    <RequirePermission>
+                      <AppLayout />
+                    </RequirePermission>
                   </RequireAuth>
                 }
               >
