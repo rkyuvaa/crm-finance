@@ -77,6 +77,10 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (path === '/hr/reports') return can('view', 'hr_reports');
     if (path === '/hr/configuration') return can('view', 'hr_configuration');
 
+    if (path === '/renewal/dashboard' || path === '/renewal') return can('view', 'renewal_dashboard');
+    if (path === '/renewal/tracker') return can('view', 'renewal_tracker');
+    if (path === '/renewal/reports') return can('view', 'renewal_reports');
+
     if (path.startsWith('/admin/users')) return can('view', 'users');
     if (path.startsWith('/admin/roles')) return can('view', 'roles');
     if (path.startsWith('/admin/departments')) return can('view', 'departments');

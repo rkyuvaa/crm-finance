@@ -19,6 +19,7 @@ import ProjectsPage from '@/pages/ProjectsPage';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import ProjectConfigurationPage from '@/pages/ProjectConfigurationPage';
 import TasksPage from '@/pages/TasksPage';
+import RenewalTrackerPage from '@/pages/RenewalTrackerPage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
 import NotificationsPage from '@/pages/NotificationsPage';
@@ -83,6 +84,12 @@ export default function App() {
                 <Route path="/projects/configuration" element={<ProjectConfigurationPage />} />
                 <Route path="/projects/:id" element={<ProjectWorkspace />} />
                 <Route path="/tasks" element={<TasksPage />} />
+                
+                {/* Renewal Tracker */}
+                <Route path="/renewal" element={<Navigate to="/renewal/dashboard" replace />} />
+                <Route path="/renewal/dashboard" element={<RenewalTrackerPage />} />
+                <Route path="/renewal/tracker" element={<RenewalTrackerPage />} />
+                <Route path="/renewal/reports" element={<RenewalTrackerPage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />

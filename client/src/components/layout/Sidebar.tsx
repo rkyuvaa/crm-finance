@@ -23,6 +23,7 @@ import {
   Calendar,
   DollarSign,
   Lock,
+  RefreshCw,
   X,
 } from 'lucide-react';
 
@@ -108,6 +109,17 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
           { key: 'hr_self_service', label: 'Self Service', path: '/hr/self-service', icon: UserCheck, badge: null },
           { key: 'hr_reports', label: 'Reports', path: '/hr/reports', icon: BarChart3, badge: null },
           { key: 'hr_configuration', label: 'HR Configuration', path: '/hr/configuration', icon: Settings2, badge: null },
+        ],
+      },
+      {
+        key: 'renewal_tracker_group',
+        label: 'Renewal Tracker',
+        icon: RefreshCw,
+        badge: null,
+        children: [
+          { key: 'renewal_dashboard', label: 'Dashboard', path: '/renewal/dashboard', icon: LayoutDashboard, badge: null },
+          { key: 'renewal_tracker', label: 'Tracker', path: '/renewal/tracker', icon: Clock, badge: null },
+          { key: 'renewal_reports', label: 'Reports', path: '/renewal/reports', icon: BarChart3, badge: null },
         ],
       },
     ],
