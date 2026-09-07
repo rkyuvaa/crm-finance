@@ -12,6 +12,7 @@ import {
   Chip,
   IconButton,
   Avatar,
+  AvatarGroup,
   Button,
   Dialog,
   DialogTitle,
@@ -19,7 +20,6 @@ import {
   DialogActions,
   TextField,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   CircularProgress,
@@ -27,6 +27,8 @@ import {
   ToggleButton,
   InputAdornment,
   Tooltip,
+  Collapse,
+  Checkbox,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -39,14 +41,14 @@ import {
   Flag,
   CheckSquare,
   Clock,
-  Paperclip,
-  Lock,
-  Zap,
+  Trash2,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
+  useAddSubtaskMutation,
+  useDeleteTaskMutation,
   useGetStatusDefinitionsQuery,
   TaskItem,
 } from '@/api/projectsApi';
@@ -66,6 +68,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
 
+  // Subtask Collapsible & Creation State
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Record<number, boolean>>({});
+  const [addingSubtaskId, setAddingSubtaskId] = useState<number | null>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
   const { data: tasks = [], isLoading } = useGetTasksQuery({
     project_id: numericProjectId,
     q: searchQ || undefined,
@@ -77,8 +84,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   });
 
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
-  const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
+  const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
+  const [addSubtask] = useAddSubtaskMutation();
+  const [deleteTask] = useDeleteTaskMutation();
 
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({
     1: true,
@@ -112,6 +121,45 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   const toggleGroup = (statusIdVal: number) => {
     setExpandedGroups((prev) => ({ ...prev, [statusIdVal]: !prev[statusIdVal] }));
+  };
+
+  const toggleSubtasksExpand = (taskId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTaskIds((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  const handleCreateSubtask = async (parentId: number) => {
+    if (!newSubtaskTitle.trim()) return;
+    try {
+      await addSubtask({ taskId: parentId, body: { title: newSubtaskTitle.trim() } }).unwrap();
+      toast.showSuccess('Subtask created successfully');
+      setNewSubtaskTitle('');
+      setAddingSubtaskId(null);
+      setExpandedTaskIds((prev) => ({ ...prev, [parentId]: true }));
+    } catch {
+      toast.showError('Failed to create subtask');
+    }
+  };
+
+  const handleToggleSubtaskCompleted = async (subtask: TaskItem, e: React.MouseEvent | React.ChangeEvent) => {
+    e.stopPropagation();
+    try {
+      await updateTask({ id: subtask.id, body: { is_completed: !subtask.is_completed } }).unwrap();
+    } catch {
+      toast.showError('Failed to update subtask status');
+    }
+  };
+
+  const handleDeleteTaskItem = async (id: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(id).unwrap();
+        toast.showSuccess('Task deleted');
+      } catch {
+        toast.showError('Failed to delete task');
+      }
+    }
   };
 
   const openTask = (task: TaskItem) => {
@@ -194,12 +242,259 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   const getPriorityFlagColor = (p: string) => {
     switch (p) {
-      case 'URGENT': return '#DC2626';
-      case 'HIGH': return '#D97706';
-      case 'NORMAL': return '#2563EB';
-      case 'LOW': return '#64748B';
-      default: return '#64748B';
+      case 'URGENT':
+        return '#DC2626';
+      case 'HIGH':
+        return '#D97706';
+      case 'NORMAL':
+        return '#2563EB';
+      case 'LOW':
+        return '#64748B';
+      default:
+        return '#64748B';
     }
+  };
+
+  // Recursive subtask card renderer supporting multi-level hierarchy (Task -> Subtask -> Sub-subtask)
+  const renderSubtaskCards = (subtaskList: TaskItem[], depth = 1) => {
+    if (!subtaskList || subtaskList.length === 0) return null;
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1, pl: depth * 1.5 }}>
+        {subtaskList.map((sub) => {
+          const subChildren = sub.nested_subtasks || sub.subtasks || [];
+          const isSubExpanded = !!expandedTaskIds[sub.id];
+          const isSubCompleted = sub.is_completed;
+          const isSubOverdue = sub.due_date && new Date(sub.due_date) < new Date() && !isSubCompleted;
+
+          return (
+            <Box key={sub.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.25,
+                  border: '1px solid',
+                  borderColor: isSubCompleted ? 'divider' : '#CBD5E1',
+                  borderLeft: '3px solid #04552B',
+                  borderRadius: '8px',
+                  bgcolor: isSubCompleted ? 'action.hover' : '#F8FAFC',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    borderColor: '#04552B',
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openTask(sub);
+                }}
+              >
+                {/* Subtask Header Row */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0 }}>
+                    <Checkbox
+                      size="small"
+                      checked={!!isSubCompleted}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => handleToggleSubtaskCompleted(sub, e)}
+                      sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
+                    />
+                    <Chip
+                      label={sub.task_number || `SUB-${sub.id}`}
+                      size="small"
+                      sx={{
+                        height: 16,
+                        fontSize: '0.6rem',
+                        fontWeight: 700,
+                        fontFamily: 'monospace',
+                        bgcolor: '#E2E8F0',
+                        color: '#334155',
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                        color: isSubCompleted ? 'text.secondary' : 'text.primary',
+                        textDecoration: isSubCompleted ? 'line-through' : 'none',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {sub.title}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {sub.priority && (
+                      <Flag
+                        size={13}
+                        color={getPriorityFlagColor(sub.priority)}
+                        fill={getPriorityFlagColor(sub.priority)}
+                      />
+                    )}
+
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDeleteTaskItem(sub.id, e)}
+                      sx={{ color: '#94A3B8', p: 0.2, '&:hover': { color: '#DC2626' } }}
+                    >
+                      <Trash2 size={12} />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {/* Subtask Meta Row */}
+                {(sub.due_date || (sub.assignees && sub.assignees.length > 0)) && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justify: 'space-between',
+                      alignItems: 'center',
+                      mt: 0.75,
+                      pt: 0.5,
+                      borderTop: '1px dashed',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    {sub.due_date ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Clock size={11} color={isSubOverdue ? '#DC2626' : '#64748B'} />
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontSize: 10,
+                            color: isSubOverdue ? '#DC2626' : 'text.secondary',
+                            fontWeight: isSubOverdue ? 700 : 500,
+                          }}
+                        >
+                          {sub.due_date}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <div />
+                    )}
+
+                    {sub.assignees && sub.assignees.length > 0 && (
+                      <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 18, height: 18, fontSize: 9, bgcolor: '#04552B' } }}>
+                        {sub.assignees.map((a) => (
+                          <Avatar key={a.id} title={a.full_name}>
+                            {a.full_name ? a.full_name.charAt(0).toUpperCase() : 'U'}
+                          </Avatar>
+                        ))}
+                      </AvatarGroup>
+                    )}
+                  </Box>
+                )}
+
+                {/* Sub-subtask Collapsible Toggle */}
+                {subChildren.length > 0 && (
+                  <Box
+                    onClick={(e) => toggleSubtasksExpand(sub.id, e)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      mt: 0.75,
+                      pt: 0.5,
+                      cursor: 'pointer',
+                      color: '#04552B',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isSubExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                    <span>
+                      {isSubExpanded ? '▼' : '▶'} {subChildren.length} {subChildren.length === 1 ? 'subtask' : 'subtasks'}
+                    </span>
+                  </Box>
+                )}
+              </Paper>
+
+              {/* Recursive child subtasks */}
+              {subChildren.length > 0 && (
+                <Collapse in={isSubExpanded} timeout="auto" unmountOnExit={false}>
+                  {renderSubtaskCards(subChildren, depth + 1)}
+                </Collapse>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  // Render Table Row for List View
+  const renderListTableRow = (task: TaskItem, depth = 0) => {
+    const subtaskList = task.nested_subtasks || task.subtasks || [];
+    const hasChildren = subtaskList.length > 0;
+    const isExpanded = !!expandedTaskIds[task.id];
+
+    return (
+      <React.Fragment key={task.id}>
+        <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => openTask(task)}>
+          <TableCell align="center">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
+              {hasChildren ? (
+                <IconButton size="small" onClick={(e) => toggleSubtasksExpand(task.id, e)} sx={{ p: 0.2 }}>
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </IconButton>
+              ) : (
+                <Box sx={{ width: 18 }} />
+              )}
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: depth === 0 ? 600 : 500, color: 'text.primary' }}>
+                {task.title}
+              </Typography>
+
+              {hasChildren && (
+                <Chip
+                  label={`${task.completed_subtask_count || 0}/${task.subtask_count || subtaskList.length} subtasks`}
+                  size="small"
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569' }}
+                />
+              )}
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
+                {task.assignee_name?.charAt(0) || '?'}
+              </Avatar>
+              <Typography variant="body2">{task.assignee_name || 'Unassigned'}</Typography>
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? 'text.primary' : 'text.secondary' }}>
+              <Calendar size={14} />
+              <Typography variant="body2">{task.due_date || 'None'}</Typography>
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <Flag size={14} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />
+              <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 600, color: getPriorityFlagColor(task.priority) }}>
+                {task.priority}
+              </Typography>
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+              {task.actual_hours}h / {task.estimated_hours}h
+            </Typography>
+          </TableCell>
+        </TableRow>
+
+        {/* List View Recursive Subtasks */}
+        {hasChildren && isExpanded && subtaskList.map((subtask) => renderListTableRow(subtask, depth + 1))}
+      </React.Fragment>
+    );
   };
 
   if (isLoading) {
@@ -313,7 +608,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           }}
         >
           {activeStatuses.map((st) => {
-            const statusTasks = filteredTasks.filter((t) => (t.status_id || 1) === st.id);
+            // Filter top-level tasks only (exclude standalone subtasks)
+            const statusTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.status_id || 1) === st.id);
 
             return (
               <Box
@@ -388,8 +684,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     </Box>
                   ) : (
                     statusTasks.map((task) => {
-                      const completedSubtasks = task.subtasks?.filter((s) => s.is_completed).length || 0;
-                      const totalSubtasks = task.subtasks?.length || 0;
+                      const subtaskList = task.nested_subtasks || task.subtasks || [];
+                      const subtaskCount = task.subtask_count ?? subtaskList.length;
+                      const completedCount =
+                        task.completed_subtask_count ?? subtaskList.filter((s) => s.is_completed).length;
+                      const isExpanded = !!expandedTaskIds[task.id];
 
                       return (
                         <Paper
@@ -409,7 +708,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             '&:hover': {
                               borderColor: 'primary.main',
                               boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                              transform: 'translateY(-1px)',
                             },
                           }}
                         >
@@ -417,16 +715,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mb: 1.5, lineHeight: 1.4 }}>
                             {task.title}
                           </Typography>
-
-                          {/* Subtasks / Dependencies Progress indicator if present */}
-                          {totalSubtasks > 0 && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
-                              <CheckSquare size={13} color="#64748B" />
-                              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11 }}>
-                                {completedSubtasks}/{totalSubtasks} subtasks
-                              </Typography>
-                            </Box>
-                          )}
 
                           {/* Footer Meta Row */}
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -459,6 +747,109 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                               </Typography>
                             </Box>
                           </Box>
+
+                          {/* ClickUp-style Collapsible Subtask Row */}
+                          {(subtaskCount > 0 || addingSubtaskId === task.id) && (
+                            <Box
+                              onClick={(e) => toggleSubtasksExpand(task.id, e)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                mt: 1.25,
+                                pt: 0.75,
+                                pb: 0.75,
+                                px: 1,
+                                borderTop: '1px solid',
+                                borderColor: 'divider',
+                                cursor: 'pointer',
+                                borderRadius: '6px',
+                                bgcolor: isExpanded ? 'action.selected' : '#F8FAFC',
+                                '&:hover': { bgcolor: 'action.selected' },
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                {isExpanded ? (
+                                  <ChevronDown size={15} color="#04552B" />
+                                ) : (
+                                  <ChevronRight size={15} color="#04552B" />
+                                )}
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: '#04552B',
+                                    fontSize: '0.75rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                  }}
+                                >
+                                  <span>{isExpanded ? '▼' : '▶'}</span>
+                                  <span>
+                                    {subtaskCount === 1
+                                      ? '1 subtask'
+                                      : `${completedCount > 0 ? `${completedCount}/${subtaskCount}` : subtaskCount} subtasks`}
+                                  </span>
+                                </Typography>
+                              </Box>
+
+                              <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 600, color: 'text.secondary' }}>
+                                {isExpanded ? 'Collapse' : 'Expand'}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Collapsible Child Task Container */}
+                          <Collapse in={isExpanded} timeout="auto" unmountOnExit={false}>
+                            <Box onClick={(e) => e.stopPropagation()} sx={{ pt: 0.5 }}>
+                              {renderSubtaskCards(subtaskList, 1)}
+
+                              {/* Inline Add Subtask Input */}
+                              <Box sx={{ mt: 1, pl: 1, display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                                <TextField
+                                  size="small"
+                                  fullWidth
+                                  placeholder="+ Add a subtask (press Enter)..."
+                                  value={addingSubtaskId === task.id ? newSubtaskTitle : ''}
+                                  onFocus={() => setAddingSubtaskId(task.id)}
+                                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleCreateSubtask(task.id);
+                                    }
+                                  }}
+                                  sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                      height: 30,
+                                      fontSize: '0.75rem',
+                                      bgcolor: 'background.paper',
+                                      borderRadius: '6px',
+                                    },
+                                  }}
+                                />
+                                {addingSubtaskId === task.id && newSubtaskTitle.trim() && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    onClick={() => handleCreateSubtask(task.id)}
+                                    sx={{
+                                      height: 30,
+                                      fontSize: '0.7rem',
+                                      minWidth: 50,
+                                      px: 1.5,
+                                      bgcolor: '#04552B',
+                                      '&:hover': { bgcolor: '#033B1E' },
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                )}
+                              </Box>
+                            </Box>
+                          </Collapse>
                         </Paper>
                       );
                     })
@@ -527,7 +918,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 </TableRow>
               ) : (
                 activeStatuses.map((status) => {
-                  const statusTasks = filteredTasks.filter((t) => (t.status_id || 1) === status.id);
+                  const statusTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.status_id || 1) === status.id);
                   if (statusTasks.length === 0) return null;
                   const isExpanded = expandedGroups[status.id];
 
@@ -549,48 +940,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       </TableRow>
 
                       {/* Tasks */}
-                      {isExpanded && statusTasks.map((task) => (
-                        <TableRow 
-                          key={task.id} 
-                          hover 
-                          sx={{ cursor: 'pointer' }}
-                          onClick={() => openTask(task)}
-                        >
-                          <TableCell align="center">
-                            <Box sx={{ width: 12, height: 12, borderRadius: '2px', border: `2px solid ${status.color}`, margin: 'auto' }} />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{task.title}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
-                                {task.assignee_name?.charAt(0) || '?'}
-                              </Avatar>
-                              <Typography variant="body2">{task.assignee_name || 'Unassigned'}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? 'text.primary' : 'text.secondary' }}>
-                              <Calendar size={14} />
-                              <Typography variant="body2">{task.due_date || 'None'}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                              <Flag size={14} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />
-                              <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 600, color: getPriorityFlagColor(task.priority) }}>
-                                {task.priority}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-                              {task.actual_hours}h / {task.estimated_hours}h
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {isExpanded && statusTasks.map((task) => renderListTableRow(task, 0))}
                     </React.Fragment>
                   );
                 })
@@ -600,62 +950,47 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         </TableContainer>
       )}
 
-      {/* Task Drawer Panel */}
-      <TaskDetailPanel open={panelOpen} onClose={() => setPanelOpen(false)} task={selectedTask} />
-
-      {/* Create Task Dialog */}
+      {/* Task Creation Modal */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, fontSize: 16 }}>Create New Task</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Create New Task</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
             label="Task Title"
-            fullWidth
             size="small"
+            fullWidth
+            required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Design User Interface Mockups"
-            autoFocus
           />
           <TextField
             label="Description"
+            size="small"
             fullWidth
             multiline
             rows={3}
-            size="small"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter task requirements and details..."
           />
-          <FormControl fullWidth size="small">
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={statusId}
-              label="Status"
-              onChange={(e) => setStatusId(Number(e.target.value))}
-            >
-              {activeStatuses.map((s) => (
-                <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+          <FormControl size="small" fullWidth>
+            <Select value={statusId} onChange={(e) => setStatusId(Number(e.target.value))}>
+              {activeStatuses.map((st) => (
+                <MenuItem key={st.id} value={st.id}>{st.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth size="small">
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={priority}
-              label="Priority"
-              onChange={(e) => setPriority(e.target.value as any)}
-            >
-              <MenuItem value="LOW">Low</MenuItem>
-              <MenuItem value="NORMAL">Normal</MenuItem>
-              <MenuItem value="HIGH">High</MenuItem>
-              <MenuItem value="URGENT">Urgent</MenuItem>
+          <FormControl size="small" fullWidth>
+            <Select value={priority} onChange={(e) => setPriority(e.target.value as any)}>
+              <MenuItem value="URGENT">Urgent 🚩</MenuItem>
+              <MenuItem value="HIGH">High 🚩</MenuItem>
+              <MenuItem value="NORMAL">Normal 🚩</MenuItem>
+              <MenuItem value="LOW">Low 🚩</MenuItem>
             </Select>
           </FormControl>
           <TextField
             label="Due Date"
             type="date"
-            fullWidth
             size="small"
+            fullWidth
             InputLabelProps={{ shrink: true }}
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
@@ -663,26 +998,26 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <TextField
             label="Estimated Hours"
             type="number"
-            fullWidth
             size="small"
+            fullWidth
             value={estimatedHours}
-            onChange={(e) => setEstimatedHours(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={(e) => setEstimatedHours(Number(e.target.value))}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCreateOpen(false)} disabled={isCreating} sx={{ textTransform: 'none' }}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveTask}
-            variant="contained"
-            disabled={isCreating}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontWeight: 600 }}
-          >
-            {isCreating ? 'Creating...' : 'Create Task'}
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveTask} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}>
+            Create Task
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Task Detail Slide-over Panel */}
+      <TaskDetailPanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        task={selectedTask}
+      />
     </Box>
   );
 }
