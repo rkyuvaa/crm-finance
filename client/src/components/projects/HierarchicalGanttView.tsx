@@ -118,13 +118,29 @@ export default function HierarchicalGanttView({
     isSyncingScroll.current = false;
   };
 
+  // Flatten top level tasks + nested subtasks recursively
+  const allTasksFlat = useMemo(() => {
+    const list: TaskItem[] = [];
+    const collect = (tList: TaskItem[]) => {
+      tList.forEach((t) => {
+        list.push(t);
+        const children = t.nested_subtasks || t.subtasks || [];
+        if (children.length > 0) {
+          collect(children);
+        }
+      });
+    };
+    collect(tasks);
+    return list;
+  }, [tasks]);
+
   // Build Recursive Tree Data
   const treeData = useMemo(() => {
     const map = new Map<number, TreeNode>();
     const roots: TreeNode[] = [];
 
     // Initialize nodes
-    tasks.forEach((t) => {
+    allTasksFlat.forEach((t) => {
       map.set(t.id, {
         ...t,
         depth: 0,
@@ -134,7 +150,7 @@ export default function HierarchicalGanttView({
     });
 
     // Populate hierarchy
-    tasks.forEach((t) => {
+    allTasksFlat.forEach((t) => {
       const node = map.get(t.id)!;
       if (t.parent_task_id && map.has(t.parent_task_id)) {
         const parent = map.get(t.parent_task_id)!;

@@ -72,7 +72,7 @@ export default function TaskBoardView({
     <DragDropContext onDragEnd={handleDragEnd}>
       <Grid container spacing={2} alignItems="stretch">
         {columns.map((col) => {
-          const colTasks = tasks.filter((t) => (t.status_id || 1) === col.id);
+          const colTasks = tasks.filter((t) => !t.parent_task_id && (t.status_id || 1) === col.id);
           return (
             <Grid item xs={12} sm={6} md={12 / Math.min(columns.length, 6)} key={col.id}>
               <Paper

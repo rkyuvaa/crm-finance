@@ -105,6 +105,17 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
   const [newChecklistItemTitles, setNewChecklistItemTitles] = useState<Record<number, string>>({});
 
+  // Dependency Dialog & Warning State
+  const [isAddDepDialogOpen, setIsAddDepDialogOpen] = useState(false);
+  const [depDirection, setDepDirection] = useState<'BLOCKING' | 'BLOCKED_BY'>('BLOCKED_BY');
+  const [depSearchQuery, setDepSearchQuery] = useState('');
+  const [blockedWarning, setBlockedWarning] = useState<{
+    open: boolean;
+    targetStatusId?: number;
+    targetIsCompleted?: boolean;
+    blockingTasks: string[];
+  }>({ open: false, blockingTasks: [] });
+
   // Dependency State
   const [depTaskId, setDepTaskId] = useState<number | ''>('');
   const [depType, setDepType] = useState<'BLOCKS' | 'BLOCKED_BY' | 'WAITING_ON'>('BLOCKED_BY');
@@ -153,8 +164,32 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const currentTaskId = activeTaskId || task?.id || 0;
   const { data: liveTask } = useGetTaskQuery(currentTaskId, { skip: !currentTaskId });
+  const { data: searchTasksResult = [] } = useGetTasksQuery(
+    { q: depSearchQuery, include_subtasks: true },
+    { skip: !isAddDepDialogOpen }
+  );
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
   const currentTask = liveTask || task;
+
+  const handleConfirmOverrideCompletion = async () => {
+    try {
+      if (blockedWarning.targetStatusId) {
+        await updateTask({
+          id: currentTaskId,
+          body: { status_id: blockedWarning.targetStatusId, override_dependencies: true },
+        }).unwrap();
+      } else if (blockedWarning.targetIsCompleted !== undefined) {
+        await updateTask({
+          id: currentTaskId,
+          body: { is_completed: blockedWarning.targetIsCompleted, override_dependencies: true },
+        }).unwrap();
+      }
+      showToast('Completed task overriding dependencies', 'warning');
+      setBlockedWarning({ open: false, blockingTasks: [] });
+    } catch {
+      showToast('Failed to complete task', 'error');
+    }
+  };
 
   const { data: comments = [] } = useGetTaskCommentsQuery(currentTaskId, { skip: !currentTaskId });
   const { data: attachments = [], isLoading: isLoadingAttachments } = useGetTaskAttachmentsQuery(currentTaskId, { skip: !currentTaskId });

@@ -362,7 +362,7 @@ def list_tasks(
     cost_center_id: Optional[int] = None,
     company_id: Optional[int] = None,
     q: Optional[str] = None,
-    include_subtasks: bool = True,
+    include_subtasks: bool = False,
     is_completed: Optional[bool] = None,
     is_archived: bool = False,
     my_tasks_only: bool = False,
@@ -382,7 +382,7 @@ def list_tasks(
     
     if parent_task_id is not None:
         query = query.filter(Task.parent_task_id == parent_task_id)
-    elif not include_subtasks:
+    elif not include_subtasks and not q:
         query = query.filter(Task.parent_task_id.is_(None))
 
     if status_id:

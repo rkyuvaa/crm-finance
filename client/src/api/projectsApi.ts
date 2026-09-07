@@ -282,7 +282,7 @@ export const projectsApi = createApi({
     }),
 
     // Tasks
-    getTasks: builder.query<TaskItem[], { project_id?: number; status?: string; priority?: string; assignee_id?: number; q?: string } | void>({
+    getTasks: builder.query<TaskItem[], { project_id?: number; status?: string; priority?: string; assignee_id?: number; q?: string; include_subtasks?: boolean } | void>({
       query: (params) => ({
         url: '/tasks',
         params: params || undefined,
