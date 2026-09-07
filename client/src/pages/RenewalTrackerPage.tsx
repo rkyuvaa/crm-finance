@@ -525,70 +525,25 @@ export default function RenewalTrackerPage() {
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
-      {/* Header Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              borderRadius: '10px',
-              backgroundColor: '#04552B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-            }}
-          >
-            <RefreshCw size={24} />
-          </Box>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#023020', lineHeight: 1.2 }}>
-              Renewal Tracker
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#667A6D' }}>
-              Track vehicle insurance, fitness certificates, permits, PUC, warranties & statutory renewals.
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Upload size={18} />}
-            onClick={() => showToast('Import format ready', 'info')}
-            sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-          >
-            Import
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Plus size={18} />}
-            onClick={() => handleOpenModal()}
-            sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
-          >
-            New Renewal Item
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Tabs Navigation */}
-      <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, backgroundColor: 'transparent' }}>
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: 14, minHeight: 44 },
-            '& .Mui-selected': { color: '#04552B' },
-            '& .MuiTabs-indicator': { backgroundColor: '#04552B', height: 3 },
-          }}
+      {/* Top Action Bar */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<Upload size={18} />}
+          onClick={() => showToast('Import format ready', 'info')}
+          sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
         >
-          <Tab icon={<LayoutDashboard size={17} />} iconPosition="start" value="dashboard" label="Dashboard" />
-          <Tab icon={<Clock size={17} />} iconPosition="start" value="tracker" label="Renewal Tracker" />
-          <Tab icon={<BarChart3 size={17} />} iconPosition="start" value="reports" label="Reports & Analytics" />
-          <Tab icon={<Settings2 size={17} />} iconPosition="start" value="configuration" label="Configuration" />
-        </Tabs>
-      </Paper>
+          Import
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Plus size={18} />}
+          onClick={() => handleOpenModal()}
+          sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
+        >
+          New Renewal Item
+        </Button>
+      </Box>
 
       {/* ── TAB 1: RENEWAL DASHBOARD ───────────────────────────────────────── */}
       {currentTab === 'dashboard' && (
