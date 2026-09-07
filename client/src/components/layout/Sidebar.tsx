@@ -1,12 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BarChart3,
   Bell,
   Briefcase,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Cpu,
   FileText,
   FolderPlus,
@@ -14,7 +12,6 @@ import {
   ListTodo,
   Menu,
   PanelLeftClose,
-  PanelLeftOpen,
   Settings,
   Settings2,
   Sparkles,
@@ -24,7 +21,6 @@ import {
   Clock,
   Calendar,
   DollarSign,
-  User,
   Lock,
 } from 'lucide-react';
 
@@ -138,6 +134,19 @@ NAV_GROUPS.forEach((group) => {
   });
 });
 
+const getParentForPath = (pathname: string): string | null => {
+  for (const [parentKey, paths] of Object.entries(PARENT_CHILD_PATHS)) {
+    if (
+      paths.some((p) =>
+        p === '/' ? pathname === '/' : pathname === p || pathname.startsWith(p + '/'),
+      )
+    ) {
+      return parentKey;
+    }
+  }
+  return null;
+};
+
 export default function Sidebar({
   collapsed,
   onNavigate,
@@ -156,72 +165,37 @@ export default function Sidebar({
   const { can } = usePermission();
   const { showError } = useToast();
 
-  // Which expandable nav items are open (keyed by NavItem.key).
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    // Auto-expand any parent whose child is the current route.
-    Object.entries(PARENT_CHILD_PATHS).forEach(([key, paths]) => {
-      if (paths.some((p) => location.pathname.startsWith(p))) initial.add(key);
-    });
-    return initial;
-  });
+  // Exactly one open section allowed at a time (string key or null)
+  const [openSection, setOpenSection] = useState<string | null>(() =>
+    getParentForPath(location.pathname),
+  );
 
-  // Keep auto-expanding on route changes (e.g. programmatic navigation).
+  // Restore state on route change (Rule 5)
   useEffect(() => {
-    Object.entries(PARENT_CHILD_PATHS).forEach(([key, paths]) => {
-      if (paths.some((p) => location.pathname.startsWith(p))) {
-        setExpandedItems((prev) => {
-          if (prev.has(key)) return prev;
-          const next = new Set(prev);
-          next.add(key);
-          return next;
-        });
-      }
-    });
+    const activeParent = getParentForPath(location.pathname);
+    if (activeParent) {
+      setOpenSection(activeParent);
+    }
   }, [location.pathname]);
 
-  const toggleItem = (key: string) => {
-    setExpandedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const toggleSection = (key: string) => {
+    // Rule 1 & Rule 2: Only one section open, clicking open section collapses it
+    setOpenSection((prev) => (prev === key ? null : key));
   };
 
-  /** Shared style base for all primary nav items (links + expandable buttons). */
-  const navItemStyle = useMemo(
-    () => ({
-      display: 'flex',
-      alignItems: 'center',
-      gap: 11,
-      width: '100%',
-      padding: '8.5px 10px',
-      marginBottom: 2,
-      border: 'none',
-      background: 'transparent',
-      borderRadius: 8,
-      color: '#A0B2A6',
-      fontSize: 13,
-      fontWeight: 500,
-      textAlign: 'left' as const,
-      cursor: 'pointer',
-      fontFamily: 'inherit',
-      textDecoration: 'none',
-      whiteSpace: 'nowrap' as const,
-      position: 'relative' as const,
-      transition: 'background 0.12s ease, color 0.12s ease',
-    }),
-    [],
-  );
+  const handleLeafClick = () => {
+    // Rule 3: Leaf items close all accordion sections
+    setOpenSection(null);
+    onNavigate?.();
+  };
 
   return (
     <aside
       aria-label="Primary navigation"
       style={{
         width: collapsed ? 76 : 244,
-        background: '#152518',
-        borderRight: '1px solid #233827',
+        background: '#1a3a2a',
+        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -234,7 +208,78 @@ export default function Sidebar({
         transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
-      {/* ── Brand / Header with Hamburger Toggle ───────────────────────── */}
+      {/* Dynamic CSS styles for animations, hover states, active accent bar */}
+      <style>{`
+        .sb-parent-btn {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          width: 100%;
+          padding: 8.5px 10px;
+          margin-bottom: 2px;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          color: rgba(255, 255, 255, 0.70);
+          font-size: 13px;
+          font-weight: 500;
+          text-align: left;
+          cursor: pointer;
+          font-family: inherit;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .sb-parent-btn:hover {
+          background: rgba(255, 255, 255, 0.07);
+          color: #ffffff;
+        }
+        .sb-parent-btn.open-state {
+          background: rgba(255, 255, 255, 0.10);
+          color: #ffffff;
+          font-weight: 600;
+        }
+        .sb-sub-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 7px 10px 7px 42px;
+          margin-bottom: 1px;
+          border: none;
+          border-left: 3px solid transparent;
+          background: transparent;
+          border-radius: 0 6px 6px 0;
+          color: rgba(255, 255, 255, 0.70);
+          font-size: 12.5px;
+          font-weight: 500;
+          text-align: left;
+          cursor: pointer;
+          font-family: inherit;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease, border-left-color 0.15s ease;
+        }
+        .sb-sub-item:hover {
+          background: rgba(255, 255, 255, 0.07);
+          color: #ffffff;
+        }
+        .sb-sub-item.active {
+          color: #5fcf87 !important;
+          background: rgba(95, 207, 135, 0.08) !important;
+          border-left: 3px solid #5fcf87 !important;
+          font-weight: 600 !important;
+        }
+        .sb-submenu {
+          overflow: hidden;
+          transition: max-height 250ms ease, opacity 250ms ease;
+        }
+        .sb-chevron {
+          transition: transform 200ms ease;
+        }
+      `}</style>
+
+      {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -268,14 +313,14 @@ export default function Sidebar({
           {!collapsed && (
             <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
               <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
-                CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
+                CRM<span style={{ color: '#5fcf87' }}>FINANCE</span>
               </div>
               <div
                 style={{
                   fontSize: 9,
                   fontWeight: 600,
                   letterSpacing: 1.4,
-                  color: '#819688',
+                  color: 'rgba(255, 255, 255, 0.50)',
                   textTransform: 'uppercase',
                 }}
               >
@@ -285,7 +330,6 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Hamburger / Sidebar Toggle Icon */}
         {onToggleSidebar && (
           <button
             type="button"
@@ -301,19 +345,11 @@ export default function Sidebar({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#A0B2A6',
+              color: 'rgba(255, 255, 255, 0.70)',
               cursor: 'pointer',
               flexShrink: 0,
               transition: 'all 0.15s ease',
               marginLeft: collapsed ? 0 : 8,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
-              e.currentTarget.style.color = '#FFFFFF';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-              e.currentTarget.style.color = '#A0B2A6';
             }}
           >
             {collapsed ? <Menu size={16} /> : <PanelLeftClose size={16} />}
@@ -321,151 +357,143 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* ── Navigation ─────────────────────────────────────────────────── */}
-      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '4px 12px 12px' }}>
+      {/* Navigation */}
+      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 12px 12px' }}>
         {NAV_GROUPS.map((group, gi) => (
           <div key={group.label} style={{ marginTop: gi === 0 ? 0 : 6 }}>
-            {collapsed && group.label === 'Main' && <div style={{ height: 8 }} />}
-
             {group.items.map((item) => {
               const Icon = item.icon;
 
-              /* ── Expandable parent item (e.g. CRM) ────────────────── */
+              /* ── Accordion parent item with children ───────────────── */
               if (item.children) {
-                const isExpanded = expandedItems.has(item.key);
+                const isExpanded = openSection === item.key;
                 const isAnyChildActive = item.children.some((c) =>
-                  location.pathname.startsWith(c.path),
+                  c.path === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(c.path),
                 );
 
                 return (
                   <div key={item.key}>
-                    {/* Primary nav button — same look as Dashboard / PLM */}
                     <button
-                      onClick={() => toggleItem(item.key)}
+                      onClick={() => toggleSection(item.key)}
+                      className={`sb-parent-btn ${isExpanded || isAnyChildActive ? 'open-state' : ''}`}
                       style={{
-                        ...navItemStyle,
                         justifyContent: collapsed ? 'center' : 'flex-start',
                         padding: collapsed ? '10px 0' : '8.5px 10px',
-                        background: isAnyChildActive ? '#2D442D' : 'transparent',
-                        color: isAnyChildActive ? '#FFFFFF' : '#A0B2A6',
-                        fontWeight: isAnyChildActive ? 600 : 500,
-                        width: '100%',
                       }}
                     >
                       <span style={{ display: 'flex', flexShrink: 0 }}>
                         <Icon
                           size={17}
-                          color={isAnyChildActive ? '#4ADE80' : '#819688'}
+                          color={isExpanded || isAnyChildActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
                           style={{ flexShrink: 0 }}
                         />
                       </span>
                       {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
                       {!collapsed && (
-                        <span style={{ display: 'flex', alignItems: 'center', color: '#819688' }}>
-                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        <span
+                          className="sb-chevron"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            color: 'rgba(255, 255, 255, 0.70)',
+                          }}
+                        >
+                          <ChevronDown size={14} />
                         </span>
                       )}
                     </button>
 
-                    {/* Child items — shown when expanded and sidebar is not collapsed */}
-                    {isExpanded && !collapsed && (
-                      <div
-                        style={{
-                          marginLeft: 14,
-                          paddingLeft: 10,
-                          borderLeft: '1px solid #2C3E2C',
-                          marginBottom: 2,
-                        }}
-                      >
-                        {item.children.map((child) => {
-                          const ChildIcon = child.icon;
-                          const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
-                          const isChildPermitted = child.key === 'crm_dashboard' ? true : can('view', child.key);
+                    {/* Submenu with CSS max-height + opacity transition */}
+                    <div
+                      className="sb-submenu"
+                      style={{
+                        maxHeight: isExpanded && !collapsed ? '600px' : '0px',
+                        opacity: isExpanded && !collapsed ? 1 : 0,
+                      }}
+                    >
+                      {item.children.map((child) => {
+                        const ChildIcon = child.icon;
+                        const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
+                        const isChildPermitted =
+                          child.key === 'crm_dashboard' ? true : can('view', child.key);
 
-                          if (!isChildPermitted) {
-                            return (
-                              <div
-                                key={child.key}
-                                onClick={() => showError(`Access Restricted: Permission required to view ${child.label}.`)}
-                                style={{
-                                  ...navItemStyle,
-                                  padding: '7px 10px',
-                                  marginBottom: 1,
-                                  fontSize: 12.5,
-                                  color: '#5B6E5F',
-                                  opacity: 0.65,
-                                  cursor: 'not-allowed',
-                                }}
-                                title={`Permission required for ${child.label}`}
-                              >
+                        if (!isChildPermitted) {
+                          return (
+                            <div
+                              key={child.key}
+                              onClick={() =>
+                                showError(`Access Restricted: Permission required to view ${child.label}.`)
+                              }
+                              className="sb-sub-item"
+                              style={{
+                                paddingLeft: collapsed ? 10 : 42,
+                                color: 'rgba(255, 255, 255, 0.35)',
+                                cursor: 'not-allowed',
+                              }}
+                              title={`Permission required for ${child.label}`}
+                            >
+                              <span style={{ display: 'flex', flexShrink: 0 }}>
+                                <ChildIcon size={15} color="rgba(255, 255, 255, 0.35)" />
+                              </span>
+                              <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>
+                                {child.label}
+                              </span>
+                              <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <NavLink
+                            key={child.key}
+                            to={child.path}
+                            end={child.path === '/'}
+                            onClick={() => onNavigate?.()}
+                            className={({ isActive }) =>
+                              `sb-sub-item ${isActive ? 'active' : ''}`
+                            }
+                            style={!collapsed ? { paddingLeft: 42 } : { paddingLeft: 10, justifyContent: 'center' }}
+                          >
+                            {({ isActive }) => (
+                              <>
                                 <span style={{ display: 'flex', flexShrink: 0 }}>
                                   <ChildIcon
                                     size={15}
-                                    color="#5B6E5F"
-                                    style={{ flexShrink: 0 }}
+                                    color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
                                   />
                                 </span>
-                                <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>{child.label}</span>
-                                <Lock size={13} color="#6B7E6F" style={{ flexShrink: 0 }} />
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <NavLink
-                              key={child.key}
-                              to={child.path}
-                              onClick={() => onNavigate?.()}
-                              className="nav-item"
-                              style={({ isActive }) => ({
-                                ...navItemStyle,
-                                padding: '7px 10px',
-                                marginBottom: 1,
-                                fontSize: 12.5,
-                                background: isActive ? '#2D442D' : 'transparent',
-                                color: isActive ? '#FFFFFF' : '#A0B2A6',
-                                fontWeight: isActive ? 600 : 500,
-                              })}
-                            >
-                              {({ isActive }) => (
-                                <>
-                                  <span style={{ display: 'flex', flexShrink: 0 }}>
-                                    <ChildIcon
-                                      size={15}
-                                      color={isActive ? '#4ADE80' : '#819688'}
-                                      style={{ flexShrink: 0 }}
-                                    />
+                                {!collapsed && <span style={{ flex: 1 }}>{child.label}</span>}
+                                {!collapsed && badgeCount !== null && badgeCount > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      background: 'rgba(95, 207, 135, 0.20)',
+                                      color: '#5fcf87',
+                                      padding: '2px 7px',
+                                      borderRadius: 20,
+                                      minWidth: 20,
+                                      textAlign: 'center',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {badgeCount}
                                   </span>
-                                  <span style={{ flex: 1 }}>{child.label}</span>
-                                  {badgeCount !== null && badgeCount > 0 && (
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        background: '#2D442D',
-                                        color: '#4ADE80',
-                                        padding: '2px 7px',
-                                        borderRadius: 20,
-                                        minWidth: 20,
-                                        textAlign: 'center',
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {badgeCount}
-                                    </span>
-                                  )}
-                                </>
-                              )}
-                            </NavLink>
-                          );
-                        })}
-                      </div>
-                    )}
+                                )}
+                              </>
+                            )}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               }
 
-              /* ── Regular nav item (leaf) ───────────────────────────── */
+              /* ── Leaf nav item (PLM, Notifications, Settings) ─────── */
               const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
               const isLeafPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
 
@@ -473,26 +501,23 @@ export default function Sidebar({
                 return (
                   <div
                     key={item.key}
-                    onClick={() => showError(`Access Restricted: Permission required to view ${item.label}.`)}
+                    onClick={() =>
+                      showError(`Access Restricted: Permission required to view ${item.label}.`)
+                    }
+                    className="sb-parent-btn"
                     style={{
-                      ...navItemStyle,
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       padding: collapsed ? '10px 0' : '8.5px 10px',
-                      color: '#5B6E5F',
-                      opacity: 0.65,
+                      color: 'rgba(255, 255, 255, 0.35)',
                       cursor: 'not-allowed',
                     }}
                     title={`Permission required for ${item.label}`}
                   >
                     <span style={{ display: 'flex', flexShrink: 0 }}>
-                      <Icon
-                        size={17}
-                        color="#5B6E5F"
-                        style={{ flexShrink: 0 }}
-                      />
+                      <Icon size={17} color="rgba(255, 255, 255, 0.35)" />
                     </span>
                     {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                    {!collapsed && <Lock size={13} color="#6B7E6F" style={{ flexShrink: 0 }} />}
+                    {!collapsed && <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />}
                   </div>
                 );
               }
@@ -502,23 +527,21 @@ export default function Sidebar({
                   key={item.key}
                   to={item.path!}
                   end={item.path === '/'}
-                  onClick={() => onNavigate?.()}
-                  className="nav-item"
-                  style={({ isActive }) => ({
-                    ...navItemStyle,
+                  onClick={handleLeafClick}
+                  className={({ isActive }) =>
+                    `sb-parent-btn ${isActive ? 'open-state' : ''}`
+                  }
+                  style={{
                     justifyContent: collapsed ? 'center' : 'flex-start',
                     padding: collapsed ? '10px 0' : '8.5px 10px',
-                    background: isActive ? '#2D442D' : 'transparent',
-                    color: isActive ? '#FFFFFF' : '#A0B2A6',
-                    fontWeight: isActive ? 600 : 500,
-                  })}
+                  }}
                 >
                   {({ isActive }) => (
                     <>
                       <span style={{ display: 'flex', flexShrink: 0 }}>
                         <Icon
                           size={17}
-                          color={isActive ? '#4ADE80' : '#819688'}
+                          color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
                           style={{ flexShrink: 0 }}
                         />
                       </span>
@@ -528,8 +551,8 @@ export default function Sidebar({
                           style={{
                             fontSize: 10,
                             fontWeight: 700,
-                            background: '#2D442D',
-                            color: '#4ADE80',
+                            background: 'rgba(95, 207, 135, 0.20)',
+                            color: '#5fcf87',
                             padding: '2px 7px',
                             borderRadius: 20,
                             minWidth: 20,
@@ -549,14 +572,14 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* ── User profile footer ────────────────────────────────────────── */}
+      {/* User Footer */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           padding: collapsed ? '12px 0' : '12px 14px',
-          borderTop: '1px solid #2C3E2C',
+          borderTop: '1px solid rgba(255, 255, 255, 0.07)',
           flexShrink: 0,
           justifyContent: collapsed ? 'center' : 'flex-start',
           cursor: 'pointer',
@@ -580,23 +603,23 @@ export default function Sidebar({
           {user ? user.initials || initialsOf(user.full_name) : '?'}
         </div>
         {!collapsed && user && (
-          <>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#FFFFFF',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {user.full_name}
-              </div>
-              <div style={{ fontSize: 11, color: '#819688' }}>{ROLE_LABELS[user.role] ?? user.role}</div>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#FFFFFF',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user.full_name}
             </div>
-          </>
+            <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.50)' }}>
+              {ROLE_LABELS[user.role] ?? user.role}
+            </div>
+          </div>
         )}
       </div>
     </aside>
