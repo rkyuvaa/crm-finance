@@ -85,7 +85,8 @@ export default function TaskListView({
   const isAllSelected = allTaskIds.length > 0 && selectedTaskIds.length === allTaskIds.length;
 
   const renderTaskRow = (task: TaskItem, depth = 0) => {
-    const hasChildren = task.subtasks && task.subtasks.length > 0;
+    const subtaskList = task.nested_subtasks || task.subtasks || [];
+    const hasChildren = subtaskList.length > 0;
     const isExpanded = !!expandedTaskIds[task.id];
     const isSelected = selectedTaskIds.includes(task.id);
 
@@ -308,7 +309,7 @@ export default function TaskListView({
         {/* Recursive Subtasks */}
         {hasChildren &&
           isExpanded &&
-          task.subtasks.map((subtask) => renderTaskRow(subtask, depth + 1))}
+          subtaskList.map((subtask) => renderTaskRow(subtask, depth + 1))}
       </React.Fragment>
     );
   };
