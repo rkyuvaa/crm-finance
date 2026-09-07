@@ -390,22 +390,9 @@ export default function ProjectsPage() {
               <MenuItem value="Delivery & Payout">Delivery & Payout</MenuItem>
               <MenuItem value="Document Operations">Document Operations</MenuItem>
               <MenuItem value="General ERP Task">General ERP Task</MenuItem>
-            </TextField>
-
-            <TextField
-              label="Link CRM Lead / Opportunity"
-              fullWidth
-              size="small"
-              select
-              value={leadId}
-              onChange={(e) => setLeadId(e.target.value === '' ? '' : Number(e.target.value))}
-            >
-              <MenuItem value="">None</MenuItem>
-              {(leadsData?.items ?? []).map((lead) => (
-                <MenuItem key={lead.id} value={lead.id}>
-                  {lead.app_no} - {lead.customer_name} ({lead.vehicle || 'Vehicle'})
-                </MenuItem>
-              ))}
+              <MenuItem value="IT & Software">IT & Software</MenuItem>
+              <MenuItem value="Finance & Audit">Finance & Audit</MenuItem>
+              <MenuItem value="Construction & Operations">Construction & Operations</MenuItem>
             </TextField>
 
             <TextField

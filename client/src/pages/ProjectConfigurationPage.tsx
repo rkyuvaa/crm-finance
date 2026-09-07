@@ -819,6 +819,36 @@ export default function ProjectConfigurationPage() {
                   />
                 </Grid>
 
+                <Grid item xs={12}>
+                  <Box sx={{ mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
+                      Configured Project Categories
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block' }}>
+                      These categories appear when creating and organizing project workspaces across the ERP.
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {[
+                        'Vehicle Customization',
+                        'Delivery & Payout',
+                        'Document Operations',
+                        'General ERP Task',
+                        'IT & Software',
+                        'Finance & Audit',
+                        'Construction & Operations',
+                      ].map((cat) => (
+                        <Chip
+                          key={cat}
+                          label={cat}
+                          variant="outlined"
+                          size="small"
+                          sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: '#04552B', color: '#04552B' }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </Grid>
+
                 <Grid item xs={12} sm={6}>
                   <FormControlLabel
                     control={
