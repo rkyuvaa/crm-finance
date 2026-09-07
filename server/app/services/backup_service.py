@@ -92,11 +92,13 @@ from app.models import (
 UPLOAD_DIR_PATH = Path("uploads")
 
 # Topological model list for export and import across all system domains
+# Topological model list for export and import across all system domains
 TABLE_MODELS = [
     ("finance_companies", FinanceCompany),
-    ("branches", Branch),
     ("pipeline_stages", PipelineStage),
     ("vehicle_models", VehicleModel),
+    ("users", User),
+    ("branches", Branch),
     ("departments", Department),
     ("cost_centers", CostCenter),
     ("roles", Role),
@@ -107,7 +109,6 @@ TABLE_MODELS = [
     ("role_permissions", RolePermission),
     ("role_data_scopes", RoleDataScope),
     ("role_field_permissions", RoleFieldPermission),
-    ("users", User),
     ("department_users", DepartmentUser),
     ("user_roles", RbacUserRole),
     ("user_permissions", UserPermission),
@@ -333,7 +334,18 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
     tables_data = backup_payload["data"]
     restored_summary = {}
 
+    is_postgres = False
     try:
+        is_postgres = db.bind is not None and db.bind.dialect.name == "postgresql"
+    except Exception:
+        pass
+
+    try:
+        if is_postgres:
+            db.execute(text("SET session_replication_role = 'replica';"))
+        elif db.bind and db.bind.dialect.name == "sqlite":
+            db.execute(text("PRAGMA foreign_keys = OFF;"))
+
         if mode == "overwrite":
             for key, model in reversed(TABLE_MODELS):
                 db.query(model).delete(synchronize_session=False)
@@ -377,17 +389,25 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
             db.flush()
             restored_summary[key] = inserted_count
 
-        if db.bind and db.bind.dialect.name == "postgresql":
+        if is_postgres:
             for key, model in TABLE_MODELS:
                 table_name = model.__tablename__
                 try:
                     db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), COALESCE(MAX(id), 1)) FROM {table_name};"))
                 except Exception:
                     pass
+            db.execute(text("SET session_replication_role = 'origin';"))
+        elif db.bind and db.bind.dialect.name == "sqlite":
+            db.execute(text("PRAGMA foreign_keys = ON;"))
 
         db.commit()
     except Exception as e:
         db.rollback()
+        if is_postgres:
+            try:
+                db.execute(text("SET session_replication_role = 'origin';"))
+            except Exception:
+                pass
         raise RuntimeError(f"Backup restoration failed: {str(e)}") from e
 
     return {
