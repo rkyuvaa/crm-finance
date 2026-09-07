@@ -212,11 +212,12 @@ export default function SystemBackupCard() {
           }}
         >
           <Box>
-            <Typography sx={{ fontWeight: 700, fontSize: 14, color: '#023020', mb: 0.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 14, color: '#023020', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
               Export System Backup
+              <Chip label="Full System ZIP" size="small" sx={{ backgroundColor: '#023020', color: '#4ADE80', fontWeight: 800, fontSize: 10, height: 20 }} />
             </Typography>
             <Typography sx={{ fontSize: 12.5, color: '#667A6D', mb: 2 }}>
-              Generate a full backup package containing PostgreSQL database statements and uploaded images/documents.
+              Generate a 100% complete system backup ZIP package containing database SQL statements, JSON metadata, and all uploaded images/documents.
             </Typography>
 
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
@@ -228,9 +229,9 @@ export default function SystemBackupCard() {
                 onChange={(e) => setExportFormat(e.target.value as 'zip' | 'sql' | 'json')}
                 sx={{ backgroundColor: '#FFFFFF', borderRadius: '6px' }}
               >
-                <MenuItem value="zip">Full Package (.ZIP) — Database SQL Dump + Uploaded Images/Docs</MenuItem>
-                <MenuItem value="sql">Database Dump (.SQL) — Raw SQL Insert Statements</MenuItem>
-                <MenuItem value="json">Database Archive (.JSON) — Portable Data Payload</MenuItem>
+                <MenuItem value="zip">★ Full System Package (.ZIP) — Database SQL + Uploaded Files [RECOMMENDED]</MenuItem>
+                <MenuItem value="sql">Database Dump Only (.SQL) — Raw SQL Insert Statements</MenuItem>
+                <MenuItem value="json">Database Data Only (.JSON) — Portable Data Payload</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -248,7 +249,7 @@ export default function SystemBackupCard() {
               fontWeight: 700,
             }}
           >
-            {downloading ? 'Preparing Backup Package...' : `Download ${exportFormat.toUpperCase()} Backup`}
+            {downloading ? 'Preparing Backup Package...' : `Download ${exportFormat === 'zip' ? 'Full System .ZIP Package' : exportFormat.toUpperCase() + ' Backup'}`}
           </Button>
         </Box>
 
