@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useGetDepartmentsQuery } from '../api/rbacApi';
+import { useBranchesQuery } from '../api/mastersApi';
 import {
   Box,
   Paper,
@@ -275,21 +276,38 @@ export default function RenewalTrackerPage() {
     return [];
   }, [deptsList]);
 
-  // Dynamic Branches from Settings
-  const [branchOptions, setBranchOptions] = useState<string[]>([]);
-  useEffect(() => {
+  // Dynamic Branches from Settings (API + Settings Local Storage)
+  const { data: apiBranches = [] } = useBranchesQuery();
+  const branchOptions = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. From backend API
+    if (Array.isArray(apiBranches) && apiBranches.length > 0) {
+      apiBranches.forEach((b: any) => {
+        if (b.name && b.is_active !== false && !list.includes(b.name)) {
+          list.push(b.name);
+        }
+      });
+    }
+
+    // 2. From Settings > Branches (Local Storage)
     try {
       const saved = localStorage.getItem('crm_branches_data');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setBranchOptions(parsed.filter((b: any) => b.status !== 'INACTIVE').map((b: any) => b.name));
-          return;
+          parsed.forEach((b: any) => {
+            if (b.name && b.status !== 'INACTIVE' && b.is_active !== false && !list.includes(b.name)) {
+              list.push(b.name);
+            }
+          });
         }
       }
     } catch {}
-    setBranchOptions([]);
-  }, [modalOpen]);
+
+    return list;
+  }, [apiBranches, modalOpen]);
+
 
 
   // Active Tab from URL

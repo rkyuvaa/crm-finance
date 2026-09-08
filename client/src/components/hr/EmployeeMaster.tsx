@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useGetDepartmentsQuery } from '../../api/rbacApi';
+import { useBranchesQuery } from '../../api/mastersApi';
 import {
   Box,
   Button,
@@ -106,20 +107,37 @@ export default function EmployeeMaster() {
     return [];
   }, [deptsList]);
 
-  const [branchOptions, setBranchOptions] = useState<string[]>([]);
-  useEffect(() => {
+  const { data: apiBranches = [] } = useBranchesQuery();
+  const branchOptions = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. From backend API
+    if (Array.isArray(apiBranches) && apiBranches.length > 0) {
+      apiBranches.forEach((b: any) => {
+        if (b.name && b.is_active !== false && !list.includes(b.name)) {
+          list.push(b.name);
+        }
+      });
+    }
+
+    // 2. From Settings > Branches (Local Storage)
     try {
       const saved = localStorage.getItem('crm_branches_data');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setBranchOptions(parsed.filter((b: any) => b.status !== 'INACTIVE').map((b: any) => b.name));
-          return;
+          parsed.forEach((b: any) => {
+            if (b.name && b.status !== 'INACTIVE' && b.is_active !== false && !list.includes(b.name)) {
+              list.push(b.name);
+            }
+          });
         }
       }
     } catch {}
-    setBranchOptions([]);
-  }, []);
+
+    return list;
+  }, [apiBranches]);
+
 
   // Load employees from localStorage if available so deletions and additions persist on page refresh
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
