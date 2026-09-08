@@ -242,6 +242,22 @@ export default function RenewalTrackerPage() {
   const [catValidityMonths, setCatValidityMonths] = useState(12);
   const [catReminderDays, setCatReminderDays] = useState(30);
 
+  // Item Modal State (Add / Edit 12 Fields)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [itemService, setItemService] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<string>('');
+  const [department, setDepartment] = useState<string>('');
+  const [branchLocation, setBranchLocation] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [lastRenewedDate, setLastRenewedDate] = useState('');
+  const [reminderDays, setReminderDays] = useState<number>(30);
+  const [renewalOwner, setRenewalOwner] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [cost, setCost] = useState<number | ''>('');
+
   // Dynamic Departments from Settings
   const { data: deptsList = [] } = useGetDepartmentsQuery();
   const departmentOptions = useMemo(() => {
@@ -267,21 +283,6 @@ export default function RenewalTrackerPage() {
     setBranchOptions([]);
   }, [modalOpen]);
 
-  // Item Modal State (Add / Edit 12 Fields)
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [itemService, setItemService] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<string>('');
-  const [department, setDepartment] = useState<string>('');
-  const [branchLocation, setBranchLocation] = useState<string>('');
-  const [startDate, setStartDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [lastRenewedDate, setLastRenewedDate] = useState('');
-  const [reminderDays, setReminderDays] = useState<number>(30);
-  const [renewalOwner, setRenewalOwner] = useState('');
-  const [remarks, setRemarks] = useState('');
-  const [cost, setCost] = useState<number | ''>('');
 
   // Active Tab from URL
   const currentTab = location.pathname.endsWith('/tracker')
