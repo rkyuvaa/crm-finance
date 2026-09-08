@@ -868,21 +868,21 @@ export default function RenewalTrackerPage() {
           </Paper>
 
           {/* Main Revamped Tracker Table */}
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', bgcolor: '#FFFFFF' }}>
-            <Table size="medium">
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', width: '100%', bgcolor: '#FFFFFF' }}>
+            <Table size="medium" sx={{ minWidth: 1650, tableLayout: 'auto' }}>
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 220 }}>Renewal Item / Service & Description</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Category</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 160 }}>Dept & Branch / Location</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 120 }}>Start Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130 }}>Renewal Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Days Remaining (Auto)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130 }}>Last Renewed Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 120 }}>Lead Time (Days)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Renewal Owner</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 180 }}>Remarks / Notes</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C', minWidth: 110 }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 260, width: 260 }}>Renewal Item / Service & Description</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 140, width: 140 }}>Category</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 170, width: 170 }}>Dept & Branch / Location</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 110, width: 110 }}>Start Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130, width: 130 }}>Renewal Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150, width: 150 }}>Days Remaining (Auto)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130, width: 130 }}>Last Renewed Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 120, width: 120 }}>Lead Time (Days)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 160, width: 160 }}>Renewal Owner</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 220, width: 220 }}>Remarks / Notes</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C', minWidth: 110, width: 110 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -898,7 +898,7 @@ export default function RenewalTrackerPage() {
                       <TableCell>
                         <Typography sx={{ fontWeight: 700, fontSize: 13.5, color: '#16231B' }}>{r.item_service}</Typography>
                         {r.description && (
-                          <Typography sx={{ fontSize: 11.5, color: '#64748B', mt: 0.3 }}>{r.description}</Typography>
+                          <Typography sx={{ fontSize: 11.5, color: '#64748B', mt: 0.3, whiteSpace: 'normal' }}>{r.description}</Typography>
                         )}
                       </TableCell>
                       <TableCell>
@@ -916,7 +916,7 @@ export default function RenewalTrackerPage() {
                       <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
                       <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: '#475569' }}>{r.reminder_days} Days</TableCell>
                       <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: '#04552B' }}>{r.renewal_owner}</TableCell>
-                      <TableCell sx={{ fontSize: 11.5, color: '#64748B', maxWidth: 200, whiteSpace: 'normal' }}>
+                      <TableCell sx={{ fontSize: 11.5, color: '#64748B', whiteSpace: 'normal' }}>
                         {r.remarks || '—'}
                       </TableCell>
                       <TableCell align="right">
