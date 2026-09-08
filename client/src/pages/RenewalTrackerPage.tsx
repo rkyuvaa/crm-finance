@@ -739,9 +739,9 @@ export default function RenewalTrackerPage() {
   };
 
   return (
-    <Box sx={{ p: 2.5, width: '100%', boxSizing: 'border-box' }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', px: { xs: 2, sm: 3, md: 3.5 }, py: 2.5, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flex: 1 }}>
       {/* Top Action Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2, width: '100%' }}>
         <Button
           variant="outlined"
           startIcon={<Upload size={16} />}
@@ -762,7 +762,7 @@ export default function RenewalTrackerPage() {
 
       {/* ── TAB 1: RENEWAL DASHBOARD ───────────────────────────────────────── */}
       {currentTab === 'dashboard' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%', maxWidth: 'none' }}>
           {/* Critical Alerts Banner */}
           {(expiredCount > 0 || expiringSoonCount > 0) && (
             <Paper
@@ -939,10 +939,10 @@ export default function RenewalTrackerPage() {
 
       {/* ── TAB 2: RENEWAL TRACKER GRID (SINGLE SCREEN FULL FIT, EXACT 12 COLUMNS, 3-DOTS ACTION) ── */}
       {currentTab === 'tracker' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 'none' }}>
           {/* Filter Controls Bar */}
-          <Paper elevation={0} sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
-            <Grid container spacing={1.5} alignItems="center">
+          <Paper elevation={0} sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF', width: '100%', boxSizing: 'border-box' }}>
+            <Grid container spacing={1.5} alignItems="center" sx={{ width: '100%', m: 0 }}>
               <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
@@ -1021,21 +1021,21 @@ export default function RenewalTrackerPage() {
           </Paper>
 
           {/* Main Revamped Tracker Table */}
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', width: '100%', bgcolor: '#FFFFFF' }}>
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', width: '100%', boxSizing: 'border-box', bgcolor: '#FFFFFF' }}>
             <Table size="medium" sx={{ width: '100%', tableLayout: 'auto' }}>
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 180 }}>Renewal Item / Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Vendor</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 130 }}>Plan</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Department</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 115 }}>Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110 }}>Renewal Cycle</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 135 }}>Days Remaining</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Last Renewed Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110 }}>Amount (₹)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 130 }}>Renewal Owner</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1, py: 1.5, minWidth: 70 }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 160, width: '18%' }}>Renewal Item / Service</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Vendor</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Plan</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Department</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 95, width: '8%' }}>Renewal Cycle</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120, width: '10%' }}>Days Remaining</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110, width: '9%' }}>Last Renewed Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 90, width: '8%' }}>Amount (₹)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110, width: '14%' }}>Renewal Owner</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1, py: 1.5, minWidth: 60, width: '5%' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1154,8 +1154,8 @@ export default function RenewalTrackerPage() {
 
       {/* ── TAB 3: REPORTS & ANALYTICS ────────────────────────────────────── */}
       {currentTab === 'reports' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Grid container spacing={2.5}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', maxWidth: 'none' }}>
+          <Grid container spacing={2.5} sx={{ width: '100%', m: 0 }}>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 2 }}>
@@ -1225,8 +1225,8 @@ export default function RenewalTrackerPage() {
 
       {/* ── TAB 4: RENEWAL CONFIGURATION ──────────────────────────────────── */}
       {currentTab === 'configuration' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 1.5, bgcolor: '#F8FAF7' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', maxWidth: 'none' }}>
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 1.5, bgcolor: '#F8FAF7', width: '100%', boxSizing: 'border-box' }}>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
                 size="small"
