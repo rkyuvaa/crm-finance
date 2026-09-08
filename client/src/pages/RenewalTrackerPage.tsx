@@ -1028,9 +1028,7 @@ export default function RenewalTrackerPage() {
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 180 }}>Renewal Item / Service</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Vendor</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 130 }}>Plan</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Category</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Department</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 130 }}>Branch</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 115 }}>Due Date</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110 }}>Renewal Cycle</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 135 }}>Days Remaining</TableCell>
@@ -1043,7 +1041,7 @@ export default function RenewalTrackerPage() {
               <TableBody>
                 {filteredRenewals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} align="center" sx={{ py: 6, color: '#7A8B80' }}>
+                    <TableCell colSpan={11} align="center" sx={{ py: 6, color: '#7A8B80' }}>
                       <Typography variant="body1" sx={{ fontWeight: 600, color: '#64748B' }}>
                         No renewal items found. Click 'New Renewal Item / Service' to create a new record.
                       </Typography>
@@ -1070,42 +1068,9 @@ export default function RenewalTrackerPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip label={r.category} size="small" sx={{ fontWeight: 600, fontSize: 11, bgcolor: '#F1F5F9' }} />
-                        </TableCell>
-                        <TableCell>
                           <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
                             {r.department || '—'}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {r.branch_location && branchesDataMap[r.branch_location] ? (
-                            <Tooltip
-                              title={
-                                <Box sx={{ p: 0.5 }}>
-                                  <Typography sx={{ fontSize: 11.5, fontWeight: 700, mb: 0.5 }}>{r.branch_location}</Typography>
-                                  <Typography sx={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    📍 Address: {[branchesDataMap[r.branch_location].address, branchesDataMap[r.branch_location].city, branchesDataMap[r.branch_location].state, branchesDataMap[r.branch_location].pincode].filter(Boolean).join(', ') || 'Not set'}
-                                  </Typography>
-                                  <Typography sx={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.3 }}>
-                                    ⏰ Shift: {branchesDataMap[r.branch_location].shift_name} ({branchesDataMap[r.branch_location].shift_start_time} - {branchesDataMap[r.branch_location].shift_end_time}, {branchesDataMap[r.branch_location].working_days})
-                                  </Typography>
-                                </Box>
-                              }
-                              arrow
-                              placement="top"
-                            >
-                              <Box sx={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#04552B', textDecoration: 'underline', textDecorationColor: '#A7F3D0' }}>
-                                  {r.branch_location}
-                                </Typography>
-                                <MapPin size={12} color="#04552B" />
-                              </Box>
-                            </Tooltip>
-                          ) : (
-                            <Typography sx={{ fontSize: 12, color: '#475569' }}>
-                              {r.branch_location || '—'}
-                            </Typography>
-                          )}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
                           {r.due_date}
