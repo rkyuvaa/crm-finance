@@ -748,181 +748,174 @@ export default function RenewalTrackerPage() {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 1.5, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flex: 1 }}>
-      {/* Top Action Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2, width: '100%' }}>
-        <Button
-          variant="outlined"
-          startIcon={<Upload size={16} />}
-          onClick={() => showToast('Import format ready for 12 renewal fields', 'info')}
-          sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: 15 }}
-        >
-          Import
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={16} />}
-          onClick={() => handleOpenModal()}
-          sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700, fontSize: 15 }}
-        >
-          New Renewal Item / Service
-        </Button>
+      {/* Top Header Row: 3 Status Filter Pills (Left) + Import & New Item Buttons (Right) */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 2,
+          width: '100%',
+        }}
+      >
+        {/* Left Side: 3 Compact Status Pills */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+          {/* Pill 1: Active & Compliant */}
+          <Paper
+            elevation={0}
+            onClick={() => setStatusFilter((prev) => (prev === 'ACTIVE' ? 'ALL' : 'ACTIVE'))}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'all 0.18s ease-in-out',
+              border: '1.5px solid',
+              borderColor: statusFilter === 'ACTIVE' ? '#04552B' : '#C8E6C9',
+              bgcolor: statusFilter === 'ACTIVE' ? '#04552B' : '#F4FBF7',
+              color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B',
+              boxShadow: statusFilter === 'ACTIVE' ? '0 3px 10px rgba(4, 85, 43, 0.2)' : 'none',
+              '&:hover': {
+                borderColor: '#04552B',
+                transform: 'translateY(-1px)',
+              },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <ShieldCheck size={17} color={statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B'} />
+            <Typography sx={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1 }}>
+              Active & Compliant
+            </Typography>
+            <Box
+              sx={{
+                px: 1,
+                py: 0.2,
+                borderRadius: '12px',
+                bgcolor: statusFilter === 'ACTIVE' ? 'rgba(255, 255, 255, 0.25)' : '#DCFCE7',
+                color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#15803D',
+                fontWeight: 800,
+                fontSize: 12.5,
+              }}
+            >
+              {activeCount}
+            </Box>
+          </Paper>
+
+          {/* Pill 2: Expiring Soon */}
+          <Paper
+            elevation={0}
+            onClick={() => setStatusFilter((prev) => (prev === 'EXPIRING_SOON' ? 'ALL' : 'EXPIRING_SOON'))}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'all 0.18s ease-in-out',
+              border: '1.5px solid',
+              borderColor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FDE68A',
+              bgcolor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FFFDF5',
+              color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706',
+              boxShadow: statusFilter === 'EXPIRING_SOON' ? '0 3px 10px rgba(217, 119, 6, 0.2)' : 'none',
+              '&:hover': {
+                borderColor: '#D97706',
+                transform: 'translateY(-1px)',
+              },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <BellRing size={17} color={statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706'} />
+            <Typography sx={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1 }}>
+              Expiring Soon (&lt;30d)
+            </Typography>
+            <Box
+              sx={{
+                px: 1,
+                py: 0.2,
+                borderRadius: '12px',
+                bgcolor: statusFilter === 'EXPIRING_SOON' ? 'rgba(255, 255, 255, 0.25)' : '#FEF3C7',
+                color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#B45309',
+                fontWeight: 800,
+                fontSize: 12.5,
+              }}
+            >
+              {expiringSoonCount}
+            </Box>
+          </Paper>
+
+          {/* Pill 3: Expired Overdue */}
+          <Paper
+            elevation={0}
+            onClick={() => setStatusFilter((prev) => (prev === 'EXPIRED' ? 'ALL' : 'EXPIRED'))}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'all 0.18s ease-in-out',
+              border: '1.5px solid',
+              borderColor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FCA5A5',
+              bgcolor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FEF2F2',
+              color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626',
+              boxShadow: statusFilter === 'EXPIRED' ? '0 3px 10px rgba(220, 38, 38, 0.2)' : 'none',
+              '&:hover': {
+                borderColor: '#DC2626',
+                transform: 'translateY(-1px)',
+              },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <AlertCircle size={17} color={statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626'} />
+            <Typography sx={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1 }}>
+              Expired Overdue
+            </Typography>
+            <Box
+              sx={{
+                px: 1,
+                py: 0.2,
+                borderRadius: '12px',
+                bgcolor: statusFilter === 'EXPIRED' ? 'rgba(255, 255, 255, 0.25)' : '#FEE2E2',
+                color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#991B1B',
+                fontWeight: 800,
+                fontSize: 12.5,
+              }}
+            >
+              {expiredCount}
+            </Box>
+          </Paper>
+        </Box>
+
+        {/* Right Side: Action Buttons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Upload size={16} />}
+            onClick={() => showToast('Import format ready for 12 renewal fields', 'info')}
+            sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: 15 }}
+          >
+            Import
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={() => handleOpenModal()}
+            sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700, fontSize: 15 }}
+          >
+            New Renewal Item / Service
+          </Button>
+        </Box>
       </Box>
 
       {/* ── TAB: RENEWAL TRACKER GRID ── */}
       {currentTab === 'tracker' && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 'none' }}>
-          {/* 3 Status Interactive Filter Pills */}
-          <Grid container spacing={2} sx={{ mb: 0.5 }}>
-            <Grid item xs={12} sm={4}>
-              <Paper
-                elevation={0}
-                onClick={() => setStatusFilter((prev) => (prev === 'ACTIVE' ? 'ALL' : 'ACTIVE'))}
-                sx={{
-                  p: 2,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                  border: '2px solid',
-                  borderColor: statusFilter === 'ACTIVE' ? '#04552B' : '#C8E6C9',
-                  bgcolor: statusFilter === 'ACTIVE' ? '#04552B' : '#FFFFFF',
-                  boxShadow: statusFilter === 'ACTIVE' ? '0 4px 14px rgba(4, 85, 43, 0.22)' : 'none',
-                  '&:hover': {
-                    borderColor: '#04552B',
-                    transform: 'translateY(-2px)',
-                  },
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      p: 1,
-                      borderRadius: '10px',
-                      bgcolor: statusFilter === 'ACTIVE' ? 'rgba(255, 255, 255, 0.2)' : '#EAF6E8',
-                      color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <ShieldCheck size={22} />
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'ACTIVE' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
-                      Active & Compliant
-                    </Typography>
-                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B', lineHeight: 1.2 }}>
-                      {activeCount} Items
-                    </Typography>
-                  </Box>
-                </Box>
-                {statusFilter === 'ACTIVE' && (
-                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
-                )}
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Paper
-                elevation={0}
-                onClick={() => setStatusFilter((prev) => (prev === 'EXPIRING_SOON' ? 'ALL' : 'EXPIRING_SOON'))}
-                sx={{
-                  p: 2,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                  border: '2px solid',
-                  borderColor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FDE68A',
-                  bgcolor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FFFFFF',
-                  boxShadow: statusFilter === 'EXPIRING_SOON' ? '0 4px 14px rgba(217, 119, 6, 0.22)' : 'none',
-                  '&:hover': {
-                    borderColor: '#D97706',
-                    transform: 'translateY(-2px)',
-                  },
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      p: 1,
-                      borderRadius: '10px',
-                      bgcolor: statusFilter === 'EXPIRING_SOON' ? 'rgba(255, 255, 255, 0.2)' : '#FEF3C7',
-                      color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <BellRing size={22} />
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'EXPIRING_SOON' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
-                      Expiring Soon (&lt;30d)
-                    </Typography>
-                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706', lineHeight: 1.2 }}>
-                      {expiringSoonCount} Items
-                    </Typography>
-                  </Box>
-                </Box>
-                {statusFilter === 'EXPIRING_SOON' && (
-                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
-                )}
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Paper
-                elevation={0}
-                onClick={() => setStatusFilter((prev) => (prev === 'EXPIRED' ? 'ALL' : 'EXPIRED'))}
-                sx={{
-                  p: 2,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                  border: '2px solid',
-                  borderColor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FCA5A5',
-                  bgcolor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FFFFFF',
-                  boxShadow: statusFilter === 'EXPIRED' ? '0 4px 14px rgba(220, 38, 38, 0.22)' : 'none',
-                  '&:hover': {
-                    borderColor: '#DC2626',
-                    transform: 'translateY(-2px)',
-                  },
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      p: 1,
-                      borderRadius: '10px',
-                      bgcolor: statusFilter === 'EXPIRED' ? 'rgba(255, 255, 255, 0.2)' : '#FEE2E2',
-                      color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <AlertCircle size={22} />
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'EXPIRED' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
-                      Expired Overdue
-                    </Typography>
-                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626', lineHeight: 1.2 }}>
-                      {expiredCount} Items
-                    </Typography>
-                  </Box>
-                </Box>
-                {statusFilter === 'EXPIRED' && (
-                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
           {/* Filter Controls Bar */}
           <Paper elevation={0} sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF', width: '100%', boxSizing: 'border-box' }}>
             <Grid container spacing={1.5} alignItems="center">
