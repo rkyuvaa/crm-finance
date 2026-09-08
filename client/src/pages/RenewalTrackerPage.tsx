@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGetDepartmentsQuery } from '../api/rbacApi';
 import {
   Box,
   Paper,
@@ -83,24 +84,7 @@ interface MailTemplate {
   body: string;
 }
 
-const DEPARTMENTS = [
-  'Logistics & Fleet',
-  'IT & Infrastructure',
-  'Legal & Statutory',
-  'Operations',
-  'HR & Admin',
-  'Finance & Accounts',
-  'Maintenance & Equipment',
-];
-
-const BRANCH_LOCATIONS = [
-  'Bangalore HQ',
-  'Chennai Hub',
-  'Hyderabad Depot',
-  'Mumbai West',
-  'Delhi North',
-  'Kolkata East',
-];
+// No demo data rule: starts as empty array []
 
 // No demo data rule: starts as empty array []
 const INITIAL_RENEWALS: RenewalItem[] = [];
@@ -258,14 +242,39 @@ export default function RenewalTrackerPage() {
   const [catValidityMonths, setCatValidityMonths] = useState(12);
   const [catReminderDays, setCatReminderDays] = useState(30);
 
+  // Dynamic Departments from Settings
+  const { data: deptsList = [] } = useGetDepartmentsQuery();
+  const departmentOptions = useMemo(() => {
+    if (deptsList && deptsList.length > 0) {
+      return deptsList.filter((d: any) => d.status !== 'INACTIVE').map((d: any) => d.name);
+    }
+    return [];
+  }, [deptsList]);
+
+  // Dynamic Branches from Settings
+  const [branchOptions, setBranchOptions] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('crm_branches_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBranchOptions(parsed.filter((b: any) => b.status !== 'INACTIVE').map((b: any) => b.name));
+          return;
+        }
+      }
+    } catch {}
+    setBranchOptions([]);
+  }, [modalOpen]);
+
   // Item Modal State (Add / Edit 12 Fields)
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [itemService, setItemService] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<string>('Insurance');
-  const [department, setDepartment] = useState<string>('Logistics & Fleet');
-  const [branchLocation, setBranchLocation] = useState<string>('Bangalore HQ');
+  const [category, setCategory] = useState<string>('');
+  const [department, setDepartment] = useState<string>('');
+  const [branchLocation, setBranchLocation] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [lastRenewedDate, setLastRenewedDate] = useState('');
@@ -292,13 +301,17 @@ export default function RenewalTrackerPage() {
   };
 
   const handleOpenModal = (item?: RenewalItem) => {
+    const defaultDept = departmentOptions.length > 0 ? departmentOptions[0] : '';
+    const defaultBranch = branchOptions.length > 0 ? branchOptions[0] : '';
+    const defaultCat = categories.length > 0 ? categories[0].name : '';
+
     if (item) {
       setEditingId(item.id);
       setItemService(item.item_service);
       setDescription(item.description || '');
-      setCategory(item.category);
-      setDepartment(item.department || 'Logistics & Fleet');
-      setBranchLocation(item.branch_location || 'Bangalore HQ');
+      setCategory(item.category || defaultCat);
+      setDepartment(item.department || defaultDept);
+      setBranchLocation(item.branch_location || defaultBranch);
       setStartDate(item.start_date || '');
       setDueDate(item.due_date);
       setLastRenewedDate(item.last_renewed_date || '');
@@ -310,9 +323,9 @@ export default function RenewalTrackerPage() {
       setEditingId(null);
       setItemService('');
       setDescription('');
-      setCategory('Insurance');
-      setDepartment('Logistics & Fleet');
-      setBranchLocation('Bangalore HQ');
+      setCategory(defaultCat);
+      setDepartment(defaultDept);
+      setBranchLocation(defaultBranch);
       setStartDate(new Date().toISOString().split('T')[0]);
       setDueDate('');
       setLastRenewedDate('');
@@ -323,6 +336,7 @@ export default function RenewalTrackerPage() {
     }
     setModalOpen(true);
   };
+
 
   const handleSaveRenewal = () => {
     if (!itemService.trim() || !dueDate) {
@@ -778,7 +792,7 @@ export default function RenewalTrackerPage() {
                   <InputLabel sx={{ fontSize: 12.5 }}>Department</InputLabel>
                   <Select value={departmentFilter} label="Department" onChange={(e) => setDepartmentFilter(e.target.value)} sx={{ fontSize: 12.5 }}>
                     <MenuItem value="ALL">All Departments</MenuItem>
-                    {DEPARTMENTS.map((d) => (
+                    {departmentOptions.map((d) => (
                       <MenuItem key={d} value={d}>
                         {d}
                       </MenuItem>
@@ -1458,11 +1472,15 @@ export default function RenewalTrackerPage() {
               <FormControl fullWidth size="small">
                 <InputLabel>Department</InputLabel>
                 <Select value={department} label="Department" onChange={(e) => setDepartment(e.target.value)}>
-                  {DEPARTMENTS.map((d) => (
-                    <MenuItem key={d} value={d}>
-                      {d}
-                    </MenuItem>
-                  ))}
+                  {departmentOptions.length === 0 ? (
+                    <MenuItem value="" disabled>No Departments configured in Settings</MenuItem>
+                  ) : (
+                    departmentOptions.map((d) => (
+                      <MenuItem key={d} value={d}>
+                        {d}
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             </Grid>
@@ -1471,12 +1489,17 @@ export default function RenewalTrackerPage() {
               <FormControl fullWidth size="small">
                 <InputLabel>Branch / Location</InputLabel>
                 <Select value={branchLocation} label="Branch / Location" onChange={(e) => setBranchLocation(e.target.value)}>
-                  {BRANCH_LOCATIONS.map((b) => (
-                    <MenuItem key={b} value={b}>
-                      {b}
-                    </MenuItem>
-                  ))}
+                  {branchOptions.length === 0 ? (
+                    <MenuItem value="" disabled>No Branches configured in Settings</MenuItem>
+                  ) : (
+                    branchOptions.map((b) => (
+                      <MenuItem key={b} value={b}>
+                        {b}
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
+
               </FormControl>
             </Grid>
           </Grid>

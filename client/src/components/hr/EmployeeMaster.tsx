@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useGetDepartmentsQuery } from '../../api/rbacApi';
 import {
   Box,
   Button,
@@ -96,6 +97,29 @@ const DEFAULT_FORM: Omit<EmployeeRecord, 'id'> = {
 
 export default function EmployeeMaster() {
   const { showToast } = useToast();
+
+  const { data: deptsList = [] } = useGetDepartmentsQuery();
+  const departmentOptions = useMemo(() => {
+    if (deptsList && deptsList.length > 0) {
+      return deptsList.filter((d: any) => d.status !== 'INACTIVE').map((d: any) => d.name);
+    }
+    return [];
+  }, [deptsList]);
+
+  const [branchOptions, setBranchOptions] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('crm_branches_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBranchOptions(parsed.filter((b: any) => b.status !== 'INACTIVE').map((b: any) => b.name));
+          return;
+        }
+      }
+    } catch {}
+    setBranchOptions([]);
+  }, []);
 
   // Load employees from localStorage if available so deletions and additions persist on page refresh
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
@@ -534,9 +558,13 @@ export default function EmployeeMaster() {
               }}
             >
               <MenuItem value="" disabled>Select Branch</MenuItem>
-              <MenuItem value="Coimbatore Office">Coimbatore Office</MenuItem>
-              <MenuItem value="Bangalore Office">Bangalore Office</MenuItem>
-              <MenuItem value="Chennai Branch">Chennai Branch</MenuItem>
+              {branchOptions.length === 0 ? (
+                <MenuItem value="" disabled>No Branches in Settings</MenuItem>
+              ) : (
+                branchOptions.map((b) => (
+                  <MenuItem key={b} value={b}>{b}</MenuItem>
+                ))
+              )}
             </Select>
 
             {/* Export Selected Button */}
@@ -813,14 +841,13 @@ export default function EmployeeMaster() {
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               >
                 <MenuItem value="— Select —">— Select —</MenuItem>
-                <MenuItem value="Management">Management</MenuItem>
-                <MenuItem value="NPD">NPD</MenuItem>
-                <MenuItem value="Accounts">Accounts</MenuItem>
-                <MenuItem value="Service">Service</MenuItem>
-                <MenuItem value="Stores">Stores</MenuItem>
-                <MenuItem value="SCM">SCM</MenuItem>
-                <MenuItem value="Sales">Sales</MenuItem>
-                <MenuItem value="IT">IT</MenuItem>
+                {departmentOptions.length === 0 ? (
+                  <MenuItem value="" disabled>No Departments in Settings</MenuItem>
+                ) : (
+                  departmentOptions.map((d) => (
+                    <MenuItem key={d} value={d}>{d}</MenuItem>
+                  ))
+                )}
               </Select>
             </Grid>
 
@@ -836,10 +863,15 @@ export default function EmployeeMaster() {
                 onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
               >
                 <MenuItem value="— Select —">— Select —</MenuItem>
-                <MenuItem value="Coimbatore Office">Coimbatore Office</MenuItem>
-                <MenuItem value="Bangalore Office">Bangalore Office</MenuItem>
-                <MenuItem value="Chennai Branch">Chennai Branch</MenuItem>
+                {branchOptions.length === 0 ? (
+                  <MenuItem value="" disabled>No Branches in Settings</MenuItem>
+                ) : (
+                  branchOptions.map((b) => (
+                    <MenuItem key={b} value={b}>{b}</MenuItem>
+                  ))
+                )}
               </Select>
+
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#334155', mb: 0.5, display: 'block' }}>
