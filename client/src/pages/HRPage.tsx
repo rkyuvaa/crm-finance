@@ -197,13 +197,19 @@ export default function HRPage() {
     type: 'ONBOARDING' as 'ONBOARDING' | 'OFFBOARDING',
   });
 
-  // Sample Mock Data for On/Off boarding tracking
-  const [onboardingList, setOnboardingList] = useState([
-    { id: 1, name: 'Alex Johnson', email: 'alex.j@company.com', role: 'Frontend Lead', dept: 'Engineering', type: 'ONBOARDING', joinDate: '2026-09-15', stage: 'IT Setup', progress: 65, status: 'In Progress' },
-    { id: 2, name: 'Sarah Miller', email: 'sarah.m@company.com', role: 'Product Designer', dept: 'Design', type: 'ONBOARDING', joinDate: '2026-09-10', stage: 'HR Orientation', progress: 40, status: 'In Progress' },
-    { id: 3, name: 'David Lee', email: 'david.l@company.com', role: 'QA Analyst', dept: 'QA', type: 'OFFBOARDING', joinDate: '2026-09-30', stage: 'Exit Clearance', progress: 85, status: 'In Progress' },
-    { id: 4, name: 'Emily Davis', email: 'emily.d@company.com', role: 'HR Specialist', dept: 'HR', type: 'ONBOARDING', joinDate: '2026-09-01', stage: 'Completed', progress: 100, status: 'Completed' },
-  ]);
+  const [onboardingList, setOnboardingList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_hr_onboarding');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_hr_onboarding', JSON.stringify(onboardingList));
+    } catch {}
+  }, [onboardingList]);
 
   // HR Configuration state
   const [configState, setConfigState] = useState({

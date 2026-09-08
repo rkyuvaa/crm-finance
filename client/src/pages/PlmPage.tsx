@@ -68,127 +68,53 @@ interface EcoItem {
   date: string;
 }
 
-const INITIAL_MODELS: VehicleModelPLM[] = [
-  {
-    id: 'MOD-01',
-    name: 'Dhoor P1 Standard',
-    code: 'DHOOR-P1',
-    stage: 'Mass Production',
-    version: 'v2.4',
-    motorRating: '1.2 kW Peak',
-    batteryCapacity: '2.1 kWh LFP',
-    rangeKm: '85 km/charge',
-    bomComponentsCount: 184,
-    unitCostEst: '₹72,000',
-    releaseDate: 'Jan 2025',
-  },
-  {
-    id: 'MOD-02',
-    name: 'Dhoor P2 High Range',
-    code: 'DHOOR-P2',
-    stage: 'Testing',
-    version: 'v1.1-RC',
-    motorRating: '2.5 kW Mid-Drive',
-    batteryCapacity: '3.4 kWh NMC Dual',
-    rangeKm: '135 km/charge',
-    bomComponentsCount: 210,
-    unitCostEst: '₹98,500',
-    releaseDate: 'Nov 2026',
-  },
-  {
-    id: 'MOD-03',
-    name: 'KIM Heavy Cargo Loader',
-    code: 'KIM-CARGO-3W',
-    stage: 'Prototype',
-    version: 'v0.9-P',
-    motorRating: '4.0 kW Heavy Duty',
-    batteryCapacity: '5.2 kWh LFP Swappable',
-    rangeKm: '110 km/charge',
-    bomComponentsCount: 340,
-    unitCostEst: '₹1,45,000',
-    releaseDate: 'Q1 2027',
-  },
-];
-
-const INITIAL_BOM: BomComponent[] = [
-  {
-    id: 'BOM-001',
-    partNo: 'KIM-MOT-1200',
-    name: 'BLDC Hub Motor 1.2kW 48V',
-    category: 'Powertrain',
-    supplier: 'Lucas TVS Pvt Ltd',
-    unitCost: '₹14,500',
-    stockQty: 140,
-    compliance: 'Certified',
-  },
-  {
-    id: 'BOM-002',
-    partNo: 'KIM-BMS-48V30A',
-    name: 'Smart CAN Bus BMS Controller',
-    category: 'Battery & BMS',
-    supplier: 'Exicom Tele-Systems',
-    unitCost: '₹3,800',
-    stockQty: 220,
-    compliance: 'Certified',
-  },
-  {
-    id: 'BOM-003',
-    partNo: 'KIM-CHS-TUB01',
-    name: 'High Tensile Steel Tubular Frame',
-    category: 'Chassis & Body',
-    supplier: 'Konwert Fabrication Unit',
-    unitCost: '₹8,200',
-    stockQty: 85,
-    compliance: 'Certified',
-  },
-  {
-    id: 'BOM-004',
-    partNo: 'KIM-GPS-IOT4G',
-    name: 'AIS-140 Compliant 4G Telematics Unit',
-    category: 'Electronics',
-    supplier: 'Sensel Telematics',
-    unitCost: '₹2,400',
-    stockQty: 45,
-    compliance: 'Pending Audit',
-  },
-];
-
-const INITIAL_ECOS: EcoItem[] = [
-  {
-    id: 'ECO-2026-08',
-    title: 'Upgrade Main Wiring Harness Insulation to IP67 Standard',
-    modelCode: 'DHOOR-P1',
-    priority: 'Critical',
-    status: 'Under Review',
-    requestedBy: 'Quality Engineering Team',
-    date: '24 Aug 2026',
-  },
-  {
-    id: 'ECO-2026-07',
-    title: 'Reinforce Rear Suspension Swingarm Mounting Bracket',
-    modelCode: 'DHOOR-P2',
-    priority: 'Standard',
-    status: 'Approved',
-    requestedBy: 'Structural Design R&D',
-    date: '18 Aug 2026',
-  },
-  {
-    id: 'ECO-2026-06',
-    title: 'Firmware Update for Regen Braking Efficiency (+8% Range)',
-    modelCode: 'DHOOR-P1',
-    priority: 'Standard',
-    status: 'Implemented',
-    requestedBy: 'Software Systems Lab',
-    date: '10 Aug 2026',
-  },
-];
+const INITIAL_MODELS: VehicleModelPLM[] = [];
+const INITIAL_BOM: BomComponent[] = [];
+const INITIAL_ECOS: EcoItem[] = [];
 
 export default function PlmPage() {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<number>(0);
-  const [models, setModels] = useState<VehicleModelPLM[]>(INITIAL_MODELS);
-  const [boms] = useState<BomComponent[]>(INITIAL_BOM);
-  const [ecos, setEcos] = useState<EcoItem[]>(INITIAL_ECOS);
+  const [models, setModels] = useState<VehicleModelPLM[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_plm_models');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_MODELS;
+  });
+  const [boms, setBoms] = useState<BomComponent[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_plm_boms');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_BOM;
+  });
+  const [ecos, setEcos] = useState<EcoItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_plm_ecos');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_ECOS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_plm_models', JSON.stringify(models));
+    } catch {}
+  }, [models]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_plm_boms', JSON.stringify(boms));
+    } catch {}
+  }, [boms]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_plm_ecos', JSON.stringify(ecos));
+    } catch {}
+  }, [ecos]);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Dialog States
@@ -204,8 +130,9 @@ export default function PlmPage() {
 
   // New ECO Form State
   const [newEcoTitle, setNewEcoTitle] = useState('');
-  const [newEcoModel, setNewEcoModel] = useState(INITIAL_MODELS[0].code);
+  const [newEcoModel, setNewEcoModel] = useState(models[0]?.code || '');
   const [newEcoPriority, setNewEcoPriority] = useState<EcoItem['priority']>('Standard');
+
 
   const handleCreateModel = () => {
     if (!newModelName.trim() || !newModelCode.trim()) {

@@ -104,17 +104,7 @@ const BRANCH_LOCATIONS = [
 
 // No demo data rule: starts as empty array []
 const INITIAL_RENEWALS: RenewalItem[] = [];
-
-const DEFAULT_CATEGORIES: CategoryConfig[] = [
-  { id: 1, name: 'Insurance', color: '#2563EB', default_validity_months: 12, default_reminder_days: 30, is_active: true },
-  { id: 2, name: 'Fitness Certificate', color: '#D97706', default_validity_months: 12, default_reminder_days: 30, is_active: true },
-  { id: 3, name: 'Permit', color: '#059669', default_validity_months: 60, default_reminder_days: 30, is_active: true },
-  { id: 4, name: 'Pollution (PUC)', color: '#DC2626', default_validity_months: 6, default_reminder_days: 15, is_active: true },
-  { id: 5, name: 'Road Tax', color: '#7C3AED', default_validity_months: 12, default_reminder_days: 15, is_active: true },
-  { id: 6, name: 'Software License', color: '#087A3D', default_validity_months: 12, default_reminder_days: 45, is_active: true },
-  { id: 7, name: 'AMC & Maintenance', color: '#475569', default_validity_months: 12, default_reminder_days: 30, is_active: true },
-  { id: 8, name: 'Building Lease', color: '#EA580C', default_validity_months: 36, default_reminder_days: 60, is_active: true },
-];
+const DEFAULT_CATEGORIES: CategoryConfig[] = [];
 
 const DEFAULT_MAIL_TEMPLATES: Record<string, MailTemplate> = {
   reminder: {
@@ -210,8 +200,34 @@ export default function RenewalTrackerPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [renewals, setRenewals] = useState<RenewalItem[]>(INITIAL_RENEWALS);
-  const [categories, setCategories] = useState<CategoryConfig[]>(DEFAULT_CATEGORIES);
+  const [renewals, setRenewals] = useState<RenewalItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_items');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_RENEWALS;
+  });
+
+  const [categories, setCategories] = useState<CategoryConfig[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_categories');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_CATEGORIES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_renewal_items', JSON.stringify(renewals));
+    } catch {}
+  }, [renewals]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_renewal_categories', JSON.stringify(categories));
+    } catch {}
+  }, [categories]);
+
   const [mailTemplates, setMailTemplates] = useState<Record<string, MailTemplate>>(DEFAULT_MAIL_TEMPLATES);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>('reminder');
 

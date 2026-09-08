@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -66,7 +66,20 @@ const INITIAL_BRANCHES: Branch[] = [];
 
 export default function BranchManagementPage() {
   const { showToast } = useToast();
-  const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES);
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_branches_data');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_BRANCHES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_branches_data', JSON.stringify(branches));
+    } catch {}
+  }, [branches]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
 
