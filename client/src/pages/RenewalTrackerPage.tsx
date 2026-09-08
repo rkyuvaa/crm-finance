@@ -802,89 +802,81 @@ export default function RenewalTrackerPage() {
             </Grid>
           </Paper>
 
-          {/* Single Screen Fixed Fit Table (12 exact column names + 3-dots action) */}
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflow: 'hidden', width: '100%', bgcolor: '#FFFFFF' }}>
-            <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
+          {/* Main Revamped Tracker Table */}
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', width: '100%', bgcolor: '#FFFFFF' }}>
+            <Table size="medium" sx={{ minWidth: 1550, tableLayout: 'auto' }}>
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '12%' }}>Renewal Item / Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '10%' }}>Description</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '8.5%' }}>Renewal Category</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '8.5%' }}>Department</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '8.5%' }}>Branch / Location</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '7%' }}>Start Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '7.5%' }}>Renewal Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '10.5%' }}>Days Remaining (Auto-calculated)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '7.5%' }}>Last Renewed Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '7.5%' }}>Reminder Lead Time (Days)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '8.5%' }}>Renewal Owner</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.8, py: 1, width: '8%' }}>Remarks / Notes</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 10.5, px: 0.5, py: 1, width: '4%' }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 220 }}>Renewal Item / Service</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 180 }}>Description</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 130 }}>Renewal Category</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 140 }}>Department</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 140 }}>Branch / Location</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110 }}>Start Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 125 }}>Renewal Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 150 }}>Days Remaining (Auto-calculated)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 125 }}>Last Renewed Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120 }}>Reminder Lead Time (Days)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 140 }}>Renewal Owner</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 180 }}>Remarks / Notes</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1, py: 1.5, minWidth: 80 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredRenewals.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={13} align="center" sx={{ py: 6, color: '#7A8B80' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, color: '#64748B' }}>
                         No renewal items found. Click 'New Renewal Item / Service' to create a new record.
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredRenewals.map((r) => (
-                    <TableRow key={r.id} hover sx={{ '& td': { px: 0.8, py: 0.8 } }}>
+                    <TableRow key={r.id} hover sx={{ '& td': { px: 1.5, py: 1.2 } }}>
                       <TableCell>
-                        <Tooltip title={r.item_service} arrow>
-                          <Typography sx={{ fontWeight: 700, fontSize: 11.5, color: '#16231B', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {r.item_service}
-                          </Typography>
-                        </Tooltip>
+                        <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>
+                          {r.item_service}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={r.description || ''} arrow>
-                          <Typography sx={{ fontSize: 11, color: '#64748B', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {r.description || '—'}
-                          </Typography>
-                        </Tooltip>
+                        <Typography sx={{ fontSize: 12, color: '#64748B', whiteSpace: 'normal' }}>
+                          {r.description || '—'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip label={r.category} size="small" sx={{ fontWeight: 600, fontSize: 10, height: 20, bgcolor: '#F1F5F9' }} />
+                        <Chip label={r.category} size="small" sx={{ fontWeight: 600, fontSize: 11, bgcolor: '#F1F5F9' }} />
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#334155', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
                           {r.department || '—'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: 11, color: '#7A8B80', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <Typography sx={{ fontSize: 12, color: '#475569' }}>
                           {r.branch_location || '—'}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ fontSize: 11, color: '#44584C' }}>{r.start_date || 'N/A'}</TableCell>
-                      <TableCell sx={{ fontSize: 11, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
+                      <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.start_date || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
                         {r.due_date}
                       </TableCell>
                       <TableCell>{renderDaysRemainingChip(r.due_date)}</TableCell>
-                      <TableCell sx={{ fontSize: 11, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
-                      <TableCell sx={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>{r.reminder_days} Days</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: '#475569' }}>{r.reminder_days} Days</TableCell>
                       <TableCell>
-                        <Tooltip title={r.renewal_owner || ''} arrow>
-                          <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#04552B', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {r.renewal_owner || '—'}
-                          </Typography>
-                        </Tooltip>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#04552B' }}>
+                          {r.renewal_owner || '—'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={r.remarks || ''} arrow>
-                          <Typography sx={{ fontSize: 11, color: '#64748B', noWrap: true, textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {r.remarks || '—'}
-                          </Typography>
-                        </Tooltip>
+                        <Typography sx={{ fontSize: 12, color: '#64748B', whiteSpace: 'normal' }}>
+                          {r.remarks || '—'}
+                        </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <IconButton size="small" onClick={(e) => handleOpenActionMenu(e, r)} sx={{ p: 0.5 }}>
-                          <MoreVertical size={15} color="#475569" />
+                        <IconButton size="small" onClick={(e) => handleOpenActionMenu(e, r)} sx={{ p: 0.8 }}>
+                          <MoreVertical size={18} color="#475569" />
                         </IconButton>
                       </TableCell>
                     </TableRow>
