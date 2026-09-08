@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Paper, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Paper, Tab, Tabs } from '@mui/material';
 import {
   Mail,
   Database,
@@ -8,6 +8,7 @@ import {
   Building2,
   KeyRound,
   ShieldAlert,
+  MapPin,
 } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
@@ -16,6 +17,7 @@ import SystemBackupCard from '@/components/settings/SystemBackupCard';
 import UserManagementPage from '@/pages/admin/UserManagementPage';
 import RoleManagementPage from '@/pages/admin/RoleManagementPage';
 import DepartmentManagementPage from '@/pages/admin/DepartmentManagementPage';
+import BranchManagementPage from '@/pages/admin/BranchManagementPage';
 import PermissionRegistryPage from '@/pages/admin/PermissionRegistryPage';
 import AccessAuditLogPage from '@/pages/admin/AccessAuditLogPage';
 
@@ -49,8 +51,6 @@ export default function SettingsPage() {
 
   return (
     <Box sx={{ width: '100%' }}>
-
-
       {/* ERP Style Navigation Tabs */}
       <Paper
         elevation={0}
@@ -92,6 +92,7 @@ export default function SettingsPage() {
         >
           {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
           {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
+          {isAdmin && <Tab icon={<MapPin size={16} />} iconPosition="start" label="Branches" />}
           <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
           {isAdmin && <Tab icon={<Database size={16} />} iconPosition="start" label="System Data Backup" />}
         </Tabs>
@@ -131,13 +132,20 @@ export default function SettingsPage() {
             </Paper>
           </CustomTabPanel>
 
-          {/* Tab 2: Mail Server (SMTP) */}
+          {/* Tab 2: Branches */}
           <CustomTabPanel value={activeTab} index={2}>
+            <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
+              <BranchManagementPage />
+            </Paper>
+          </CustomTabPanel>
+
+          {/* Tab 3: Mail Server (SMTP) */}
+          <CustomTabPanel value={activeTab} index={3}>
             <MailServerConfigCard />
           </CustomTabPanel>
 
-          {/* Tab 3: System Data Backup */}
-          <CustomTabPanel value={activeTab} index={3}>
+          {/* Tab 4: System Data Backup */}
+          <CustomTabPanel value={activeTab} index={4}>
             <SystemBackupCard />
           </CustomTabPanel>
         </>
