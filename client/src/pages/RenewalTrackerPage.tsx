@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useGetDepartmentsQuery } from '../api/rbacApi';
-import { useBranchesQuery } from '../api/mastersApi';
+import { useGetDepartmentsQuery, useGetUsersQuery } from '../api/rbacApi';
+import { useBranchesQuery, useUsersQuery } from '../api/mastersApi';
 import {
   Box,
   Paper,
@@ -399,6 +399,53 @@ export default function RenewalTrackerPage() {
   const branchOptions = useMemo(() => {
     return Object.keys(branchesDataMap);
   }, [branchesDataMap]);
+
+  // Dynamic System Users & Employee Master List for Renewal Owner
+  const { data: apiUsers = [] } = useUsersQuery();
+  const { data: rbacUsersData } = useGetUsersQuery({ page: 1, page_size: 100 });
+
+  const ownerOptions = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. From mastersApi /masters/users
+    if (Array.isArray(apiUsers) && apiUsers.length > 0) {
+      apiUsers.forEach((u: any) => {
+        const name = u.full_name || u.name || u.username;
+        if (name && !list.includes(name)) {
+          list.push(name);
+        }
+      });
+    }
+
+    // 2. From rbacApi /users
+    const rbacItems = (rbacUsersData as any)?.items || (Array.isArray(rbacUsersData) ? rbacUsersData : []);
+    if (Array.isArray(rbacItems) && rbacItems.length > 0) {
+      rbacItems.forEach((u: any) => {
+        const name = u.full_name || u.name || u.username;
+        if (name && !list.includes(name)) {
+          list.push(name);
+        }
+      });
+    }
+
+    // 3. From Employee Master (Local Storage)
+    try {
+      const savedEmp = localStorage.getItem('crm_employee_master_data');
+      if (savedEmp) {
+        const parsed = JSON.parse(savedEmp);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((e: any) => {
+            const name = e.name || e.full_name;
+            if (name && !list.includes(name)) {
+              list.push(name);
+            }
+          });
+        }
+      }
+    } catch {}
+
+    return list;
+  }, [apiUsers, rbacUsersData, modalOpen]);
 
 
 
@@ -1854,14 +1901,27 @@ export default function RenewalTrackerPage() {
 
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <TextField
-                label="Renewal Owner"
-                fullWidth
-                size="small"
-                value={renewalOwner}
-                onChange={(e) => setRenewalOwner(e.target.value)}
-                placeholder="e.g. Rajesh Kumar (Fleet Mgr)"
-              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Renewal Owner</InputLabel>
+                <Select
+                  value={renewalOwner}
+                  label="Renewal Owner"
+                  onChange={(e) => setRenewalOwner(e.target.value)}
+                >
+                  {renewalOwner && !ownerOptions.includes(renewalOwner) && (
+                    <MenuItem value={renewalOwner}>{renewalOwner}</MenuItem>
+                  )}
+                  {ownerOptions.length === 0 && !renewalOwner ? (
+                    <MenuItem value="" disabled>No Users found in System</MenuItem>
+                  ) : (
+                    ownerOptions.map((u) => (
+                      <MenuItem key={u} value={u}>
+                        {u}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
             </Grid>
 
             <Grid item xs={12} sm={6}>
