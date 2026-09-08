@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Avatar, Divider, IconButton, InputAdornment, Menu, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
-import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Search, User as UserIcon, X, Sun, Moon } from 'lucide-react';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Avatar, Divider, IconButton, Menu, MenuItem, Tooltip, useMediaQuery } from '@mui/material';
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, User as UserIcon, Sun, Moon } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
 import { useDashboardQuery } from '@/api/dashboardApi';
@@ -32,7 +32,6 @@ const BREADCRUMBS: Record<string, [string, string]> = {
 
 export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { mode, toggleThemeMode } = useThemeMode();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,48 +42,6 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
 
   const isSmallMobile = useMediaQuery('(max-width:600px)');
   const isTablet = useMediaQuery('(max-width:900px)');
-
-  const currentQ = searchParams.get('q') ?? '';
-  const [query, setQuery] = useState(currentQ);
-
-  useEffect(() => {
-    setQuery(currentQ);
-  }, [currentQ]);
-
-  const isCrmRoute = location.pathname === '/leads' || location.pathname === '/opportunities' || location.pathname === '/applications';
-
-  const handleQueryChange = (newVal: string) => {
-    setQuery(newVal);
-    const trimmed = newVal.trim();
-    if (isCrmRoute) {
-      const nextParams = new URLSearchParams(searchParams);
-      if (trimmed) {
-        nextParams.set('q', trimmed);
-      } else {
-        nextParams.delete('q');
-      }
-      setSearchParams(nextParams, { replace: true });
-    } else if (trimmed) {
-      navigate(`/leads?q=${encodeURIComponent(trimmed)}`);
-    }
-  };
-
-  const submitSearch = () => {
-    const q = query.trim();
-    if (!q) return;
-    if (!isCrmRoute) {
-      navigate(`/leads?q=${encodeURIComponent(q)}`);
-    }
-  };
-
-  const handleClearSearch = () => {
-    setQuery('');
-    if (isCrmRoute) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('q');
-      setSearchParams(nextParams, { replace: true });
-    }
-  };
 
   const crumb = BREADCRUMBS[location.pathname] ?? BREADCRUMBS[`/${location.pathname.split('/')[1]}`] ?? [
     'CRMFinance',
@@ -115,6 +72,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         borderBottom: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'space-between',
         gap: isSmallMobile ? 8 : 14,
         padding: isSmallMobile ? '0 10px' : '0 20px',
         flexShrink: 0,
@@ -145,49 +103,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         </div>
       )}
 
-      <TextField
-        size="small"
-        placeholder={isSmallMobile ? "Search..." : "Search by App ID, customer, mobile, vehicle…"}
-        value={query}
-        onChange={(e) => handleQueryChange(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
-        sx={{
-          flex: 1,
-          maxWidth: isSmallMobile ? 180 : 520,
-          mx: isSmallMobile ? 0 : 'auto',
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 2,
-            background: mode === 'dark' ? '#0D1117' : '#F7F9F5',
-            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
-            fontSize: isSmallMobile ? 12 : 13.5,
-            '& fieldset': { borderColor: mode === 'dark' ? '#30363D' : '#E4EBE1' },
-            '&:hover fieldset': { borderColor: mode === 'dark' ? '#8B949E' : '#C9E0C6' },
-            '&.Mui-focused fieldset': { borderColor: '#087A3D', borderWidth: 1 },
-          },
-          '& .MuiInputBase-input::placeholder': {
-            color: mode === 'dark' ? '#8B949E' : '#7A8B80',
-            opacity: 1,
-          },
-        }}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={16} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
-              </InputAdornment>
-            ),
-            endAdornment: query ? (
-              <InputAdornment position="end">
-                <IconButton size="small" onClick={handleClearSearch} sx={{ p: 0.5 }}>
-                  <X size={14} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
-                </IconButton>
-              </InputAdornment>
-            ) : null,
-          },
-        }}
-      />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? 6 : 10, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? 6 : 10, flexShrink: 0, marginLeft: 'auto' }}>
         <Tooltip title={mode === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"} arrow>
           <IconButton
             onClick={toggleThemeMode}
@@ -306,3 +222,4 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
     </header>
   );
 }
+

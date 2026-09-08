@@ -4,8 +4,6 @@ import {
   Box,
   Paper,
   Typography,
-  Tabs,
-  Tab,
   Button,
   Grid,
   Chip,
@@ -32,45 +30,38 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  RefreshCw,
   Plus,
   Search,
-  Clock,
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
-  FileText,
-  Calendar,
-  DollarSign,
   ShieldCheck,
   Upload,
   Download,
   Pencil,
   Trash2,
-  BarChart3,
-  LayoutDashboard,
   BellRing,
-  Settings2,
   Mail,
   Sliders,
   FolderCog,
   Code2,
-  CheckSquare,
-  Eye,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 
-interface RenewalItem {
+export interface RenewalItem {
   id: number;
-  asset_name: string;
-  asset_code: string;
+  item_service: string;
+  description: string;
   category: string;
-  reference_no: string;
-  provider: string;
-  issue_date: string;
-  expiry_date: string;
-  cost: number;
+  department: string;
+  branch_location: string;
+  start_date: string;
+  due_date: string;
+  last_renewed_date: string;
   reminder_days: number;
+  renewal_owner: string;
+  remarks: string;
+  cost?: number;
   status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'RENEWED';
 }
 
@@ -90,70 +81,104 @@ interface MailTemplate {
   body: string;
 }
 
+const DEPARTMENTS = [
+  'Logistics & Fleet',
+  'IT & Infrastructure',
+  'Legal & Statutory',
+  'Operations',
+  'HR & Admin',
+  'Finance & Accounts',
+  'Maintenance & Equipment',
+];
+
+const BRANCH_LOCATIONS = [
+  'Bangalore HQ',
+  'Chennai Hub',
+  'Hyderabad Depot',
+  'Mumbai West',
+  'Delhi North',
+  'Kolkata East',
+];
+
 const INITIAL_RENEWALS: RenewalItem[] = [
   {
     id: 1,
-    asset_name: 'Tata Primavera 3525.K (KA-01-EQ-9821)',
-    asset_code: 'VEH-9821',
+    item_service: 'Tata Primavera 3525.K Motor Insurance',
+    description: 'Commercial vehicle comprehensive insurance policy including zero depreciation & engine protect',
     category: 'Insurance',
-    reference_no: 'POL-ICICI-99882',
-    provider: 'ICICI Lombard General Insurance',
-    issue_date: '2025-09-15',
-    expiry_date: '2026-09-15',
-    cost: 45000,
+    department: 'Logistics & Fleet',
+    branch_location: 'Bangalore HQ',
+    start_date: '2025-09-15',
+    due_date: '2026-09-15',
+    last_renewed_date: '2025-09-15',
     reminder_days: 15,
+    renewal_owner: 'Rajesh Kumar (Fleet Mgr)',
+    remarks: 'Quotation received from ICICI Lombard. Under management approval.',
+    cost: 45000,
     status: 'EXPIRING_SOON',
   },
   {
     id: 2,
-    asset_name: 'Ashok Leyland Captain 2823 (KA-05-MH-4412)',
-    asset_code: 'VEH-4412',
+    item_service: 'Ashok Leyland Captain RTO Fitness Certificate',
+    description: 'Statutory annual vehicle fitness inspection & certificate renewal',
     category: 'Fitness Certificate',
-    reference_no: 'FC-KA05-2025-098',
-    provider: 'Regional Transport Office (RTO South)',
-    issue_date: '2025-09-01',
-    expiry_date: '2026-09-05',
-    cost: 8500,
+    department: 'Operations',
+    branch_location: 'Chennai Hub',
+    start_date: '2025-09-01',
+    due_date: '2026-09-05',
+    last_renewed_date: '2025-09-01',
     reminder_days: 30,
+    renewal_owner: 'Suresh Nair (Transport Lead)',
+    remarks: 'Physical vehicle inspection scheduled at RTO South.',
+    cost: 8500,
     status: 'EXPIRED',
   },
   {
     id: 3,
-    asset_name: 'BharatBenz 2823C Tippers (KA-51-AB-1204)',
-    asset_code: 'VEH-1204',
+    item_service: 'National All-India Goods Permit (Fleet #4)',
+    description: '5-year national goods transport permit for interstate commercial tippers',
     category: 'Permit',
-    reference_no: 'NP-IND-88371',
-    provider: 'National Permit Authority',
-    issue_date: '2025-10-10',
-    expiry_date: '2026-10-10',
-    cost: 16000,
+    department: 'Legal & Statutory',
+    branch_location: 'Hyderabad Depot',
+    start_date: '2025-10-10',
+    due_date: '2026-10-10',
+    last_renewed_date: '2020-10-10',
     reminder_days: 30,
+    renewal_owner: 'Priya Sharma (Compliance Lead)',
+    remarks: 'All tax receipts verified. Prepared for online portal renewal submission.',
+    cost: 16000,
     status: 'ACTIVE',
   },
   {
     id: 4,
-    asset_name: 'Mahindra Blazo X 28 (KA-03-JJ-7711)',
-    asset_code: 'VEH-7711',
+    item_service: 'BharatBenz Commercial PUC Certificate',
+    description: 'Statutory pollution under control certificate for fleet tippers',
     category: 'Pollution (PUC)',
-    reference_no: 'PUC-2026-00441',
-    provider: 'State Pollution Control Board',
-    issue_date: '2026-03-01',
-    expiry_date: '2026-09-01',
-    cost: 1200,
+    department: 'Logistics & Fleet',
+    branch_location: 'Bangalore HQ',
+    start_date: '2026-03-01',
+    due_date: '2026-09-01',
+    last_renewed_date: '2026-03-01',
     reminder_days: 7,
+    renewal_owner: 'Kiran V (Fleet Inspector)',
+    remarks: 'Emissions test passed. Pending document upload.',
+    cost: 1200,
     status: 'EXPIRED',
   },
   {
     id: 5,
-    asset_name: 'Heavy Hydraulic Tipper Fleet #12',
-    asset_code: 'EQ-HIP-12',
-    category: 'AMC & Warranty',
-    reference_no: 'AMC-CAT-2025-01',
-    provider: 'Caterpillar India Service',
-    issue_date: '2025-12-01',
-    expiry_date: '2026-12-01',
+    item_service: 'Microsoft 365 Enterprise E5 Subscriptions',
+    description: 'Annual cloud software workspace & email licenses for 250 enterprise staff',
+    category: 'Software License',
+    department: 'IT & Infrastructure',
+    branch_location: 'Bangalore HQ',
+    start_date: '2025-11-01',
+    due_date: '2026-11-01',
+    last_renewed_date: '2025-11-01',
+    reminder_days: 45,
+    renewal_owner: 'Anand Verma (IT Lead)',
+    remarks: 'Volume licensing contract review ongoing with Microsoft partner.',
     cost: 120000,
-    reminder_days: 30,
     status: 'ACTIVE',
   },
 ];
@@ -164,63 +189,69 @@ const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 3, name: 'Permit', color: '#059669', default_validity_months: 60, default_reminder_days: 30, is_active: true },
   { id: 4, name: 'Pollution (PUC)', color: '#DC2626', default_validity_months: 6, default_reminder_days: 15, is_active: true },
   { id: 5, name: 'Road Tax', color: '#7C3AED', default_validity_months: 12, default_reminder_days: 15, is_active: true },
-  { id: 6, name: 'AMC & Warranty', color: '#475569', default_validity_months: 12, default_reminder_days: 30, is_active: true },
-  { id: 7, name: 'Enterprise License', color: '#087A3D', default_validity_months: 24, default_reminder_days: 45, is_active: true },
+  { id: 6, name: 'Software License', color: '#087A3D', default_validity_months: 12, default_reminder_days: 45, is_active: true },
+  { id: 7, name: 'AMC & Maintenance', color: '#475569', default_validity_months: 12, default_reminder_days: 30, is_active: true },
+  { id: 8, name: 'Building Lease', color: '#EA580C', default_validity_months: 36, default_reminder_days: 60, is_active: true },
 ];
 
 const DEFAULT_MAIL_TEMPLATES: Record<string, MailTemplate> = {
   reminder: {
     id: 'reminder',
-    title: 'Upcoming Renewal Reminder (Advance Alert)',
-    subject: 'Renewal Reminder: {{asset_name}} ({{category}}) expires in {{days_remaining}} days',
-    body: `Dear Fleet / Operations Manager,
+    title: 'Upcoming Renewal Alert (Advance Warning)',
+    subject: 'Renewal Reminder: {{item_service}} ({{category}}) due on {{due_date}}',
+    body: `Dear {{renewal_owner}},
 
-This is an automated system reminder that the following asset renewal is coming due shortly:
+This is an automated system reminder that the following renewal item is coming due shortly:
 
-Asset Name: {{asset_name}}
-Asset Code: {{asset_code}}
-Renewal Category: {{category}}
-Policy / Reference No.: {{reference_no}}
-Provider / Authority: {{provider}}
-Expiry Date: {{expiry_date}}
-Estimated Cost / Premium: ₹{{cost}}
+Renewal Item / Service: {{item_service}}
+Description: {{description}}
+Category: {{category}}
+Department: {{department}}
+Branch / Location: {{branch_location}}
+Renewal Due Date: {{due_date}}
+Days Remaining: {{days_remaining}} days
+Last Renewed Date: {{last_renewed_date}}
+Renewal Owner: {{renewal_owner}}
 
-Please initiate the renewal process with {{provider}} prior to the expiration date to ensure uninterrupted operations.
+Remarks / Notes:
+{{remarks}}
+
+Please initiate the renewal process prior to the due date to avoid service disruption or non-compliance.
 
 Best regards,
-Enterprise Renewal Notification System`,
+Enterprise Renewal Management System`,
   },
   critical: {
     id: 'critical',
-    title: 'Urgent Expiry Warning (Critical Alert)',
-    subject: 'URGENT: {{asset_name}} expires in {{days_remaining}} days!',
+    title: 'Urgent Due Alert (Critical Warning)',
+    subject: 'URGENT: {{item_service}} due in {{days_remaining}} days!',
     body: `ATTENTION: CRITICAL RENEWAL WARNING
 
-The statutory compliance document for {{asset_name}} is expiring in less than 7 days.
+The compliance item "{{item_service}}" is expiring in less than 7 days.
 
-Asset Code: {{asset_code}}
-Document Category: {{category}}
-Expiry Date: {{expiry_date}}
-Current Status: EXPIRING SOON
+Department: {{department}}
+Branch / Location: {{branch_location}}
+Renewal Due Date: {{due_date}}
+Owner: {{renewal_owner}}
 
-Failure to renew before {{expiry_date}} may result in regulatory penalties or operational shutdown. Please process immediately.
+Please process immediately to prevent statutory penalties or operational downtime.
 
 Regards,
 Compliance Department`,
   },
   overdue: {
     id: 'overdue',
-    title: 'Overdue Expiry Alert (Post Expiry)',
-    subject: 'EXPIRED ALERT: {{asset_name}} ({{category}}) expired on {{expiry_date}}',
-    body: `NOTICE OF EXPIRED COMPLIANCE RECORD
+    title: 'Overdue Expiry Alert (Post Due Date)',
+    subject: 'EXPIRED ALERT: {{item_service}} ({{category}}) expired on {{due_date}}',
+    body: `NOTICE OF OVERDUE COMPLIANCE ITEM
 
-The statutory renewal for {{asset_name}} has EXPIRED on {{expiry_date}}.
+The renewal for {{item_service}} has EXPIRED on {{due_date}}.
 
-Asset Code: {{asset_code}}
-Category: {{category}}
-Reference No.: {{reference_no}}
+Department: {{department}}
+Location: {{branch_location}}
+Owner: {{renewal_owner}}
 
-This asset is currently flagged as NON-COMPLIANT in the enterprise system. Please complete the renewal and upload the updated document immediately.
+This item is currently flagged as OVERDUE / NON-COMPLIANT. Please complete the renewal and record updated details immediately.
 
 Regards,
 Enterprise Admin`,
@@ -228,19 +259,29 @@ Enterprise Admin`,
   renewed: {
     id: 'renewed',
     title: 'Renewal Confirmation Notification',
-    subject: 'CONFIRMED: {{asset_name}} ({{category}}) successfully renewed',
+    subject: 'CONFIRMED: {{item_service}} successfully renewed',
     body: `RENEWAL CONFIRMATION
 
-The renewal process for {{asset_name}} has been marked as COMPLETED.
+The renewal process for {{item_service}} has been marked as COMPLETED.
 
-Asset Code: {{asset_code}}
-Category: {{category}}
-New Expiry Date: {{expiry_date}}
-Updated By System User.
+Department: {{department}}
+Next Due Date: {{due_date}}
+Updated By: {{renewal_owner}}
 
 Thank you for maintaining enterprise compliance standards.`,
   },
 };
+
+/** Helper to calculate days remaining dynamically from due_date */
+function getDaysRemaining(dueDateStr: string): number {
+  if (!dueDateStr) return 0;
+  const due = new Date(dueDateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const diffTime = due.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
 export default function RenewalTrackerPage() {
   const location = useLocation();
@@ -255,17 +296,17 @@ export default function RenewalTrackerPage() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // Configuration Policy State
+  // Config SubTab State
   const [configSubTab, setConfigSubTab] = useState<'categories' | 'reminders' | 'templates' | 'rules'>('categories');
   const [advanceDaysList, setAdvanceDaysList] = useState<string>('60, 30, 15, 7, 1');
   const [emailFrequency, setEmailFrequency] = useState<string>('DAILY_DIGEST');
   const [autoEscalateOverdue, setAutoEscalateOverdue] = useState<boolean>(true);
   const [enableEmailAlerts, setEnableEmailAlerts] = useState<boolean>(true);
-  const [requireRefNo, setRequireRefNo] = useState<boolean>(true);
-  const [requireDocUpload, setRequireDocUpload] = useState<boolean>(false);
-  const [autoCalcExpiry, setAutoCalcExpiry] = useState<boolean>(true);
+  const [requireOwner, setRequireOwner] = useState<boolean>(true);
+  const [autoCalcNextDue, setAutoCalcNextDue] = useState<boolean>(true);
   const [currencySymbol, setCurrencySymbol] = useState<string>('₹');
 
   // Category Modal State
@@ -276,20 +317,23 @@ export default function RenewalTrackerPage() {
   const [catValidityMonths, setCatValidityMonths] = useState(12);
   const [catReminderDays, setCatReminderDays] = useState(30);
 
-  // Item Modal State
+  // Item Modal State (Add / Edit 12 Fields)
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [assetName, setAssetName] = useState('');
-  const [assetCode, setAssetCode] = useState('');
+  const [itemService, setItemService] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState<string>('Insurance');
-  const [referenceNo, setReferenceNo] = useState('');
-  const [provider, setProvider] = useState('');
-  const [issueDate, setIssueDate] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cost, setCost] = useState<number | ''>('');
+  const [department, setDepartment] = useState<string>('Logistics & Fleet');
+  const [branchLocation, setBranchLocation] = useState<string>('Bangalore HQ');
+  const [startDate, setStartDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [lastRenewedDate, setLastRenewedDate] = useState('');
   const [reminderDays, setReminderDays] = useState<number>(30);
+  const [renewalOwner, setRenewalOwner] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [cost, setCost] = useState<number | ''>('');
 
-  // Active Tab determined by URL path
+  // Active Tab from URL
   const currentTab = location.pathname.endsWith('/tracker')
     ? 'tracker'
     : location.pathname.endsWith('/reports')
@@ -298,54 +342,51 @@ export default function RenewalTrackerPage() {
     ? 'configuration'
     : 'dashboard';
 
-  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
-    navigate(`/renewal/${newValue}`);
-  };
-
   const handleOpenModal = (item?: RenewalItem) => {
     if (item) {
       setEditingId(item.id);
-      setAssetName(item.asset_name);
-      setAssetCode(item.asset_code);
+      setItemService(item.item_service);
+      setDescription(item.description || '');
       setCategory(item.category);
-      setReferenceNo(item.reference_no);
-      setProvider(item.provider);
-      setIssueDate(item.issue_date);
-      setExpiryDate(item.expiry_date);
-      setCost(item.cost);
-      setReminderDays(item.reminder_days);
+      setDepartment(item.department || 'Logistics & Fleet');
+      setBranchLocation(item.branch_location || 'Bangalore HQ');
+      setStartDate(item.start_date || '');
+      setDueDate(item.due_date);
+      setLastRenewedDate(item.last_renewed_date || '');
+      setReminderDays(item.reminder_days || 30);
+      setRenewalOwner(item.renewal_owner || '');
+      setRemarks(item.remarks || '');
+      setCost(item.cost || '');
     } else {
       setEditingId(null);
-      setAssetName('');
-      setAssetCode(`VEH-${Math.floor(1000 + Math.random() * 9000)}`);
+      setItemService('');
+      setDescription('');
       setCategory('Insurance');
-      setReferenceNo('');
-      setProvider('');
-      setIssueDate(new Date().toISOString().split('T')[0]);
-      setExpiryDate('');
-      setCost('');
+      setDepartment('Logistics & Fleet');
+      setBranchLocation('Bangalore HQ');
+      setStartDate(new Date().toISOString().split('T')[0]);
+      setDueDate('');
+      setLastRenewedDate('');
       setReminderDays(30);
+      setRenewalOwner('Rajesh Kumar (Fleet Mgr)');
+      setRemarks('');
+      setCost('');
     }
     setModalOpen(true);
   };
 
   const handleSaveRenewal = () => {
-    if (!assetName.trim() || !expiryDate) {
-      showToast('Asset name and expiry date are required', 'error');
+    if (!itemService.trim() || !dueDate) {
+      showToast('Renewal Item / Service name and Renewal Due Date are mandatory', 'error');
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const daysLeft = getDaysRemaining(dueDate);
     let calculatedStatus: RenewalItem['status'] = 'ACTIVE';
-    if (expiryDate < today) {
+    if (daysLeft < 0) {
       calculatedStatus = 'EXPIRED';
-    } else {
-      const expTime = new Date(expiryDate).getTime();
-      const todayTime = new Date().getTime();
-      const diffDays = Math.ceil((expTime - todayTime) / (1000 * 3600 * 24));
-      if (diffDays <= reminderDays) {
-        calculatedStatus = 'EXPIRING_SOON';
-      }
+    } else if (daysLeft <= reminderDays) {
+      calculatedStatus = 'EXPIRING_SOON';
     }
 
     if (editingId) {
@@ -354,15 +395,18 @@ export default function RenewalTrackerPage() {
           r.id === editingId
             ? {
                 ...r,
-                asset_name: assetName,
-                asset_code: assetCode,
+                item_service: itemService.trim(),
+                description: description.trim(),
                 category,
-                reference_no: referenceNo,
-                provider,
-                issue_date: issueDate,
-                expiry_date: expiryDate,
+                department,
+                branch_location: branchLocation,
+                start_date: startDate,
+                due_date: dueDate,
+                last_renewed_date: lastRenewedDate,
+                reminder_days: Number(reminderDays),
+                renewal_owner: renewalOwner.trim(),
+                remarks: remarks.trim(),
                 cost: cost ? Number(cost) : 0,
-                reminder_days: reminderDays,
                 status: calculatedStatus,
               }
             : r,
@@ -372,19 +416,22 @@ export default function RenewalTrackerPage() {
     } else {
       const newItem: RenewalItem = {
         id: Date.now(),
-        asset_name: assetName,
-        asset_code: assetCode || `AST-${Math.floor(1000 + Math.random() * 9000)}`,
+        item_service: itemService.trim(),
+        description: description.trim(),
         category,
-        reference_no: referenceNo || 'N/A',
-        provider: provider || 'Standard Authority',
-        issue_date: issueDate,
-        expiry_date: expiryDate,
+        department,
+        branch_location: branchLocation,
+        start_date: startDate || new Date().toISOString().split('T')[0],
+        due_date: dueDate,
+        last_renewed_date: lastRenewedDate || 'N/A',
+        reminder_days: Number(reminderDays),
+        renewal_owner: renewalOwner.trim() || 'System Admin',
+        remarks: remarks.trim(),
         cost: cost ? Number(cost) : 0,
-        reminder_days: reminderDays,
         status: calculatedStatus,
       };
       setRenewals((prev) => [newItem, ...prev]);
-      showToast('New renewal item created', 'success');
+      showToast('New renewal item created successfully', 'success');
     }
 
     setModalOpen(false);
@@ -394,19 +441,21 @@ export default function RenewalTrackerPage() {
     setRenewals((prev) =>
       prev.map((r) => {
         if (r.id === id) {
-          const nextExpiry = new Date(r.expiry_date || Date.now());
-          nextExpiry.setFullYear(nextExpiry.getFullYear() + 1);
+          const todayStr = new Date().toISOString().split('T')[0];
+          const nextDue = new Date(r.due_date || Date.now());
+          nextDue.setFullYear(nextDue.getFullYear() + 1);
           return {
             ...r,
-            issue_date: new Date().toISOString().split('T')[0],
-            expiry_date: nextExpiry.toISOString().split('T')[0],
+            last_renewed_date: todayStr,
+            start_date: todayStr,
+            due_date: nextDue.toISOString().split('T')[0],
             status: 'RENEWED',
           };
         }
         return r;
       }),
     );
-    showToast('Item marked as renewed for another term!', 'success');
+    showToast('Marked as renewed! Updated last renewed date & calculated next due date.', 'success');
   };
 
   const handleDelete = (id: number) => {
@@ -483,43 +532,58 @@ export default function RenewalTrackerPage() {
     }
   };
 
-  // Mail Template Save
-  const handleSaveMailTemplate = () => {
-    showToast('Mail notification template saved successfully', 'success');
-  };
-
   // Filtered List
   const filteredRenewals = renewals.filter((r) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
-      r.asset_name.toLowerCase().includes(q) ||
-      r.asset_code.toLowerCase().includes(q) ||
-      r.reference_no.toLowerCase().includes(q) ||
-      r.provider.toLowerCase().includes(q);
+      r.item_service.toLowerCase().includes(q) ||
+      (r.description && r.description.toLowerCase().includes(q)) ||
+      (r.renewal_owner && r.renewal_owner.toLowerCase().includes(q)) ||
+      (r.branch_location && r.branch_location.toLowerCase().includes(q)) ||
+      (r.remarks && r.remarks.toLowerCase().includes(q));
 
     const matchesCategory = categoryFilter === 'ALL' || r.category === categoryFilter;
+    const matchesDepartment = departmentFilter === 'ALL' || r.department === departmentFilter;
     const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesCategory && matchesDepartment && matchesStatus;
   });
 
   // Metrics
   const totalCount = renewals.length;
-  const expiringSoonCount = renewals.filter((r) => r.status === 'EXPIRING_SOON').length;
-  const expiredCount = renewals.filter((r) => r.status === 'EXPIRED').length;
-  const renewedCount = renewals.filter((r) => r.status === 'RENEWED' || r.status === 'ACTIVE').length;
-  const totalAnnualCost = renewals.reduce((acc, r) => acc + (r.cost || 0), 0);
+  const expiringSoonCount = renewals.filter((r) => {
+    const days = getDaysRemaining(r.due_date);
+    return days >= 0 && days <= r.reminder_days;
+  }).length;
+  const expiredCount = renewals.filter((r) => getDaysRemaining(r.due_date) < 0).length;
+  const activeCount = totalCount - expiredCount - expiringSoonCount;
 
-  const getStatusChip = (status: RenewalItem['status']) => {
-    switch (status) {
-      case 'EXPIRING_SOON':
-        return <Chip label="Expiring Soon" size="small" sx={{ bg: '#FEF3C7', color: '#D97706', fontWeight: 700, borderRadius: '6px' }} />;
-      case 'EXPIRED':
-        return <Chip label="Expired" size="small" sx={{ bg: '#FEE2E2', color: '#DC2626', fontWeight: 700, borderRadius: '6px' }} />;
-      case 'RENEWED':
-        return <Chip label="Renewed" size="small" sx={{ bg: '#DCFCE7', color: '#15803D', fontWeight: 700, borderRadius: '6px' }} />;
-      default:
-        return <Chip label="Active" size="small" sx={{ bg: '#E0F2FE', color: '#0369A1', fontWeight: 700, borderRadius: '6px' }} />;
+  const renderDaysRemainingChip = (dueDateStr: string) => {
+    const days = getDaysRemaining(dueDateStr);
+    if (days < 0) {
+      return (
+        <Chip
+          label={`${Math.abs(days)} Days Overdue`}
+          size="small"
+          sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 700, borderRadius: '6px' }}
+        />
+      );
+    } else if (days <= 30) {
+      return (
+        <Chip
+          label={`${days} Days Left`}
+          size="small"
+          sx={{ bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 700, borderRadius: '6px' }}
+        />
+      );
+    } else {
+      return (
+        <Chip
+          label={`${days} Days Left`}
+          size="small"
+          sx={{ bgcolor: '#EAF6E8', color: '#04552B', fontWeight: 700, borderRadius: '6px' }}
+        />
+      );
     }
   };
 
@@ -530,7 +594,7 @@ export default function RenewalTrackerPage() {
         <Button
           variant="outlined"
           startIcon={<Upload size={18} />}
-          onClick={() => showToast('Import format ready', 'info')}
+          onClick={() => showToast('Import format ready for 12 renewal fields', 'info')}
           sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
         >
           Import
@@ -541,7 +605,7 @@ export default function RenewalTrackerPage() {
           onClick={() => handleOpenModal()}
           sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
         >
-          New Renewal Item
+          New Renewal Item / Service
         </Button>
       </Box>
 
@@ -570,7 +634,7 @@ export default function RenewalTrackerPage() {
                     Attention Required: {expiredCount} Expired & {expiringSoonCount} Expiring Soon Items
                   </Typography>
                   <Typography sx={{ fontSize: 12.5, color: expiredCount > 0 ? '#B91C1C' : '#B45309' }}>
-                    Immediate renewal action recommended to maintain compliance and avoid fines or downtime.
+                    Action required to avoid compliance non-conformity or service downtime.
                   </Typography>
                 </Box>
               </Box>
@@ -586,7 +650,7 @@ export default function RenewalTrackerPage() {
                   borderRadius: '6px',
                 }}
               >
-                View Tracker List
+                View Renewal Tracker
               </Button>
             </Paper>
           )}
@@ -600,14 +664,14 @@ export default function RenewalTrackerPage() {
                     <ShieldCheck size={20} />
                   </Box>
                   <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600 }}>
-                    Total Renewals Tracked
+                    Total Renewal Items
                   </Typography>
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 800, color: '#023020' }}>
                   {totalCount}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#7A8B80' }}>
-                  Annual Cost: {currencySymbol}{totalAnnualCost.toLocaleString('en-IN')}
+                  Across all departments & branches
                 </Typography>
               </Paper>
             </Grid>
@@ -626,7 +690,7 @@ export default function RenewalTrackerPage() {
                   {expiringSoonCount}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600 }}>
-                  Requires vendor followup
+                  Reminder lead alerts active
                 </Typography>
               </Paper>
             </Grid>
@@ -657,33 +721,33 @@ export default function RenewalTrackerPage() {
                     <CheckCircle2 size={20} />
                   </Box>
                   <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600 }}>
-                    Active & Renewed
+                    Active & Compliant
                   </Typography>
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 800, color: '#15803D' }}>
-                  {renewedCount}
+                  {activeCount}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 600 }}>
-                  Compliance: {totalCount > 0 ? Math.round((renewedCount / totalCount) * 100) : 100}%
+                  Compliance: {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100}%
                 </Typography>
               </Paper>
             </Grid>
           </Grid>
 
-          {/* Quick Action Table preview */}
+          {/* Quick Action Overview Table */}
           <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 2.5, bgcolor: '#FFFFFF' }}>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 2 }}>
-              Upcoming & Priority Renewals Overview
+              Priority Renewal Services Overview
             </Typography>
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Asset / Vehicle</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Category</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Provider</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Expiry Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Fee / Premium</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Item / Service</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Category & Dept</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Branch / Location</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Days Remaining</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Owner</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C' }}>Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -691,20 +755,19 @@ export default function RenewalTrackerPage() {
                 {renewals.slice(0, 5).map((row) => (
                   <TableRow key={row.id} hover>
                     <TableCell>
-                      <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>{row.asset_name}</Typography>
-                      <Typography sx={{ fontSize: 11, color: '#7A8B80' }}>Ref: {row.reference_no}</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>{row.item_service}</Typography>
+                      <Typography sx={{ fontSize: 11, color: '#7A8B80' }}>{row.description}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={row.category} size="small" variant="outlined" sx={{ fontSize: 11, fontWeight: 600 }} />
+                      <Chip label={row.category} size="small" variant="outlined" sx={{ fontSize: 11, fontWeight: 600, mb: 0.5 }} />
+                      <Typography sx={{ fontSize: 11, color: '#44584C' }}>{row.department}</Typography>
                     </TableCell>
-                    <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{row.provider}</TableCell>
-                    <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: row.status === 'EXPIRED' ? '#DC2626' : '#16231B' }}>
-                      {row.expiry_date}
+                    <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{row.branch_location}</TableCell>
+                    <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: getDaysRemaining(row.due_date) < 0 ? '#DC2626' : '#16231B' }}>
+                      {row.due_date}
                     </TableCell>
-                    <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: '#023020' }}>
-                      {currencySymbol}{row.cost.toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell>{getStatusChip(row.status)}</TableCell>
+                    <TableCell>{renderDaysRemainingChip(row.due_date)}</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{row.renewal_owner}</TableCell>
                     <TableCell align="right">
                       <Button
                         size="small"
@@ -722,17 +785,17 @@ export default function RenewalTrackerPage() {
         </Box>
       )}
 
-      {/* ── TAB 2: RENEWAL TRACKER GRID ───────────────────────────────────── */}
+      {/* ── TAB 2: RENEWAL TRACKER GRID (FULL REVAMPED FIELDS TABLE) ───────────────── */}
       {currentTab === 'tracker' && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          {/* Controls Bar */}
+          {/* Filter Controls Bar */}
           <Paper elevation={0} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder="Search vehicle, asset, provider or ref no..."
+                  placeholder="Search item, description, owner, branch, remarks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   InputProps={{
@@ -745,7 +808,7 @@ export default function RenewalTrackerPage() {
                 />
               </Grid>
 
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.5}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Category</InputLabel>
                   <Select value={categoryFilter} label="Category" onChange={(e) => setCategoryFilter(e.target.value)}>
@@ -759,7 +822,21 @@ export default function RenewalTrackerPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={6} sm={3}>
+              <Grid item xs={6} sm={2.5}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Department</InputLabel>
+                  <Select value={departmentFilter} label="Department" onChange={(e) => setDepartmentFilter(e.target.value)}>
+                    <MenuItem value="ALL">All Departments</MenuItem>
+                    {DEPARTMENTS.map((d) => (
+                      <MenuItem key={d} value={d}>
+                        {d}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={6} sm={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
@@ -772,67 +849,76 @@ export default function RenewalTrackerPage() {
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={2} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Grid item xs={6} sm={1} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"
                   size="small"
                   onClick={() => {
                     setSearchQuery('');
                     setCategoryFilter('ALL');
+                    setDepartmentFilter('ALL');
                     setStatusFilter('ALL');
                   }}
-                  sx={{ textTransform: 'none', color: '#7A8B80', borderColor: '#CBD5E1' }}
+                  sx={{ textTransform: 'none', color: '#7A8B80', borderColor: '#CBD5E1', fontSize: 12 }}
                 >
-                  Reset Filters
+                  Reset
                 </Button>
               </Grid>
             </Grid>
           </Paper>
 
-          {/* Main Table */}
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflow: 'hidden', bgcolor: '#FFFFFF' }}>
-            <Table>
+          {/* Main Revamped Tracker Table */}
+          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', overflowX: 'auto', bgcolor: '#FFFFFF' }}>
+            <Table size="medium">
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Asset / Vehicle Name</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Category</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Reference No.</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Provider / RTO</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Expiry Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Fee / Cost</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Status</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C' }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 220 }}>Renewal Item / Service & Description</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Category</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 160 }}>Dept & Branch / Location</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 120 }}>Start Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130 }}>Renewal Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Days Remaining (Auto)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 130 }}>Last Renewed Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 120 }}>Lead Time (Days)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 150 }}>Renewal Owner</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', minWidth: 180 }}>Remarks / Notes</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C', minWidth: 110 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredRenewals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#7A8B80' }}>
-                      No renewal items match the selected filter.
+                    <TableCell colSpan={11} align="center" sx={{ py: 6, color: '#7A8B80' }}>
+                      No renewal items match the selected filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredRenewals.map((r) => (
                     <TableRow key={r.id} hover>
                       <TableCell>
-                        <Typography sx={{ fontWeight: 700, fontSize: 13.5, color: '#16231B' }}>{r.asset_name}</Typography>
-                        <Typography sx={{ fontSize: 11, color: '#7A8B80', fontFamily: 'monospace' }}>{r.asset_code}</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: 13.5, color: '#16231B' }}>{r.item_service}</Typography>
+                        {r.description && (
+                          <Typography sx={{ fontSize: 11.5, color: '#64748B', mt: 0.3 }}>{r.description}</Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Chip label={r.category} size="small" sx={{ fontWeight: 600, fontSize: 11, bgcolor: '#F1F5F9' }} />
                       </TableCell>
-                      <TableCell sx={{ fontSize: 12.5, fontFamily: 'monospace', color: '#334155' }}>{r.reference_no}</TableCell>
-                      <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.provider}</TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: r.status === 'EXPIRED' ? '#DC2626' : '#16231B' }}>
-                          {r.expiry_date}
-                        </Typography>
-                        <Typography sx={{ fontSize: 10.5, color: '#7A8B80' }}>Alert @ {r.reminder_days} days</Typography>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>{r.department}</Typography>
+                        <Typography sx={{ fontSize: 11, color: '#7A8B80' }}>{r.branch_location}</Typography>
                       </TableCell>
-                      <TableCell sx={{ fontSize: 13, fontWeight: 700, color: '#023020' }}>
-                        {currencySymbol}{r.cost.toLocaleString('en-IN')}
+                      <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.start_date || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
+                        {r.due_date}
                       </TableCell>
-                      <TableCell>{getStatusChip(r.status)}</TableCell>
+                      <TableCell>{renderDaysRemainingChip(r.due_date)}</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: '#475569' }}>{r.reminder_days} Days</TableCell>
+                      <TableCell sx={{ fontSize: 12.5, fontWeight: 600, color: '#04552B' }}>{r.renewal_owner}</TableCell>
+                      <TableCell sx={{ fontSize: 11.5, color: '#64748B', maxWidth: 200, whiteSpace: 'normal' }}>
+                        {r.remarks || '—'}
+                      </TableCell>
                       <TableCell align="right">
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                           <Tooltip title="Mark Renewed">
@@ -868,19 +954,18 @@ export default function RenewalTrackerPage() {
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 2 }}>
-                  Category Renewal Expense Distribution
+                  Category Renewal Distribution
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {categories.slice(0, 5).map((c, i) => {
+                  {categories.slice(0, 6).map((c) => {
                     const catItems = renewals.filter((r) => r.category === c.name);
-                    const catTotal = catItems.reduce((a, b) => a + (b.cost || 0), 0);
-                    const pct = totalAnnualCost > 0 ? Math.round((catTotal / totalAnnualCost) * 100) : 0;
+                    const pct = totalCount > 0 ? Math.round((catItems.length / totalCount) * 100) : 0;
                     return (
                       <Box key={c.id}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                           <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#16231B' }}>{c.name}</Typography>
                           <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#023020' }}>
-                            {currencySymbol}{catTotal.toLocaleString('en-IN')} ({pct}%)
+                            {catItems.length} Items ({pct}%)
                           </Typography>
                         </Box>
                         <LinearProgress
@@ -905,24 +990,24 @@ export default function RenewalTrackerPage() {
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 2 }}>
-                  Compliance & Expiry Audit Summary
+                  Compliance & Renewal Audit Summary
                 </Typography>
                 <Box sx={{ p: 2, bgcolor: '#F8FAF7', borderRadius: '10px', border: '1px solid #E4EBE1', mb: 2 }}>
                   <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#023020', mb: 0.5 }}>
-                    Fleet Statutory Compliance Rating
+                    Enterprise Statutory Compliance Rating
                   </Typography>
                   <Typography sx={{ fontSize: 28, fontWeight: 800, color: '#04552B' }}>
                     {totalCount > 0 ? Math.round(((totalCount - expiredCount) / totalCount) * 100) : 100}%
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: '#7A8B80' }}>
-                    Calculated based on active vs expired vehicle certificates and permits.
+                    Calculated on Active / Valid Items vs Overdue Expiries across all branches.
                   </Typography>
                 </Box>
                 <Button
                   fullWidth
                   variant="outlined"
                   startIcon={<Download size={16} />}
-                  onClick={() => showToast('Full Renewal Compliance Audit Exported', 'success')}
+                  onClick={() => showToast('Full 12-Field Renewal Compliance Audit Exported (.CSV)', 'success')}
                   sx={{ textTransform: 'none', fontWeight: 700, borderColor: '#04552B', color: '#04552B' }}
                 >
                   Download Full Compliance Audit Report (.CSV)
@@ -936,7 +1021,6 @@ export default function RenewalTrackerPage() {
       {/* ── TAB 4: RENEWAL CONFIGURATION ──────────────────────────────────── */}
       {currentTab === 'configuration' && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Sub-Navigation Tabs inside Configuration */}
           <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 1.5, bgcolor: '#F8FAF7' }}>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
@@ -1011,7 +1095,7 @@ export default function RenewalTrackerPage() {
                     Renewal Category Master
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#667A6D' }}>
-                    Configure renewal categories, default validity terms, color badges, and default reminder advance days.
+                    Configure categories, default validity terms, and advance reminder lead times.
                   </Typography>
                 </Box>
                 <Button
@@ -1069,10 +1153,10 @@ export default function RenewalTrackerPage() {
           {configSubTab === 'reminders' && (
             <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 1 }}>
-                Advance Reminder & Notification Policy
+                Advance Reminder Lead Time & Escalation Policy
               </Typography>
               <Typography variant="body2" sx={{ color: '#667A6D', mb: 3 }}>
-                Configure trigger intervals, email dispatch frequencies, and escalation rules for upcoming or overdue renewals.
+                Configure trigger lead times and escalation rules for upcoming or overdue renewals.
               </Typography>
 
               <Grid container spacing={3}>
@@ -1083,7 +1167,7 @@ export default function RenewalTrackerPage() {
                     size="small"
                     value={advanceDaysList}
                     onChange={(e) => setAdvanceDaysList(e.target.value)}
-                    helperText="Triggers advance email alerts at X days prior to expiry date (e.g. 60, 30, 15, 7, 1)"
+                    helperText="Triggers advance email alerts at X days prior to due date (e.g. 60, 30, 15, 7, 1)"
                     sx={{ mb: 2.5 }}
                   />
 
@@ -1104,7 +1188,7 @@ export default function RenewalTrackerPage() {
 
                   <FormControlLabel
                     control={<Switch checked={autoEscalateOverdue} onChange={(e) => setAutoEscalateOverdue(e.target.checked)} color="warning" />}
-                    label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Auto-escalate Overdue Expiries to Operations Head</Typography>}
+                    label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Auto-escalate Overdue Expiries to Department Head</Typography>}
                     sx={{ display: 'block' }}
                   />
                 </Grid>
@@ -1115,21 +1199,21 @@ export default function RenewalTrackerPage() {
                       Reminder Escalation Matrix
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: '#667A6D', mb: 2 }}>
-                      Automated email notification rules applied based on remaining expiry days:
+                      Automated email notifications triggered based on calculated days remaining:
                     </Typography>
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       <Box sx={{ p: 1.5, bg: '#FFFFFF', borderRadius: '6px', borderLeft: '4px solid #2563EB' }}>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#1E40AF' }}>30 Days Before Expiry</Typography>
-                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Notifies Asset Owner & Vehicle Driver</Typography>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#1E40AF' }}>Reminder Lead Time (e.g., 30 Days)</Typography>
+                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Notifies Renewal Owner & Department Lead</Typography>
                       </Box>
                       <Box sx={{ p: 1.5, bg: '#FFFFFF', borderRadius: '6px', borderLeft: '4px solid #D97706' }}>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#92400E' }}>7 Days Before Expiry (Urgent)</Typography>
-                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Notifies Fleet Manager & Procurement Department</Typography>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#92400E' }}>7 Days Before Renewal Due Date</Typography>
+                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Escalates to Branch Manager & Procurement</Typography>
                       </Box>
                       <Box sx={{ p: 1.5, bg: '#FFFFFF', borderRadius: '6px', borderLeft: '4px solid #DC2626' }}>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#991B1B' }}>0 Days / Post Expiry (Overdue)</Typography>
-                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Escalates to General Manager & Compliance Head</Typography>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#991B1B' }}>Overdue (0 Days / Past Due Date)</Typography>
+                        <Typography sx={{ fontSize: 11.5, color: '#475569' }}>Escalates to Operations Head & Legal</Typography>
                       </Box>
                     </Box>
                   </Paper>
@@ -1155,7 +1239,7 @@ export default function RenewalTrackerPage() {
                 Email Notification Templates Editor
               </Typography>
               <Typography variant="body2" sx={{ color: '#667A6D', mb: 3 }}>
-                Customize automated email templates sent to managers, drivers, and vendors.
+                Customize automated notification emails for all 12 renewal fields.
               </Typography>
 
               <Grid container spacing={3}>
@@ -1188,11 +1272,23 @@ export default function RenewalTrackerPage() {
 
                   <Box sx={{ mt: 3, p: 2, bgcolor: '#F8FAF7', borderRadius: '8px', border: '1px solid #E4EBE1' }}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Code2 size={15} /> Available Dynamic Placeholders
+                      <Code2 size={15} /> Dynamic Placeholders
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {['{{asset_name}}', '{{asset_code}}', '{{category}}', '{{expiry_date}}', '{{days_remaining}}', '{{provider}}', '{{reference_no}}', '{{cost}}'].map((tag) => (
-                        <Chip key={tag} label={tag} size="small" sx={{ fontSize: 10.5, fontFamily: 'monospace', bgcolor: '#EAF6E8', color: '#04552B' }} />
+                      {[
+                        '{{item_service}}',
+                        '{{description}}',
+                        '{{category}}',
+                        '{{department}}',
+                        '{{branch_location}}',
+                        '{{start_date}}',
+                        '{{due_date}}',
+                        '{{days_remaining}}',
+                        '{{last_renewed_date}}',
+                        '{{renewal_owner}}',
+                        '{{remarks}}',
+                      ].map((tag) => (
+                        <Chip key={tag} label={tag} size="small" sx={{ fontSize: 10, fontFamily: 'monospace', bgcolor: '#EAF6E8', color: '#04552B' }} />
                       ))}
                     </Box>
                   </Box>
@@ -1215,7 +1311,7 @@ export default function RenewalTrackerPage() {
                       />
 
                       <TextField
-                        label="Email Body Content (PlainText / HTML)"
+                        label="Email Body Content"
                         fullWidth
                         multiline
                         rows={10}
@@ -1229,32 +1325,10 @@ export default function RenewalTrackerPage() {
                         sx={{ fontFamily: 'monospace', fontSize: 12.5 }}
                       />
 
-                      {/* Live Preview Box */}
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: '#F1F5F9', borderRadius: '8px', border: '1px dashed #94A3B8' }}>
-                        <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#475569', mb: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Eye size={14} /> Live Sample Email Preview
-                        </Typography>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A', mb: 1 }}>
-                          Subject: {mailTemplates[selectedTemplateKey].subject.replace('{{asset_name}}', 'Tata Primavera 3525.K').replace('{{category}}', 'Insurance').replace('{{days_remaining}}', '15')}
-                        </Typography>
-                        <Divider sx={{ mb: 1 }} />
-                        <Typography sx={{ fontSize: 11.5, whiteSpace: 'pre-wrap', color: '#334155', fontFamily: 'monospace' }}>
-                          {mailTemplates[selectedTemplateKey].body
-                            .replace(/{{asset_name}}/g, 'Tata Primavera 3525.K (KA-01-EQ-9821)')
-                            .replace(/{{asset_code}}/g, 'VEH-9821')
-                            .replace(/{{category}}/g, 'Insurance')
-                            .replace(/{{reference_no}}/g, 'POL-ICICI-99882')
-                            .replace(/{{provider}}/g, 'ICICI Lombard Insurance')
-                            .replace(/{{expiry_date}}/g, '2026-09-15')
-                            .replace(/{{cost}}/g, '45,000')
-                            .replace(/{{days_remaining}}/g, '15')}
-                        </Typography>
-                      </Paper>
-
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Button
                           variant="contained"
-                          onClick={handleSaveMailTemplate}
+                          onClick={() => showToast('Email template saved successfully', 'success')}
                           sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
                         >
                           Save Email Template
@@ -1271,26 +1345,22 @@ export default function RenewalTrackerPage() {
           {configSubTab === 'rules' && (
             <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 1 }}>
-                Compliance Workflow & Statutory Setup
+                Compliance Rules & System Setup
               </Typography>
               <Typography variant="body2" sx={{ color: '#667A6D', mb: 3 }}>
-                Configure statutory mandatory fields, default currency, and document verification rules.
+                Configure statutory validation rules and auto-calculation logic.
               </Typography>
 
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <FormControlLabel
-                      control={<Switch checked={requireRefNo} onChange={(e) => setRequireRefNo(e.target.checked)} color="success" />}
-                      label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Require Policy / Reference Number on Creation</Typography>}
+                      control={<Switch checked={requireOwner} onChange={(e) => setRequireOwner(e.target.checked)} color="success" />}
+                      label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Require Renewal Owner on Creation</Typography>}
                     />
                     <FormControlLabel
-                      control={<Switch checked={requireDocUpload} onChange={(e) => setRequireDocUpload(e.target.checked)} color="success" />}
-                      label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Require Scanned PDF / Document Upload on Renewal</Typography>}
-                    />
-                    <FormControlLabel
-                      control={<Switch checked={autoCalcExpiry} onChange={(e) => setAutoCalcExpiry(e.target.checked)} color="success" />}
-                      label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Auto-calculate Next Expiry Date (+1 Year) on Mark Renewed</Typography>}
+                      control={<Switch checked={autoCalcNextDue} onChange={(e) => setAutoCalcNextDue(e.target.checked)} color="success" />}
+                      label={<Typography sx={{ fontSize: 13.5, fontWeight: 600, color: '#16231B' }}>Auto-calculate Next Renewal Due Date (+1 Year) on Mark Renewed</Typography>}
                     />
                   </Box>
                 </Grid>
@@ -1306,10 +1376,10 @@ export default function RenewalTrackerPage() {
 
                   <Paper elevation={0} sx={{ p: 2, bgcolor: '#F8FAF7', border: '1px solid #E4EBE1', borderRadius: '8px' }}>
                     <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#023020', mb: 0.5 }}>
-                      Statutory Audit Mode Active
+                      Auto-Calculated Days Remaining Active
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: '#667A6D' }}>
-                      All category modifications, email dispatch logs, and status updates are recorded in the central Enterprise Audit Trail.
+                      Days remaining are recalculated dynamically every midnight relative to system clock and Renewal Due Date.
                     </Typography>
                   </Paper>
                 </Grid>
@@ -1329,35 +1399,34 @@ export default function RenewalTrackerPage() {
         </Box>
       )}
 
-      {/* Item Modal (Add/Edit Renewal) */}
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, color: '#023020' }}>
-          {editingId ? 'Edit Renewal Record' : 'New Renewal Item'}
+      {/* ── ITEM MODAL (ADD / EDIT ALL 12 REVAMPED FIELDS) ───────────────────────── */}
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: '#023020', borderBottom: '1px solid #E4EBE1' }}>
+          {editingId ? 'Edit Renewal Item / Service' : 'New Renewal Item / Service'}
         </DialogTitle>
-        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <TextField
-            label="Asset / Vehicle Name"
-            fullWidth
-            size="small"
-            value={assetName}
-            onChange={(e) => setAssetName(e.target.value)}
-            placeholder="e.g. Tata Primavera 3525.K (KA-01-EQ-9821)"
-          />
+        <DialogContent sx={{ pt: 2.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          {/* Section 1: Core Details */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#04552B', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 12 }}>
+            1. Core Service & Organization Details
+          </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid item xs={12} sm={8}>
               <TextField
-                label="Asset / Vehicle Code"
+                label="Renewal Item / Service"
                 fullWidth
+                required
                 size="small"
-                value={assetCode}
-                onChange={(e) => setAssetCode(e.target.value)}
+                value={itemService}
+                onChange={(e) => setItemService(e.target.value)}
+                placeholder="e.g. Tata Primavera Motor Insurance or Microsoft 365 Subscription"
               />
             </Grid>
-            <Grid item xs={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Category</InputLabel>
-                <Select value={category} label="Category" onChange={(e) => setCategory(e.target.value as any)}>
+
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>Renewal Category</InputLabel>
+                <Select value={category} label="Renewal Category" onChange={(e) => setCategory(e.target.value)}>
                   {categories.map((c) => (
                     <MenuItem key={c.id} value={c.name}>
                       {c.name}
@@ -1366,58 +1435,154 @@ export default function RenewalTrackerPage() {
                 </Select>
               </FormControl>
             </Grid>
-          </Grid>
 
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid item xs={12}>
               <TextField
-                label="Reference / Policy No."
+                label="Description"
                 fullWidth
+                multiline
+                rows={2}
                 size="small"
-                value={referenceNo}
-                onChange={(e) => setReferenceNo(e.target.value)}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Detailed coverage specs, policy scope, or terms summary..."
               />
             </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Provider / Authority"
-                fullWidth
-                size="small"
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-              />
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Department</InputLabel>
+                <Select value={department} label="Department" onChange={(e) => setDepartment(e.target.value)}>
+                  {DEPARTMENTS.map((d) => (
+                    <MenuItem key={d} value={d}>
+                      {d}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Branch / Location</InputLabel>
+                <Select value={branchLocation} label="Branch / Location" onChange={(e) => setBranchLocation(e.target.value)}>
+                  {BRANCH_LOCATIONS.map((b) => (
+                    <MenuItem key={b} value={b}>
+                      {b}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
 
+          <Divider />
+
+          {/* Section 2: Dates & Schedule */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#04552B', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 12 }}>
+            2. Schedule, Validity & Auto-Calculations
+          </Typography>
+
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid item xs={12} sm={4}>
               <TextField
-                label="Issue Date"
+                label="Start Date"
                 type="date"
                 fullWidth
                 size="small"
                 InputLabelProps={{ shrink: true }}
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
               />
             </Grid>
-            <Grid item xs={6}>
+
+            <Grid item xs={12} sm={4}>
               <TextField
-                label="Expiry Date"
+                label="Renewal Due Date"
+                type="date"
+                required
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Last Renewed Date"
                 type="date"
                 fullWidth
                 size="small"
                 InputLabelProps={{ shrink: true }}
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
+                value={lastRenewedDate}
+                onChange={(e) => setLastRenewedDate(e.target.value)}
               />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Reminder Lead Time (Days)"
+                type="number"
+                fullWidth
+                size="small"
+                value={reminderDays}
+                onChange={(e) => setReminderDays(Number(e.target.value))}
+                helperText="Send advance reminder alert X days before Renewal Due Date"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              {/* Days Remaining Auto-calculated Box Preview */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 1.5,
+                  bgcolor: '#F8FAF7',
+                  border: '1px solid #E4EBE1',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  height: '100%',
+                }}
+              >
+                <Box>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#44584C', textTransform: 'uppercase' }}>
+                    Days Remaining (Auto-calculated)
+                  </Typography>
+                  <Typography sx={{ fontSize: 16, fontWeight: 800, color: '#023020', mt: 0.2 }}>
+                    {dueDate ? `${getDaysRemaining(dueDate)} Days` : 'Select Due Date'}
+                  </Typography>
+                </Box>
+                {dueDate && renderDaysRemainingChip(dueDate)}
+              </Paper>
             </Grid>
           </Grid>
 
+          <Divider />
+
+          {/* Section 3: Ownership & Remarks */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#04552B', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 12 }}>
+            3. Ownership & Remarks
+          </Typography>
+
           <Grid container spacing={2}>
-            <Grid item xs={6}>
+            <Grid item xs={12} sm={6}>
               <TextField
-                label={`Renewal Fee / Premium (${currencySymbol})`}
+                label="Renewal Owner"
+                fullWidth
+                size="small"
+                value={renewalOwner}
+                onChange={(e) => setRenewalOwner(e.target.value)}
+                placeholder="e.g. Rajesh Kumar (Fleet Mgr)"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={`Estimated Cost (${currencySymbol}) - Optional`}
                 type="number"
                 fullWidth
                 size="small"
@@ -1425,20 +1590,22 @@ export default function RenewalTrackerPage() {
                 onChange={(e) => setCost(e.target.value ? Number(e.target.value) : '')}
               />
             </Grid>
-            <Grid item xs={6}>
+
+            <Grid item xs={12}>
               <TextField
-                label="Reminder Advance Days"
-                type="number"
+                label="Remarks / Notes"
                 fullWidth
+                multiline
+                rows={2}
                 size="small"
-                value={reminderDays}
-                onChange={(e) => setReminderDays(Number(e.target.value))}
-                helperText="Send alert X days before expiry"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Vendor contacts, quotation status, approval notes..."
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #E4EBE1' }}>
           <Button onClick={() => setModalOpen(false)} sx={{ textTransform: 'none', color: '#7A8B80' }}>
             Cancel
           </Button>
@@ -1447,12 +1614,12 @@ export default function RenewalTrackerPage() {
             onClick={handleSaveRenewal}
             sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
           >
-            Save Renewal Item
+            Save Renewal Record
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Category Modal (Add/Edit Category) */}
+      {/* Category Modal (Add / Edit Category) */}
       <Dialog open={catModalOpen} onClose={() => setCatModalOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, color: '#023020' }}>
           {editingCatId ? 'Edit Renewal Category' : 'New Renewal Category'}
@@ -1464,13 +1631,13 @@ export default function RenewalTrackerPage() {
             size="small"
             value={catName}
             onChange={(e) => setCatName(e.target.value)}
-            placeholder="e.g. Commercial Fitness Certificate"
+            placeholder="e.g. Software License"
           />
 
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField
-                label="Color Badge Hex"
+                label="Color Hex"
                 fullWidth
                 size="small"
                 value={catColor}
@@ -1490,7 +1657,7 @@ export default function RenewalTrackerPage() {
           </Grid>
 
           <TextField
-            label="Default Advance Reminder (Days)"
+            label="Default Reminder Lead Time (Days)"
             type="number"
             fullWidth
             size="small"
