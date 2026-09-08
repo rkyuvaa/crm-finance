@@ -739,7 +739,7 @@ export default function RenewalTrackerPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 'none', px: { xs: 2, sm: 3, md: 3.5 }, py: 2.5, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 1.5, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flex: 1 }}>
       {/* Top Action Bar */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2, width: '100%' }}>
         <Button
@@ -942,7 +942,7 @@ export default function RenewalTrackerPage() {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 'none' }}>
           {/* Filter Controls Bar */}
           <Paper elevation={0} sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF', width: '100%', boxSizing: 'border-box' }}>
-            <Grid container spacing={1.5} alignItems="center" sx={{ width: '100%', m: 0 }}>
+            <Grid container spacing={1.5} alignItems="center">
               <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
@@ -1155,7 +1155,7 @@ export default function RenewalTrackerPage() {
       {/* ── TAB 3: REPORTS & ANALYTICS ────────────────────────────────────── */}
       {currentTab === 'reports' && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', maxWidth: 'none' }}>
-          <Grid container spacing={2.5} sx={{ width: '100%', m: 0 }}>
+          <Grid container spacing={2.5}>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 3, bgcolor: '#FFFFFF' }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020', mb: 2 }}>
