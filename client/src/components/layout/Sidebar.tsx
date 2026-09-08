@@ -117,7 +117,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: RefreshCw,
         badge: null,
         children: [
-          { key: 'renewal_dashboard', label: 'Dashboard', path: '/renewal/dashboard', icon: LayoutDashboard, badge: null },
           { key: 'renewal_tracker', label: 'Tracker', path: '/renewal/tracker', icon: Clock, badge: null },
           { key: 'renewal_reports', label: 'Reports', path: '/renewal/reports', icon: BarChart3, badge: null },
           { key: 'renewal_configuration', label: 'Configuration', path: '/renewal/configuration', icon: Settings2, badge: null },

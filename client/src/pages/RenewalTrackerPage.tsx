@@ -450,13 +450,11 @@ export default function RenewalTrackerPage() {
 
 
   // Active Tab from URL
-  const currentTab = location.pathname.endsWith('/tracker')
-    ? 'tracker'
-    : location.pathname.endsWith('/reports')
+  const currentTab = location.pathname.endsWith('/reports')
     ? 'reports'
     : location.pathname.endsWith('/configuration')
     ? 'configuration'
-    : 'dashboard';
+    : 'tracker';
 
   const handleOpenActionMenu = (event: React.MouseEvent<HTMLElement>, item: RenewalItem) => {
     setActionMenuAnchor({ element: event.currentTarget, item });
@@ -681,6 +679,14 @@ export default function RenewalTrackerPage() {
     }
   };
 
+  const getItemEffectiveStatus = (r: RenewalItem): string => {
+    if (r.status === 'RENEWED') return 'RENEWED';
+    const days = getDaysRemaining(r.due_date);
+    if (days < 0) return 'EXPIRED';
+    if (days <= (r.reminder_days || 30)) return 'EXPIRING_SOON';
+    return 'ACTIVE';
+  };
+
   // Filtered List
   const filteredRenewals = renewals.filter((r) => {
     const q = searchQuery.toLowerCase();
@@ -695,19 +701,21 @@ export default function RenewalTrackerPage() {
 
     const matchesCategory = categoryFilter === 'ALL' || r.category === categoryFilter;
     const matchesDepartment = departmentFilter === 'ALL' || r.department === departmentFilter;
-    const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
+
+    const effStatus = getItemEffectiveStatus(r);
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      r.status === statusFilter ||
+      effStatus === statusFilter;
 
     return matchesSearch && matchesCategory && matchesDepartment && matchesStatus;
   });
 
   // Metrics
   const totalCount = renewals.length;
-  const expiringSoonCount = renewals.filter((r) => {
-    const days = getDaysRemaining(r.due_date);
-    return days >= 0 && days <= r.reminder_days;
-  }).length;
-  const expiredCount = renewals.filter((r) => getDaysRemaining(r.due_date) < 0).length;
-  const activeCount = totalCount - expiredCount - expiringSoonCount;
+  const expiringSoonCount = renewals.filter((r) => getItemEffectiveStatus(r) === 'EXPIRING_SOON').length;
+  const expiredCount = renewals.filter((r) => getItemEffectiveStatus(r) === 'EXPIRED').length;
+  const activeCount = renewals.filter((r) => getItemEffectiveStatus(r) === 'ACTIVE').length;
 
   const renderDaysRemainingChip = (dueDateStr: string) => {
     const days = getDaysRemaining(dueDateStr);
@@ -760,186 +768,161 @@ export default function RenewalTrackerPage() {
         </Button>
       </Box>
 
-      {/* ── TAB 1: RENEWAL DASHBOARD ───────────────────────────────────────── */}
-      {currentTab === 'dashboard' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%', maxWidth: 'none' }}>
-          {/* Critical Alerts Banner */}
-          {(expiredCount > 0 || expiringSoonCount > 0) && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                backgroundColor: expiredCount > 0 ? '#FEF2F2' : '#FFFBEB',
-                border: '1px solid',
-                borderColor: expiredCount > 0 ? '#FCA5A5' : '#FCD34D',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <AlertTriangle size={20} color={expiredCount > 0 ? '#DC2626' : '#D97706'} />
-                <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: 13.5, color: expiredCount > 0 ? '#991B1B' : '#92400E' }}>
-                    Attention Required: {expiredCount} Expired & {expiringSoonCount} Expiring Soon Items
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: expiredCount > 0 ? '#B91C1C' : '#B45309' }}>
-                    Action required to avoid compliance non-conformity or service downtime.
-                  </Typography>
-                </Box>
-              </Box>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => navigate('/renewal/tracker')}
+      {/* ── TAB: RENEWAL TRACKER GRID ── */}
+      {currentTab === 'tracker' && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 'none' }}>
+          {/* 3 Status Interactive Filter Pills */}
+          <Grid container spacing={2} sx={{ mb: 0.5 }}>
+            <Grid item xs={12} sm={4}>
+              <Paper
+                elevation={0}
+                onClick={() => setStatusFilter((prev) => (prev === 'ACTIVE' ? 'ALL' : 'ACTIVE'))}
                 sx={{
-                  backgroundColor: expiredCount > 0 ? '#DC2626' : '#D97706',
-                  '&:hover': { backgroundColor: expiredCount > 0 ? '#B91C1C' : '#B45309' },
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  borderRadius: '6px',
+                  p: 2,
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  border: '2px solid',
+                  borderColor: statusFilter === 'ACTIVE' ? '#04552B' : '#C8E6C9',
+                  bgcolor: statusFilter === 'ACTIVE' ? '#04552B' : '#FFFFFF',
+                  boxShadow: statusFilter === 'ACTIVE' ? '0 4px 14px rgba(4, 85, 43, 0.22)' : 'none',
+                  '&:hover': {
+                    borderColor: '#04552B',
+                    transform: 'translateY(-2px)',
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                View Renewal Tracker
-              </Button>
-            </Paper>
-          )}
-
-          {/* Metric KPI Cards */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Paper elevation={0} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Box sx={{ p: 0.8, borderRadius: '8px', backgroundColor: '#EAF6E8', color: '#04552B' }}>
-                    <ShieldCheck size={18} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: '10px',
+                      bgcolor: statusFilter === 'ACTIVE' ? 'rgba(255, 255, 255, 0.2)' : '#EAF6E8',
+                      color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ShieldCheck size={22} />
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600, fontSize: 12.5 }}>
-                    Total Renewal Items
-                  </Typography>
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'ACTIVE' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
+                      Active & Compliant
+                    </Typography>
+                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'ACTIVE' ? '#FFFFFF' : '#04552B', lineHeight: 1.2 }}>
+                      {activeCount} Items
+                    </Typography>
+                  </Box>
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#023020' }}>
-                  {totalCount}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#7A8B80' }}>
-                  Across all departments & branches
-                </Typography>
+                {statusFilter === 'ACTIVE' && (
+                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
+                )}
               </Paper>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <Paper elevation={0} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Box sx={{ p: 0.8, borderRadius: '8px', backgroundColor: '#FEF3C7', color: '#D97706' }}>
-                    <BellRing size={18} />
+            <Grid item xs={12} sm={4}>
+              <Paper
+                elevation={0}
+                onClick={() => setStatusFilter((prev) => (prev === 'EXPIRING_SOON' ? 'ALL' : 'EXPIRING_SOON'))}
+                sx={{
+                  p: 2,
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  border: '2px solid',
+                  borderColor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FDE68A',
+                  bgcolor: statusFilter === 'EXPIRING_SOON' ? '#D97706' : '#FFFFFF',
+                  boxShadow: statusFilter === 'EXPIRING_SOON' ? '0 4px 14px rgba(217, 119, 6, 0.22)' : 'none',
+                  '&:hover': {
+                    borderColor: '#D97706',
+                    transform: 'translateY(-2px)',
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: '10px',
+                      bgcolor: statusFilter === 'EXPIRING_SOON' ? 'rgba(255, 255, 255, 0.2)' : '#FEF3C7',
+                      color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <BellRing size={22} />
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600, fontSize: 12.5 }}>
-                    Expiring Soon (&lt;30 Days)
-                  </Typography>
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'EXPIRING_SOON' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
+                      Expiring Soon (&lt;30d)
+                    </Typography>
+                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'EXPIRING_SOON' ? '#FFFFFF' : '#D97706', lineHeight: 1.2 }}>
+                      {expiringSoonCount} Items
+                    </Typography>
+                  </Box>
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#D97706' }}>
-                  {expiringSoonCount}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600 }}>
-                  Reminder lead alerts active
-                </Typography>
+                {statusFilter === 'EXPIRING_SOON' && (
+                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
+                )}
               </Paper>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <Paper elevation={0} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Box sx={{ p: 0.8, borderRadius: '8px', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
-                    <AlertCircle size={18} />
+            <Grid item xs={12} sm={4}>
+              <Paper
+                elevation={0}
+                onClick={() => setStatusFilter((prev) => (prev === 'EXPIRED' ? 'ALL' : 'EXPIRED'))}
+                sx={{
+                  p: 2,
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  border: '2px solid',
+                  borderColor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FCA5A5',
+                  bgcolor: statusFilter === 'EXPIRED' ? '#DC2626' : '#FFFFFF',
+                  boxShadow: statusFilter === 'EXPIRED' ? '0 4px 14px rgba(220, 38, 38, 0.22)' : 'none',
+                  '&:hover': {
+                    borderColor: '#DC2626',
+                    transform: 'translateY(-2px)',
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: '10px',
+                      bgcolor: statusFilter === 'EXPIRED' ? 'rgba(255, 255, 255, 0.2)' : '#FEE2E2',
+                      color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <AlertCircle size={22} />
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600, fontSize: 12.5 }}>
-                    Expired Overdue
-                  </Typography>
-                </Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#DC2626' }}>
-                  {expiredCount}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#DC2626', fontWeight: 600 }}>
-                  Action mandatory
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={3}>
-              <Paper elevation={0} sx={{ p: 2, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                  <Box sx={{ p: 0.8, borderRadius: '8px', backgroundColor: '#DCFCE7', color: '#15803D' }}>
-                    <CheckCircle2 size={18} />
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: statusFilter === 'EXPIRED' ? 'rgba(255, 255, 255, 0.9)' : '#7A8B80' }}>
+                      Expired Overdue
+                    </Typography>
+                    <Typography sx={{ fontSize: 20, fontWeight: 800, color: statusFilter === 'EXPIRED' ? '#FFFFFF' : '#DC2626', lineHeight: 1.2 }}>
+                      {expiredCount} Items
+                    </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#7A8B80', fontWeight: 600, fontSize: 12.5 }}>
-                    Active & Compliant
-                  </Typography>
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: '#15803D' }}>
-                  {activeCount}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 600 }}>
-                  Compliance: {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 100}%
-                </Typography>
+                {statusFilter === 'EXPIRED' && (
+                  <Chip label="Filtered" size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', fontWeight: 700, fontSize: 11 }} />
+                )}
               </Paper>
             </Grid>
           </Grid>
-
-          {/* Priority Services Table */}
-          <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '12px', p: 2, bgcolor: '#FFFFFF' }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#023020', mb: 1.5 }}>
-              Priority Renewal Services Overview
-            </Typography>
-            {renewals.length === 0 ? (
-              <Box sx={{ py: 4, textAlign: 'center', color: '#7A8B80' }}>
-                <Typography variant="body2">No renewal items found. Click 'New Renewal Item / Service' above to add your first record.</Typography>
-              </Box>
-            ) : (
-              <Table size="small">
-                <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Item / Service</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Category</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Branch / Location</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Due Date</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Days Remaining (Auto-calculated)</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Renewal Owner</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C' }}>Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {renewals.slice(0, 5).map((row) => (
-                    <TableRow key={row.id} hover>
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 700, fontSize: 14.5, color: '#16231B' }}>{row.item_service}</Typography>
-                        <Typography sx={{ fontSize: 13, color: '#7A8B80' }}>{row.description}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={row.category} size="small" variant="outlined" sx={{ fontSize: 12.5, fontWeight: 600 }} />
-                      </TableCell>
-                      <TableCell sx={{ fontSize: 14, color: '#44584C' }}>{row.branch_location}</TableCell>
-                      <TableCell sx={{ fontSize: 14, fontWeight: 600, color: getDaysRemaining(row.due_date) < 0 ? '#DC2626' : '#16231B' }}>
-                        {row.due_date}
-                      </TableCell>
-                      <TableCell>{renderDaysRemainingChip(row.due_date)}</TableCell>
-                      <TableCell sx={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{row.renewal_owner}</TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={(e) => handleOpenActionMenu(e, row)}>
-                          <MoreVertical size={16} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Paper>
-        </Box>
-      )}
-
-      {/* ── TAB 2: RENEWAL TRACKER GRID (SINGLE SCREEN FULL FIT, EXACT 12 COLUMNS, 3-DOTS ACTION) ── */}
-      {currentTab === 'tracker' && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 'none' }}>
           {/* Filter Controls Bar */}
           <Paper elevation={0} sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '12px', bgcolor: '#FFFFFF', width: '100%', boxSizing: 'border-box' }}>
             <Grid container spacing={1.5} alignItems="center">
