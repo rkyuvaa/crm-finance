@@ -1697,37 +1697,6 @@ export default function RenewalTrackerPage() {
               </FormControl>
             </Grid>
 
-            {branchLocation && branchesDataMap[branchLocation] && (
-              <Grid item xs={12}>
-                <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#F4FBF7', border: '1px solid #C8E6C9', borderRadius: '8px' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.8 }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#04552B', display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                      <MapPin size={14} color="#04552B" />
-                      Branch Address:
-                    </Typography>
-                    <Typography sx={{ fontSize: 11.5, color: '#1B4D3E', fontWeight: 600 }}>
-                      {[
-                        branchesDataMap[branchLocation].address,
-                        branchesDataMap[branchLocation].city,
-                        branchesDataMap[branchLocation].state,
-                        branchesDataMap[branchLocation].pincode,
-                      ]
-                        .filter(Boolean)
-                        .join(', ') || 'Address details not set'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#04552B', display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                      <Clock size={14} color="#04552B" />
-                      Shift Timing:
-                    </Typography>
-                    <Typography sx={{ fontSize: 11.5, color: '#1B4D3E', fontWeight: 600 }}>
-                      {branchesDataMap[branchLocation].shift_name} ({branchesDataMap[branchLocation].shift_start_time} - {branchesDataMap[branchLocation].shift_end_time}, {branchesDataMap[branchLocation].working_days})
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Grid>
-            )}
 
             <Grid item xs={12}>
               <TextField
