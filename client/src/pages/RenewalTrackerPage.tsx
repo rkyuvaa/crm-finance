@@ -1687,17 +1687,7 @@ export default function RenewalTrackerPage() {
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
                 <InputLabel>Branch / Location</InputLabel>
-                <Select
-                  value={branchLocation}
-                  label="Branch / Location"
-                  onChange={(e) => {
-                    if (e.target.value === '__ADD_NEW__') {
-                      setQuickBranchModalOpen(true);
-                    } else {
-                      setBranchLocation(e.target.value);
-                    }
-                  }}
-                >
+                <Select value={branchLocation} label="Branch / Location" onChange={(e) => setBranchLocation(e.target.value)}>
                   {branchOptions.length === 0 ? (
                     <MenuItem value="" disabled>No Branches configured in Settings</MenuItem>
                   ) : (
@@ -1707,10 +1697,6 @@ export default function RenewalTrackerPage() {
                       </MenuItem>
                     ))
                   )}
-                  <Divider sx={{ my: 0.5 }} />
-                  <MenuItem value="__ADD_NEW__" sx={{ fontWeight: 700, color: '#04552B', gap: 1 }}>
-                    <Plus size={15} /> + Add New Branch / Location
-                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
