@@ -49,6 +49,9 @@ import {
   FolderCog,
   Code2,
   MoreVertical,
+  MapPin,
+  Clock,
+  Building,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 
@@ -276,16 +279,92 @@ export default function RenewalTrackerPage() {
     return [];
   }, [deptsList]);
 
-  // Dynamic Branches from Settings (API + Settings Local Storage)
+  // Dynamic Branch updates listener
+  const [branchUpdateVer, setBranchUpdateVer] = useState(0);
+
+  useEffect(() => {
+    const handleBranchUpdate = () => setBranchUpdateVer((v) => v + 1);
+    window.addEventListener('crm_branches_changed', handleBranchUpdate);
+    window.addEventListener('storage', handleBranchUpdate);
+    return () => {
+      window.removeEventListener('crm_branches_changed', handleBranchUpdate);
+      window.removeEventListener('storage', handleBranchUpdate);
+    };
+  }, []);
+
+  // Quick Add Branch Modal State
+  const [quickBranchModalOpen, setQuickBranchModalOpen] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [newBranchAddress, setNewBranchAddress] = useState('');
+  const [newBranchCity, setNewBranchCity] = useState('');
+  const [newBranchState, setNewBranchState] = useState('');
+  const [newBranchPincode, setNewBranchPincode] = useState('');
+  const [newBranchShiftName, setNewBranchShiftName] = useState('General Day Shift');
+  const [newBranchShiftStart, setNewBranchShiftStart] = useState('09:00 AM');
+  const [newBranchShiftEnd, setNewBranchShiftEnd] = useState('06:00 PM');
+  const [newBranchWorkingDays, setNewBranchWorkingDays] = useState('Mon - Sat (6 Days)');
+
+  const handleSaveQuickBranch = () => {
+    if (!newBranchName.trim()) {
+      showToast('Branch Name is required', 'error');
+      return;
+    }
+    const newBranchObj = {
+      id: Date.now(),
+      name: newBranchName.trim(),
+      code: `BR-${Math.floor(100 + Math.random() * 900)}`,
+      type: 'Branch Office' as const,
+      address: newBranchAddress.trim(),
+      city: newBranchCity.trim(),
+      state: newBranchState.trim(),
+      pincode: newBranchPincode.trim(),
+      shift_name: newBranchShiftName.trim() || 'General Day Shift',
+      shift_start_time: newBranchShiftStart.trim() || '09:00 AM',
+      shift_end_time: newBranchShiftEnd.trim() || '06:00 PM',
+      working_days: newBranchWorkingDays.trim() || 'Mon - Sat (6 Days)',
+      manager_name: '',
+      phone: '',
+      email: '',
+      status: 'ACTIVE' as const,
+    };
+
+    try {
+      const saved = localStorage.getItem('crm_branches_data');
+      const existing = saved ? JSON.parse(saved) : [];
+      const updated = [newBranchObj, ...existing];
+      localStorage.setItem('crm_branches_data', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('crm_branches_changed'));
+    } catch {}
+
+    setBranchLocation(newBranchObj.name);
+    setQuickBranchModalOpen(false);
+    setNewBranchName('');
+    setNewBranchAddress('');
+    setNewBranchCity('');
+    setNewBranchState('');
+    setNewBranchPincode('');
+    showToast(`Branch "${newBranchObj.name}" created and linked successfully!`, 'success');
+  };
+
+  // Dynamic Branches Details Map (Name -> { address, city, state, pincode, shift_name, shift_start_time, shift_end_time, working_days })
   const { data: apiBranches = [] } = useBranchesQuery();
-  const branchOptions = useMemo(() => {
-    const list: string[] = [];
+  const branchesDataMap = useMemo(() => {
+    const map: Record<string, { address?: string; city?: string; state?: string; pincode?: string; shift_name?: string; shift_start_time?: string; shift_end_time?: string; working_days?: string }> = {};
 
     // 1. From backend API
-    if (Array.isArray(apiBranches) && apiBranches.length > 0) {
+    if (Array.isArray(apiBranches)) {
       apiBranches.forEach((b: any) => {
-        if (b.name && b.is_active !== false && !list.includes(b.name)) {
-          list.push(b.name);
+        if (b.name) {
+          map[b.name] = {
+            address: b.address || '',
+            city: b.city || '',
+            state: b.state || '',
+            pincode: b.pincode || '',
+            shift_name: b.shift_name || 'General Day Shift',
+            shift_start_time: b.shift_start_time || '09:00 AM',
+            shift_end_time: b.shift_end_time || '06:00 PM',
+            working_days: b.working_days || 'Mon - Sat (6 Days)',
+          };
         }
       });
     }
@@ -295,18 +374,31 @@ export default function RenewalTrackerPage() {
       const saved = localStorage.getItem('crm_branches_data');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           parsed.forEach((b: any) => {
-            if (b.name && b.status !== 'INACTIVE' && b.is_active !== false && !list.includes(b.name)) {
-              list.push(b.name);
+            if (b.name && b.status !== 'INACTIVE' && b.is_active !== false) {
+              map[b.name] = {
+                address: b.address || '',
+                city: b.city || '',
+                state: b.state || '',
+                pincode: b.pincode || '',
+                shift_name: b.shift_name || 'General Day Shift',
+                shift_start_time: b.shift_start_time || '09:00 AM',
+                shift_end_time: b.shift_end_time || '06:00 PM',
+                working_days: b.working_days || 'Mon - Sat (6 Days)',
+              };
             }
           });
         }
       }
     } catch {}
 
-    return list;
-  }, [apiBranches, modalOpen]);
+    return map;
+  }, [apiBranches, modalOpen, branchUpdateVer]);
+
+  const branchOptions = useMemo(() => {
+    return Object.keys(branchesDataMap);
+  }, [branchesDataMap]);
 
 
 
@@ -948,9 +1040,34 @@ export default function RenewalTrackerPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ fontSize: 12, color: '#475569' }}>
-                            {r.branch_location || '—'}
-                          </Typography>
+                          {r.branch_location && branchesDataMap[r.branch_location] ? (
+                            <Tooltip
+                              title={
+                                <Box sx={{ p: 0.5 }}>
+                                  <Typography sx={{ fontSize: 11.5, fontWeight: 700, mb: 0.5 }}>{r.branch_location}</Typography>
+                                  <Typography sx={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    📍 Address: {[branchesDataMap[r.branch_location].address, branchesDataMap[r.branch_location].city, branchesDataMap[r.branch_location].state, branchesDataMap[r.branch_location].pincode].filter(Boolean).join(', ') || 'Not set'}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.3 }}>
+                                    ⏰ Shift: {branchesDataMap[r.branch_location].shift_name} ({branchesDataMap[r.branch_location].shift_start_time} - {branchesDataMap[r.branch_location].shift_end_time}, {branchesDataMap[r.branch_location].working_days})
+                                  </Typography>
+                                </Box>
+                              }
+                              arrow
+                              placement="top"
+                            >
+                              <Box sx={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#04552B', textDecoration: 'underline', textDecorationColor: '#A7F3D0' }}>
+                                  {r.branch_location}
+                                </Typography>
+                                <MapPin size={12} color="#04552B" />
+                              </Box>
+                            </Tooltip>
+                          ) : (
+                            <Typography sx={{ fontSize: 12, color: '#475569' }}>
+                              {r.branch_location || '—'}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.start_date || 'N/A'}</TableCell>
                         <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
@@ -1570,7 +1687,17 @@ export default function RenewalTrackerPage() {
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth size="small">
                 <InputLabel>Branch / Location</InputLabel>
-                <Select value={branchLocation} label="Branch / Location" onChange={(e) => setBranchLocation(e.target.value)}>
+                <Select
+                  value={branchLocation}
+                  label="Branch / Location"
+                  onChange={(e) => {
+                    if (e.target.value === '__ADD_NEW__') {
+                      setQuickBranchModalOpen(true);
+                    } else {
+                      setBranchLocation(e.target.value);
+                    }
+                  }}
+                >
                   {branchOptions.length === 0 ? (
                     <MenuItem value="" disabled>No Branches configured in Settings</MenuItem>
                   ) : (
@@ -1580,9 +1707,45 @@ export default function RenewalTrackerPage() {
                       </MenuItem>
                     ))
                   )}
+                  <Divider sx={{ my: 0.5 }} />
+                  <MenuItem value="__ADD_NEW__" sx={{ fontWeight: 700, color: '#04552B', gap: 1 }}>
+                    <Plus size={15} /> + Add New Branch / Location
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
+
+            {branchLocation && branchesDataMap[branchLocation] && (
+              <Grid item xs={12}>
+                <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#F4FBF7', border: '1px solid #C8E6C9', borderRadius: '8px' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.8 }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#04552B', display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <MapPin size={14} color="#04552B" />
+                      Branch Address:
+                    </Typography>
+                    <Typography sx={{ fontSize: 11.5, color: '#1B4D3E', fontWeight: 600 }}>
+                      {[
+                        branchesDataMap[branchLocation].address,
+                        branchesDataMap[branchLocation].city,
+                        branchesDataMap[branchLocation].state,
+                        branchesDataMap[branchLocation].pincode,
+                      ]
+                        .filter(Boolean)
+                        .join(', ') || 'Address details not set'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#04552B', display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                      <Clock size={14} color="#04552B" />
+                      Shift Timing:
+                    </Typography>
+                    <Typography sx={{ fontSize: 11.5, color: '#1B4D3E', fontWeight: 600 }}>
+                      {branchesDataMap[branchLocation].shift_name} ({branchesDataMap[branchLocation].shift_start_time} - {branchesDataMap[branchLocation].shift_end_time}, {branchesDataMap[branchLocation].working_days})
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
 
             <Grid item xs={12}>
               <TextField
@@ -1816,6 +1979,120 @@ export default function RenewalTrackerPage() {
             sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
           >
             Save Category
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Quick Add Branch Modal */}
+      <Dialog open={quickBranchModalOpen} onClose={() => setQuickBranchModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: '#023020', borderBottom: '1px solid #E4EBE1', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MapPin size={20} color="#04552B" />
+          Add New Branch & Shift Timing
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: '#667A6D' }}>
+            Enter branch details. This branch will automatically link across Renewal Tracker, Employee Master, and Settings.
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Branch Name *"
+                fullWidth
+                size="small"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                placeholder="e.g. Headquarters / Chennai Hub"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Shift Name"
+                fullWidth
+                size="small"
+                value={newBranchShiftName}
+                onChange={(e) => setNewBranchShiftName(e.target.value)}
+                placeholder="e.g. General Day Shift"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Street Address *"
+                fullWidth
+                size="small"
+                value={newBranchAddress}
+                onChange={(e) => setNewBranchAddress(e.target.value)}
+                placeholder="Building name, street address..."
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="City"
+                fullWidth
+                size="small"
+                value={newBranchCity}
+                onChange={(e) => setNewBranchCity(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="State"
+                fullWidth
+                size="small"
+                value={newBranchState}
+                onChange={(e) => setNewBranchState(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Pincode"
+                fullWidth
+                size="small"
+                value={newBranchPincode}
+                onChange={(e) => setNewBranchPincode(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Shift Start Time"
+                fullWidth
+                size="small"
+                value={newBranchShiftStart}
+                onChange={(e) => setNewBranchShiftStart(e.target.value)}
+                placeholder="09:00 AM"
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Shift End Time"
+                fullWidth
+                size="small"
+                value={newBranchShiftEnd}
+                onChange={(e) => setNewBranchShiftEnd(e.target.value)}
+                placeholder="06:00 PM"
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Working Days"
+                fullWidth
+                size="small"
+                value={newBranchWorkingDays}
+                onChange={(e) => setNewBranchWorkingDays(e.target.value)}
+                placeholder="Mon - Sat (6 Days)"
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #E4EBE1' }}>
+          <Button onClick={() => setQuickBranchModalOpen(false)} sx={{ textTransform: 'none', color: '#7A8B80' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveQuickBranch}
+            sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
+          >
+            Save & Link Branch
           </Button>
         </DialogActions>
       </Dialog>

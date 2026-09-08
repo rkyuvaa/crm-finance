@@ -107,6 +107,17 @@ export default function EmployeeMaster() {
     return [];
   }, [deptsList]);
 
+  const [branchUpdateVer, setBranchUpdateVer] = useState(0);
+  useEffect(() => {
+    const handleBranchUpdate = () => setBranchUpdateVer((v) => v + 1);
+    window.addEventListener('crm_branches_changed', handleBranchUpdate);
+    window.addEventListener('storage', handleBranchUpdate);
+    return () => {
+      window.removeEventListener('crm_branches_changed', handleBranchUpdate);
+      window.removeEventListener('storage', handleBranchUpdate);
+    };
+  }, []);
+
   const { data: apiBranches = [] } = useBranchesQuery();
   const branchOptions = useMemo(() => {
     const list: string[] = [];
@@ -136,7 +147,7 @@ export default function EmployeeMaster() {
     } catch {}
 
     return list;
-  }, [apiBranches]);
+  }, [apiBranches, branchUpdateVer]);
 
 
   // Load employees from localStorage if available so deletions and additions persist on page refresh

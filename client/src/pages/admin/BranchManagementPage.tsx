@@ -77,6 +77,7 @@ export default function BranchManagementPage() {
   useEffect(() => {
     try {
       localStorage.setItem('crm_branches_data', JSON.stringify(branches));
+      window.dispatchEvent(new CustomEvent('crm_branches_changed'));
     } catch {}
   }, [branches]);
 
