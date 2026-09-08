@@ -716,7 +716,7 @@ export default function RenewalTrackerPage() {
         <Chip
           label={`${Math.abs(days)}d Overdue`}
           size="small"
-          sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 700, borderRadius: '4px', fontSize: 10.5, height: 22 }}
+          sx={{ bgcolor: '#FEE2E2', color: '#DC2626', fontWeight: 700, borderRadius: '4px', fontSize: 12.5, height: 24 }}
         />
       );
     } else if (days <= 30) {
@@ -724,7 +724,7 @@ export default function RenewalTrackerPage() {
         <Chip
           label={`${days}d Left`}
           size="small"
-          sx={{ bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 700, borderRadius: '4px', fontSize: 10.5, height: 22 }}
+          sx={{ bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 700, borderRadius: '4px', fontSize: 12.5, height: 24 }}
         />
       );
     } else {
@@ -732,7 +732,7 @@ export default function RenewalTrackerPage() {
         <Chip
           label={`${days}d Left`}
           size="small"
-          sx={{ bgcolor: '#EAF6E8', color: '#04552B', fontWeight: 700, borderRadius: '4px', fontSize: 10.5, height: 22 }}
+          sx={{ bgcolor: '#EAF6E8', color: '#04552B', fontWeight: 700, borderRadius: '4px', fontSize: 12.5, height: 24 }}
         />
       );
     }
@@ -746,7 +746,7 @@ export default function RenewalTrackerPage() {
           variant="outlined"
           startIcon={<Upload size={16} />}
           onClick={() => showToast('Import format ready for 12 renewal fields', 'info')}
-          sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: 13 }}
+          sx={{ borderColor: '#cbd5e1', color: '#334155', borderRadius: '8px', textTransform: 'none', fontWeight: 600, fontSize: 15 }}
         >
           Import
         </Button>
@@ -754,7 +754,7 @@ export default function RenewalTrackerPage() {
           variant="contained"
           startIcon={<Plus size={16} />}
           onClick={() => handleOpenModal()}
-          sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700, fontSize: 13 }}
+          sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 700, fontSize: 15 }}
         >
           New Renewal Item / Service
         </Button>
@@ -911,18 +911,18 @@ export default function RenewalTrackerPage() {
                   {renewals.slice(0, 5).map((row) => (
                     <TableRow key={row.id} hover>
                       <TableCell>
-                        <Typography sx={{ fontWeight: 700, fontSize: 12.5, color: '#16231B' }}>{row.item_service}</Typography>
-                        <Typography sx={{ fontSize: 11, color: '#7A8B80' }}>{row.description}</Typography>
+                        <Typography sx={{ fontWeight: 700, fontSize: 14.5, color: '#16231B' }}>{row.item_service}</Typography>
+                        <Typography sx={{ fontSize: 13, color: '#7A8B80' }}>{row.description}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip label={row.category} size="small" variant="outlined" sx={{ fontSize: 10.5, fontWeight: 600 }} />
+                        <Chip label={row.category} size="small" variant="outlined" sx={{ fontSize: 12.5, fontWeight: 600 }} />
                       </TableCell>
-                      <TableCell sx={{ fontSize: 12, color: '#44584C' }}>{row.branch_location}</TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 600, color: getDaysRemaining(row.due_date) < 0 ? '#DC2626' : '#16231B' }}>
+                      <TableCell sx={{ fontSize: 14, color: '#44584C' }}>{row.branch_location}</TableCell>
+                      <TableCell sx={{ fontSize: 14, fontWeight: 600, color: getDaysRemaining(row.due_date) < 0 ? '#DC2626' : '#16231B' }}>
                         {row.due_date}
                       </TableCell>
                       <TableCell>{renderDaysRemainingChip(row.due_date)}</TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{row.renewal_owner}</TableCell>
+                      <TableCell sx={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{row.renewal_owner}</TableCell>
                       <TableCell align="right">
                         <IconButton size="small" onClick={(e) => handleOpenActionMenu(e, row)}>
                           <MoreVertical size={16} />
@@ -957,14 +957,14 @@ export default function RenewalTrackerPage() {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ '& .MuiInputBase-input': { fontSize: 12.5 } }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: 14.5 } }}
                 />
               </Grid>
 
               <Grid item xs={6} sm={2.5}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 12.5 }}>Category</InputLabel>
-                  <Select value={categoryFilter} label="Category" onChange={(e) => setCategoryFilter(e.target.value)} sx={{ fontSize: 12.5 }}>
+                  <InputLabel sx={{ fontSize: 14.5 }}>Category</InputLabel>
+                  <Select value={categoryFilter} label="Category" onChange={(e) => setCategoryFilter(e.target.value)} sx={{ fontSize: 14.5 }}>
                     <MenuItem value="ALL">All Categories</MenuItem>
                     {categories.map((c) => (
                       <MenuItem key={c.id} value={c.name}>
@@ -977,8 +977,8 @@ export default function RenewalTrackerPage() {
 
               <Grid item xs={6} sm={2.5}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 12.5 }}>Department</InputLabel>
-                  <Select value={departmentFilter} label="Department" onChange={(e) => setDepartmentFilter(e.target.value)} sx={{ fontSize: 12.5 }}>
+                  <InputLabel sx={{ fontSize: 14.5 }}>Department</InputLabel>
+                  <Select value={departmentFilter} label="Department" onChange={(e) => setDepartmentFilter(e.target.value)} sx={{ fontSize: 14.5 }}>
                     <MenuItem value="ALL">All Departments</MenuItem>
                     {departmentOptions.map((d) => (
                       <MenuItem key={d} value={d}>
@@ -991,8 +991,8 @@ export default function RenewalTrackerPage() {
 
               <Grid item xs={6} sm={2}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ fontSize: 12.5 }}>Status</InputLabel>
-                  <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)} sx={{ fontSize: 12.5 }}>
+                  <InputLabel sx={{ fontSize: 14.5 }}>Status</InputLabel>
+                  <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)} sx={{ fontSize: 14.5 }}>
                     <MenuItem value="ALL">All Statuses</MenuItem>
                     <MenuItem value="ACTIVE">Active</MenuItem>
                     <MenuItem value="EXPIRING_SOON">Expiring Soon</MenuItem>
@@ -1012,7 +1012,7 @@ export default function RenewalTrackerPage() {
                     setDepartmentFilter('ALL');
                     setStatusFilter('ALL');
                   }}
-                  sx={{ textTransform: 'none', color: '#7A8B80', borderColor: '#CBD5E1', fontSize: 11.5, px: 1 }}
+                  sx={{ textTransform: 'none', color: '#7A8B80', borderColor: '#CBD5E1', fontSize: 13.5, px: 1 }}
                 >
                   Reset
                 </Button>
@@ -1025,17 +1025,17 @@ export default function RenewalTrackerPage() {
             <Table size="medium" sx={{ width: '100%', tableLayout: 'auto' }}>
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 160, width: '18%' }}>Renewal Item / Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Vendor</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Plan</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Department</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 95, width: '8%' }}>Renewal Cycle</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 120, width: '10%' }}>Days Remaining</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110, width: '9%' }}>Last Renewed Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 90, width: '8%' }}>Amount (₹)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1.5, py: 1.5, minWidth: 110, width: '14%' }}>Renewal Owner</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 12.5, px: 1, py: 1.5, minWidth: 60, width: '5%' }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 160, width: '18%' }}>Renewal Item / Service</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Vendor</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Plan</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Department</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Due Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 95, width: '8%' }}>Renewal Cycle</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 120, width: '10%' }}>Days Remaining</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '9%' }}>Last Renewed Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 90, width: '8%' }}>Amount (₹)</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '14%' }}>Renewal Owner</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1, py: 1.5, minWidth: 60, width: '5%' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1053,38 +1053,38 @@ export default function RenewalTrackerPage() {
                     return (
                       <TableRow key={r.id} hover sx={{ '& td': { px: 1.5, py: 1.2 } }}>
                         <TableCell>
-                          <Typography sx={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: 15, color: '#16231B' }}>
                             {r.item_service}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+                          <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: '#334155' }}>
                             {r.vendor || '—'}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ fontSize: 12.5, color: '#475569' }}>
+                          <Typography sx={{ fontSize: 14.5, color: '#475569' }}>
                             {r.plan || '—'}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+                          <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: '#334155' }}>
                             {r.department || '—'}
                           </Typography>
                         </TableCell>
-                        <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
+                        <TableCell sx={{ fontSize: 14.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
                           {r.due_date}
                         </TableCell>
                         <TableCell>
-                          <Chip label={r.renewal_cycle || 'Yearly'} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11, color: '#04552B', borderColor: '#A7F3D0' }} />
+                          <Chip label={r.renewal_cycle || 'Yearly'} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 13, color: '#04552B', borderColor: '#A7F3D0' }} />
                         </TableCell>
                         <TableCell>{renderDaysRemainingChip(r.due_date)}</TableCell>
-                        <TableCell sx={{ fontSize: 12.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
-                        <TableCell sx={{ fontSize: 12.5, fontWeight: 700, color: '#04552B' }}>
+                        <TableCell sx={{ fontSize: 14.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
+                        <TableCell sx={{ fontSize: 14.5, fontWeight: 700, color: '#04552B' }}>
                           {displayAmt ? `₹${Number(displayAmt).toLocaleString('en-IN')}` : '—'}
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: '#04552B' }}>
+                          <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: '#04552B' }}>
                             {r.renewal_owner || '—'}
                           </Typography>
                         </TableCell>
