@@ -7,6 +7,7 @@ import {
   Paper,
   Typography,
   Button,
+  CircularProgress,
   Grid,
   Chip,
   IconButton,
@@ -52,7 +53,9 @@ import {
   MapPin,
   Clock,
   Building,
+  Send,
 } from 'lucide-react';
+import { useTestSmtpConnectionMutation } from '../api/smtpApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 export interface RenewalItem {
@@ -187,10 +190,43 @@ function getDaysRemaining(dueDateStr: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
+/** Helper to interpolate dynamic template tags for preview & test dispatch */
+function renderTemplateText(templateText: string, sampleItem?: RenewalItem): string {
+  if (!templateText) return '';
+  const itemService = sampleItem?.item_service || 'Enterprise Infrastructure License';
+  const description = sampleItem?.description || 'Production application hosting SSL & server renewal';
+  const category = sampleItem?.category || 'IT & Cloud Services';
+  const department = sampleItem?.department || 'IT Operations';
+  const branchLocation = sampleItem?.branch_location || 'Headquarters';
+  const startDate = sampleItem?.start_date || '2025-09-15';
+  const dueDate = sampleItem?.due_date || '2026-09-15';
+  const daysRemaining = sampleItem ? getDaysRemaining(sampleItem.due_date).toString() : '7';
+  const lastRenewedDate = sampleItem?.last_renewed_date || '2025-09-15';
+  const renewalOwner = sampleItem?.renewal_owner || 'IT Manager';
+  const remarks = sampleItem?.remarks || 'Auto-renewal pending approval.';
+
+  return templateText
+    .replace(/\{\{item_service\}\}/g, itemService)
+    .replace(/\{\{description\}\}/g, description)
+    .replace(/\{\{category\}\}/g, category)
+    .replace(/\{\{department\}\}/g, department)
+    .replace(/\{\{branch_location\}\}/g, branchLocation)
+    .replace(/\{\{start_date\}\}/g, startDate)
+    .replace(/\{\{due_date\}\}/g, dueDate)
+    .replace(/\{\{days_remaining\}\}/g, daysRemaining)
+    .replace(/\{\{last_renewed_date\}\}/g, lastRenewedDate)
+    .replace(/\{\{renewal_owner\}\}/g, renewalOwner)
+    .replace(/\{\{remarks\}\}/g, remarks);
+}
+
 export default function RenewalTrackerPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+
+  const [testSmtp, { isLoading: isSendingTestEmail }] = useTestSmtpConnectionMutation();
+  const [testMailDialogOpen, setTestMailDialogOpen] = useState(false);
+  const [testRecipientEmail, setTestRecipientEmail] = useState('');
 
   const [renewals, setRenewals] = useState<RenewalItem[]>(() => {
     try {
@@ -1614,7 +1650,29 @@ export default function RenewalTrackerPage() {
                         sx={{ fontFamily: 'monospace', fontSize: 12.5 }}
                       />
 
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<Send size={16} />}
+                          onClick={() => {
+                            const authUser = localStorage.getItem('user');
+                            let defaultEmail = '';
+                            try {
+                              if (authUser) defaultEmail = JSON.parse(authUser).email || '';
+                            } catch {}
+                            setTestRecipientEmail(defaultEmail || 'admin@company.com');
+                            setTestMailDialogOpen(true);
+                          }}
+                          sx={{
+                            borderColor: '#04552B',
+                            color: '#04552B',
+                            '&:hover': { borderColor: '#034120', backgroundColor: '#F0FDF4' },
+                            textTransform: 'none',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Trigger Test Email
+                        </Button>
                         <Button
                           variant="contained"
                           onClick={() => {
@@ -2155,6 +2213,59 @@ export default function RenewalTrackerPage() {
             sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
           >
             Save & Link Branch
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── TRIGGER TEST MAIL DIALOG ────────────────────────────────────────── */}
+      <Dialog open={testMailDialogOpen} onClose={() => setTestMailDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: '#023020', borderBottom: '1px solid #E4EBE1', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Send size={18} color="#04552B" /> Trigger Test Email Notification
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: '#475569', mt: 1 }}>
+            Send a live test notification email for event: <strong>{mailTemplates[selectedTemplateKey]?.title}</strong>
+          </Typography>
+
+          <TextField
+            label="Recipient Email Address *"
+            type="email"
+            fullWidth
+            size="small"
+            value={testRecipientEmail}
+            onChange={(e) => setTestRecipientEmail(e.target.value)}
+            placeholder="e.g. user@domain.com"
+            helperText="The notification will be dispatched via configured SMTP server credentials."
+          />
+
+          <Box sx={{ p: 2, bgcolor: '#F8FAF7', borderRadius: '8px', border: '1px solid #E4EBE1' }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', mb: 0.5 }}>
+              Subject Line Preview:
+            </Typography>
+            <Typography sx={{ fontSize: 12.5, fontFamily: 'monospace', color: '#04552B', mb: 1.5, p: 1, bgcolor: '#FFFFFF', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 600 }}>
+              {renderTemplateText(mailTemplates[selectedTemplateKey]?.subject || '')}
+            </Typography>
+
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', mb: 0.5 }}>
+              Rendered Body Preview:
+            </Typography>
+            <Typography sx={{ fontSize: 11.5, fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#334155', p: 1.5, bgcolor: '#FFFFFF', borderRadius: '4px', border: '1px solid #CBD5E1', maxHeight: 180, overflowY: 'auto' }}>
+              {renderTemplateText(mailTemplates[selectedTemplateKey]?.body || '')}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #E4EBE1' }}>
+          <Button onClick={() => setTestMailDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={isSendingTestEmail}
+            onClick={handleSendTestEmailNotification}
+            startIcon={isSendingTestEmail ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
+            sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
+          >
+            {isSendingTestEmail ? 'Sending Test Mail...' : 'Trigger & Send Email'}
           </Button>
         </DialogActions>
       </Dialog>
