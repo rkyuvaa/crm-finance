@@ -228,6 +228,23 @@ export default function RenewalTrackerPage() {
   const [testMailDialogOpen, setTestMailDialogOpen] = useState(false);
   const [testRecipientEmail, setTestRecipientEmail] = useState('');
 
+  const handleSendTestEmailNotification = async () => {
+    if (!testRecipientEmail || !testRecipientEmail.includes('@')) {
+      showToast('Please enter a valid recipient email address', 'error');
+      return;
+    }
+    try {
+      const res = await testSmtp({
+        test_email: testRecipientEmail.trim(),
+      }).unwrap();
+      showToast(res.message || `Test notification email dispatched to ${testRecipientEmail}`, 'success');
+      setTestMailDialogOpen(false);
+    } catch (err: any) {
+      const detail = err?.data?.detail || 'Failed to dispatch test notification email. Please check SMTP settings.';
+      showToast(typeof detail === 'string' ? detail : 'Failed to send test email', 'error');
+    }
+  };
+
   const [renewals, setRenewals] = useState<RenewalItem[]>(() => {
     try {
       const saved = localStorage.getItem('crm_renewal_items');
