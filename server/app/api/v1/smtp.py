@@ -207,7 +207,7 @@ def test_smtp_configuration(
         rec.smtp_password = override_data.get("smtp_password")
     if override_data.get("smtp_from_email"):
         rec.smtp_from_email = override_data.get("smtp_from_email")
-    if override_data.get("smtp_from_name"):
+    if override_data.get("smtp_from_name") and (not rec.smtp_from_name or override_data.get("smtp_host")):
         rec.smtp_from_name = override_data.get("smtp_from_name")
     rec.is_enabled = True
 

@@ -227,6 +227,7 @@ export default function RenewalTrackerPage() {
   const [testSmtp, { isLoading: isSendingTestEmail }] = useTestSmtpConnectionMutation();
   const [testMailDialogOpen, setTestMailDialogOpen] = useState(false);
   const [testRecipientEmail, setTestRecipientEmail] = useState('');
+  const [testSenderName, setTestSenderName] = useState('Renewal Reminder');
   const [selectedTestItemId, setSelectedTestItemId] = useState<number | 'sample'>('sample');
 
   const handleSendTestEmailNotification = async () => {
@@ -242,6 +243,7 @@ export default function RenewalTrackerPage() {
         test_email: testRecipientEmail.trim(),
         subject: renderedSubject,
         body: renderedBody,
+        smtp_from_name: testSenderName.trim() || 'Renewal Reminder',
       }).unwrap();
       showToast(res.message || `Notification email dispatched to ${testRecipientEmail}`, 'success');
       setTestMailDialogOpen(false);
@@ -2359,16 +2361,31 @@ export default function RenewalTrackerPage() {
             </Select>
           </FormControl>
 
-          <TextField
-            label="Recipient Email Address (Item Owner) *"
-            type="email"
-            fullWidth
-            size="small"
-            value={testRecipientEmail}
-            onChange={(e) => setTestRecipientEmail(e.target.value)}
-            placeholder="e.g. owner@domain.com"
-            helperText={selectedTestItemObj ? `Owner: ${selectedTestItemObj.renewal_owner || 'Unassigned'} (${resolveOwnerEmail(selectedTestItemObj.renewal_owner)})` : 'The notification will be dispatched via configured SMTP server credentials.'}
-          />
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Sender Display Name (Module Name) *"
+                fullWidth
+                size="small"
+                value={testSenderName}
+                onChange={(e) => setTestSenderName(e.target.value)}
+                placeholder="e.g. Renewal Reminder"
+                helperText="Displays as sender name in recipient's inbox."
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Recipient Email Address (Item Owner) *"
+                type="email"
+                fullWidth
+                size="small"
+                value={testRecipientEmail}
+                onChange={(e) => setTestRecipientEmail(e.target.value)}
+                placeholder="e.g. owner@domain.com"
+                helperText={selectedTestItemObj ? `Owner: ${selectedTestItemObj.renewal_owner || 'Unassigned'}` : 'Target recipient email.'}
+              />
+            </Grid>
+          </Grid>
 
           <Box sx={{ p: 2, bgcolor: '#F8FAF7', borderRadius: '8px', border: '1px solid #E4EBE1' }}>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', mb: 0.5 }}>
