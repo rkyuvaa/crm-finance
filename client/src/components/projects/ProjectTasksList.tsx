@@ -192,7 +192,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setDescription('');
     setStatusId(defaultStatusId);
     setPriority('NORMAL');
-    setAssigneeId('');
+    setAssigneeIds([]);
     setDueDate('');
     setEstimatedHours(0);
     setCreateOpen(true);
