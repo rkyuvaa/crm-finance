@@ -193,17 +193,32 @@ function getDaysRemaining(dueDateStr: string): number {
 /** Helper to interpolate dynamic template tags for preview & test dispatch */
 function renderTemplateText(templateText: string, sampleItem?: RenewalItem): string {
   if (!templateText) return '';
-  const itemService = sampleItem?.item_service || 'Enterprise Infrastructure License';
-  const description = sampleItem?.description || 'Production application hosting SSL & server renewal';
-  const category = sampleItem?.category || 'IT & Cloud Services';
-  const department = sampleItem?.department || 'IT Operations';
-  const branchLocation = sampleItem?.branch_location || 'Headquarters';
-  const startDate = sampleItem?.start_date || '2025-09-15';
-  const dueDate = sampleItem?.due_date || '2026-09-15';
-  const daysRemaining = sampleItem ? getDaysRemaining(sampleItem.due_date).toString() : '7';
-  const lastRenewedDate = sampleItem?.last_renewed_date || '2025-09-15';
-  const renewalOwner = sampleItem?.renewal_owner || 'IT Manager';
-  const remarks = sampleItem?.remarks || 'Auto-renewal pending approval.';
+
+  let itemService = 'Enterprise Infrastructure License';
+  let description = 'Production application hosting SSL & server renewal';
+  let category = 'IT & Cloud Services';
+  let department = 'IT Operations';
+  let branchLocation = 'Headquarters';
+  let startDate = '2025-09-15';
+  let dueDate = '2026-09-15';
+  let daysRemaining = '7';
+  let lastRenewedDate = '2025-09-15';
+  let renewalOwner = 'IT Manager';
+  let remarks = 'Auto-renewal pending approval.';
+
+  if (sampleItem) {
+    itemService = sampleItem.item_service || 'N/A';
+    description = sampleItem.description && sampleItem.description.trim() ? sampleItem.description.trim() : 'N/A';
+    category = sampleItem.category || 'N/A';
+    department = sampleItem.department || 'N/A';
+    branchLocation = sampleItem.branch_location || 'N/A';
+    startDate = sampleItem.start_date || 'N/A';
+    dueDate = sampleItem.due_date || 'N/A';
+    daysRemaining = getDaysRemaining(sampleItem.due_date).toString();
+    lastRenewedDate = sampleItem.last_renewed_date || 'N/A';
+    renewalOwner = sampleItem.renewal_owner || 'Unassigned';
+    remarks = sampleItem.remarks && sampleItem.remarks.trim() ? sampleItem.remarks.trim() : 'N/A';
+  }
 
   return templateText
     .replace(/\{\{item_service\}\}/g, itemService)
