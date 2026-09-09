@@ -220,7 +220,20 @@ export default function RenewalTrackerPage() {
     } catch {}
   }, [categories]);
 
-  const [mailTemplates, setMailTemplates] = useState<Record<string, MailTemplate>>(DEFAULT_MAIL_TEMPLATES);
+  const [mailTemplates, setMailTemplates] = useState<Record<string, MailTemplate>>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_mail_templates');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_MAIL_TEMPLATES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_renewal_mail_templates', JSON.stringify(mailTemplates));
+    } catch {}
+  }, [mailTemplates]);
+
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>('reminder');
 
   // 3-Dots Action Menu State
@@ -234,13 +247,98 @@ export default function RenewalTrackerPage() {
 
   // Config SubTab State
   const [configSubTab, setConfigSubTab] = useState<'categories' | 'reminders' | 'templates' | 'rules'>('categories');
-  const [advanceDaysList, setAdvanceDaysList] = useState<string>('60, 30, 15, 7, 1');
-  const [emailFrequency, setEmailFrequency] = useState<string>('DAILY_DIGEST');
-  const [autoEscalateOverdue, setAutoEscalateOverdue] = useState<boolean>(true);
-  const [enableEmailAlerts, setEnableEmailAlerts] = useState<boolean>(true);
-  const [requireOwner, setRequireOwner] = useState<boolean>(true);
-  const [autoCalcNextDue, setAutoCalcNextDue] = useState<boolean>(true);
-  const [currencySymbol, setCurrencySymbol] = useState<string>('₹');
+  const [advanceDaysList, setAdvanceDaysList] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_reminder_policy');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.advanceDaysList !== undefined) return parsed.advanceDaysList;
+      }
+    } catch {}
+    return '60, 30, 15, 7, 1';
+  });
+  const [emailFrequency, setEmailFrequency] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_reminder_policy');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.emailFrequency !== undefined) return parsed.emailFrequency;
+      }
+    } catch {}
+    return 'DAILY_DIGEST';
+  });
+  const [autoEscalateOverdue, setAutoEscalateOverdue] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_reminder_policy');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.autoEscalateOverdue !== undefined) return parsed.autoEscalateOverdue;
+      }
+    } catch {}
+    return true;
+  });
+  const [enableEmailAlerts, setEnableEmailAlerts] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_reminder_policy');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.enableEmailAlerts !== undefined) return parsed.enableEmailAlerts;
+      }
+    } catch {}
+    return true;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_renewal_reminder_policy', JSON.stringify({
+        advanceDaysList,
+        emailFrequency,
+        autoEscalateOverdue,
+        enableEmailAlerts,
+      }));
+    } catch {}
+  }, [advanceDaysList, emailFrequency, autoEscalateOverdue, enableEmailAlerts]);
+
+  const [requireOwner, setRequireOwner] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_compliance_rules');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.requireOwner !== undefined) return parsed.requireOwner;
+      }
+    } catch {}
+    return true;
+  });
+  const [autoCalcNextDue, setAutoCalcNextDue] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_compliance_rules');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.autoCalcNextDue !== undefined) return parsed.autoCalcNextDue;
+      }
+    } catch {}
+    return true;
+  });
+  const [currencySymbol, setCurrencySymbol] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('crm_renewal_compliance_rules');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (parsed.currencySymbol !== undefined) return parsed.currencySymbol;
+      }
+    } catch {}
+    return '₹';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_renewal_compliance_rules', JSON.stringify({
+        requireOwner,
+        autoCalcNextDue,
+        currencySymbol,
+      }));
+    } catch {}
+  }, [requireOwner, autoCalcNextDue, currencySymbol]);
 
   // Category Modal State
   const [catModalOpen, setCatModalOpen] = useState(false);
@@ -1404,7 +1502,17 @@ export default function RenewalTrackerPage() {
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
                 <Button
                   variant="contained"
-                  onClick={() => showToast('Reminder Policy Settings Saved', 'success')}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('crm_renewal_reminder_policy', JSON.stringify({
+                        advanceDaysList,
+                        emailFrequency,
+                        autoEscalateOverdue,
+                        enableEmailAlerts,
+                      }));
+                    } catch {}
+                    showToast('Reminder Policy Settings Saved', 'success');
+                  }}
                   sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
                 >
                   Save Reminder Policy
@@ -1509,7 +1617,12 @@ export default function RenewalTrackerPage() {
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <Button
                           variant="contained"
-                          onClick={() => showToast('Email template saved successfully', 'success')}
+                          onClick={() => {
+                            try {
+                              localStorage.setItem('crm_renewal_mail_templates', JSON.stringify(mailTemplates));
+                            } catch {}
+                            showToast('Email template saved successfully', 'success');
+                          }}
                           sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
                         >
                           Save Email Template
@@ -1569,7 +1682,16 @@ export default function RenewalTrackerPage() {
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
                 <Button
                   variant="contained"
-                  onClick={() => showToast('Compliance rules saved successfully', 'success')}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('crm_renewal_compliance_rules', JSON.stringify({
+                        requireOwner,
+                        autoCalcNextDue,
+                        currencySymbol,
+                      }));
+                    } catch {}
+                    showToast('Compliance rules saved successfully', 'success');
+                  }}
                   sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
                 >
                   Save Compliance Rules

@@ -212,7 +212,7 @@ export default function HRPage() {
   }, [onboardingList]);
 
   // HR Configuration state
-  const [configState, setConfigState] = useState({
+  const DEFAULT_HR_CONFIG = {
     casualLeaveQuota: 12,
     sickLeaveQuota: 10,
     earnedLeaveQuota: 15,
@@ -223,7 +223,21 @@ export default function HRPage() {
     hraPct: 40,
     autoApproveLeave: false,
     notifyHrOnLeave: true,
+  };
+
+  const [configState, setConfigState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_hr_config');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_HR_CONFIG;
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_hr_config', JSON.stringify(configState));
+    } catch {}
+  }, [configState]);
 
   // Handlers
   const handleSaveAttendance = async () => {
@@ -1061,12 +1075,27 @@ export default function HRPage() {
 
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button variant="outlined" onClick={() => showToast('Configuration reset', 'info')} sx={{ textTransform: 'none', borderRadius: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setConfigState(DEFAULT_HR_CONFIG);
+                    try {
+                      localStorage.setItem('crm_hr_config', JSON.stringify(DEFAULT_HR_CONFIG));
+                    } catch {}
+                    showToast('Configuration reset to defaults', 'info');
+                  }}
+                  sx={{ textTransform: 'none', borderRadius: 2 }}
+                >
                   Reset Defaults
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={() => showToast('HR Configuration updated successfully', 'success')}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('crm_hr_config', JSON.stringify(configState));
+                    } catch {}
+                    showToast('HR Configuration updated successfully', 'success');
+                  }}
                   sx={{ bgcolor: '#087A3D', textTransform: 'none', borderRadius: 2 }}
                 >
                   Save Settings

@@ -123,7 +123,7 @@ export default function ProjectConfigurationPage() {
   const [deletingField, setDeletingField] = useState(false);
 
   // --- Task Settings State ---
-  const [taskSettings, setTaskSettings] = useState({
+  const DEFAULT_TASK_SETTINGS = {
     defaultStatusId: 1,
     defaultPriority: 'NORMAL',
     allowTaskAssignment: true,
@@ -133,10 +133,24 @@ export default function ProjectConfigurationPage() {
     enableTaskComments: true,
     enableTaskDependencies: true,
     defaultTaskView: 'List',
+  };
+
+  const [taskSettings, setTaskSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_task_configuration_settings');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_TASK_SETTINGS;
   });
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_task_configuration_settings', JSON.stringify(taskSettings));
+    } catch {}
+  }, [taskSettings]);
+
   // --- Project Settings State ---
-  const [projectSettings, setProjectSettings] = useState({
+  const DEFAULT_PROJECT_SETTINGS = {
     defaultProjectStatus: 'Active',
     projectCodePrefix: 'PRJ-',
     projectNumbering: 'Auto',
@@ -146,7 +160,21 @@ export default function ProjectConfigurationPage() {
     allowProjectArchiving: true,
     enableProjectBudget: true,
     enableProjectDocuments: true,
+  };
+
+  const [projectSettings, setProjectSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_project_configuration_settings');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_PROJECT_SETTINGS;
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('crm_project_configuration_settings', JSON.stringify(projectSettings));
+    } catch {}
+  }, [projectSettings]);
 
   // Default fallback data if API returns empty
   const defaultStatuses: StatusDefinitionItem[] = [
@@ -328,10 +356,16 @@ export default function ProjectConfigurationPage() {
 
   // Save Settings Handlers
   const handleSaveTaskSettings = () => {
+    try {
+      localStorage.setItem('crm_task_configuration_settings', JSON.stringify(taskSettings));
+    } catch {}
     toast.showSuccess('Task configuration settings saved successfully!');
   };
 
   const handleSaveProjectSettings = () => {
+    try {
+      localStorage.setItem('crm_project_configuration_settings', JSON.stringify(projectSettings));
+    } catch {}
     toast.showSuccess('Project configuration parameters saved successfully!');
   };
 
