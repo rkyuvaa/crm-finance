@@ -210,16 +210,16 @@ export default function TaskListView({
           {/* Assignees */}
           <TableCell>
             {task.assignees && task.assignees.length > 0 ? (
-              <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 11, bgcolor: '#04552B' } }}>
+              <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 11, bgcolor: '#04552B', color: '#FFFFFF' } }}>
                 {task.assignees.map((a) => (
-                  <Avatar key={a.id} title={a.full_name}>
-                    {a.full_name ? a.full_name.charAt(0).toUpperCase() : 'U'}
+                  <Avatar key={a.id} title={a.user?.full_name || `User #${a.user_id}`}>
+                    {(a.user?.full_name || '?').charAt(0).toUpperCase()}
                   </Avatar>
                 ))}
               </AvatarGroup>
             ) : (
               <Typography variant="caption" color="textSecondary">
-                Unassigned
+                {task.assignee_name || 'Unassigned'}
               </Typography>
             )}
           </TableCell>
@@ -237,14 +237,27 @@ export default function TaskListView({
                   task.priority === 'URGENT'
                     ? '#FEE2E2'
                     : task.priority === 'HIGH'
-                    ? '#FEF3C7'
+                    ? '#FFEDD5'
+                    : task.priority === 'NORMAL'
+                    ? '#DBEAFE'
                     : '#F1F5F9',
                 color:
                   task.priority === 'URGENT'
                     ? '#DC2626'
                     : task.priority === 'HIGH'
-                    ? '#D97706'
-                    : '#475569',
+                    ? '#EA580C'
+                    : task.priority === 'NORMAL'
+                    ? '#2563EB'
+                    : '#64748B',
+                border: '1px solid',
+                borderColor:
+                  task.priority === 'URGENT'
+                    ? '#EF4444'
+                    : task.priority === 'HIGH'
+                    ? '#F97316'
+                    : task.priority === 'NORMAL'
+                    ? '#3B82F6'
+                    : '#94A3B8',
               }}
             />
           </TableCell>

@@ -20,6 +20,12 @@ import {
   TextField,
   Typography,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
 } from '@mui/material';
 import {
   Briefcase,
@@ -33,6 +39,7 @@ import {
   User,
   AlertCircle,
   Upload,
+  Users,
 } from 'lucide-react';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
 import {
@@ -42,6 +49,7 @@ import {
   ProjectItem,
 } from '@/api/projectsApi';
 import { useApplicationsQuery } from '@/api/applicationsApi';
+import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 import { useNavigate } from 'react-router-dom';
@@ -56,6 +64,7 @@ export default function ProjectsPage() {
 
   const { data: projects = [], isLoading, isError, refetch } = useGetProjectsQuery({ q: searchQ || undefined });
   const { data: leadsData } = useApplicationsQuery({ page: 1, page_size: 100 });
+  const { data: users = [] } = useUsersQuery();
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
 
@@ -63,6 +72,8 @@ export default function ProjectsPage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Vehicle Customization');
   const [leadId, setLeadId] = useState<number | ''>('');
+  const [managerId, setManagerId] = useState<number | ''>('');
+  const [memberIds, setMemberIds] = useState<number[]>([]);
   const [budget, setBudget] = useState<number | ''>('');
   const [targetStartDate, setTargetStartDate] = useState('');
   const [targetEndDate, setTargetEndDate] = useState('');
@@ -78,6 +89,7 @@ export default function ProjectsPage() {
         name: name.trim(),
         category,
         lead_id: leadId ? Number(leadId) : undefined,
+        owner_id: managerId ? Number(managerId) : undefined,
         budget: budget ? Number(budget) : 0,
         target_start_date: targetStartDate || undefined,
         target_end_date: targetEndDate || undefined,
@@ -88,10 +100,12 @@ export default function ProjectsPage() {
       setCreateOpen(false);
       setName('');
       setLeadId('');
+      setManagerId('');
+      setMemberIds([]);
       setBudget('');
       setPrefix('');
-    } catch {
-      showToast('Failed to create project', 'error');
+    } catch (err: any) {
+      showToast(err?.data?.detail || 'Failed to create project', 'error');
     }
   };
 
@@ -404,6 +418,51 @@ export default function ProjectsPage() {
               <MenuItem value="Finance & Audit">Finance & Audit</MenuItem>
               <MenuItem value="Construction & Operations">Construction & Operations</MenuItem>
             </TextField>
+
+            <TextField
+              label="Project Manager"
+              fullWidth
+              size="small"
+              select
+              value={managerId}
+              onChange={(e) => setManagerId(e.target.value ? Number(e.target.value) : '')}
+            >
+              <MenuItem value="">Select Project Manager...</MenuItem>
+              {users.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.full_name} ({u.email})
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <FormControl fullWidth size="small">
+              <InputLabel id="project-members-label">Project Team Members (Multiple)</InputLabel>
+              <Select
+                labelId="project-members-label"
+                multiple
+                value={memberIds}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setMemberIds(typeof val === 'string' ? val.split(',').map(Number) : val);
+                }}
+                input={<OutlinedInput label="Project Team Members (Multiple)" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((id) => {
+                      const u = users.find((usr) => usr.id === id);
+                      return <Chip key={id} label={u?.full_name || `User #${id}`} size="small" />;
+                    })}
+                  </Box>
+                )}
+              >
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    <Checkbox checked={memberIds.includes(u.id)} />
+                    <ListItemText primary={u.full_name} secondary={u.role || u.email} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             <TextField
               label="Task ID Prefix (3 chars)"

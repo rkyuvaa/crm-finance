@@ -511,15 +511,17 @@ export default function TaskBoardView({
                                   )}
 
                                   {task.assignees && task.assignees.length > 0 ? (
-                                    <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 22, height: 22, fontSize: 10, bgcolor: '#04552B' } }}>
+                                    <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 22, height: 22, fontSize: 10, bgcolor: '#04552B', color: '#FFFFFF' } }}>
                                       {task.assignees.map((a) => (
-                                        <Avatar key={a.id} title={a.full_name}>
-                                          {a.full_name ? a.full_name.charAt(0).toUpperCase() : 'U'}
+                                        <Avatar key={a.id} title={a.user?.full_name || `User #${a.user_id}`}>
+                                          {(a.user?.full_name || '?').charAt(0).toUpperCase()}
                                         </Avatar>
                                       ))}
                                     </AvatarGroup>
                                   ) : (
-                                    <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#94A3B8' }}>?</Avatar>
+                                    <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#94A3B8' }}>
+                                      {(task.assignee_name || '?').charAt(0).toUpperCase()}
+                                    </Avatar>
                                   )}
                                 </Box>
 

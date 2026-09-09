@@ -30,6 +30,9 @@ import {
   Tooltip,
   Collapse,
   Checkbox,
+  InputLabel,
+  ListItemText,
+  OutlinedInput,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -122,7 +125,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [description, setDescription] = useState('');
   const [statusId, setStatusId] = useState<number>(1);
   const [priority, setPriority] = useState<'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'>('NORMAL');
-  const [assigneeId, setAssigneeId] = useState<number | ''>('');
+  const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
 
@@ -248,13 +251,18 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         project_id: numericProjectId,
         status_id: statusId,
         priority,
-        assignee_id: assigneeId ? Number(assigneeId) : undefined,
-        assignee_ids: assigneeId ? [Number(assigneeId)] : [],
+        assignee_id: assigneeIds.length > 0 ? assigneeIds[0] : undefined,
+        assignee_ids: assigneeIds,
         due_date: dueDate || undefined,
         estimated_hours: Number(estimatedHours) || 0,
       } as any).unwrap();
       toast.showSuccess(`Task "${title}" created successfully!`);
       setCreateOpen(false);
+      setTitle('');
+      setDescription('');
+      setAssigneeIds([]);
+      setDueDate('');
+      setEstimatedHours(0);
     } catch (err: any) {
       toast.showError(err?.data?.detail || 'Failed to create task');
     }
@@ -483,27 +491,51 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
           <TableCell>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
-                {task.assignee_name?.charAt(0) || '?'}
-              </Avatar>
-              <Typography variant="body2">{task.assignee_name || 'Unassigned'}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+              {task.assignees && task.assignees.length > 0 ? (
+                task.assignees.map((a) => (
+                  <Tooltip key={a.user_id} title={a.user?.full_name || `User #${a.user_id}`}>
+                    <Chip
+                      avatar={
+                        <Avatar sx={{ width: 22, height: 22, fontSize: '0.7rem', bgcolor: '#04552B', color: '#fff' }}>
+                          {(a.user?.full_name || '?').charAt(0)}
+                        </Avatar>
+                      }
+                      label={a.user?.full_name || `User #${a.user_id}`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 24, fontSize: '0.72rem', fontWeight: 600 }}
+                    />
+                  </Tooltip>
+                ))
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  {task.assignee_name || 'Unassigned'}
+                </Typography>
+              )}
             </Box>
           </TableCell>
           <TableCell>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? 'text.primary' : 'text.secondary' }}>
-              <Calendar size={14} />
-              <Typography variant="body2">{task.due_date || 'None'}</Typography>
-              {task.end_date_locked && <Lock size={12} color="#D97706" />}
-            </Box>
-          </TableCell>
-          <TableCell>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-              <Flag size={14} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />
-              <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 600, color: getPriorityFlagColor(task.priority) }}>
-                {task.priority}
-              </Typography>
-            </Box>
+            <Chip
+              icon={<Flag size={12} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />}
+              label={task.priority}
+              size="small"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                color: getPriorityFlagColor(task.priority),
+                bgcolor:
+                  task.priority === 'URGENT'
+                    ? '#FEE2E2'
+                    : task.priority === 'HIGH'
+                    ? '#FFEDD5'
+                    : task.priority === 'NORMAL'
+                    ? '#DBEAFE'
+                    : '#F1F5F9',
+                border: '1px solid',
+                borderColor: getPriorityFlagColor(task.priority),
+              }}
+            />
           </TableCell>
           <TableCell>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
@@ -1069,23 +1101,65 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Select>
           </FormControl>
           <FormControl size="small" fullWidth>
-            <Select value={priority} onChange={(e) => setPriority(e.target.value as any)}>
-              <MenuItem value="URGENT">Urgent 🚩</MenuItem>
-              <MenuItem value="HIGH">High 🚩</MenuItem>
-              <MenuItem value="NORMAL">Normal 🚩</MenuItem>
-              <MenuItem value="LOW">Low 🚩</MenuItem>
+            <Select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as any)}
+              renderValue={(val) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Flag size={14} color={getPriorityFlagColor(val)} fill={getPriorityFlagColor(val)} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: getPriorityFlagColor(val) }}>
+                    {val} Priority
+                  </Typography>
+                </Box>
+              )}
+            >
+              <MenuItem value="URGENT">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#DC2626', fontWeight: 600 }}>
+                  <Flag size={14} color="#DC2626" fill="#DC2626" /> Urgent
+                </Box>
+              </MenuItem>
+              <MenuItem value="HIGH">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#EA580C', fontWeight: 600 }}>
+                  <Flag size={14} color="#EA580C" fill="#EA580C" /> High
+                </Box>
+              </MenuItem>
+              <MenuItem value="NORMAL">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#2563EB', fontWeight: 600 }}>
+                  <Flag size={14} color="#2563EB" fill="#2563EB" /> Normal
+                </Box>
+              </MenuItem>
+              <MenuItem value="LOW">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#64748B', fontWeight: 600 }}>
+                  <Flag size={14} color="#64748B" fill="#64748B" /> Low
+                </Box>
+              </MenuItem>
             </Select>
           </FormControl>
-          <FormControl size="small" fullWidth required>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel id="create-task-assignees-label">Task Assignees (Multiple)</InputLabel>
             <Select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value === '' ? '' : Number(e.target.value))}
-              displayEmpty
+              labelId="create-task-assignees-label"
+              multiple
+              value={assigneeIds}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAssigneeIds(typeof val === 'string' ? val.split(',').map(Number) : val);
+              }}
+              input={<OutlinedInput label="Task Assignees (Multiple)" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((id) => {
+                    const u = users.find((usr) => usr.id === id);
+                    return <Chip key={id} label={u?.full_name || `User #${id}`} size="small" />;
+                  })}
+                </Box>
+              )}
             >
-              <MenuItem value="">Select Assignee (Required) *</MenuItem>
               {users.map((u) => (
                 <MenuItem key={u.id} value={u.id}>
-                  {u.full_name} ({u.role_name || u.email || 'User'})
+                  <Checkbox checked={assigneeIds.includes(u.id)} />
+                  <ListItemText primary={u.full_name} secondary={u.role_name || u.email || 'User'} />
                 </MenuItem>
               ))}
             </Select>
