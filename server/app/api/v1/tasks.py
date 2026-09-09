@@ -298,6 +298,15 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
                 depends_on_is_completed=blocker.is_completed,
                 direction="BLOCKED_BY",
                 dependency_type=dep.dependency_type,
+                predecessor_task_id=dep.depends_on_task_id,
+                predecessor_task_number=blocker.task_number,
+                predecessor_task_title=blocker.title,
+                predecessor_status_name=blocker.status_def.name if blocker.status_def else None,
+                predecessor_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                predecessor_due_date=blocker.due_date,
+                predecessor_is_completed=blocker.is_completed,
+                dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                lag_days=getattr(dep, 'lag_days', 0) or 0,
                 created_at=dep.created_at,
             ))
 
@@ -318,6 +327,15 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
                 depends_on_is_completed=blocked_task.is_completed,
                 direction="BLOCKING",
                 dependency_type=dep.dependency_type,
+                predecessor_task_id=dep.depends_on_task_id,
+                predecessor_task_number=blocked_task.task_number,
+                predecessor_task_title=blocked_task.title,
+                predecessor_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                predecessor_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                predecessor_due_date=blocked_task.due_date,
+                predecessor_is_completed=blocked_task.is_completed,
+                dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                lag_days=getattr(dep, 'lag_days', 0) or 0,
                 created_at=dep.created_at,
             ))
 

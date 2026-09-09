@@ -231,16 +231,26 @@ class TaskDependencyCreate(BaseModel):
 class TaskDependencyOut(BaseModel):
     id: int
     task_id: int
-    predecessor_task_id: int
+    depends_on_task_id: Optional[int] = None
+    depends_on_task_number: Optional[str] = None
+    depends_on_task_title: Optional[str] = None
+    depends_on_status_name: Optional[str] = None
+    depends_on_priority: Optional[str] = None
+    depends_on_due_date: Optional[date] = None
+    depends_on_is_completed: Optional[bool] = None
+    direction: Optional[str] = None
+    dependency_type: Optional[Any] = None
+
+    predecessor_task_id: Optional[int] = None
     predecessor_task_number: Optional[str] = None
     predecessor_task_title: Optional[str] = None
     predecessor_status_name: Optional[str] = None
     predecessor_priority: Optional[str] = None
     predecessor_due_date: Optional[date] = None
     predecessor_is_completed: Optional[bool] = None
-    dep_type: str
-    lag_days: int
-    created_at: datetime
+    dep_type: Optional[str] = "FS"
+    lag_days: int = 0
+    created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -370,9 +380,9 @@ class TaskOut(TaskBase):
     completed_at: Optional[datetime] = None
     completed_by: Optional[int] = None
 
-    duration_working_days: int = 0
-    estimated_cost: float = 0.0
-    actual_cost: float = 0.0
+    duration_working_days: Optional[int] = 0
+    estimated_cost: Optional[float] = 0.0
+    actual_cost: Optional[float] = 0.0
     completion_date: Optional[date] = None
 
     is_parent: bool = False
