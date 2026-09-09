@@ -227,6 +227,7 @@ export default function RenewalTrackerPage() {
   const [testSmtp, { isLoading: isSendingTestEmail }] = useTestSmtpConnectionMutation();
   const [testMailDialogOpen, setTestMailDialogOpen] = useState(false);
   const [testRecipientEmail, setTestRecipientEmail] = useState('');
+  const [selectedTestItemId, setSelectedTestItemId] = useState<number | 'sample'>('sample');
 
   const handleSendTestEmailNotification = async () => {
     if (!testRecipientEmail || !testRecipientEmail.includes('@')) {
@@ -237,11 +238,11 @@ export default function RenewalTrackerPage() {
       const res = await testSmtp({
         test_email: testRecipientEmail.trim(),
       }).unwrap();
-      showToast(res.message || `Test notification email dispatched to ${testRecipientEmail}`, 'success');
+      showToast(res.message || `Notification email dispatched to ${testRecipientEmail}`, 'success');
       setTestMailDialogOpen(false);
     } catch (err: any) {
-      const detail = err?.data?.detail || 'Failed to dispatch test notification email. Please check SMTP settings.';
-      showToast(typeof detail === 'string' ? detail : 'Failed to send test email', 'error');
+      const detail = err?.data?.detail || 'Failed to dispatch notification email. Please check SMTP settings.';
+      showToast(typeof detail === 'string' ? detail : 'Failed to send email', 'error');
     }
   };
 
@@ -554,6 +555,94 @@ export default function RenewalTrackerPage() {
   // Dynamic System Users & Employee Master List for Renewal Owner
   const { data: apiUsers = [] } = useUsersQuery();
   const { data: rbacUsersData } = useGetUsersQuery({ page: 1, page_size: 100 });
+
+  // Helper to dynamically resolve email for a given Renewal Owner name
+  const resolveOwnerEmail = (ownerName: string): string => {
+    if (!ownerName) return 'admin@company.com';
+    const searchName = ownerName.trim().toLowerCase();
+
+    // 1. From mastersApi /masters/users
+    if (Array.isArray(apiUsers) && apiUsers.length > 0) {
+      const found = apiUsers.find((u: any) => {
+        const name = (u.full_name || u.name || u.username || '').toLowerCase();
+        return name === searchName || name.includes(searchName) || searchName.includes(name);
+      });
+      if (found?.email) return found.email;
+    }
+
+    // 2. From rbacApi /users
+    const rbacItems = (rbacUsersData as any)?.items || (Array.isArray(rbacUsersData) ? rbacUsersData : []);
+    if (Array.isArray(rbacItems) && rbacItems.length > 0) {
+      const found = rbacItems.find((u: any) => {
+        const name = (u.full_name || u.name || u.username || '').toLowerCase();
+        return name === searchName || name.includes(searchName) || searchName.includes(name);
+      });
+      if (found?.email) return found.email;
+    }
+
+    // 3. From Employee Master in localStorage
+    try {
+      const saved = localStorage.getItem('crm_employee_master_data');
+      if (saved) {
+        const employees = JSON.parse(saved);
+        if (Array.isArray(employees)) {
+          const found = employees.find((e: any) => {
+            const name = (e.full_name || e.name || '').toLowerCase();
+            return name === searchName || name.includes(searchName) || searchName.includes(name);
+          });
+          if (found?.email) return found.email;
+        }
+      }
+    } catch {}
+
+    // 4. Default fallback email format based on owner's name
+    const formatted = searchName.replace(/[^a-z0-9]/g, '.');
+    return `${formatted}@company.com`;
+  };
+
+  const handleOpenTriggerEmailDialog = (item?: RenewalItem) => {
+    if (item) {
+      setSelectedTestItemId(item.id);
+      setTestRecipientEmail(resolveOwnerEmail(item.renewal_owner));
+    } else if (renewals.length > 0) {
+      const firstItem = renewals[0];
+      setSelectedTestItemId(firstItem.id);
+      setTestRecipientEmail(resolveOwnerEmail(firstItem.renewal_owner));
+    } else {
+      setSelectedTestItemId('sample');
+      const authUser = localStorage.getItem('user');
+      let defaultEmail = '';
+      try {
+        if (authUser) defaultEmail = JSON.parse(authUser).email || '';
+      } catch {}
+      setTestRecipientEmail(defaultEmail || 'admin@company.com');
+    }
+    setTestMailDialogOpen(true);
+  };
+
+  const handleSelectTestItemChange = (val: string | number) => {
+    if (val === 'sample') {
+      setSelectedTestItemId('sample');
+      const authUser = localStorage.getItem('user');
+      let defaultEmail = '';
+      try {
+        if (authUser) defaultEmail = JSON.parse(authUser).email || '';
+      } catch {}
+      setTestRecipientEmail(defaultEmail || 'admin@company.com');
+    } else {
+      const numericId = Number(val);
+      setSelectedTestItemId(numericId);
+      const foundItem = renewals.find((r) => r.id === numericId);
+      if (foundItem) {
+        setTestRecipientEmail(resolveOwnerEmail(foundItem.renewal_owner));
+      }
+    }
+  };
+
+  const selectedTestItemObj = useMemo(() => {
+    if (selectedTestItemId === 'sample') return undefined;
+    return renewals.find((r) => r.id === Number(selectedTestItemId));
+  }, [selectedTestItemId, renewals]);
 
   const ownerOptions = useMemo(() => {
     const list: string[] = [];
@@ -1249,6 +1338,18 @@ export default function RenewalTrackerPage() {
       >
         <MenuItem
           onClick={() => {
+            if (actionMenuAnchor) {
+              handleOpenTriggerEmailDialog(actionMenuAnchor.item);
+            }
+            handleCloseActionMenu();
+          }}
+          sx={{ fontSize: 12.5, fontWeight: 600, color: '#04552B', py: 1 }}
+        >
+          <Mail size={14} style={{ marginRight: 8 }} />
+          Send Email Notification to Owner
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
             if (actionMenuAnchor) handleMarkRenewed(actionMenuAnchor.item.id);
             handleCloseActionMenu();
           }}
@@ -1671,15 +1772,7 @@ export default function RenewalTrackerPage() {
                         <Button
                           variant="outlined"
                           startIcon={<Send size={16} />}
-                          onClick={() => {
-                            const authUser = localStorage.getItem('user');
-                            let defaultEmail = '';
-                            try {
-                              if (authUser) defaultEmail = JSON.parse(authUser).email || '';
-                            } catch {}
-                            setTestRecipientEmail(defaultEmail || 'admin@company.com');
-                            setTestMailDialogOpen(true);
-                          }}
+                          onClick={() => handleOpenTriggerEmailDialog()}
                           sx={{
                             borderColor: '#04552B',
                             color: '#04552B',
@@ -2237,22 +2330,39 @@ export default function RenewalTrackerPage() {
       {/* ── TRIGGER TEST MAIL DIALOG ────────────────────────────────────────── */}
       <Dialog open={testMailDialogOpen} onClose={() => setTestMailDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, color: '#023020', borderBottom: '1px solid #E4EBE1', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Send size={18} color="#04552B" /> Trigger Test Email Notification
+          <Send size={18} color="#04552B" /> Trigger Email Notification to Item Owner
         </DialogTitle>
         <DialogContent sx={{ pt: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="body2" sx={{ color: '#475569', mt: 1 }}>
-            Send a live test notification email for event: <strong>{mailTemplates[selectedTemplateKey]?.title}</strong>
+            Send notification email for template: <strong>{mailTemplates[selectedTemplateKey]?.title}</strong>
           </Typography>
 
+          <FormControl fullWidth size="small">
+            <InputLabel sx={{ fontSize: 13 }}>Target Renewal Item / Owner</InputLabel>
+            <Select
+              value={selectedTestItemId}
+              label="Target Renewal Item / Owner"
+              onChange={(e) => handleSelectTestItemChange(e.target.value)}
+              sx={{ fontSize: 13 }}
+            >
+              <MenuItem value="sample">Sample Demo Item (Default Preview)</MenuItem>
+              {renewals.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.item_service} — Owner: {item.renewal_owner || 'Unassigned'} ({resolveOwnerEmail(item.renewal_owner)})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <TextField
-            label="Recipient Email Address *"
+            label="Recipient Email Address (Item Owner) *"
             type="email"
             fullWidth
             size="small"
             value={testRecipientEmail}
             onChange={(e) => setTestRecipientEmail(e.target.value)}
-            placeholder="e.g. user@domain.com"
-            helperText="The notification will be dispatched via configured SMTP server credentials."
+            placeholder="e.g. owner@domain.com"
+            helperText={selectedTestItemObj ? `Owner: ${selectedTestItemObj.renewal_owner || 'Unassigned'} (${resolveOwnerEmail(selectedTestItemObj.renewal_owner)})` : 'The notification will be dispatched via configured SMTP server credentials.'}
           />
 
           <Box sx={{ p: 2, bgcolor: '#F8FAF7', borderRadius: '8px', border: '1px solid #E4EBE1' }}>
@@ -2260,14 +2370,14 @@ export default function RenewalTrackerPage() {
               Subject Line Preview:
             </Typography>
             <Typography sx={{ fontSize: 12.5, fontFamily: 'monospace', color: '#04552B', mb: 1.5, p: 1, bgcolor: '#FFFFFF', borderRadius: '4px', border: '1px solid #CBD5E1', fontWeight: 600 }}>
-              {renderTemplateText(mailTemplates[selectedTemplateKey]?.subject || '')}
+              {renderTemplateText(mailTemplates[selectedTemplateKey]?.subject || '', selectedTestItemObj)}
             </Typography>
 
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', mb: 0.5 }}>
               Rendered Body Preview:
             </Typography>
             <Typography sx={{ fontSize: 11.5, fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#334155', p: 1.5, bgcolor: '#FFFFFF', borderRadius: '4px', border: '1px solid #CBD5E1', maxHeight: 180, overflowY: 'auto' }}>
-              {renderTemplateText(mailTemplates[selectedTemplateKey]?.body || '')}
+              {renderTemplateText(mailTemplates[selectedTemplateKey]?.body || '', selectedTestItemObj)}
             </Typography>
           </Box>
         </DialogContent>
@@ -2282,7 +2392,7 @@ export default function RenewalTrackerPage() {
             startIcon={isSendingTestEmail ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
             sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' }, textTransform: 'none', fontWeight: 700 }}
           >
-            {isSendingTestEmail ? 'Sending Test Mail...' : 'Trigger & Send Email'}
+            {isSendingTestEmail ? 'Sending Email...' : 'Trigger & Send Email'}
           </Button>
         </DialogActions>
       </Dialog>
