@@ -235,8 +235,13 @@ export default function RenewalTrackerPage() {
       return;
     }
     try {
+      const renderedSubject = renderTemplateText(mailTemplates[selectedTemplateKey]?.subject || '', selectedTestItemObj);
+      const renderedBody = renderTemplateText(mailTemplates[selectedTemplateKey]?.body || '', selectedTestItemObj);
+
       const res = await testSmtp({
         test_email: testRecipientEmail.trim(),
+        subject: renderedSubject,
+        body: renderedBody,
       }).unwrap();
       showToast(res.message || `Notification email dispatched to ${testRecipientEmail}`, 'success');
       setTestMailDialogOpen(false);

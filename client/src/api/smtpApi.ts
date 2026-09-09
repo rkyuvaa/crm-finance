@@ -19,6 +19,10 @@ export const smtpApi = baseApi.injectEndpoints({
       { success: boolean; message: string },
       {
         test_email: string;
+        subject?: string;
+        body?: string;
+        plain_text?: string;
+        html_content?: string;
         smtp_host?: string | null;
         smtp_port?: number;
         smtp_security?: string;

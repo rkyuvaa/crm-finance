@@ -41,6 +41,10 @@ class SmtpSettingInput(BaseModel):
 
 class SmtpTestInput(BaseModel):
     test_email: EmailStr
+    subject: str | None = None
+    body: str | None = None
+    plain_text: str | None = None
+    html_content: str | None = None
     smtp_host: str | None = None
     smtp_port: int | None = None
     smtp_security: str | None = None
@@ -125,9 +129,35 @@ def test_smtp_configuration(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
-    subject = "CRMFinance Mail Server Connection Test"
-    plain_text = "Hello,\n\nThis is a test email from CRMFinance to verify your SMTP mail server configuration.\n\nRegards,\nCRMFinance Team"
-    html_content = """<!DOCTYPE html>
+    subject = payload.subject.strip() if (payload.subject and payload.subject.strip()) else "CRMFinance Mail Server Connection Test"
+
+    if payload.body and payload.body.strip():
+        raw_body = payload.body.strip()
+        plain_text = raw_body
+        html_body = raw_body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f9f5; padding: 24px; color: #1e293b;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e4ebe1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="background: #04552B; padding: 18px 24px; color: #ffffff;">
+      <h3 style="margin: 0; font-size: 16px; font-weight: 700;">{subject}</h3>
+    </div>
+    <div style="padding: 24px; font-size: 14px; line-height: 1.6; color: #334155;">
+{html_body}
+    </div>
+    <div style="font-size: 12px; color: #7a8b80; border-top: 1px solid #e4ebe1; padding: 16px 24px; background: #f8faf7;">
+      Sent automatically via Enterprise Renewal Notification System
+    </div>
+  </div>
+</body>
+</html>"""
+    elif payload.html_content and payload.html_content.strip():
+        plain_text = payload.plain_text or payload.html_content
+        html_content = payload.html_content
+    else:
+        plain_text = "Hello,\n\nThis is a test email from CRMFinance to verify your SMTP mail server configuration.\n\nRegards,\nCRMFinance Team"
+        html_content = """<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; background: #f7f9f5; padding: 20px;">
