@@ -224,23 +224,22 @@ class TaskAttachmentOut(TaskAttachmentBase):
 
 # --- Task Dependency & Relationship ---
 class TaskDependencyCreate(BaseModel):
-    depends_on_task_id: int
-    dependency_type: DependencyType = DependencyType.BLOCKS
-    direction: Optional[str] = "BLOCKED_BY"  # "BLOCKED_BY" or "BLOCKING"
-
+    predecessor_task_id: int
+    dep_type: str = "FS"  # FS, SS, FF, SF
+    lag_days: int = 0
 
 class TaskDependencyOut(BaseModel):
     id: int
     task_id: int
-    depends_on_task_id: int
-    depends_on_task_number: Optional[str] = None
-    depends_on_task_title: Optional[str] = None
-    depends_on_status_name: Optional[str] = None
-    depends_on_priority: Optional[str] = None
-    depends_on_due_date: Optional[date] = None
-    depends_on_is_completed: Optional[bool] = None
-    direction: str = "BLOCKED_BY"  # "BLOCKING" or "BLOCKED_BY"
-    dependency_type: DependencyType
+    predecessor_task_id: int
+    predecessor_task_number: Optional[str] = None
+    predecessor_task_title: Optional[str] = None
+    predecessor_status_name: Optional[str] = None
+    predecessor_priority: Optional[str] = None
+    predecessor_due_date: Optional[date] = None
+    predecessor_is_completed: Optional[bool] = None
+    dep_type: str
+    lag_days: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -304,6 +303,11 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     project_id: Optional[int] = None
     parent_task_id: Optional[int] = None
+    milestone_id: Optional[int] = None
+    duration_working_days: Optional[int] = None
+    estimated_cost: Optional[float] = None
+    actual_cost: Optional[float] = None
+    completion_date: Optional[date] = None
     assignee_ids: Optional[List[int]] = None
     follower_ids: Optional[List[int]] = None
     tag_ids: Optional[List[int]] = None
@@ -335,6 +339,11 @@ class TaskUpdate(BaseModel):
     cost_center_id: Optional[int] = None
     phase_id: Optional[int] = None
     parent_task_id: Optional[int] = None
+    milestone_id: Optional[int] = None
+    duration_working_days: Optional[int] = None
+    estimated_cost: Optional[float] = None
+    actual_cost: Optional[float] = None
+    completion_date: Optional[date] = None
     is_completed: Optional[bool] = None
     is_archived: Optional[bool] = None
     is_deleted: Optional[bool] = None
@@ -349,6 +358,7 @@ class TaskOut(TaskBase):
     project_id: Optional[int] = None
     project_name: Optional[str] = None
     parent_task_id: Optional[int] = None
+    milestone_id: Optional[int] = None
     sort_order: int = 0
     actual_minutes: int = 0
     actual_hours: float = 0.0
@@ -359,6 +369,21 @@ class TaskOut(TaskBase):
     is_blocked: bool = False
     completed_at: Optional[datetime] = None
     completed_by: Optional[int] = None
+
+    duration_working_days: int = 0
+    estimated_cost: float = 0.0
+    actual_cost: float = 0.0
+    completion_date: Optional[date] = None
+
+    is_parent: bool = False
+    is_date_controlled_by: Optional[int] = None
+    start_date_locked: bool = False
+    end_date_locked: bool = False
+
+    rollup_start_date: Optional[date] = None
+    rollup_end_date: Optional[date] = None
+    rollup_estimated_cost: float = 0.0
+    rollup_actual_cost: float = 0.0
 
     assignee_name: Optional[str] = None
     cost_center_code: Optional[str] = None
@@ -459,24 +484,21 @@ class TaskAutomationRuleOut(BaseModel):
 class ProjectMilestoneBase(BaseModel):
     title: str
     description: Optional[str] = None
-    due_date: Optional[date] = None
-    is_completed: bool = False
-
 
 class ProjectMilestoneCreate(ProjectMilestoneBase):
     pass
 
-
 class ProjectMilestoneUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    due_date: Optional[date] = None
-    is_completed: Optional[bool] = None
-
 
 class ProjectMilestoneOut(ProjectMilestoneBase):
     id: int
     project_id: int
+    rollup_start_date: Optional[date] = None
+    rollup_end_date: Optional[date] = None
+    rollup_estimated_cost: float = 0.0
+    rollup_actual_cost: float = 0.0
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -499,13 +521,13 @@ class ProjectBase(BaseModel):
     target_end_date: Optional[date] = None
     owner_id: Optional[int] = None
 
-
 class ProjectCreate(ProjectBase):
-    pass
+    prefix: str
 
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    prefix: Optional[str] = None
     code: Optional[str] = None
     description: Optional[str] = None
     space_id: Optional[int] = None
@@ -524,12 +546,19 @@ class ProjectUpdate(BaseModel):
 
 class ProjectOut(ProjectBase):
     id: int
+    prefix: Optional[str] = None
     owner_name: Optional[str] = None
     lead_app_no: Optional[str] = None
     lead_customer_name: Optional[str] = None
     status_name: Optional[str] = None
     tasks_count: dict = {"total": 0, "done": 0}
     milestones: List[ProjectMilestoneOut] = []
+
+    rollup_start_date: Optional[date] = None
+    rollup_end_date: Optional[date] = None
+    rollup_estimated_cost: float = 0.0
+    rollup_actual_cost: float = 0.0
+
     created_at: datetime
     updated_at: datetime
 
@@ -589,6 +618,9 @@ class StatusDefinitionBase(BaseModel):
     category: TaskStatusCategory = TaskStatusCategory.ACTIVE
     display_order: int = 0
     is_terminal: bool = False
+    is_completed_type: bool = False
+    exclude_from_active_totals: bool = False
+    is_default_on_create: bool = False
 
 
 class StatusDefinitionCreate(StatusDefinitionBase):
@@ -601,9 +633,13 @@ class StatusDefinitionUpdate(BaseModel):
     category: Optional[TaskStatusCategory] = None
     display_order: Optional[int] = None
     is_terminal: Optional[bool] = None
+    is_completed_type: Optional[bool] = None
+    exclude_from_active_totals: Optional[bool] = None
+    is_default_on_create: Optional[bool] = None
 
 
 class StatusDefinitionOut(StatusDefinitionBase):
     id: int
+    is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)

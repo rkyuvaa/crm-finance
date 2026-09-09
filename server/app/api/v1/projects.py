@@ -105,6 +105,11 @@ def create_project(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new project master record"""
+    # Check if prefix is unique
+    existing = db.query(Project).filter(Project.prefix == data.prefix).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Project prefix must be unique")
+
     project = Project(**data.model_dump())
     if not project.owner_id:
         project.owner_id = current_user.id
@@ -352,7 +357,7 @@ def update_project_milestone(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update a milestone (title, description, due_date, is_completed)"""
+    """Update a milestone (title, description)"""
     milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")

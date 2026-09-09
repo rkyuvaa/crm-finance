@@ -40,6 +40,7 @@ import {
   CheckSquare,
   FolderCog,
   Zap,
+  CalendarDays,
 } from 'lucide-react';
 import {
   useGetStatusDefinitionsQuery,
@@ -50,6 +51,10 @@ import {
   useCreateCustomFieldDefinitionMutation,
   useUpdateCustomFieldDefinitionMutation,
   useDeleteCustomFieldDefinitionMutation,
+  useGetCalendarConfigQuery,
+  useAddHolidayMutation,
+  useDeleteHolidayMutation,
+  useSetWeeklyOffMutation,
   StatusDefinitionItem,
   CustomFieldDefinitionItem,
 } from '@/api/projectsApi';
@@ -96,6 +101,9 @@ export default function ProjectConfigurationPage() {
   const [statusName, setStatusName] = useState('');
   const [statusColor, setStatusColor] = useState('#2563EB');
   const [statusIsTerminal, setStatusIsTerminal] = useState(false);
+  const [statusIsCompletedType, setStatusIsCompletedType] = useState(false);
+  const [statusExcludeFromTotals, setStatusExcludeFromTotals] = useState(false);
+  const [statusIsDefaultOnCreate, setStatusIsDefaultOnCreate] = useState(false);
   const [statusDisplayOrder, setStatusDisplayOrder] = useState<number>(0);
   const [submittingStatus, setSubmittingStatus] = useState(false);
 
@@ -121,6 +129,16 @@ export default function ProjectConfigurationPage() {
   const [deleteFieldModalOpen, setDeleteFieldModalOpen] = useState(false);
   const [fieldToDelete, setFieldToDelete] = useState<CustomFieldDefinitionItem | null>(null);
   const [deletingField, setDeletingField] = useState(false);
+
+  // --- Calendar State ---
+  const { data: calendarConfig, isLoading: isLoadingCalendar } = useGetCalendarConfigQuery();
+  const [addHoliday] = useAddHolidayMutation();
+  const [deleteHoliday] = useDeleteHolidayMutation();
+  const [setWeeklyOff] = useSetWeeklyOffMutation();
+
+  const [holidayDate, setHolidayDate] = useState('');
+  const [holidayDesc, setHolidayDesc] = useState('');
+  const [holidayRecurs, setHolidayRecurs] = useState(false);
 
   // --- Task Settings State ---
   const DEFAULT_TASK_SETTINGS = {
@@ -178,11 +196,11 @@ export default function ProjectConfigurationPage() {
 
   // Default fallback data if API returns empty
   const defaultStatuses: StatusDefinitionItem[] = [
-    { id: 1, name: 'To Do', color: '#64748B', display_order: 1, is_terminal: false },
-    { id: 2, name: 'In Progress', color: '#2563EB', display_order: 2, is_terminal: false },
-    { id: 3, name: 'In Review', color: '#D97706', display_order: 3, is_terminal: false },
-    { id: 4, name: 'Done', color: '#16A34A', display_order: 4, is_terminal: true },
-    { id: 5, name: 'Blocked', color: '#DC2626', display_order: 5, is_terminal: false },
+    { id: 1, name: 'To Do', color: '#64748B', display_order: 1, is_terminal: false, is_completed_type: false, exclude_from_active_totals: false, is_default_on_create: true },
+    { id: 2, name: 'In Progress', color: '#2563EB', display_order: 2, is_terminal: false, is_completed_type: false, exclude_from_active_totals: false, is_default_on_create: false },
+    { id: 3, name: 'In Review', color: '#D97706', display_order: 3, is_terminal: false, is_completed_type: false, exclude_from_active_totals: false, is_default_on_create: false },
+    { id: 4, name: 'Done', color: '#16A34A', display_order: 4, is_terminal: true, is_completed_type: true, exclude_from_active_totals: true, is_default_on_create: false },
+    { id: 5, name: 'Blocked', color: '#DC2626', display_order: 5, is_terminal: false, is_completed_type: false, exclude_from_active_totals: false, is_default_on_create: false },
   ];
 
   const defaultCustomFields: CustomFieldDefinitionItem[] = [
@@ -212,12 +230,18 @@ export default function ProjectConfigurationPage() {
       setStatusName(statusItem.name);
       setStatusColor(statusItem.color);
       setStatusIsTerminal(statusItem.is_terminal);
+      setStatusIsCompletedType(statusItem.is_completed_type || false);
+      setStatusExcludeFromTotals(statusItem.exclude_from_active_totals || false);
+      setStatusIsDefaultOnCreate(statusItem.is_default_on_create || false);
       setStatusDisplayOrder(statusItem.display_order);
     } else {
       setEditingStatus(null);
       setStatusName('');
       setStatusColor('#2563EB');
       setStatusIsTerminal(false);
+      setStatusIsCompletedType(false);
+      setStatusExcludeFromTotals(false);
+      setStatusIsDefaultOnCreate(false);
       setStatusDisplayOrder(displayStatuses.length + 1);
     }
     setStatusModalOpen(true);
@@ -237,6 +261,9 @@ export default function ProjectConfigurationPage() {
             name: statusName.trim(),
             color: statusColor,
             is_terminal: statusIsTerminal,
+            is_completed_type: statusIsCompletedType,
+            exclude_from_active_totals: statusExcludeFromTotals,
+            is_default_on_create: statusIsDefaultOnCreate,
             display_order: Number(statusDisplayOrder),
           },
         }).unwrap();
@@ -246,6 +273,9 @@ export default function ProjectConfigurationPage() {
           name: statusName.trim(),
           color: statusColor,
           is_terminal: statusIsTerminal,
+          is_completed_type: statusIsCompletedType,
+          exclude_from_active_totals: statusExcludeFromTotals,
+          is_default_on_create: statusIsDefaultOnCreate,
           display_order: Number(statusDisplayOrder),
         }).unwrap();
         toast.showSuccess(`Workflow status "${statusName}" created successfully!`);
@@ -400,6 +430,7 @@ export default function ProjectConfigurationPage() {
             <Tab icon={<CheckSquare size={15} />} iconPosition="start" label="3. Task Settings" />
             <Tab icon={<FolderCog size={15} />} iconPosition="start" label="4. Project Settings" />
             <Tab icon={<Zap size={15} />} iconPosition="start" label="5. Automations Rules" />
+            <Tab icon={<CalendarDays size={15} />} iconPosition="start" label="6. Working Calendar" />
           </Tabs>
         </Box>
 
@@ -988,6 +1019,84 @@ export default function ProjectConfigurationPage() {
               </Box>
             </Paper>
           </CustomTabPanel>
+
+          {/* ────────────────────────────────────────────────────────────────
+              TAB 6: WORKING CALENDAR
+             ──────────────────────────────────────────────────────────────── */}
+          <CustomTabPanel value={activeTab} index={5}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
+                Working Calendar
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
+                Configure weekly off days and company holidays.
+              </Typography>
+            </Box>
+
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, mb: 3, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Weekly Off Days</Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+                  const isOff = calendarConfig?.weekly_off_days?.includes(idx) ?? false;
+                  return (
+                    <Chip
+                      key={day}
+                      label={day}
+                      onClick={async () => {
+                        const current = calendarConfig?.weekly_off_days || [];
+                        const next = isOff ? current.filter(d => d !== idx) : [...current, idx];
+                        await setWeeklyOff({ day_of_week_list: next });
+                      }}
+                      color={isOff ? 'error' : 'default'}
+                      variant={isOff ? 'filled' : 'outlined'}
+                      sx={{ fontWeight: 600, cursor: 'pointer' }}
+                    />
+                  );
+                })}
+              </Box>
+            </Paper>
+
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, bgcolor: 'background.default' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Company Holidays</Typography>
+              
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 3, alignItems: 'center' }}>
+                <TextField size="small" type="date" value={holidayDate} onChange={e => setHolidayDate(e.target.value)} InputLabelProps={{ shrink: true }} label="Date" sx={{ width: 150 }} />
+                <TextField size="small" value={holidayDesc} onChange={e => setHolidayDesc(e.target.value)} placeholder="Holiday Description..." sx={{ flex: 1 }} />
+                <FormControlLabel control={<Switch size="small" checked={holidayRecurs} onChange={e => setHolidayRecurs(e.target.checked)} />} label="Recurs Yearly" />
+                <Button variant="contained" onClick={async () => {
+                  if(!holidayDate || !holidayDesc) return;
+                  await addHoliday({ holiday_date: holidayDate, description: holidayDesc, recurs_yearly: holidayRecurs });
+                  setHolidayDate(''); setHolidayDesc(''); setHolidayRecurs(false);
+                }} sx={{ bgcolor: '#04552B', textTransform: 'none' }}>Add</Button>
+              </Box>
+
+              <Table size="small">
+                <TableHead sx={{ bgcolor: 'background.paper' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Recurs Yearly</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {calendarConfig?.holidays?.map((h: any) => (
+                    <TableRow key={h.id}>
+                      <TableCell>{h.holiday_date}</TableCell>
+                      <TableCell>{h.description}</TableCell>
+                      <TableCell>{h.recurs_yearly ? 'Yes' : 'No'}</TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" color="error" onClick={() => deleteHoliday(h.id)}><Trash2 size={16} /></IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!calendarConfig?.holidays?.length && (
+                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 3, color: 'text.secondary' }}>No holidays added.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Paper>
+          </CustomTabPanel>
         </Box>
       </Paper>
 
@@ -1055,6 +1164,18 @@ export default function ProjectConfigurationPage() {
               />
             }
             label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Terminal / Completed State?</Typography>}
+          />
+          <FormControlLabel
+            control={<Switch checked={statusIsCompletedType} onChange={(e) => setStatusIsCompletedType(e.target.checked)} size="small" color="success" />}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Is Completed Type?</Typography>}
+          />
+          <FormControlLabel
+            control={<Switch checked={statusExcludeFromTotals} onChange={(e) => setStatusExcludeFromTotals(e.target.checked)} size="small" color="success" />}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Exclude from Active Totals?</Typography>}
+          />
+          <FormControlLabel
+            control={<Switch checked={statusIsDefaultOnCreate} onChange={(e) => setStatusIsDefaultOnCreate(e.target.checked)} size="small" color="success" />}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Default on Create?</Typography>}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

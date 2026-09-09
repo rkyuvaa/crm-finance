@@ -24,6 +24,10 @@ export interface ProjectItem {
   owner_id?: number;
   owner_name?: string;
   tasks_count: { total: number; done: number };
+  prefix?: string;
+  rollup_start_date?: string;
+  rollup_end_date?: string;
+  cost_variance?: number;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +105,9 @@ export interface TaskDependencyInfo {
   depends_on_due_date?: string;
   depends_on_is_completed?: boolean;
   direction?: 'BLOCKING' | 'BLOCKED_BY';
+  predecessor_task_id: number;
+  dep_type: 'FS' | 'SS' | 'FF' | 'SF';
+  lag_days: number;
 }
 
 export interface TaskRelationshipInfo {
@@ -173,6 +180,17 @@ export interface TaskItem {
   nested_subtasks?: TaskItem[];
   subtask_count?: number;
   completed_subtask_count?: number;
+  milestone_id?: number;
+  duration_working_days?: number;
+  estimated_cost: number;
+  actual_cost: number;
+  cost_variance: number;
+  completion_date?: string;
+  is_parent: boolean;
+  start_date_locked: boolean;
+  end_date_locked: boolean;
+  controlled_by_task_number?: string;
+  duration_display?: string;
   created_at: string;
   updated_at: string;
 }
@@ -203,6 +221,9 @@ export interface StatusDefinitionItem {
   color: string;
   display_order: number;
   is_terminal: boolean;
+  is_completed_type: boolean;
+  exclude_from_active_totals: boolean;
+  is_default_on_create: boolean;
 }
 
 export interface CustomFieldDefinitionItem {
@@ -220,8 +241,12 @@ export interface ProjectMilestoneItem {
   project_id: number;
   title: string;
   description?: string;
-  due_date?: string;
-  is_completed: boolean;
+  rollup_start_date?: string;
+  rollup_end_date?: string;
+  rollup_estimated_cost: number;
+  rollup_actual_cost: number;
+  rollup_duration_days?: number;
+  cost_variance: number;
   created_at: string;
 }
 
@@ -241,10 +266,25 @@ export interface TaskCustomFieldValueItem {
   value?: string;
 }
 
+export interface WorkingCalendarHoliday {
+  id: number;
+  holiday_date: string;
+  description: string;
+  recurs_yearly: boolean;
+  created_at: string;
+}
+export interface WeeklyOffConfig {
+  day_of_week_list: number[]; // 0=Mon, 6=Sun
+}
+export interface CalendarConfig {
+  holidays: WorkingCalendarHoliday[];
+  weekly_off_days: number[];
+}
+
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields', 'Calendar'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -643,6 +683,35 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Tasks', 'Projects'],
     }),
+
+    // Calendar
+    getCalendarConfig: builder.query<CalendarConfig, void>({
+      query: () => '/calendar/config',
+      providesTags: ['Calendar'],
+    }),
+    addHoliday: builder.mutation<WorkingCalendarHoliday, Omit<WorkingCalendarHoliday, 'id'|'created_at'>>({
+      query: (body) => ({
+        url: '/calendar/holidays',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Calendar'],
+    }),
+    deleteHoliday: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/calendar/holidays/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Calendar'],
+    }),
+    setWeeklyOff: builder.mutation<WeeklyOffConfig, WeeklyOffConfig>({
+      query: (body) => ({
+        url: '/calendar/weekly-off',
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Calendar'],
+    }),
   }),
 });
 
@@ -699,4 +768,8 @@ export const {
   useGetTaskTemplatesQuery,
   useCreateTaskTemplateMutation,
   useApplyTaskTemplateMutation,
+  useGetCalendarConfigQuery,
+  useAddHolidayMutation,
+  useDeleteHolidayMutation,
+  useSetWeeklyOffMutation,
 } = projectsApi;

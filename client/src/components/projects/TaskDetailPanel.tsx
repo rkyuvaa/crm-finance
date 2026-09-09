@@ -109,6 +109,8 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [isAddDepDialogOpen, setIsAddDepDialogOpen] = useState(false);
   const [depDirection, setDepDirection] = useState<'BLOCKING' | 'BLOCKED_BY'>('BLOCKED_BY');
   const [depSearchQuery, setDepSearchQuery] = useState('');
+  const [depRelType, setDepRelType] = useState<'FS' | 'SS' | 'FF' | 'SF'>('FS');
+  const [depLagDays, setDepLagDays] = useState<number>(0);
   const [blockedWarning, setBlockedWarning] = useState<{
     open: boolean;
     targetStatusId?: number;
@@ -876,6 +878,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         >
                           {dep.depends_on_task_title}
                         </Typography>
+                        <Chip label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {dep.depends_on_status_name && (
@@ -937,6 +940,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         >
                           {dep.depends_on_task_title}
                         </Typography>
+                        <Chip label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {dep.depends_on_status_name && (
@@ -1098,7 +1102,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Start Date
+                  Start Date {currentTask.start_date_locked && <Lock size={12} color="#D97706" title="Locked by dependencies" style={{ marginLeft: 4 }} />}
                 </Typography>
                 <TextField
                   type="date"
@@ -1106,13 +1110,14 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   fullWidth
                   value={currentTask.start_date || ''}
                   onChange={(e) => handleStartDateChange(e.target.value)}
+                  disabled={currentTask.start_date_locked}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Due Date
+                  Due Date {currentTask.end_date_locked && <Lock size={12} color="#D97706" title="Locked by dependencies" style={{ marginLeft: 4 }} />}
                 </Typography>
                 <TextField
                   type="date"
@@ -1120,9 +1125,54 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   fullWidth
                   value={currentTask.due_date || ''}
                   onChange={(e) => handleDueDateChange(e.target.value)}
+                  disabled={currentTask.end_date_locked}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
+              </Grid>
+            </Grid>
+
+            {/* Completion Date (if set) */}
+            {currentTask.completion_date && (
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Completion Date
+                </Typography>
+                <Typography variant="body2">{currentTask.completion_date}</Typography>
+              </Box>
+            )}
+
+            {/* Duration Display */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Duration
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                {currentTask.duration_display || (currentTask.is_parent ? `${currentTask.duration_working_days || 0} CD` : `${currentTask.duration_working_days || 0} WD`)}
+              </Typography>
+            </Box>
+
+            {/* Financials */}
+            <Grid container spacing={1}>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Est. Cost
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>₹{(currentTask.estimated_cost || 0).toLocaleString('en-IN')}</Typography>
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Actual Cost
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>₹{(currentTask.actual_cost || 0).toLocaleString('en-IN')}</Typography>
+              </Grid>
+              <Grid item xs={4}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Variance
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, color: (currentTask.cost_variance || 0) > 0 ? '#DC2626' : '#16A34A' }}>
+                  ₹{(currentTask.cost_variance || 0).toLocaleString('en-IN')}
+                </Typography>
               </Grid>
             </Grid>
 
@@ -1322,6 +1372,38 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             </Select>
           </Box>
 
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={6}>
+              <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                DEPENDENCY TYPE
+              </Typography>
+              <Select
+                fullWidth
+                size="small"
+                value={depRelType}
+                onChange={(e) => setDepRelType(e.target.value as any)}
+              >
+                <MenuItem value="FS">Finish to Start (FS)</MenuItem>
+                <MenuItem value="SS">Start to Start (SS)</MenuItem>
+                <MenuItem value="FF">Finish to Finish (FF)</MenuItem>
+                <MenuItem value="SF">Start to Finish (SF)</MenuItem>
+              </Select>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                LAG DAYS
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                value={depLagDays}
+                onChange={(e) => setDepLagDays(Number(e.target.value))}
+                placeholder="0"
+              />
+            </Grid>
+          </Grid>
+
           <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
             SEARCH TARGET TASK
           </Typography>
@@ -1352,6 +1434,8 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       taskId: currentTask.id,
                       depends_on_task_id: t.id,
                       direction: depDirection,
+                      dep_type: depRelType,
+                      lag_days: depLagDays,
                     }).unwrap();
                     showToast('Dependency created successfully', 'success');
                     setIsAddDepDialogOpen(false);

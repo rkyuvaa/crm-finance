@@ -66,6 +66,7 @@ export default function ProjectsPage() {
   const [budget, setBudget] = useState<number | ''>('');
   const [targetStartDate, setTargetStartDate] = useState('');
   const [targetEndDate, setTargetEndDate] = useState('');
+  const [prefix, setPrefix] = useState('');
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -81,12 +82,14 @@ export default function ProjectsPage() {
         target_start_date: targetStartDate || undefined,
         target_end_date: targetEndDate || undefined,
         status: 'PLANNING',
+        prefix: prefix.toUpperCase().slice(0, 3),
       }).unwrap();
       showToast('Project created successfully', 'success');
       setCreateOpen(false);
       setName('');
       setLeadId('');
       setBudget('');
+      setPrefix('');
     } catch {
       showToast('Failed to create project', 'error');
     }
@@ -299,6 +302,13 @@ export default function ProjectsPage() {
                           size="small"
                           sx={{ backgroundColor: 'action.hover', color: 'text.primary', fontWeight: 600, fontSize: '0.75rem' }}
                         />
+                        {project.prefix && (
+                          <Chip
+                            label={project.prefix}
+                            size="small"
+                            sx={{ backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700, fontSize: '0.75rem', fontFamily: 'monospace' }}
+                          />
+                        )}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           {(() => {
                             const stInfo = getStatusInfo(project);
@@ -394,6 +404,16 @@ export default function ProjectsPage() {
               <MenuItem value="Finance & Audit">Finance & Audit</MenuItem>
               <MenuItem value="Construction & Operations">Construction & Operations</MenuItem>
             </TextField>
+
+            <TextField
+              label="Task ID Prefix (3 chars)"
+              fullWidth
+              size="small"
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value.toUpperCase().slice(0, 3))}
+              placeholder="e.g. ARR"
+              helperText="e.g. ARR → tasks will be ARR-T1, ARR-T2…"
+            />
 
             <TextField
               label="Budget (INR)"

@@ -15,7 +15,7 @@ import {
   TextField,
   CircularProgress,
 } from '@mui/material';
-import { Plus, Flag, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Flag, Calendar, Trash2, Info } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 import {
   useGetProjectMilestonesQuery,
@@ -43,23 +43,12 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const completedCount = milestones.filter((m) => m.is_completed).length;
-  const progressPct = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0;
+  const progressPct = 0; // Not tracking milestone is_completed locally anymore but can still compute if needed? Actually wait, the UI depends on it. 
+  // Wait, I will just leave progress as 0 or remove complete toggle if there is no is_completed in ProjectMilestoneItem. The requirement says ProjectMilestoneItem has no is_completed. Let me remove it.
 
-  const handleToggleMilestone = async (id: number, currentStatus: boolean) => {
-    try {
-      await updateMilestone({
-        id,
-        body: { is_completed: !currentStatus },
-      }).unwrap();
-      showToast(!currentStatus ? 'Milestone marked as complete' : 'Milestone marked as pending', 'success');
-    } catch {
-      showToast('Failed to update milestone status', 'error');
-    }
-  };
+  // Milestone completion logic removed as milestones are just rollups now
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -73,15 +62,12 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
         body: {
           title: title.trim(),
           description: description.trim() || undefined,
-          due_date: dueDate || undefined,
-          is_completed: false,
         },
       }).unwrap();
       showToast('Milestone created successfully', 'success');
       setCreateOpen(false);
       setTitle('');
       setDescription('');
-      setDueDate('');
     } catch {
       showToast('Failed to create milestone', 'error');
     } finally {
@@ -122,19 +108,6 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
           </Button>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <LinearProgress
-            variant="determinate"
-            value={progressPct}
-            sx={{ flex: 1, height: 8, borderRadius: 4, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
-          />
-          <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 45, color: 'text.primary' }}>
-            {progressPct}%
-          </Typography>
-        </Box>
-        <Typography variant="caption" color="textSecondary">
-          {completedCount} of {milestones.length} Milestones Reached
-        </Typography>
       </Paper>
 
       {/* Milestones List / Empty State / Loading */}
@@ -183,26 +156,14 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                 borderColor: 'divider',
                 borderRadius: '10px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                flexDirection: 'column',
+                gap: 1.5,
                 bgcolor: 'background.paper',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Checkbox
-                  checked={m.is_completed}
-                  onChange={() => handleToggleMilestone(m.id, m.is_completed)}
-                  color="success"
-                />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      fontWeight: 700,
-                      color: m.is_completed ? 'text.secondary' : 'text.primary',
-                      textDecoration: m.is_completed ? 'line-through' : 'none',
-                    }}
-                  >
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     {m.title}
                   </Typography>
                   {m.description && (
@@ -211,21 +172,47 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     </Typography>
                   )}
                 </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {m.due_date && (
-                  <Chip
-                    icon={<Calendar size={14} />}
-                    label={m.due_date}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem', fontWeight: 600 }}
-                  />
-                )}
                 <IconButton size="small" onClick={() => handleDeleteMilestone(m.id)} sx={{ color: '#EF4444' }}>
                   <Trash2 size={16} />
                 </IconButton>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', bgcolor: '#F8FAFC', p: 1.5, borderRadius: '8px', border: '1px solid', borderColor: 'divider' }}>
+                <Tooltip title="Rolled up from tasks">
+                  <Info size={16} color="#64748B" />
+                </Tooltip>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>Start Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{m.rollup_start_date || '—'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>End Date</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{m.rollup_end_date || '—'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>Duration (CD)</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{m.rollup_duration_days != null ? `${m.rollup_duration_days} CD` : '—'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>Est. Cost</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{m.rollup_estimated_cost != null ? `₹${m.rollup_estimated_cost.toLocaleString('en-IN')}` : '—'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>Actual Cost</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{m.rollup_actual_cost != null ? `₹${m.rollup_actual_cost.toLocaleString('en-IN')}` : '—'}</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>Variance</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: (m.cost_variance || 0) > 0 ? '#DC2626' : '#16A34A' }}>
+                    {m.cost_variance != null ? `₹${m.cost_variance.toLocaleString('en-IN')}` : '—'}
+                  </Typography>
+                </Box>
               </Box>
             </Paper>
           ))}
@@ -252,15 +239,6 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
               size="small"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-            />
-            <TextField
-              label="Target Due Date"
-              type="date"
-              fullWidth
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
             />
           </Box>
         </DialogContent>

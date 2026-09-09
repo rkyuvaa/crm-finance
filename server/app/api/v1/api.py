@@ -16,6 +16,7 @@ from app.api.v1 import (
     smtp,
     stubs,
     tasks,
+    calendar,
 )
 
 api_router = APIRouter()
@@ -31,6 +32,7 @@ api_router.include_router(masters.router)
 api_router.include_router(hr.router)
 api_router.include_router(projects.router)
 api_router.include_router(tasks.router)
+api_router.include_router(calendar.router)
 api_router.include_router(rbac_admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(backup_admin.router, prefix="/admin/backup", tags=["backup"])
 api_router.include_router(stubs.router)

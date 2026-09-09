@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -42,6 +43,8 @@ import {
   CheckSquare,
   Clock,
   Trash2,
+  Lock,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -50,6 +53,7 @@ import {
   useAddSubtaskMutation,
   useDeleteTaskMutation,
   useGetStatusDefinitionsQuery,
+  useGetProjectMilestonesQuery,
   TaskItem,
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
@@ -69,6 +73,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [searchQ, setSearchQ] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
+  const [groupBy, setGroupBy] = useState<'status' | 'milestone'>('status');
+
+  const { data: milestones = [] } = useGetProjectMilestonesQuery(numericProjectId);
+
+  const isRecalculating = useSelector((state: any) => {
+    if (!state.projectsApi || !state.projectsApi.mutations) return false;
+    return Object.values(state.projectsApi.mutations).some((m: any) => 
+      (m.endpointName === 'updateTask' || m.endpointName === 'createTask' || m.endpointName === 'deleteTask') && m.status === 'pending'
+    );
+  });
 
   // Subtask Collapsible & Creation State
   const [expandedTaskIds, setExpandedTaskIds] = useState<Record<number, boolean>>({});
@@ -480,6 +494,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.due_date ? 'text.primary' : 'text.secondary' }}>
               <Calendar size={14} />
               <Typography variant="body2">{task.due_date || 'None'}</Typography>
+              {task.end_date_locked && <Lock size={12} color="#D97706" />}
             </Box>
           </TableCell>
           <TableCell>
@@ -492,7 +507,22 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           </TableCell>
           <TableCell>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-              {task.actual_hours}h / {task.estimated_hours}h
+              {task.is_parent ? `${task.duration_working_days || 0} CD` : `${task.duration_working_days || 0} WD`}
+            </Typography>
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+              ₹{(task.estimated_cost || 0).toLocaleString('en-IN')}
+            </Typography>
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+              ₹{(task.actual_cost || 0).toLocaleString('en-IN')}
+            </Typography>
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace', color: (task.cost_variance || 0) > 0 ? '#DC2626' : '#16A34A' }}>
+              ₹{(task.cost_variance || 0).toLocaleString('en-IN')}
             </Typography>
           </TableCell>
         </TableRow>
@@ -554,11 +584,29 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          <Chip label="Group: Status" size="small" variant="outlined" sx={{ height: 26, fontSize: 11, fontWeight: 600 }} />
+          <FormControl size="small">
+            <Select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as 'status' | 'milestone')}
+              sx={{ height: 32, fontSize: 12, bgcolor: 'background.paper' }}
+            >
+              <MenuItem value="status">Group: Status</MenuItem>
+              <MenuItem value="milestone">Group: Milestone</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Right Search & Add Task Action */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {isRecalculating && (
+            <Chip
+              icon={<RefreshCw size={12} className="animate-spin" />}
+              label="Recalculating..."
+              size="small"
+              sx={{ bgcolor: '#FEF3C7', color: '#D97706', fontWeight: 600, fontSize: 11, border: '1px solid #FDE68A' }}
+            />
+          )}
+
           <FormControl size="small" sx={{ minWidth: 130 }}>
             <Select
               value={priorityFilter}
@@ -901,7 +949,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Assignee</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Due Date</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Priority</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={140}>Tracked Time</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={100}>Duration</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Est. Cost</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Actual Cost</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Variance</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -922,14 +973,14 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ) : (
+              ) : groupBy === 'status' ? (
                 activeStatuses.map((status) => {
                   const statusTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.status_id || 1) === status.id);
                   if (statusTasks.length === 0) return null;
-                  const isExpanded = expandedGroups[status.id];
+                  const isExpanded = expandedGroups[status.id] !== false; // default true
 
                   return (
-                    <React.Fragment key={status.id}>
+                    <React.Fragment key={`status-${status.id}`}>
                       {/* Group Header */}
                       <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(status.id)}>
                         <TableCell>
@@ -937,7 +988,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={8}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip label={status.name} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
                             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
@@ -947,6 +998,39 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
                       {/* Tasks */}
                       {isExpanded && statusTasks.map((task) => renderListTableRow(task, 0))}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                [
+                  ...milestones.map((m) => ({ id: m.id, name: m.title })),
+                  { id: null, name: 'Unassigned Milestone' }
+                ].map((milestone) => {
+                  const mTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.milestone_id || null) === milestone.id);
+                  if (mTasks.length === 0) return null;
+                  const groupId = milestone.id || -1;
+                  const isExpanded = expandedGroups[groupId] !== false; // default true
+
+                  return (
+                    <React.Fragment key={`milestone-${groupId}`}>
+                      <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
+                        <TableCell>
+                          <IconButton size="small">
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </IconButton>
+                        </TableCell>
+                        <TableCell colSpan={8}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                              {milestone.name}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                              {mTasks.length} Tasks
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && mTasks.map((task) => renderListTableRow(task, 0))}
                     </React.Fragment>
                   );
                 })

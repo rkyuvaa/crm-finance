@@ -63,6 +63,10 @@ class TaskStatusDef(Base):
     display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_terminal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # KIM PM v1.1 — status behaviour flags
+    is_completed_type: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # auto-stamps completion_date
+    exclude_from_active_totals: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_default_on_create: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # exactly one may be True
 
 
 class TaskPriority(enum.StrEnum):
@@ -76,6 +80,14 @@ class DependencyType(enum.StrEnum):
     BLOCKS = "BLOCKS"
     BLOCKED_BY = "BLOCKED_BY"
     WAITING_ON = "WAITING_ON"
+
+
+class PMDepType(enum.StrEnum):
+    """Scheduling dependency types for date-driven calculation (FS/SS/FF/SF + lag)"""
+    FS = "FS"  # Finish-to-Start: successor.start = predecessor.end + lag
+    SS = "SS"  # Start-to-Start:  successor.start = predecessor.start + lag
+    FF = "FF"  # Finish-to-Finish: successor.end = predecessor.end + lag
+    SF = "SF"  # Start-to-Finish: successor.end = predecessor.start + lag
 
 
 class RelationshipType(enum.StrEnum):
@@ -146,6 +158,11 @@ class Project(Base):
     target_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     target_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # KIM PM v1.1 — project ID prefix (3-char, immutable after first task created)
+    prefix: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # KIM PM v1.1 — server-computed rollup dates from milestones
+    rollup_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    rollup_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp()
@@ -169,11 +186,20 @@ class ProjectMilestone(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Kept for backward compat but no longer user-editable — superseded by rollup fields
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # KIM PM v1.1 — server-computed rollup fields (populated by rollup_service)
+    rollup_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    rollup_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    rollup_estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    rollup_actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    rollup_duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # calendar days
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
     project: Mapped["Project"] = relationship("Project", back_populates="milestones")
+    tasks: Mapped[List["Task"]] = relationship("Task", back_populates="milestone", foreign_keys="Task.milestone_id")
 
 
 class Task(Base):
@@ -185,6 +211,8 @@ class Task(Base):
     project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True)
     phase_id: Mapped[int | None] = mapped_column(ForeignKey("project_phases.id", ondelete="SET NULL"), nullable=True, index=True)
     parent_task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True, index=True)
+    # KIM PM v1.1 — milestone FK (groups task under Project → Milestone → Task hierarchy)
+    milestone_id: Mapped[int | None] = mapped_column(ForeignKey("project_milestones.id", ondelete="SET NULL"), nullable=True, index=True)
     
     title: Mapped[str] = mapped_column(String(250), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -211,6 +239,11 @@ class Task(Base):
     actual_hours: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     progress_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
+    # KIM PM v1.1 — scheduling & cost fields
+    duration_working_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # leaf: user-entered working days
+    estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # monetary
+    actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)     # monetary
+    completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)          # auto-stamped on completed-type status
 
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
@@ -247,6 +280,7 @@ class Task(Base):
 
     parent_task: Mapped["Task | None"] = relationship("Task", remote_side=[id], back_populates="subtask_items", lazy="joined")
     subtask_items: Mapped[List["Task"]] = relationship("Task", back_populates="parent_task", cascade="all, delete-orphan")
+    milestone: Mapped["ProjectMilestone | None"] = relationship("ProjectMilestone", back_populates="tasks", foreign_keys=[milestone_id])
 
     assignees: Mapped[List["TaskAssignee"]] = relationship("TaskAssignee", back_populates="task", cascade="all, delete-orphan")
     followers: Mapped[List["TaskFollower"]] = relationship("TaskFollower", back_populates="task", cascade="all, delete-orphan")
@@ -441,6 +475,11 @@ class TaskDependency(Base):
     dependency_type: Mapped[DependencyType] = mapped_column(
         Enum(DependencyType, name="task_dependency_type"), default=DependencyType.BLOCKS, nullable=False
     )
+    # KIM PM v1.1 — scheduling dependency fields (FS/SS/FF/SF + lag)
+    pm_dep_type: Mapped[PMDepType | None] = mapped_column(
+        Enum(PMDepType, name="pm_dep_type"), nullable=True
+    )
+    lag_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # working days; can be negative
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
     task: Mapped["Task"] = relationship("Task", foreign_keys=[task_id])
@@ -557,3 +596,15 @@ class TaskCustomFieldValue(Base):
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True, nullable=False)
     field_id: Mapped[int] = mapped_column(ForeignKey("task_custom_field_definitions.id", ondelete="CASCADE"), index=True, nullable=False)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+class WorkingCalendarHoliday(Base):
+    __tablename__ = "working_calendar_holidays"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
+    description: Mapped[str] = mapped_column(String(200), nullable=False)
+    recurs_yearly: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+class WeeklyOffDay(Base):
+    __tablename__ = "weekly_off_days"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day_of_week: Mapped[int] = mapped_column(Integer, nullable=False, unique=True) # 0=Sunday, 1=Monday...
