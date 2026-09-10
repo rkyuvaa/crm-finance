@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Avatar,
@@ -15,6 +15,8 @@ import {
   Paper,
   Select,
   TablePagination,
+  TextField,
+  InputAdornment,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -34,6 +36,8 @@ import {
   CheckSquare,
   XCircle,
   Upload,
+  Search,
+  X,
 } from 'lucide-react';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
 
@@ -67,6 +71,11 @@ export default function LeadsPage() {
   const currentModule = isOpportunityRoute ? 'OPPORTUNITY' : 'LEAD';
   const [searchParams] = useSearchParams();
   const searchQ = searchParams.get('q') ?? '';
+  const [searchInput, setSearchInput] = useState(searchQ);
+
+  useEffect(() => {
+    setSearchInput(searchQ);
+  }, [searchQ]);
 
   const [selectedStageKey, setSelectedStageKey] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(0);
@@ -348,7 +357,56 @@ export default function LeadsPage() {
 
       {/* 2. Action row below stage pills */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260, maxWidth: 440 }}>
+          <TextField
+            size="small"
+            fullWidth
+            placeholder={isOpportunityRoute ? "Search Opportunities (App ID, Customer, Phone, Vehicle)..." : "Search Leads (App ID, Customer, Phone, Vehicle)..."}
+            value={searchInput}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchInput(val);
+              const params = new URLSearchParams(searchParams);
+              if (val.trim()) {
+                params.set('q', val);
+              } else {
+                params.delete('q');
+              }
+              navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} color="#64748B" />
+                </InputAdornment>
+              ),
+              endAdornment: searchInput ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSearchInput('');
+                      const params = new URLSearchParams(searchParams);
+                      params.delete('q');
+                      navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+                    }}
+                  >
+                    <X size={14} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+            sx={{
+              bgcolor: '#ffffff',
+              borderRadius: '8px',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                fontSize: '13px',
+                height: 38,
+              },
+            }}
+          />
+
           {selectedIds.size > 0 && !isOpportunityRoute && (
             <Chip
               icon={<CheckSquare size={16} />}
@@ -365,20 +423,6 @@ export default function LeadsPage() {
               size="small"
               onDelete={() => setSelectedStageKey(undefined)}
               color="primary"
-              variant="outlined"
-              sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
-            />
-          )}
-          {searchQ && (
-            <Chip
-              label={`Search: "${searchQ}"`}
-              size="small"
-              onDelete={() => {
-                const params = new URLSearchParams(searchParams);
-                params.delete('q');
-                navigate(`/leads?${params.toString()}`);
-              }}
-              color="secondary"
               variant="outlined"
               sx={{ fontSize: 11, fontWeight: 600, borderRadius: '6px' }}
             />
