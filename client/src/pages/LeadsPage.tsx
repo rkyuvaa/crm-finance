@@ -127,23 +127,20 @@ export default function LeadsPage() {
     }
 
     const keyAliases: Record<string, string[]> = {
-      new: ['new', 'leads', 'lead', 'all_leads', 'lead_details'],
-      applications: ['applications', 'application', 'new_opportunity', 'new-opportunity', 'all_opportunities', 'document_upload', 'doc_upload'],
-      verification: ['verification', 'document_verification', 'doc_verification'],
-      finance: ['finance', 'finance_approval', 'query', 'final_submission'],
-      query: ['query', 'finance_approval'],
-      sanctioned: ['sanctioned', 'loan_sanctioned'],
-      delivery: ['delivery', 'disbursement', 'disburse'],
-      disburse: ['disburse', 'disbursement'],
-      completed: ['completed', 'closed'],
+      new: ['new', 'lead', 'leads', 'all_leads', 'new_lead'],
+      contacted: ['contacted', 'contact'],
+      interested: ['interested'],
+      not_interested: ['not_interested', 'not-interested', 'disqualified'],
+      qualified: ['qualified'],
 
-      new_opportunity: ['applications', 'application', 'new_opportunity', 'all_opportunities', 'document_upload'],
-      document_upload: ['applications', 'application', 'document_upload', 'verification'],
-      document_verification: ['verification', 'document_verification'],
-      final_submission: ['finance', 'final_submission', 'applications'],
-      finance_approval: ['finance', 'finance_approval', 'query'],
-      loan_sanctioned: ['sanctioned', 'loan_sanctioned'],
+      new_opportunity: ['new_opportunity', 'new-opportunity', 'application', 'applications', 'all_opportunities'],
+      document_upload: ['document_upload', 'doc_upload', 'upload_documents'],
+      document_verification: ['document_verification', 'doc_verification', 'verification'],
+      final_submission: ['final_submission', 'submission'],
+      finance_approval: ['finance_approval', 'finance', 'query'],
+      loan_sanctioned: ['loan_sanctioned', 'sanctioned', 'sanction'],
       disbursement: ['disbursement', 'disburse', 'delivery'],
+      completed: ['completed', 'closed'],
     };
 
     const aliasesForStage = keyAliases[stageKeyLower] || [];
@@ -187,8 +184,15 @@ export default function LeadsPage() {
       const statusLower = (s.status ? String(s.status) : '').toLowerCase().trim();
 
       let count = 0;
-      if (data?.stage_counts) {
-        count = data.stage_counts[keyLower] ?? data.stage_counts[statusLower] ?? 0;
+      if (data?.stage_counts && data.stage_counts[keyLower] !== undefined) {
+        count = data.stage_counts[keyLower];
+      } else if (
+        data?.stage_counts &&
+        statusLower &&
+        !['application', 'lead'].includes(statusLower) &&
+        data.stage_counts[statusLower] !== undefined
+      ) {
+        count = data.stage_counts[statusLower];
       } else {
         count = (data?.items ?? []).filter((app) => isAppInStage(app, s as any, idx, isOpportunityRoute)).length;
       }
@@ -702,23 +706,9 @@ export default function LeadsPage() {
             >
               {kanbanColumns.map((col) => {
                 const colApps = rows.filter((app) => {
-                  if (app.stage_key) {
-                    return app.stage_key.toLowerCase() === col.key.toLowerCase();
-                  }
-                  if (!isOpportunityRoute) {
-                    return col.key.toLowerCase() === 'new' || col.key.toLowerCase() === 'leads';
-                  }
-                  if (col.status && col.status !== 'APPLICATION' && app.status === col.status) {
-                    return true;
-                  }
-                  if (
-                    isOpportunityRoute &&
-                    app.status === 'APPLICATION' &&
-                    ['applications', 'leads', 'new_opportunity', 'new-opportunity'].includes(col.key.toLowerCase())
-                  ) {
-                    return true;
-                  }
-                  return false;
+                  const colIdx = pipelineStages.findIndex((s) => s.key === col.key);
+                  const stageObj = pipelineStages.find((s) => s.key === col.key);
+                  return isAppInStage(app, (stageObj || col) as any, colIdx >= 0 ? colIdx : 0, isOpportunityRoute);
                 });
 
                 return (
