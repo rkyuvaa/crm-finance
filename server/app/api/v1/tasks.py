@@ -1880,6 +1880,12 @@ def reschedule_dependencies(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     holiday_dates, weekly_off_days = _get_working_calendar(db)
+    if data and data.days_shift:
+        if task.start_date:
+            task.start_date = _add_working_days(task.start_date, data.days_shift, holiday_dates, weekly_off_days)
+        if task.due_date:
+            task.due_date = _add_working_days(task.due_date, data.days_shift, holiday_dates, weekly_off_days)
+        db.add(task)
     visited: set = set()
 
     def _shift_downstream(tid: int):
