@@ -164,7 +164,7 @@ export default function ProjectsPage() {
   });
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>
       {/* Header Action Button */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2.5 }}>
 

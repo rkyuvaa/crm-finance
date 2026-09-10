@@ -462,7 +462,7 @@ export default function ProjectConfigurationPage() {
   };
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>
 
 
       {/* ── Main ERP Workspace Container ─────────────────────────────────── */}

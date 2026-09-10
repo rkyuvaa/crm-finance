@@ -155,7 +155,7 @@ export default function TasksPage() {
     : tasks;
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>
       {/* Top Header Action Button */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
         <Button

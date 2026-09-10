@@ -136,7 +136,7 @@ export default function ProjectWorkspace() {
   const progressPercent = project.progress > 0 ? project.progress : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
 
   return (
-    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+    <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 2.5, height: '100%' }}>
       {/* Sticky Header */}
       <Box
         sx={{
