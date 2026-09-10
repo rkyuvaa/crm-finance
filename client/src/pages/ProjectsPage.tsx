@@ -68,9 +68,27 @@ export default function ProjectsPage() {
   const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
   const [deleteProject] = useDeleteProjectMutation();
 
+  const DEFAULT_PROJECT_CATEGORIES = [
+    'Vehicle Customization',
+    'Delivery & Payout',
+    'Document Operations',
+    'General ERP Task',
+    'IT & Software',
+    'Finance & Audit',
+    'Construction & Operations',
+  ];
+
+  const getStoredCategories = (): string[] => {
+    try {
+      const saved = localStorage.getItem('crm_project_categories');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_PROJECT_CATEGORIES;
+  };
+
   // Form State
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Vehicle Customization');
+  const [category, setCategory] = useState(() => getStoredCategories()[0] || 'Vehicle Customization');
   const [leadId, setLeadId] = useState<number | ''>('');
   const [managerId, setManagerId] = useState<number | ''>('');
   const [memberIds, setMemberIds] = useState<number[]>([]);
@@ -409,13 +427,11 @@ export default function ProjectsPage() {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <MenuItem value="Vehicle Customization">Vehicle Customization</MenuItem>
-              <MenuItem value="Delivery & Payout">Delivery & Payout</MenuItem>
-              <MenuItem value="Document Operations">Document Operations</MenuItem>
-              <MenuItem value="General ERP Task">General ERP Task</MenuItem>
-              <MenuItem value="IT & Software">IT & Software</MenuItem>
-              <MenuItem value="Finance & Audit">Finance & Audit</MenuItem>
-              <MenuItem value="Construction & Operations">Construction & Operations</MenuItem>
+              {getStoredCategories().map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {cat}
+                </MenuItem>
+              ))}
             </TextField>
 
             <TextField

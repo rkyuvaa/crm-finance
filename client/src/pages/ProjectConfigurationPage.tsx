@@ -414,11 +414,31 @@ export default function ProjectConfigurationPage() {
     toast.showSuccess('Task configuration settings saved successfully!');
   };
 
+  const DEFAULT_PROJECT_CATEGORIES = [
+    'Vehicle Customization',
+    'Delivery & Payout',
+    'Document Operations',
+    'General ERP Task',
+    'IT & Software',
+    'Finance & Audit',
+    'Construction & Operations',
+  ];
+
+  const [projectCategories, setProjectCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('crm_project_categories');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_PROJECT_CATEGORIES;
+  });
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+
   const handleSaveProjectSettings = () => {
     try {
       localStorage.setItem('crm_project_configuration_settings', JSON.stringify(projectSettings));
+      localStorage.setItem('crm_project_categories', JSON.stringify(projectCategories));
     } catch {}
-    toast.showSuccess('Project configuration parameters saved successfully!');
+    toast.showSuccess('Project configuration parameters & categories saved successfully!');
   };
 
   const handleSavePmSettings = async () => {
@@ -929,25 +949,75 @@ export default function ProjectConfigurationPage() {
 
                 <Grid item xs={12}>
                   <Box sx={{ mt: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
                       Configured Project Categories
                     </Typography>
                     <Typography variant="caption" color="textSecondary" sx={{ mb: 2, display: 'block' }}>
                       These categories appear when creating and organizing project workspaces across the ERP.
                     </Typography>
+
+                    <Box sx={{ display: 'flex', gap: 1.5, mb: 2, alignItems: 'center' }}>
+                      <TextField
+                        size="small"
+                        placeholder="Enter new category name..."
+                        value={newCategoryInput}
+                        onChange={(e) => setNewCategoryInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (!newCategoryInput.trim()) return;
+                            if (projectCategories.includes(newCategoryInput.trim())) {
+                              toast.showError('Category already exists');
+                              return;
+                            }
+                            const updated = [...projectCategories, newCategoryInput.trim()];
+                            setProjectCategories(updated);
+                            setNewCategoryInput('');
+                            try {
+                              localStorage.setItem('crm_project_categories', JSON.stringify(updated));
+                            } catch {}
+                            toast.showSuccess(`Added category "${newCategoryInput.trim()}"`);
+                          }
+                        }}
+                        sx={{ width: 280, '& .MuiOutlinedInput-root': { height: 36, fontSize: 13 } }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<Plus size={14} />}
+                        onClick={() => {
+                          if (!newCategoryInput.trim()) return;
+                          if (projectCategories.includes(newCategoryInput.trim())) {
+                            toast.showError('Category already exists');
+                            return;
+                          }
+                          const updated = [...projectCategories, newCategoryInput.trim()];
+                          setProjectCategories(updated);
+                          setNewCategoryInput('');
+                          try {
+                            localStorage.setItem('crm_project_categories', JSON.stringify(updated));
+                          } catch {}
+                          toast.showSuccess(`Added category "${newCategoryInput.trim()}"`);
+                        }}
+                        sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, height: 36 }}
+                      >
+                        Add Category
+                      </Button>
+                    </Box>
+
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {[
-                        'Vehicle Customization',
-                        'Delivery & Payout',
-                        'Document Operations',
-                        'General ERP Task',
-                        'IT & Software',
-                        'Finance & Audit',
-                        'Construction & Operations',
-                      ].map((cat) => (
+                      {projectCategories.map((cat) => (
                         <Chip
                           key={cat}
                           label={cat}
+                          onDelete={() => {
+                            const updated = projectCategories.filter((c) => c !== cat);
+                            setProjectCategories(updated);
+                            try {
+                              localStorage.setItem('crm_project_categories', JSON.stringify(updated));
+                            } catch {}
+                            toast.showSuccess(`Removed category "${cat}"`);
+                          }}
                           variant="outlined"
                           size="small"
                           sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: '#04552B', color: '#04552B' }}
@@ -1079,20 +1149,33 @@ export default function ProjectConfigurationPage() {
             <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, mb: 3, bgcolor: 'background.default' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Weekly Off Days</Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
-                  const isOff = calendarConfig?.weekly_off_days?.includes(idx) ?? false;
+                {[
+                  { name: 'Mon', dow: 1 },
+                  { name: 'Tue', dow: 2 },
+                  { name: 'Wed', dow: 3 },
+                  { name: 'Thu', dow: 4 },
+                  { name: 'Fri', dow: 5 },
+                  { name: 'Sat', dow: 6 },
+                  { name: 'Sun', dow: 0 },
+                ].map(({ name, dow }) => {
+                  const isOff = calendarConfig?.weekly_off_days?.includes(dow) ?? false;
                   return (
                     <Chip
-                      key={day}
-                      label={day}
+                      key={name}
+                      label={name}
                       onClick={async () => {
                         const current = calendarConfig?.weekly_off_days || [];
-                        const next = isOff ? current.filter(d => d !== idx) : [...current, idx];
-                        await setWeeklyOff({ day_of_week_list: next });
+                        const next = isOff ? current.filter((d) => d !== dow) : [...current, dow];
+                        try {
+                          await setWeeklyOff({ day_of_week_list: next }).unwrap();
+                          toast.showSuccess(`${name} configured as ${isOff ? 'Working Day' : 'Weekly Off'}`);
+                        } catch {
+                          toast.showError('Failed to update weekly off day');
+                        }
                       }}
                       color={isOff ? 'error' : 'default'}
                       variant={isOff ? 'filled' : 'outlined'}
-                      sx={{ fontWeight: 600, cursor: 'pointer' }}
+                      sx={{ fontWeight: 600, cursor: 'pointer', minWidth: 50, justifyContent: 'center' }}
                     />
                   );
                 })}
