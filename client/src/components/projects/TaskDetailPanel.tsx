@@ -324,6 +324,24 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
+  const handleEstimatedCostChange = async (cost: number) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { estimated_cost: cost } as any }).unwrap();
+      showToast('Estimated cost updated', 'success');
+    } catch {
+      showToast('Failed to update estimated cost', 'error');
+    }
+  };
+
+  const handleActualCostChange = async (cost: number) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { actual_cost: cost } as any }).unwrap();
+      showToast('Actual cost updated', 'success');
+    } catch {
+      showToast('Failed to update actual cost', 'error');
+    }
+  };
+
   const handleCostCenterChange = async (ccId: number | '') => {
     try {
       await updateTask({ id: currentTaskId, body: { cost_center_id: ccId || undefined } as any }).unwrap();
@@ -1156,23 +1174,39 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             <Grid container spacing={1}>
               <Grid item xs={4}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Est. Cost
+                  Est. Cost (₹)
                 </Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>₹{(currentTask.estimated_cost || 0).toLocaleString('en-IN')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={currentTask.estimated_cost ?? ''}
+                  onChange={(e) => handleEstimatedCostChange(Number(e.target.value))}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                />
               </Grid>
               <Grid item xs={4}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Actual Cost
+                  Actual Cost (₹)
                 </Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>₹{(currentTask.actual_cost || 0).toLocaleString('en-IN')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={currentTask.actual_cost ?? ''}
+                  onChange={(e) => handleActualCostChange(Number(e.target.value))}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                />
               </Grid>
               <Grid item xs={4}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Variance
+                  Variance (₹)
                 </Typography>
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, color: (currentTask.cost_variance || 0) > 0 ? '#DC2626' : '#16A34A' }}>
-                  ₹{(currentTask.cost_variance || 0).toLocaleString('en-IN')}
-                </Typography>
+                <Box sx={{ height: 36, display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: ((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)) < 0 ? '#DC2626' : '#16A34A' }}>
+                    ₹{((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)).toLocaleString('en-IN')}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
 
