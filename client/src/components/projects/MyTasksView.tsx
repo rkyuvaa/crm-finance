@@ -74,7 +74,7 @@ export default function MyTasksView({ tasks, onOpenTaskDetail }: MyTasksViewProp
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Chip
-                    label={task.task_number || `T-${task.id}`}
+                    label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}
                     size="small"
                     sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, fontFamily: 'monospace' }}
                   />

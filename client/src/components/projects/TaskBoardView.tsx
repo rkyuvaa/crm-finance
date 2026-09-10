@@ -160,7 +160,7 @@ export default function TaskBoardView({
                       sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
                     />
                     <Chip
-                      label={sub.task_number || `SUB-${sub.id}`}
+                      label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
                       size="small"
                       sx={{
                         height: 16,
@@ -385,7 +385,7 @@ export default function TaskBoardView({
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                     <Chip
-                                      label={task.task_number || `TASK-${task.id}`}
+                                      label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}
                                       size="small"
                                       sx={{
                                         height: 18,

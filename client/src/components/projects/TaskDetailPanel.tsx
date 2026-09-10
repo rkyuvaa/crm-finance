@@ -555,7 +555,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             </Button>
           )}
           <Chip
-            label={currentTask?.task_number || `TASK-${currentTask?.id}`}
+            label={currentTask?.task_number ? currentTask.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${currentTask?.id}`}
             size="small"
             sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 700, fontFamily: 'monospace' }}
           />
@@ -693,7 +693,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         style={{ cursor: 'pointer', width: 17, height: 17, accentColor: '#04552B' }}
                       />
                       <Chip
-                        label={sub.task_number || `SUB-${sub.id}`}
+                        label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
                         size="small"
                         sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }}
                       />
@@ -888,7 +888,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Chip label="BLOCKING" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#FEF3C7', color: '#D97706' }} />
-                        <Chip label={dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                        <Chip label={dep.depends_on_task_number ? dep.depends_on_task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
@@ -950,7 +950,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                             color: dep.depends_on_is_completed ? '#166534' : '#DC2626',
                           }}
                         />
-                        <Chip label={dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                        <Chip label={dep.depends_on_task_number ? dep.depends_on_task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
@@ -1444,7 +1444,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           <TextField
             fullWidth
             size="small"
-            placeholder="Search by Task ID (e.g. TASK-000004) or Task Title..."
+            placeholder="Search by Task ID (e.g. TASK-4) or Task Title..."
             value={depSearchQuery}
             onChange={(e) => setDepSearchQuery(e.target.value)}
             InputProps={{
@@ -1490,7 +1490,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               >
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label={t.task_number || `TASK-${t.id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
+                    <Chip label={t.task_number ? t.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${t.id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {t.title}
                     </Typography>

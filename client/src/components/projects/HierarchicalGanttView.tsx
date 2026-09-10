@@ -902,7 +902,7 @@ export default function HierarchicalGanttView({
                     {node.isMilestone && <Box sx={{ width: 10, height: 10, bgcolor: '#F59E0B', transform: 'rotate(45deg)', mr: 1, flexShrink: 0 }} />}
 
                     <Chip
-                      label={node.task_number || `T-${node.id}`}
+                      label={node.task_number ? node.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${node.id}`}
                       size="small"
                       sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, mr: 0.75, bgcolor: '#F1F5F9', color: '#475569', fontFamily: 'monospace' }}
                     />

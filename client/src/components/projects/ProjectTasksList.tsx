@@ -329,7 +329,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
                     />
                     <Chip
-                      label={sub.task_number || `SUB-${sub.id}`}
+                      label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
                       size="small"
                       sx={{
                         height: 16,

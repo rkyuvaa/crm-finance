@@ -173,7 +173,7 @@ export default function TaskCalendarView({ tasks, onOpenTaskDetail }: TaskCalend
                           textDecoration: t.is_completed ? 'line-through' : 'none',
                         }}
                       >
-                        {t.task_number || `T-${t.id}`}: {t.title}
+                        {(t.task_number ? t.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${t.id}`)}: {t.title}
                       </Typography>
                     </Box>
                   ))}

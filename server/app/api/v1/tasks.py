@@ -172,20 +172,27 @@ def _compute_successor_dates(predecessor_start, predecessor_due, dep_type: str, 
 
 # --- Helper Utilities ---
 
+def _unpad_task_number(val: Optional[str]) -> Optional[str]:
+    if not val:
+        return val
+    import re
+    return re.sub(r'(TASK-|#|SUB-|^)0+([1-9]\d*)', r'\1\2', val)
+
+
 def _generate_task_number(db: Session, project_id: Optional[int] = None) -> str:
-    """Generate server-side unique human-readable task number e.g. TASK-000001 or PRJ-2026-0001"""
+    """Generate server-side unique human-readable task number e.g. TASK-1 or PRJ-TASK-1 without zero padding"""
     if project_id:
         proj = db.get(Project, project_id)
         if proj and proj.code:
             prefix = f"{proj.code.upper()}"
             max_num = db.query(func.count(Task.id)).filter(Task.project_id == project_id).scalar() or 0
-            return f"{prefix}-TASK-{max_num + 1:04d}"
+            return f"{prefix}-TASK-{max_num + 1}"
     
     total = db.query(func.count(Task.id)).scalar() or 0
     num = total + 1
-    while db.query(Task).filter(Task.task_number == f"TASK-{num:06d}").first():
+    while db.query(Task).filter(Task.task_number == f"TASK-{num}").first():
         num += 1
-    return f"TASK-{num:06d}"
+    return f"TASK-{num}"
 
 
 def _get_task_depth(db: Session, parent_task_id: Optional[int]) -> int:
@@ -297,6 +304,8 @@ def _update_parent_progress(db: Session, parent_id: Optional[int]):
 
 def _format_task_out(t: Task, db: Session) -> TaskOut:
     out = TaskOut.model_validate(t)
+    if out.task_number:
+        out.task_number = _unpad_task_number(out.task_number)
     out.project_name = t.project.name if t.project else None
     out.assignee_name = t.assignee.full_name if t.assignee else None
     out.status_name = t.status_def.name if t.status_def else None

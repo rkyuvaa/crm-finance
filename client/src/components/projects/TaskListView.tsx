@@ -134,7 +134,7 @@ export default function TaskListView({
               )}
 
               <Chip
-                label={task.task_number || `TASK-${task.id}`}
+                label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}
                 size="small"
                 sx={{
                   height: 20,
@@ -287,7 +287,7 @@ export default function TaskListView({
                       >
                         <Chip
                           icon={<Link2 size={9} color={colors.color} />}
-                          label={`${dep.predecessor_task_number || dep.depends_on_task_number || `#${dep.depends_on_task_id}`} (${dt})`}
+                          label={`${(dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`).replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                           size="small"
                           sx={{
                             height: 18,
