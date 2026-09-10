@@ -47,7 +47,7 @@ export default function LoginPage() {
 
   const onSubmit = async (values: LoginForm) => {
     try {
-      const result = await login(values).unwrap();
+      const result = await login(values as any).unwrap();
       dispatch(setCredentials({ token: result.access_token, user: result.user }));
       navigate(from, { replace: true });
     } catch {

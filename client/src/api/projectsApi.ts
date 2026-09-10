@@ -48,6 +48,13 @@ export interface TaskAssigneeInfo {
   user_id: number;
   full_name: string;
   email?: string;
+  user?: {
+    id?: number;
+    full_name?: string;
+    email?: string;
+    avatar?: string;
+    name?: string;
+  };
 }
 
 export interface TaskFollowerInfo {
@@ -105,9 +112,34 @@ export interface TaskDependencyInfo {
   depends_on_due_date?: string;
   depends_on_is_completed?: boolean;
   direction?: 'BLOCKING' | 'BLOCKED_BY';
-  predecessor_task_id: number;
+  predecessor_task_id?: number;
+  predecessor_task_number?: string;
+  predecessor_task_title?: string;
   dep_type: 'FS' | 'SS' | 'FF' | 'SF';
   lag_days: number;
+}
+
+export interface CascadePreviewItem {
+  task_id: number;
+  task_number: string;
+  title: string;
+  old_start?: string;
+  old_due?: string;
+  new_start?: string;
+  new_due?: string;
+}
+
+export interface CascadePreviewOut {
+  total_affected: number;
+  items: CascadePreviewItem[];
+}
+
+export interface ProjectPmSettings {
+  id?: number;
+  project_id: number;
+  default_dep_type: 'FS' | 'SS' | 'FF' | 'SF';
+  auto_shift_successors: boolean;
+  prompt_on_reschedule: boolean;
 }
 
 export interface TaskRelationshipInfo {
@@ -158,7 +190,11 @@ export interface TaskItem {
   due_date?: string;
   due_time?: string;
   estimated_minutes: number;
+  estimated_hours?: number;
   actual_minutes: number;
+  actual_hours?: number;
+  assignee_name?: string;
+  override_dependencies?: boolean;
   progress_percentage: number;
   is_completed: boolean;
   is_archived: boolean;
@@ -230,7 +266,7 @@ export interface CustomFieldDefinitionItem {
   id: number;
   name: string;
   label: string;
-  field_type: 'Text' | 'Number' | 'Date' | 'Select' | 'Boolean';
+  field_type: 'Text' | 'Number' | 'Date' | 'Select' | 'Boolean' | string;
   options?: string;
   is_required: boolean;
   display_order: number;
@@ -284,7 +320,7 @@ export interface CalendarConfig {
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields', 'Calendar'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields', 'Calendar', 'PmSettings'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -605,20 +641,35 @@ export const projectsApi = createApi({
     }),
 
     // Dependencies
-    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; depends_on_task_id: number; dependency_type?: string; direction?: string }>({
-      query: ({ taskId, ...body }) => ({
-        url: `/tasks/${taskId}/dependencies`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
-    }),
+    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; predecessor_task_id?: number; dep_type?: string; lag_days?: number; depends_on_task_id?: number; dependency_type?: string; direction?: string }>(
+      {
+        query: ({ taskId, ...body }) => ({
+          url: `/tasks/${taskId}/dependencies`,
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+      }
+    ),
+    updateDependency: builder.mutation<TaskDependencyInfo, { dependencyId: number; dep_type?: string; lag_days?: number }>(
+      {
+        query: ({ dependencyId, ...body }) => ({
+          url: `/tasks/dependencies/${dependencyId}`,
+          method: 'PATCH',
+          body,
+        }),
+        invalidatesTags: ['Tasks'],
+      }
+    ),
     removeDependency: builder.mutation<void, { taskId: number; dependencyId: number }>({
       query: ({ taskId, dependencyId }) => ({
         url: `/tasks/${taskId}/dependencies/${dependencyId}`,
         method: 'DELETE',
       }),
       invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+    }),
+    getCascadePreview: builder.query<CascadePreviewOut, { taskId: number; days_shift: number }>({
+      query: ({ taskId, days_shift }) => `/tasks/${taskId}/cascade-preview?days_shift=${days_shift}`,
     }),
 
     // Subtask & Dependency Advanced Actions
@@ -712,6 +763,20 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Calendar'],
     }),
+
+    // PM Settings
+    getProjectPmSettings: builder.query<ProjectPmSettings, number>({
+      query: (projectId) => `/tasks/pm-settings/${projectId}`,
+      providesTags: (_res, _err, projectId) => [{ type: 'PmSettings', id: projectId }, 'PmSettings'],
+    }),
+    updateProjectPmSettings: builder.mutation<ProjectPmSettings, { projectId: number; body: Partial<ProjectPmSettings> }>({
+      query: ({ projectId, body }) => ({
+        url: `/tasks/pm-settings/${projectId}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { projectId }) => [{ type: 'PmSettings', id: projectId }, 'PmSettings'],
+    }),
   }),
 });
 
@@ -759,7 +824,9 @@ export const {
   useAddFollowerMutation,
   useRemoveFollowerMutation,
   useAddDependencyMutation,
+  useUpdateDependencyMutation,
   useRemoveDependencyMutation,
+  useGetCascadePreviewQuery,
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
   useReorderSubtasksMutation,
@@ -772,4 +839,6 @@ export const {
   useAddHolidayMutation,
   useDeleteHolidayMutation,
   useSetWeeklyOffMutation,
+  useGetProjectPmSettingsQuery,
+  useUpdateProjectPmSettingsMutation,
 } = projectsApi;

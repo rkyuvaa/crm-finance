@@ -337,14 +337,14 @@ export default function HRPage() {
   };
 
   // Filtering users for Employee Management
-  const filteredUsers = usersList.filter((user) => {
-    const nameStr = user?.name || '';
+  const filteredUsers = usersList.filter((user: any) => {
+    const nameStr = user?.full_name || user?.name || '';
     const emailStr = user?.email || '';
     const query = (searchTerm || '').toLowerCase();
     const matchesSearch =
       nameStr.toLowerCase().includes(query) ||
       emailStr.toLowerCase().includes(query);
-    const matchesDept = departmentFilter === 'All' || user?.department?.name === departmentFilter;
+    const matchesDept = departmentFilter === 'All' || user?.department?.name === departmentFilter || user?.departments?.[0]?.name === departmentFilter;
     return matchesSearch && matchesDept;
   });
 
@@ -853,7 +853,7 @@ export default function HRPage() {
 
                   <Divider sx={{ my: 2 }} />
 
-                  <Stack spacing={1.5} textAling="left">
+                  <Stack spacing={1.5} textAlign="left">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="caption" sx={{ color: '#64748b' }}>Manager:</Typography>
                       <Typography variant="caption" sx={{ fontWeight: 600 }}>Sarah Conner</Typography>

@@ -14,7 +14,7 @@ from app.models.projects import (
     TaskAttachment, TaskCustomFieldDefinition, TaskCustomFieldValue, Project, ProjectPhase,
     TaskAssignee, TaskFollower, TaskTag, TaskTagMap, TaskChecklist, TaskChecklistItem,
     TaskTimeEntry, TaskDependency, TaskRelationship, TaskActivity, TaskTemplate, TaskAutomationRule,
-    DependencyType, RelationshipType
+    DependencyType, RelationshipType, WorkingCalendarHoliday, WeeklyOffDay
 )
 from app.models.cost_center import CostCenter
 from app.models.branch import Branch
@@ -57,6 +57,11 @@ from app.schemas.projects import (
     TaskConvertRequest,
     TaskReorderRequest,
     RescheduleDependenciesRequest,
+    TaskDependencyUpdate,
+    CascadePreviewItem,
+    CascadePreviewOut,
+    ProjectPmSettingsOut,
+    ProjectPmSettingsUpdate,
 )
 from app.core.deps import get_current_user
 
@@ -64,6 +69,100 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "tasks")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+# --- Working-Day Calendar Helpers ---
+
+def _get_working_calendar(db: Session):
+    """Returns (holiday_dates: set, weekly_off_days: set[int]) from DB"""
+    from datetime import date as _date
+    holidays = db.query(WorkingCalendarHoliday).all()
+    holiday_dates: set = set()
+    today_year = _date.today().year
+    for h in holidays:
+        # Use the 'date' column name — handle both column name variants
+        hd = getattr(h, 'date', None) or getattr(h, 'holiday_date', None)
+        if hd is None:
+            continue
+        holiday_dates.add(hd)
+        if getattr(h, 'recurs_yearly', False):
+            # Add recurring instance for nearby years
+            for yr in range(today_year - 1, today_year + 3):
+                try:
+                    holiday_dates.add(hd.replace(year=yr))
+                except ValueError:
+                    pass
+
+    off_rows = db.query(WeeklyOffDay).all()
+    weekly_off_days: set = {r.day_of_week for r in off_rows}
+    return holiday_dates, weekly_off_days
+
+
+def _is_working_day(d, holiday_dates: set, weekly_off_days: set) -> bool:
+    """Returns True if d is a working day (not weekend/holiday)"""
+    # day_of_week in DB: 0=Sunday per WeeklyOffDay convention
+    # Python weekday(): 0=Monday. Convert: Python Mon=0 → DB 2, Sun=6 → DB 1
+    # Simpler: Python isoweekday(): Mon=1..Sun=7. DB stores 0=Sun,1=Mon..6=Sat
+    iso = d.isoweekday()  # 1=Mon .. 7=Sun
+    # Map to DB convention: 0=Sun, 1=Mon, ..., 6=Sat
+    db_dow = 0 if iso == 7 else iso
+    if db_dow in weekly_off_days:
+        return False
+    if d in holiday_dates:
+        return False
+    return True
+
+
+def _add_working_days(start_date, days: int, holiday_dates: set, weekly_off_days: set):
+    """Add N working days to start_date, skipping non-working days"""
+    current = start_date
+    remaining = abs(days)
+    step = 1 if days >= 0 else -1
+    while remaining > 0:
+        current = current + timedelta(days=step)
+        if _is_working_day(current, holiday_dates, weekly_off_days):
+            remaining -= 1
+    return current
+
+
+def _compute_successor_dates(predecessor_start, predecessor_due, dep_type: str, lag_days: int, duration_days: int, holiday_dates: set, weekly_off_days: set):
+    """Compute successor start/due based on dep type + lag, holiday-aware."""
+    if not predecessor_due and not predecessor_start:
+        return None, None
+
+    pred_start = predecessor_start
+    pred_end = predecessor_due or predecessor_start
+
+    if dep_type == "FS":   # Finish-to-Start: succ_start = pred_end + lag
+        anchor = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
+        succ_start = anchor
+    elif dep_type == "SS": # Start-to-Start: succ_start = pred_start + lag
+        anchor = _add_working_days(pred_start or pred_end, lag_days, holiday_dates, weekly_off_days)
+        succ_start = anchor
+    elif dep_type == "FF": # Finish-to-Finish: succ_end = pred_end + lag
+        succ_end = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
+        if duration_days and duration_days > 0:
+            succ_start = _add_working_days(succ_end, -duration_days, holiday_dates, weekly_off_days)
+        else:
+            succ_start = succ_end
+        return succ_start, succ_end
+    elif dep_type == "SF": # Start-to-Finish: succ_end = pred_start + lag
+        succ_end = _add_working_days(pred_start or pred_end, lag_days, holiday_dates, weekly_off_days)
+        if duration_days and duration_days > 0:
+            succ_start = _add_working_days(succ_end, -duration_days, holiday_dates, weekly_off_days)
+        else:
+            succ_start = succ_end
+        return succ_start, succ_end
+    else:  # Default FS
+        succ_start = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
+
+    # Calculate end from start + duration
+    if duration_days and duration_days > 0:
+        succ_end = _add_working_days(succ_start, duration_days, holiday_dates, weekly_off_days)
+    else:
+        succ_end = succ_start
+
+    return succ_start, succ_end
 
 
 # --- Helper Utilities ---
@@ -1319,17 +1418,33 @@ def create_task_dependency(
     current_user: User = Depends(get_current_user),
 ):
     task = db.get(Task, task_id)
-    target_task = db.get(Task, data.depends_on_task_id)
+
+    # Support both old field (depends_on_task_id) and new field (predecessor_task_id)
+    target_task_id = getattr(data, 'depends_on_task_id', None) or getattr(data, 'predecessor_task_id', None)
+    if not target_task_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="predecessor_task_id is required")
+
+    target_task = db.get(Task, target_task_id)
     if not task or not target_task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task or target task not found")
 
-    if data.direction == "BLOCKING":
-        # task_id BLOCKS target_task
+    # Cross-project dependency block
+    if task.project_id and target_task.project_id and task.project_id != target_task.project_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "CROSS_PROJECT_DEPENDENCY",
+                "message": "Dependencies between tasks in different projects are not allowed. Both tasks must belong to the same project."
+            }
+        )
+
+    direction = getattr(data, 'direction', None)
+    if direction == "BLOCKING":
         blocked_id = target_task.id
         blocking_id = task.id
         target_display = target_task
     else:
-        # task_id IS BLOCKED BY target_task
+        # task_id IS BLOCKED BY target_task (default BLOCKED_BY)
         blocked_id = task.id
         blocking_id = target_task.id
         target_display = target_task
@@ -1344,28 +1459,82 @@ def create_task_dependency(
     if existing_dep:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Dependency relationship already exists")
 
+    # Resolve dep_type (FS/SS/FF/SF)
+    dep_type_val = getattr(data, 'dep_type', 'FS') or 'FS'
+    lag = getattr(data, 'lag_days', 0) or 0
+
     dep = TaskDependency(
         task_id=blocked_id,
         depends_on_task_id=blocking_id,
-        dependency_type=data.dependency_type
+        dependency_type=getattr(data, 'dependency_type', DependencyType.BLOCKS) or DependencyType.BLOCKS,
+        pm_dep_type=dep_type_val,
+        lag_days=lag,
     )
     db.add(dep)
-    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=target_display.task_number)
+    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=f"{target_display.task_number} ({dep_type_val}+{lag}d)")
     db.commit()
     db.refresh(dep)
 
+    blocker = db.get(Task, blocking_id)
     return TaskDependencyOut(
         id=dep.id,
         task_id=dep.task_id,
         depends_on_task_id=dep.depends_on_task_id,
-        depends_on_task_number=target_display.task_number,
-        depends_on_task_title=target_display.title,
-        depends_on_status_name=target_display.status_def.name if target_display.status_def else None,
-        depends_on_priority=target_display.priority.value if hasattr(target_display.priority, 'value') else str(target_display.priority),
-        depends_on_due_date=target_display.due_date,
-        depends_on_is_completed=target_display.is_completed,
-        direction=data.direction or "BLOCKED_BY",
+        depends_on_task_number=blocker.task_number if blocker else None,
+        depends_on_task_title=blocker.title if blocker else None,
+        depends_on_status_name=blocker.status_def.name if blocker and blocker.status_def else None,
+        depends_on_priority=blocker.priority.value if blocker and hasattr(blocker.priority, 'value') else str(blocker.priority) if blocker else None,
+        depends_on_due_date=blocker.due_date if blocker else None,
+        depends_on_is_completed=blocker.is_completed if blocker else False,
+        direction=direction or "BLOCKED_BY",
         dependency_type=dep.dependency_type,
+        predecessor_task_id=blocking_id,
+        predecessor_task_number=blocker.task_number if blocker else None,
+        predecessor_task_title=blocker.title if blocker else None,
+        dep_type=dep_type_val,
+        lag_days=lag,
+        created_at=dep.created_at,
+    )
+
+
+@router.patch("/dependencies/{dependency_id}", response_model=TaskDependencyOut)
+def update_task_dependency(
+    dependency_id: int,
+    data: TaskDependencyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update an existing dependency's type and/or lag days"""
+    dep = db.get(TaskDependency, dependency_id)
+    if not dep:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dependency not found")
+
+    if data.dep_type is not None:
+        dep.pm_dep_type = data.dep_type
+    if data.lag_days is not None:
+        dep.lag_days = data.lag_days
+
+    _log_activity(db, dep.task_id, current_user.id, "DEPENDENCY_UPDATED",
+                  new_val=f"{dep.pm_dep_type}+{dep.lag_days}d")
+    db.commit()
+    db.refresh(dep)
+
+    blocker = db.get(Task, dep.depends_on_task_id)
+    blocked = db.get(Task, dep.task_id)
+    return TaskDependencyOut(
+        id=dep.id,
+        task_id=dep.task_id,
+        depends_on_task_id=dep.depends_on_task_id,
+        depends_on_task_number=blocker.task_number if blocker else None,
+        depends_on_task_title=blocker.title if blocker else None,
+        depends_on_is_completed=blocker.is_completed if blocker else False,
+        direction="BLOCKED_BY",
+        dependency_type=dep.dependency_type,
+        predecessor_task_id=dep.depends_on_task_id,
+        predecessor_task_number=blocker.task_number if blocker else None,
+        predecessor_task_title=blocker.title if blocker else None,
+        dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+        lag_days=dep.lag_days or 0,
         created_at=dep.created_at,
     )
 
@@ -1624,6 +1793,54 @@ def reorder_subtasks(
     return {"message": "Subtasks reordered successfully"}
 
 
+@router.get("/{task_id}/cascade-preview", response_model=CascadePreviewOut)
+def cascade_preview(
+    task_id: int,
+    days_shift: int = Query(0, description="Signed day offset to preview cascade"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Dry-run cascade reschedule — returns which tasks would move without committing."""
+    task = db.get(Task, task_id)
+    if not task or task.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    if days_shift == 0:
+        return CascadePreviewOut(total_affected=0, items=[])
+
+    holiday_dates, weekly_off_days = _get_working_calendar(db)
+    items: list[CascadePreviewItem] = []
+    visited: set = set()
+
+    def _preview_downstream(tid: int, shift: int):
+        if tid in visited:
+            return
+        visited.add(tid)
+        deps = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == tid).all()
+        for d in deps:
+            blocked_t = d.task
+            if blocked_t and not blocked_t.is_deleted and blocked_t.id not in visited:
+                new_start = None
+                new_due = None
+                if blocked_t.start_date:
+                    new_start = _add_working_days(blocked_t.start_date, shift, holiday_dates, weekly_off_days)
+                if blocked_t.due_date:
+                    new_due = _add_working_days(blocked_t.due_date, shift, holiday_dates, weekly_off_days)
+                items.append(CascadePreviewItem(
+                    task_id=blocked_t.id,
+                    task_number=blocked_t.task_number,
+                    title=blocked_t.title,
+                    old_start=blocked_t.start_date,
+                    old_due=blocked_t.due_date,
+                    new_start=new_start,
+                    new_due=new_due,
+                ))
+                _preview_downstream(blocked_t.id, shift)
+
+    _preview_downstream(task.id, days_shift)
+    return CascadePreviewOut(total_affected=len(items), items=items)
+
+
 @router.post("/{task_id}/reschedule-dependencies", response_model=TaskOut)
 def reschedule_dependencies(
     task_id: int,
@@ -1631,7 +1848,7 @@ def reschedule_dependencies(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Shift start_date and due_date for downstream dependent tasks"""
+    """Cascade-reschedule downstream dependent tasks (working-day-aware)."""
     task = db.get(Task, task_id)
     if not task or task.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -1639,7 +1856,8 @@ def reschedule_dependencies(
     if data.days_shift == 0:
         return _format_task_out(task, db)
 
-    visited = set()
+    holiday_dates, weekly_off_days = _get_working_calendar(db)
+    visited: set = set()
 
     def _shift_downstream(tid: int, shift: int):
         if tid in visited:
@@ -1649,16 +1867,82 @@ def reschedule_dependencies(
         for d in deps:
             blocked_t = d.task
             if blocked_t and not blocked_t.is_deleted:
-                if blocked_t.start_date:
-                    blocked_t.start_date = blocked_t.start_date + timedelta(days=shift)
-                if blocked_t.due_date:
-                    blocked_t.due_date = blocked_t.due_date + timedelta(days=shift)
+                dep_type = getattr(d.pm_dep_type, 'value', str(d.pm_dep_type)) if d.pm_dep_type else "FS"
+                lag = d.lag_days or 0
+                # Compute proper dates based on predecessor's updated dates
+                predecessor = db.get(Task, tid)
+                if predecessor:
+                    new_start, new_due = _compute_successor_dates(
+                        predecessor.start_date,
+                        predecessor.due_date,
+                        dep_type,
+                        lag,
+                        blocked_t.duration_working_days or 0,
+                        holiday_dates,
+                        weekly_off_days,
+                    )
+                    if new_start:
+                        blocked_t.start_date = new_start
+                    if new_due:
+                        blocked_t.due_date = new_due
+                else:
+                    # Fallback: simple working-day shift
+                    if blocked_t.start_date:
+                        blocked_t.start_date = _add_working_days(blocked_t.start_date, shift, holiday_dates, weekly_off_days)
+                    if blocked_t.due_date:
+                        blocked_t.due_date = _add_working_days(blocked_t.due_date, shift, holiday_dates, weekly_off_days)
                 db.add(blocked_t)
-                _log_activity(db, blocked_t.id, current_user.id, "AUTO_RESCHEDULED", new_val=f"shifted {shift} days")
+                _log_activity(db, blocked_t.id, current_user.id, "AUTO_RESCHEDULED",
+                              new_val=f"{dep_type}+{lag}d cascade shifted")
                 _shift_downstream(blocked_t.id, shift)
 
     _shift_downstream(task.id, data.days_shift)
     db.commit()
     db.refresh(task)
     return _format_task_out(task, db)
+
+
+# --- Project PM Settings API ---
+
+@router.get("/pm-settings/{project_id}", response_model=ProjectPmSettingsOut, tags=["projects"])
+def get_project_pm_settings(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get PM scheduling settings for a project"""
+    from app.models.projects import ProjectPmSettings
+    settings = db.query(ProjectPmSettings).filter(ProjectPmSettings.project_id == project_id).first()
+    if not settings:
+        # Return sensible defaults
+        return ProjectPmSettingsOut(
+            project_id=project_id,
+            default_dep_type="FS",
+            auto_shift_successors=True,
+            prompt_on_reschedule=False,
+        )
+    return ProjectPmSettingsOut.model_validate(settings)
+
+
+@router.put("/pm-settings/{project_id}", response_model=ProjectPmSettingsOut, tags=["projects"])
+def update_project_pm_settings(
+    project_id: int,
+    data: ProjectPmSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upsert PM scheduling settings for a project"""
+    from app.models.projects import ProjectPmSettings
+    settings = db.query(ProjectPmSettings).filter(ProjectPmSettings.project_id == project_id).first()
+    if not settings:
+        settings = ProjectPmSettings(project_id=project_id)
+        db.add(settings)
+
+    update_dict = data.model_dump(exclude_unset=True)
+    for field, val in update_dict.items():
+        setattr(settings, field, val)
+
+    db.commit()
+    db.refresh(settings)
+    return ProjectPmSettingsOut.model_validate(settings)
 

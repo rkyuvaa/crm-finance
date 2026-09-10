@@ -28,9 +28,17 @@ import {
   Plus,
   Trash2,
   Lock,
+  Link2,
 } from 'lucide-react';
 import { TaskItem, useUpdateTaskMutation } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+
+const DEP_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
+  FS: { bg: '#D1FAE5', color: '#065F46' },
+  SS: { bg: '#DBEAFE', color: '#1E40AF' },
+  FF: { bg: '#EDE9FE', color: '#5B21B6' },
+  SF: { bg: '#FEF3C7', color: '#92400E' },
+};
 
 interface TaskListViewProps {
   tasks: TaskItem[];
@@ -262,6 +270,49 @@ export default function TaskListView({
             />
           </TableCell>
 
+          {/* Predecessors */}
+          <TableCell onClick={(e) => e.stopPropagation()}>
+            {task.dependencies && task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.4, maxWidth: 180 }}>
+                {task.dependencies
+                  .filter((d) => d.direction !== 'BLOCKING')
+                  .slice(0, 3)
+                  .map((dep) => {
+                    const dt = dep.dep_type || 'FS';
+                    const colors = DEP_TYPE_COLORS[dt] || DEP_TYPE_COLORS.FS;
+                    return (
+                      <Tooltip
+                        key={dep.id}
+                        title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} · ${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}`}
+                      >
+                        <Chip
+                          icon={<Link2 size={9} color={colors.color} />}
+                          label={`${dep.predecessor_task_number || dep.depends_on_task_number || `#${dep.depends_on_task_id}`} (${dt})`}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: '0.62rem',
+                            fontWeight: 700,
+                            fontFamily: 'monospace',
+                            bgcolor: colors.bg,
+                            color: colors.color,
+                            '& .MuiChip-icon': { ml: 0.5 },
+                          }}
+                        />
+                      </Tooltip>
+                    );
+                  })}
+                {task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 3 && (
+                  <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', alignSelf: 'center' }}>
+                    +{task.dependencies.filter((d) => d.direction !== 'BLOCKING').length - 3} more
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>—</Typography>
+            )}
+          </TableCell>
+
           {/* Due Date */}
           <TableCell>
             {task.due_date ? (
@@ -349,6 +400,7 @@ export default function TaskListView({
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>STATUS</TableCell>
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>ASSIGNEES</TableCell>
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>PRIORITY</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>PREDECESSORS</TableCell>
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>DUE DATE</TableCell>
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>PROGRESS</TableCell>
             <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>TIME TRACKED</TableCell>
@@ -358,7 +410,7 @@ export default function TaskListView({
         <TableBody>
           {rootTasks.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
                 <Typography variant="body2" color="textSecondary">
                   No tasks found in this view.
                 </Typography>

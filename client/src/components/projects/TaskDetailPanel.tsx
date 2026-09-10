@@ -1102,7 +1102,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Start Date {currentTask.start_date_locked && <Lock size={12} color="#D97706" title="Locked by dependencies" style={{ marginLeft: 4 }} />}
+                  Start Date {currentTask.start_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
                 </Typography>
                 <TextField
                   type="date"
@@ -1117,7 +1117,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Due Date {currentTask.end_date_locked && <Lock size={12} color="#D97706" title="Locked by dependencies" style={{ marginLeft: 4 }} />}
+                  Due Date {currentTask.end_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
                 </Typography>
                 <TextField
                   type="date"

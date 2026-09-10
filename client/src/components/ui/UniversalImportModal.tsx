@@ -444,7 +444,7 @@ export default function UniversalImportModal({
                             onChange={(e) => handleMappingChange(header, e.target.value)}
                             sx={{ height: 36, fontSize: 13, bgcolor: '#ffffff' }}
                           >
-                            <MenuItem value="__IGNORE__" sx={{ color: '#94a3b8', italic: true }}>
+                            <MenuItem value="__IGNORE__" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                               ⛔ — Ignore Column (Do Not Import) —
                             </MenuItem>
                             {erpFields.map((f) => (

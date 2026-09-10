@@ -41,6 +41,8 @@ import {
   FolderCog,
   Zap,
   CalendarDays,
+  Network,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useGetStatusDefinitionsQuery,
@@ -55,9 +57,12 @@ import {
   useAddHolidayMutation,
   useDeleteHolidayMutation,
   useSetWeeklyOffMutation,
+  useGetProjectPmSettingsQuery,
+  useUpdateProjectPmSettingsMutation,
   StatusDefinitionItem,
   CustomFieldDefinitionItem,
 } from '@/api/projectsApi';
+import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/ToastHost';
 
 interface TabPanelProps {
@@ -78,6 +83,8 @@ function CustomTabPanel(props: TabPanelProps) {
 export default function ProjectConfigurationPage() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState(0);
+  const [searchParams] = useSearchParams();
+  const configProjectId = Number(searchParams.get('projectId') || '0');
 
   // RTK Query Hooks
   const { data: statusDefs = [], isLoading: isLoadingStatuses } = useGetStatusDefinitionsQuery();
@@ -90,6 +97,21 @@ export default function ProjectConfigurationPage() {
   const [createCustomField] = useCreateCustomFieldDefinitionMutation();
   const [updateCustomField] = useUpdateCustomFieldDefinitionMutation();
   const [deleteCustomField] = useDeleteCustomFieldDefinitionMutation();
+
+  // PM Settings
+  const { data: pmSettings } = useGetProjectPmSettingsQuery(configProjectId, { skip: !configProjectId });
+  const [updatePmSettings, { isLoading: savingPmSettings }] = useUpdateProjectPmSettingsMutation();
+  const [pmDepType, setPmDepType] = useState<'FS'|'SS'|'FF'|'SF'>('FS');
+  const [pmAutoShift, setPmAutoShift] = useState(true);
+  const [pmPromptReschedule, setPmPromptReschedule] = useState(false);
+
+  useEffect(() => {
+    if (pmSettings) {
+      setPmDepType(pmSettings.default_dep_type);
+      setPmAutoShift(pmSettings.auto_shift_successors);
+      setPmPromptReschedule(pmSettings.prompt_on_reschedule);
+    }
+  }, [pmSettings]);
 
   // Search Filters
   const [statusSearch, setStatusSearch] = useState('');
@@ -350,10 +372,10 @@ export default function ProjectConfigurationPage() {
       };
 
       if (editingField) {
-        await updateCustomField({ id: editingField.id, body: payload }).unwrap();
+        await updateCustomField({ id: editingField.id, body: payload as any }).unwrap();
         toast.showSuccess(`Custom field "${fieldLabel}" updated successfully!`);
       } else {
-        await createCustomField(payload).unwrap();
+        await createCustomField(payload as any).unwrap();
         toast.showSuccess(`Custom field "${fieldLabel}" created successfully!`);
       }
       setFieldModalOpen(false);
@@ -399,6 +421,26 @@ export default function ProjectConfigurationPage() {
     toast.showSuccess('Project configuration parameters saved successfully!');
   };
 
+  const handleSavePmSettings = async () => {
+    if (!configProjectId) {
+      toast.showError('Select a specific project from query parameters to save PM settings (e.g. ?projectId=1).');
+      return;
+    }
+    try {
+      await updatePmSettings({
+        projectId: configProjectId,
+        body: {
+          default_dep_type: pmDepType,
+          auto_shift_successors: pmAutoShift,
+          prompt_on_reschedule: pmPromptReschedule,
+        },
+      }).unwrap();
+      toast.showSuccess('Project PM scheduling preferences updated successfully!');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to save PM settings');
+    }
+  };
+
   return (
     <Box sx={{ p: 3, width: '100%' }}>
 
@@ -431,6 +473,7 @@ export default function ProjectConfigurationPage() {
             <Tab icon={<FolderCog size={15} />} iconPosition="start" label="4. Project Settings" />
             <Tab icon={<Zap size={15} />} iconPosition="start" label="5. Automations Rules" />
             <Tab icon={<CalendarDays size={15} />} iconPosition="start" label="6. Working Calendar" />
+            <Tab icon={<Network size={15} />} iconPosition="start" label="7. PM Scheduling" />
           </Tabs>
         </Box>
 
@@ -1095,6 +1138,98 @@ export default function ProjectConfigurationPage() {
                   )}
                 </TableBody>
               </Table>
+            </Paper>
+          </CustomTabPanel>
+
+          {/* ────────────────────────────────────────────────────────────────
+              TAB 7: PM SCHEDULING & DEPENDENCIES
+          ──────────────────────────────────────────────────────────────── */}
+          <CustomTabPanel value={activeTab} index={6}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '16px' }}>
+                  Project Management & Dependency Scheduling Settings
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
+                  Configure automatic dependency shift logic, default dependency relation types, and prompt behavior.
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                onClick={handleSavePmSettings}
+                disabled={savingPmSettings}
+                sx={{ textTransform: 'none', fontWeight: 600, fontSize: 13, bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+              >
+                {savingPmSettings ? 'Saving...' : 'Save PM Settings'}
+              </Button>
+            </Box>
+
+            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: '6px' }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel sx={{ fontSize: 13 }}>Default Dependency Type</InputLabel>
+                    <Select
+                      value={pmDepType}
+                      label="Default Dependency Type"
+                      onChange={(e) => setPmDepType(e.target.value as any)}
+                      sx={{ fontSize: 13 }}
+                    >
+                      <MenuItem value="FS" sx={{ fontSize: 13 }}>Finish-to-Start (FS) — Default</MenuItem>
+                      <MenuItem value="SS" sx={{ fontSize: 13 }}>Start-to-Start (SS)</MenuItem>
+                      <MenuItem value="FF" sx={{ fontSize: 13 }}>Finish-to-Finish (FF)</MenuItem>
+                      <MenuItem value="SF" sx={{ fontSize: 13 }}>Start-to-Finish (SF)</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                    When dragging between tasks or adding dependencies, this type will be chosen by default.
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={pmAutoShift}
+                        onChange={(e) => setPmAutoShift(e.target.checked)}
+                        color="success"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'text.primary' }}>
+                          Auto-shift Successor Tasks on Reschedule
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          Automatically push dependent tasks forward when a predecessor's end date is delayed, taking into account working calendar & holidays.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={pmPromptReschedule}
+                        onChange={(e) => setPmPromptReschedule(e.target.checked)}
+                        color="success"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'text.primary' }}>
+                          Prompt Confirmation before Rescheduling Successors
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          Display a preview dialog showing affected tasks and date changes before executing cascade updates.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Grid>
+              </Grid>
             </Paper>
           </CustomTabPanel>
         </Box>

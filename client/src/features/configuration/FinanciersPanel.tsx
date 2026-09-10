@@ -73,7 +73,7 @@ function FinancierFormDialog({
         await updateCompany({ id: editing.id, body: values }).unwrap();
         showToast('Financier updated successfully', 'success');
       } else {
-        await createCompany(values).unwrap();
+        await createCompany(values as any).unwrap();
         showToast('Financier added successfully', 'success');
       }
       reset();

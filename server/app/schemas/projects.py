@@ -224,9 +224,12 @@ class TaskAttachmentOut(TaskAttachmentBase):
 
 # --- Task Dependency & Relationship ---
 class TaskDependencyCreate(BaseModel):
-    predecessor_task_id: int
+    predecessor_task_id: Optional[int] = None
+    depends_on_task_id: Optional[int] = None
     dep_type: str = "FS"  # FS, SS, FF, SF
     lag_days: int = 0
+    dependency_type: Optional[str] = None
+    direction: Optional[str] = None
 
 class TaskDependencyOut(BaseModel):
     id: int
@@ -532,7 +535,7 @@ class ProjectBase(BaseModel):
     owner_id: Optional[int] = None
 
 class ProjectCreate(ProjectBase):
-    prefix: str
+    prefix: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -653,3 +656,42 @@ class StatusDefinitionOut(StatusDefinitionBase):
     is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Task Dependency Update ---
+class TaskDependencyUpdate(BaseModel):
+    dep_type: Optional[str] = None  # FS, SS, FF, SF
+    lag_days: Optional[int] = None
+
+
+# --- Cascade Preview ---
+class CascadePreviewItem(BaseModel):
+    task_id: int
+    task_number: str
+    title: str
+    old_start: Optional[date] = None
+    old_due: Optional[date] = None
+    new_start: Optional[date] = None
+    new_due: Optional[date] = None
+
+
+class CascadePreviewOut(BaseModel):
+    total_affected: int
+    items: List[CascadePreviewItem]
+
+
+# --- Project PM Settings ---
+class ProjectPmSettingsOut(BaseModel):
+    id: Optional[int] = None
+    project_id: int
+    default_dep_type: str = "FS"
+    auto_shift_successors: bool = True
+    prompt_on_reschedule: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectPmSettingsUpdate(BaseModel):
+    default_dep_type: Optional[str] = None
+    auto_shift_successors: Optional[bool] = None
+    prompt_on_reschedule: Optional[bool] = None

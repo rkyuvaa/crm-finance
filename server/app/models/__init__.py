@@ -101,6 +101,7 @@ from app.models.projects import (
     TaskCustomFieldValue,
     WorkingCalendarHoliday,
     WeeklyOffDay,
+    ProjectPmSettings,
 )
 
 __all__ = [
@@ -203,4 +204,5 @@ __all__ = [
     "TaskCustomFieldValue",
     "WorkingCalendarHoliday",
     "WeeklyOffDay",
+    "ProjectPmSettings",
 ]

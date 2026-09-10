@@ -28,6 +28,7 @@ export interface UserBrief {
   id: number;
   full_name: string;
   role: UserRole;
+  role_name?: string;
   email: string | null;
 }
 

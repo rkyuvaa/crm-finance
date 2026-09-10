@@ -93,9 +93,8 @@ export default function ProjectsPage() {
         budget: budget ? Number(budget) : 0,
         target_start_date: targetStartDate || undefined,
         target_end_date: targetEndDate || undefined,
-        status: 'PLANNING',
         prefix: prefix.toUpperCase().slice(0, 3),
-      }).unwrap();
+      } as any).unwrap();
       showToast('Project created successfully', 'success');
       setCreateOpen(false);
       setName('');

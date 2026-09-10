@@ -608,3 +608,18 @@ class WeeklyOffDay(Base):
     __tablename__ = "weekly_off_days"
     id: Mapped[int] = mapped_column(primary_key=True)
     day_of_week: Mapped[int] = mapped_column(Integer, nullable=False, unique=True) # 0=Sunday, 1=Monday...
+
+
+class ProjectPmSettings(Base):
+    """Per-project Project Management scheduling preferences"""
+    __tablename__ = "project_pm_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    default_dep_type: Mapped[str] = mapped_column(String(2), default="FS", nullable=False)  # FS/SS/FF/SF
+    auto_shift_successors: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    prompt_on_reschedule: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp())
+
+    project: Mapped["Project"] = relationship("Project")

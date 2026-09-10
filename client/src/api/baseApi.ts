@@ -81,6 +81,8 @@ export const baseApi = createApi({
     'Tabs',
     'Users',
     'VehicleModels',
+    'CostCenters',
+    'Branches',
   ],
   endpoints: () => ({}),
 });

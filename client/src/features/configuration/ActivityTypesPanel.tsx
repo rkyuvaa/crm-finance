@@ -71,7 +71,7 @@ function ActivityTypeFormDialog({
         await updateType({ id: editing.id, body: values }).unwrap();
         showToast('Activity type updated', 'success');
       } else {
-        await createType(values).unwrap();
+        await createType(values as any).unwrap();
         showToast('Activity type added', 'success');
       }
       reset();

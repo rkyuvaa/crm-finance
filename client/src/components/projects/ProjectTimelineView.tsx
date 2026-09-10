@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box } from '@mui/material';
-import { useGetTasksQuery, TaskItem } from '@/api/projectsApi';
+import { useGetTasksQuery, useGetProjectMilestonesQuery, TaskItem } from '@/api/projectsApi';
 import HierarchicalGanttView from '@/components/projects/HierarchicalGanttView';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 
@@ -15,6 +15,7 @@ export default function ProjectTimelineView({ projectId, onOpenTaskDetail }: Pro
     { project_id: numericId },
     { skip: !numericId || isNaN(numericId) }
   );
+  const { data: milestones = [] } = useGetProjectMilestonesQuery(numericId, { skip: !numericId || isNaN(numericId) });
 
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -32,7 +33,9 @@ export default function ProjectTimelineView({ projectId, onOpenTaskDetail }: Pro
     <Box>
       <HierarchicalGanttView
         tasks={tasks}
+        milestones={milestones}
         isLoading={isLoading}
+        projectId={numericId}
         onOpenTaskDetail={handleOpenDetail}
       />
       {!onOpenTaskDetail && (

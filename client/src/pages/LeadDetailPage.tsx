@@ -165,7 +165,7 @@ export default function LeadDetailPage() {
           down_payment: values.down_payment,
           finance_company_id: values.finance_company_id ? Number(values.finance_company_id) : null,
           lead_source: values.lead_source || null,
-        },
+        } as any,
       }).unwrap();
       showToast(`Lead ${lead.app_no} updated`, 'success');
     } catch (err) {
