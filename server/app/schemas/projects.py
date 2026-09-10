@@ -497,6 +497,7 @@ class TaskAutomationRuleOut(BaseModel):
 class ProjectMilestoneBase(BaseModel):
     title: str
     description: Optional[str] = None
+    is_completed: bool = False
 
 class ProjectMilestoneCreate(ProjectMilestoneBase):
     pass
@@ -504,6 +505,7 @@ class ProjectMilestoneCreate(ProjectMilestoneBase):
 class ProjectMilestoneUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    is_completed: Optional[bool] = None
 
 class ProjectMilestoneOut(ProjectMilestoneBase):
     id: int

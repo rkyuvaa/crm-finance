@@ -113,11 +113,27 @@ def _is_working_day(d, holiday_dates: set, weekly_off_days: set) -> bool:
     return True
 
 
+def _count_working_days(start_date: date, due_date: date, holiday_dates: set, weekly_off_days: set) -> int:
+    if not start_date or not due_date or due_date < start_date:
+        return 1
+    current = start_date
+    count = 0
+    while current <= due_date:
+        if _is_working_day(current, holiday_dates, weekly_off_days):
+            count += 1
+        current += timedelta(days=1)
+    return max(1, count)
+
+
 def _add_working_days(start_date, days: int, holiday_dates: set, weekly_off_days: set):
     """Add N working days to start_date, skipping non-working days"""
     current = start_date
+    if days == 0:
+        while not _is_working_day(current, holiday_dates, weekly_off_days):
+            current += timedelta(days=1)
+        return current
+    step = 1 if days > 0 else -1
     remaining = abs(days)
-    step = 1 if days >= 0 else -1
     while remaining > 0:
         current = current + timedelta(days=step)
         if _is_working_day(current, holiday_dates, weekly_off_days):
@@ -133,35 +149,24 @@ def _compute_successor_dates(predecessor_start, predecessor_due, dep_type: str, 
     pred_start = predecessor_start
     pred_end = predecessor_due or predecessor_start
 
-    if dep_type == "FS":   # Finish-to-Start: succ_start = pred_end + lag
-        anchor = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
-        succ_start = anchor
+    dur = max(1, duration_days or 1)
+
+    if dep_type == "FS":   # Finish-to-Start: succ_start = pred_end + 1 + lag
+        succ_start = _add_working_days(pred_end, 1 + lag_days, holiday_dates, weekly_off_days)
     elif dep_type == "SS": # Start-to-Start: succ_start = pred_start + lag
-        anchor = _add_working_days(pred_start or pred_end, lag_days, holiday_dates, weekly_off_days)
-        succ_start = anchor
-    elif dep_type == "FF": # Finish-to-Finish: succ_end = pred_end + lag
+        succ_start = _add_working_days(pred_start or pred_end, lag_days, holiday_dates, weekly_off_days)
+    elif dep_type == "FF": # Finish-to-Finish
         succ_end = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
-        if duration_days and duration_days > 0:
-            succ_start = _add_working_days(succ_end, -duration_days, holiday_dates, weekly_off_days)
-        else:
-            succ_start = succ_end
+        succ_start = _add_working_days(succ_end, -(dur - 1), holiday_dates, weekly_off_days)
         return succ_start, succ_end
-    elif dep_type == "SF": # Start-to-Finish: succ_end = pred_start + lag
+    elif dep_type == "SF": # Start-to-Finish
         succ_end = _add_working_days(pred_start or pred_end, lag_days, holiday_dates, weekly_off_days)
-        if duration_days and duration_days > 0:
-            succ_start = _add_working_days(succ_end, -duration_days, holiday_dates, weekly_off_days)
-        else:
-            succ_start = succ_end
+        succ_start = _add_working_days(succ_end, -(dur - 1), holiday_dates, weekly_off_days)
         return succ_start, succ_end
     else:  # Default FS
-        succ_start = _add_working_days(pred_end, lag_days, holiday_dates, weekly_off_days)
+        succ_start = _add_working_days(pred_end, 1 + lag_days, holiday_dates, weekly_off_days)
 
-    # Calculate end from start + duration
-    if duration_days and duration_days > 0:
-        succ_end = _add_working_days(succ_start, duration_days, holiday_dates, weekly_off_days)
-    else:
-        succ_end = succ_start
-
+    succ_end = _add_working_days(succ_start, dur - 1, holiday_dates, weekly_off_days)
     return succ_start, succ_end
 
 
@@ -563,6 +568,12 @@ def create_task(
     if not data.title or not data.title.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task title is mandatory")
 
+    if data.start_date and data.due_date and data.due_date < data.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Due date cannot be earlier than start date"
+        )
+
     # Validate Cost Center master reference if provided
     if data.cost_center_id:
         cc = db.get(CostCenter, data.cost_center_id)
@@ -586,6 +597,12 @@ def create_task(
 
     task_num = _generate_task_number(db, data.project_id)
 
+    holiday_dates, weekly_off_days = _get_working_calendar(db)
+    if data.start_date and data.due_date:
+        dur_days = _count_working_days(data.start_date, data.due_date, holiday_dates, weekly_off_days)
+    else:
+        dur_days = 1
+
     task = Task(
         task_number=task_num,
         project_id=data.project_id,
@@ -603,6 +620,7 @@ def create_task(
         start_time=data.start_time,
         due_date=data.due_date,
         due_time=data.due_time,
+        duration_working_days=dur_days,
         estimated_minutes=data.estimated_minutes or int(data.estimated_hours * 60),
         estimated_hours=data.estimated_hours or ((data.estimated_minutes or 0) / 60.0),
         tags=data.tags,
@@ -683,6 +701,17 @@ def update_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     update_dict = data.model_dump(exclude_unset=True)
+
+    new_start_val = update_dict.get("start_date", task.start_date)
+    new_due_val = update_dict.get("due_date", task.due_date)
+    if new_start_val and new_due_val and new_due_val < new_start_val:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Due date cannot be earlier than start date"
+        )
+    if new_start_val and new_due_val:
+        holiday_dates, weekly_off_days = _get_working_calendar(db)
+        task.duration_working_days = _count_working_days(new_start_val, new_due_val, holiday_dates, weekly_off_days)
 
     if "title" in update_dict:
         if not update_dict["title"] or not update_dict["title"].strip():
@@ -1429,13 +1458,10 @@ def create_task_dependency(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task or target task not found")
 
     # Cross-project dependency block
-    if task.project_id and target_task.project_id and task.project_id != target_task.project_id:
+    if task.project_id != target_task.project_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "CROSS_PROJECT_DEPENDENCY",
-                "message": "Dependencies between tasks in different projects are not allowed. Both tasks must belong to the same project."
-            }
+            detail="Dependencies between tasks in different projects are not allowed."
         )
 
     direction = getattr(data, 'direction', None)
@@ -1844,7 +1870,7 @@ def cascade_preview(
 @router.post("/{task_id}/reschedule-dependencies", response_model=TaskOut)
 def reschedule_dependencies(
     task_id: int,
-    data: RescheduleDependenciesRequest,
+    data: Optional[RescheduleDependenciesRequest] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1853,13 +1879,10 @@ def reschedule_dependencies(
     if not task or task.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    if data.days_shift == 0:
-        return _format_task_out(task, db)
-
     holiday_dates, weekly_off_days = _get_working_calendar(db)
     visited: set = set()
 
-    def _shift_downstream(tid: int, shift: int):
+    def _shift_downstream(tid: int):
         if tid in visited:
             return
         visited.add(tid)
@@ -1867,36 +1890,39 @@ def reschedule_dependencies(
         for d in deps:
             blocked_t = d.task
             if blocked_t and not blocked_t.is_deleted:
-                dep_type = getattr(d.pm_dep_type, 'value', str(d.pm_dep_type)) if d.pm_dep_type else "FS"
-                lag = d.lag_days or 0
-                # Compute proper dates based on predecessor's updated dates
-                predecessor = db.get(Task, tid)
-                if predecessor:
-                    new_start, new_due = _compute_successor_dates(
-                        predecessor.start_date,
-                        predecessor.due_date,
-                        dep_type,
-                        lag,
-                        blocked_t.duration_working_days or 0,
-                        holiday_dates,
-                        weekly_off_days,
-                    )
-                    if new_start:
-                        blocked_t.start_date = new_start
-                    if new_due:
-                        blocked_t.due_date = new_due
-                else:
-                    # Fallback: simple working-day shift
-                    if blocked_t.start_date:
-                        blocked_t.start_date = _add_working_days(blocked_t.start_date, shift, holiday_dates, weekly_off_days)
-                    if blocked_t.due_date:
-                        blocked_t.due_date = _add_working_days(blocked_t.due_date, shift, holiday_dates, weekly_off_days)
-                db.add(blocked_t)
-                _log_activity(db, blocked_t.id, current_user.id, "AUTO_RESCHEDULED",
-                              new_val=f"{dep_type}+{lag}d cascade shifted")
-                _shift_downstream(blocked_t.id, shift)
+                # Calculate max required start date across all predecessors
+                pred_deps = db.query(TaskDependency).filter(TaskDependency.task_id == blocked_t.id).all()
+                max_calc_start = None
+                max_calc_due = None
 
-    _shift_downstream(task.id, data.days_shift)
+                for pd in pred_deps:
+                    p_task = db.get(Task, pd.depends_on_task_id)
+                    if p_task:
+                        p_dep_type = getattr(pd.pm_dep_type, 'value', str(pd.pm_dep_type)) if pd.pm_dep_type else "FS"
+                        p_lag = pd.lag_days or 0
+                        calc_s, calc_d = _compute_successor_dates(
+                            p_task.start_date,
+                            p_task.due_date,
+                            p_dep_type,
+                            p_lag,
+                            blocked_t.duration_working_days or 0,
+                            holiday_dates,
+                            weekly_off_days,
+                        )
+                        if calc_s and (max_calc_start is None or calc_s > max_calc_start):
+                            max_calc_start = calc_s
+                            max_calc_due = calc_d
+
+                if max_calc_start:
+                    if not blocked_t.start_date or max_calc_start > blocked_t.start_date:
+                        blocked_t.start_date = max_calc_start
+                        blocked_t.due_date = max_calc_due
+                        db.add(blocked_t)
+                        _log_activity(db, blocked_t.id, current_user.id, "AUTO_RESCHEDULED", new_val=f"Cascade shifted to {max_calc_start}")
+
+                _shift_downstream(blocked_t.id)
+
+    _shift_downstream(task.id)
     db.commit()
     db.refresh(task)
     return _format_task_out(task, db)
