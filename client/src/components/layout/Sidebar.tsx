@@ -24,6 +24,9 @@ import {
   DollarSign,
   Lock,
   RefreshCw,
+  ClipboardList,
+  Package,
+  Laptop,
   X,
 } from 'lucide-react';
 
@@ -120,6 +123,16 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
           { key: 'renewal_tracker', label: 'Tracker', path: '/renewal/tracker', icon: Clock, badge: null },
           { key: 'renewal_reports', label: 'Reports', path: '/renewal/reports', icon: BarChart3, badge: null },
           { key: 'renewal_configuration', label: 'Configuration', path: '/renewal/configuration', icon: Settings2, badge: null },
+        ],
+      },
+      {
+        key: 'requirements_group',
+        label: 'Requirements',
+        icon: ClipboardList,
+        badge: null,
+        children: [
+          { key: 'req_material', label: 'Material Requirement', path: '/requirements/material', icon: Package, badge: null },
+          { key: 'req_it', label: 'IT Requirement', path: '/requirements/it', icon: Laptop, badge: null },
         ],
       },
     ],

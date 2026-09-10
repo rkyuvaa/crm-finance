@@ -20,6 +20,7 @@ import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import ProjectConfigurationPage from '@/pages/ProjectConfigurationPage';
 import TasksPage from '@/pages/TasksPage';
 import RenewalTrackerPage from '@/pages/RenewalTrackerPage';
+import RequirementsPage from '@/pages/RequirementsPage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
 import NotificationsPage from '@/pages/NotificationsPage';
@@ -91,6 +92,11 @@ export default function App() {
                 <Route path="/renewal/tracker" element={<RenewalTrackerPage />} />
                 <Route path="/renewal/reports" element={<RenewalTrackerPage />} />
                 <Route path="/renewal/configuration" element={<RenewalTrackerPage />} />
+                
+                {/* Requirements Management */}
+                <Route path="/requirements" element={<Navigate to="/requirements/material" replace />} />
+                <Route path="/requirements/material" element={<RequirementsPage />} />
+                <Route path="/requirements/it" element={<RequirementsPage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />
