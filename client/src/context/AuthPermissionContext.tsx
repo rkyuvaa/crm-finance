@@ -85,6 +85,11 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (path === '/requirements/material') return can('view', 'req_material');
     if (path === '/requirements/it') return can('view', 'req_it');
 
+    if (path === '/compliance/policies') return can('view', 'compliance_policies');
+    if (path === '/compliance/audit') return can('view', 'compliance_audit');
+    if (path === '/compliance/sops') return can('view', 'compliance_sops');
+    if (path === '/compliance/acknowledgements') return can('view', 'compliance_acknowledgements');
+
     if (path.startsWith('/admin/users')) return can('view', 'users');
     if (path.startsWith('/admin/roles')) return can('view', 'roles');
     if (path.startsWith('/admin/departments')) return can('view', 'departments');

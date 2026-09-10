@@ -21,6 +21,7 @@ import ProjectConfigurationPage from '@/pages/ProjectConfigurationPage';
 import TasksPage from '@/pages/TasksPage';
 import RenewalTrackerPage from '@/pages/RenewalTrackerPage';
 import RequirementsPage from '@/pages/RequirementsPage';
+import PolicyCompliancePage from '@/pages/PolicyCompliancePage';
 import GenericStagePage from '@/pages/GenericStagePage';
 import ReportsPage from '@/pages/ReportsPage';
 import NotificationsPage from '@/pages/NotificationsPage';
@@ -97,6 +98,13 @@ export default function App() {
                 <Route path="/requirements" element={<Navigate to="/requirements/material" replace />} />
                 <Route path="/requirements/material" element={<RequirementsPage />} />
                 <Route path="/requirements/it" element={<RequirementsPage />} />
+                
+                {/* KIM - Policy & Compliance */}
+                <Route path="/compliance" element={<Navigate to="/compliance/policies" replace />} />
+                <Route path="/compliance/policies" element={<PolicyCompliancePage />} />
+                <Route path="/compliance/audit" element={<PolicyCompliancePage />} />
+                <Route path="/compliance/sops" element={<PolicyCompliancePage />} />
+                <Route path="/compliance/acknowledgements" element={<PolicyCompliancePage />} />
                 
                 {/* Administration / Access Control */}
                 <Route path="/admin/users" element={<UserManagementPage />} />

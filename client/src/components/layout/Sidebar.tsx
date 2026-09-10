@@ -27,6 +27,10 @@ import {
   ClipboardList,
   Package,
   Laptop,
+  ShieldCheck,
+  ClipboardCheck,
+  BookOpen,
+  CheckCircle2,
   X,
 } from 'lucide-react';
 
@@ -133,6 +137,18 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         children: [
           { key: 'req_material', label: 'Material Requirement', path: '/requirements/material', icon: Package, badge: null },
           { key: 'req_it', label: 'IT Requirement', path: '/requirements/it', icon: Laptop, badge: null },
+        ],
+      },
+      {
+        key: 'policy_compliance_group',
+        label: 'KIM - Policy & Compliance',
+        icon: ShieldCheck,
+        badge: null,
+        children: [
+          { key: 'compliance_policies', label: 'Company Policies', path: '/compliance/policies', icon: ShieldCheck, badge: null },
+          { key: 'compliance_audit', label: 'Compliance Audit', path: '/compliance/audit', icon: ClipboardCheck, badge: null },
+          { key: 'compliance_sops', label: 'SOPs', path: '/compliance/sops', icon: BookOpen, badge: null },
+          { key: 'compliance_acknowledgements', label: 'Acknowledgements', path: '/compliance/acknowledgements', icon: CheckCircle2, badge: null },
         ],
       },
     ],
