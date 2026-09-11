@@ -48,11 +48,13 @@ from app.models import (
     ProjectCustomFieldDefinition,
     ProjectCustomFieldValue,
     ProjectMilestone,
+    ProjectPmSettings,
     ProjectPhase,
     ProjectSpace,
     ProjectStatusDef,
     ProjectType,
     ProjectWorkspace,
+    WorkingCalendarHoliday,
     RbacUserRole,
     Resource,
     Role,
@@ -87,6 +89,7 @@ from app.models import (
     UserPermission,
     VehicleModel,
     Verification,
+    WeeklyOffDay,
 )
 
 UPLOAD_DIR_PATH = Path("uploads")
@@ -167,7 +170,9 @@ TABLE_MODELS = [
     ("task_templates", TaskTemplate),
     ("task_automations", TaskAutomationRule),
     ("project_custom_field_definitions", ProjectCustomFieldDefinition),
-    ("project_custom_field_values", ProjectCustomFieldValue),
+    ("project_pm_settings", ProjectPmSettings),
+    ("weekly_off_days", WeeklyOffDay),
+    ("working_calendar_holidays", WorkingCalendarHoliday),
     ("task_custom_field_definitions", TaskCustomFieldDefinition),
     ("task_custom_field_values", TaskCustomFieldValue),
 ]

@@ -600,7 +600,7 @@ class TaskCustomFieldValue(Base):
 class WorkingCalendarHoliday(Base):
     __tablename__ = "working_calendar_holidays"
     id: Mapped[int] = mapped_column(primary_key=True)
-    date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
+    holiday_date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String(200), nullable=False)
     recurs_yearly: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
