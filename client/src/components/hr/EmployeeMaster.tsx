@@ -48,6 +48,8 @@ import {
   UserCheck,
   CheckSquare,
 } from 'lucide-react';
+import { useTableSort } from '../../hooks/useTableSort';
+import ErpSortHeaderCell from '../ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
 
@@ -185,41 +187,25 @@ export default function EmployeeMaster() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Sort State
-  const [sortField, setSortField] = useState<keyof EmployeeRecord>('emp_id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const { sortState, handleSort, sortData } = useTableSort<EmployeeRecord>();
 
   // Filtered & Sorted Employees List
-  const filteredEmployees = useMemo(() => {
-    return employees
-      .filter((emp) => {
-        if (!emp) return false;
-        const query = (searchTerm || '').toLowerCase();
-        return (
-          (emp.emp_id || '').toLowerCase().includes(query) ||
-          (emp.name || '').toLowerCase().includes(query) ||
-          (emp.email || '').toLowerCase().includes(query) ||
-          (emp.designation || '').toLowerCase().includes(query) ||
-          (emp.department || '').toLowerCase().includes(query) ||
-          (emp.branch || '').toLowerCase().includes(query)
-        );
-      })
-      .sort((a, b) => {
-        const valA = a[sortField] || '';
-        const valB = b[sortField] || '';
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [employees, searchTerm, sortField, sortOrder]);
+  const searchedEmployees = useMemo(() => {
+    return employees.filter((emp) => {
+      if (!emp) return false;
+      const query = (searchTerm || '').toLowerCase();
+      return (
+        (emp.emp_id || '').toLowerCase().includes(query) ||
+        (emp.name || '').toLowerCase().includes(query) ||
+        (emp.email || '').toLowerCase().includes(query) ||
+        (emp.designation || '').toLowerCase().includes(query) ||
+        (emp.department || '').toLowerCase().includes(query) ||
+        (emp.branch || '').toLowerCase().includes(query)
+      );
+    });
+  }, [employees, searchTerm]);
 
-  const handleSort = (field: keyof EmployeeRecord) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
+  const filteredEmployees = useMemo(() => sortData(searchedEmployees), [searchedEmployees, sortData]);
 
   // Selection Handlers
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -653,44 +639,14 @@ export default function EmployeeMaster() {
                   sx={{ color: '#64748b', '&.Mui-checked': { color: '#087A3D' }, '&.MuiCheckbox-indeterminate': { color: '#087A3D' } }}
                 />
               </TableCell>
-              <TableCell onClick={() => handleSort('emp_id')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  EMP ID {sortField === 'emp_id' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('name')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  NAME {sortField === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('designation')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  DESIGNATION {sortField === 'designation' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('department')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  DEPARTMENT {sortField === 'department' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('branch')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  BRANCH {sortField === 'branch' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('shift')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  SHIFT {sortField === 'shift' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer', fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  STATUS {sortField === 'status' && (sortOrder === 'asc' ? '▲' : '▼')}
-                </Box>
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 700, fontSize: 12, color: '#475569' }}>
-                ACTIONS
-              </TableCell>
+              <ErpSortHeaderCell variant="mui" field="emp_id" label="EMP ID" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="name" label="NAME" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="designation" label="DESIGNATION" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="department" label="DEPARTMENT" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="branch" label="BRANCH" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="shift" label="SHIFT" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" field="status" label="STATUS" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
+              <ErpSortHeaderCell variant="mui" label="ACTIONS" align="center" sortable={false} sx={{ fontSize: 12, color: '#475569' }} />
             </TableRow>
           </TableHead>
           <TableBody>

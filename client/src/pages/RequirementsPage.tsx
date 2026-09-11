@@ -50,8 +50,11 @@ import {
   Calendar,
   User,
   FileText,
+  Building2,
   DollarSign,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
 
 export interface RequirementItem {
@@ -165,6 +168,9 @@ export default function RequirementsPage() {
       return true;
     });
   }, [typeFiltered, searchQuery, statusFilter, priorityFilter, departmentFilter]);
+
+  const { sortState, handleSort, sortData } = useTableSort<RequirementItem>();
+  const sortedItems = useMemo(() => sortData(filteredItems), [filteredItems, sortData]);
 
   // Statistics KPIs
   const totalCount = typeFiltered.length;
@@ -567,20 +573,20 @@ export default function RequirementsPage() {
         <Table size="small">
           <TableHead sx={{ bgcolor: 'background.default' }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Requisition ID</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Requirement Title</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Qty & Unit</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Est. Cost (₹)</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Department</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Required By</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Priority</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+              <ErpSortHeaderCell variant="mui" field="id" label="Requisition ID" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
+              <ErpSortHeaderCell variant="mui" field="title" label="Requirement Title" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="category" label="Category" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="quantity" label="Qty & Unit" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="total_cost" label="Est. Cost (₹)" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="department" label="Department" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="required_by_date" label="Required By" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="priority" label="Priority" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredItems.map((item) => (
+            {sortedItems.map((item) => (
               <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedDetailItem(item)}>
                 <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#04552B' }}>
                   {item.id}

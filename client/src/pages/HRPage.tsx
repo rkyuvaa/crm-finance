@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Avatar,
@@ -63,6 +63,8 @@ import {
   LogOut,
   Upload,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
 import { useToast } from '@/components/ui/ToastHost';
 import {
@@ -238,6 +240,12 @@ export default function HRPage() {
       localStorage.setItem('crm_hr_config', JSON.stringify(configState));
     } catch {}
   }, [configState]);
+
+  const { sortState: attendanceSortState, handleSort: handleAttendanceSort, sortData: sortAttendance } = useTableSort<any>();
+  const { sortState: leaveSortState, handleSort: handleLeaveSort, sortData: sortLeave } = useTableSort<any>();
+
+  const sortedAttendanceRecords = useMemo(() => sortAttendance(attendanceRecords), [attendanceRecords, sortAttendance]);
+  const sortedLeaveRequests = useMemo(() => sortLeave(leaveRequests), [leaveRequests, sortLeave]);
 
   // Handlers
   const handleSaveAttendance = async () => {
@@ -631,17 +639,17 @@ export default function HRPage() {
               <Table>
                 <TableHead sx={{ bgcolor: '#f8fafc' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Employee</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Check In</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Check Out</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Hours Worked</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                    <ErpSortHeaderCell variant="mui" field="user_name" label="Employee" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" field="attendance_date" label="Date" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" field="check_in_time" label="Check In" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" field="check_out_time" label="Check Out" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" field="hours_worked" label="Hours Worked" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={attendanceSortState} onSort={handleAttendanceSort} />
+                    <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {attendanceRecords.map((record) => (
+                  {sortedAttendanceRecords.map((record) => (
                     <TableRow key={record.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>{record.user_name}</TableCell>
                       <TableCell>{record.attendance_date}</TableCell>
@@ -726,17 +734,17 @@ export default function HRPage() {
               <Table>
                 <TableHead sx={{ bgcolor: '#f8fafc' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Employee</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Start Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>End Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Reason</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                    <ErpSortHeaderCell variant="mui" field="user_name" label="Employee" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" field="leave_type" label="Type" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" field="start_date" label="Start Date" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" field="end_date" label="End Date" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" field="reason" label="Reason" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={leaveSortState} onSort={handleLeaveSort} />
+                    <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {leaveRequests.map((leave) => (
+                  {sortedLeaveRequests.map((leave) => (
                     <TableRow key={leave.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>{leave.user_name}</TableCell>
                       <TableCell><Chip label={leave.leave_type} size="small" variant="outlined" /></TableCell>

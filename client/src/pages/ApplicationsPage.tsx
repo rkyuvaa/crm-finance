@@ -20,6 +20,8 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { LoadingRows } from '@/components/ui/PageState';
 import { useToast } from '@/components/ui/ToastHost';
+import { useTableSort } from '@/hooks/useTableSort';
+import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
 import { formatAmount, formatDate, initialsOf } from '@/utils/format';
 import type { ApplicationItem, ApplicationStatus } from '@/types';
 
@@ -67,6 +69,9 @@ export default function ApplicationsPage() {
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const tabs = data?.tab_counts ?? { all: 0, mine: 0, pending: 0 };
+
+  const { sortState, handleSort, sortData } = useTableSort<ApplicationItem>();
+  const sortedItems = useMemo(() => sortData(data?.items ?? []), [data?.items, sortData]);
 
   const pagesToShow = useMemo(() => {
     const pages: (number | '…')[] = [];
@@ -200,19 +205,19 @@ export default function ApplicationsPage() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#F7FAF8' }}>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Application</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Customer</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Vehicle</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 600, color: '#6B8278' }}>Amount</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Finance</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Status</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: '#6B8278' }}>Updated</th>
-                    <th style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 600, color: '#6B8278' }}>Actions</th>
+                  <tr>
+                    <ErpSortHeaderCell field="app_no" label="Application" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="customer_name" label="Customer" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="vehicle" label="Vehicle" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="amount" label="Amount" align="right" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="finance_company_name" label="Finance" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="status" label="Status" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell field="updated_at" label="Updated" sortState={sortState} onSort={handleSort} />
+                    <ErpSortHeaderCell label="Actions" align="center" sortable={false} />
                   </tr>
                 </thead>
                 <tbody>
-                  {(data?.items ?? []).map((app) => {
+                  {sortedItems.map((app) => {
                     const isUnassigned = app.assigned_to == null;
                     const urgent = isUnassigned;
                     return (

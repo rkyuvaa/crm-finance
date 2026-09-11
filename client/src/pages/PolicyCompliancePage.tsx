@@ -48,6 +48,8 @@ import {
   Users,
   ExternalLink,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
 
 export interface PolicyComplianceItem {
@@ -180,6 +182,15 @@ export default function PolicyCompliancePage() {
       return true;
     });
   }, [sectionFiltered, searchQuery, statusFilter, categoryFilter, departmentFilter]);
+
+  const { sortState, handleSort, sortData } = useTableSort<PolicyComplianceItem>({
+    getValue: {
+      code_number: (item) => item.code_number || item.id,
+      owner_auditor: (item) => item.owner,
+    },
+  });
+
+  const sortedItems = useMemo(() => sortData(filteredItems), [filteredItems, sortData]);
 
   // Statistics KPIs
   const totalPoliciesCount = items.filter((i) => i.section === 'POLICIES').length;
@@ -610,19 +621,19 @@ export default function PolicyCompliancePage() {
         <Table size="small">
           <TableHead sx={{ bgcolor: 'background.default' }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Code / ID</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Version</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Department</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Owner / Auditor</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Effective Date</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+              <ErpSortHeaderCell variant="mui" field="code_number" label="Code / ID" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
+              <ErpSortHeaderCell variant="mui" field="title" label="Title" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="category" label="Category" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="version" label="Version" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="department" label="Department" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="owner_auditor" label="Owner / Auditor" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="effective_date" label="Effective Date" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredItems.map((item) => (
+            {sortedItems.map((item) => (
               <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedDetailItem(item)}>
                 <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#04552B' }}>
                   {item.code_number || item.id}

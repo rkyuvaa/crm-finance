@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { TaskItem, useUpdateTaskMutation } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { useTableSort } from '@/hooks/useTableSort';
+import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
 
 const DEP_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   FS: { bg: '#D1FAE5', color: '#065F46' },
@@ -88,6 +90,17 @@ export default function TaskListView({
 
   // Group into root tasks (parent_task_id is null/undefined)
   const rootTasks = tasks.filter((t) => !t.parent_task_id);
+
+  const { sortState, handleSort, sortData } = useTableSort<TaskItem>({
+    getValue: {
+      task_title: (t) => t.title,
+      project: (t) => t.project_name || '',
+      progress: (t) => t.progress_percentage || 0,
+      time_tracked: (t) => t.actual_minutes || 0,
+    },
+  });
+
+  const sortedRootTasks = React.useMemo(() => sortData(rootTasks), [rootTasks, sortData]);
 
   const allTaskIds = tasks.map((t) => t.id);
   const isAllSelected = allTaskIds.length > 0 && selectedTaskIds.length === allTaskIds.length;
@@ -395,20 +408,20 @@ export default function TaskListView({
                 sx={{ color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
               />
             </TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary', py: 1.5 }}>TASK / SUBTASK</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>PROJECT / COST CENTER</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>STATUS</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>ASSIGNEES</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>PRIORITY</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>PREDECESSORS</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>DUE DATE</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>PROGRESS</TableCell>
-            <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>TIME TRACKED</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 700, color: 'text.secondary' }}>ACTIONS</TableCell>
+            <ErpSortHeaderCell variant="mui" field="task_title" label="TASK / SUBTASK" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
+            <ErpSortHeaderCell variant="mui" field="project" label="PROJECT / COST CENTER" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="status" label="STATUS" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" label="ASSIGNEES" sortable={false} />
+            <ErpSortHeaderCell variant="mui" field="priority" label="PRIORITY" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" label="PREDECESSORS" sortable={false} sx={{ whiteSpace: 'nowrap' }} />
+            <ErpSortHeaderCell variant="mui" field="due_date" label="DUE DATE" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="progress" label="PROGRESS" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="time_tracked" label="TIME TRACKED" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" label="ACTIONS" align="right" sortable={false} />
           </TableRow>
         </TableHead>
         <TableBody>
-          {rootTasks.length === 0 ? (
+          {sortedRootTasks.length === 0 ? (
             <TableRow>
               <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
                 <Typography variant="body2" color="textSecondary">
@@ -417,7 +430,7 @@ export default function TaskListView({
               </TableCell>
             </TableRow>
           ) : (
-            rootTasks.map((task) => renderTaskRow(task, 0))
+            sortedRootTasks.map((task) => renderTaskRow(task, 0))
           )}
         </TableBody>
       </Table>

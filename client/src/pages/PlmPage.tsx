@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -31,6 +31,8 @@ import {
   GitBranch,
   Package,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
 
 interface VehicleModelPLM {
@@ -214,6 +216,12 @@ export default function PlmPage() {
       e.modelCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const { sortState: bomSortState, handleSort: handleBomSort, sortData: sortBoms } = useTableSort<any>();
+  const { sortState: ecoSortState, handleSort: handleEcoSort, sortData: sortEcos } = useTableSort<any>();
+
+  const sortedBoms = useMemo(() => sortBoms(filteredBoms), [filteredBoms, sortBoms]);
+  const sortedEcos = useMemo(() => sortEcos(filteredEcos), [filteredEcos, sortEcos]);
+
   return (
     <Box sx={{ pb: 6 }}>
       {/* 1. Page Header Action Buttons */}
@@ -394,17 +402,17 @@ export default function PlmPage() {
             <Table>
               <TableHead sx={{ background: '#F8FAF8' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Part No</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Component Name</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Category</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Supplier</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Unit Cost</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Stock Level</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Compliance</TableCell>
+                  <ErpSortHeaderCell variant="mui" field="partNo" label="Part No" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="name" label="Component Name" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="category" label="Category" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="supplier" label="Supplier" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="unitCost" label="Unit Cost" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="stockQty" label="Stock Level" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="compliance" label="Compliance" sortState={bomSortState} onSort={handleBomSort} sx={{ color: '#023020' }} />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredBoms.map((b) => (
+                {sortedBoms.map((b) => (
                   <TableRow key={b.id} hover>
                     <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace', color: '#087A3D' }}>{b.partNo}</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#16231B' }}>{b.name}</TableCell>
@@ -438,16 +446,16 @@ export default function PlmPage() {
             <Table>
               <TableHead sx={{ background: '#F8FAF8' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>ECO Number</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Change Request Title</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Affected Model</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Priority</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: '#023020' }}>Requested Date</TableCell>
+                  <ErpSortHeaderCell variant="mui" field="id" label="ECO Number" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="title" label="Change Request Title" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="modelCode" label="Affected Model" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="priority" label="Priority" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
+                  <ErpSortHeaderCell variant="mui" field="requestedDate" label="Requested Date" sortState={ecoSortState} onSort={handleEcoSort} sx={{ color: '#023020' }} />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredEcos.map((eco) => {
+                {sortedEcos.map((eco) => {
                   const ecoSt = ecoStatusColors[eco.status];
                   return (
                     <TableRow key={eco.id} hover>

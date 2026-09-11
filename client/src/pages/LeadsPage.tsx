@@ -40,6 +40,8 @@ import {
   X,
 } from 'lucide-react';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
+import { useTableSort } from '@/hooks/useTableSort';
+import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
 
 import {
   useApplicationsQuery,
@@ -61,6 +63,18 @@ import { useToast } from '@/components/ui/ToastHost';
 import type { ApplicationItem, ApplicationStatus, PipelineStage } from '@/types';
 
 
+
+const LEAD_TABLE_COLUMNS: { field?: string; label: string; sortable?: boolean; align?: 'left' | 'center' | 'right' }[] = [
+  { field: 'app_no', label: 'App ID', sortable: true },
+  { field: 'customer_name', label: 'Customer', sortable: true },
+  { field: 'vehicle', label: 'Vehicle', sortable: true },
+  { field: 'amount', label: 'Amount', sortable: true },
+  { field: 'status', label: 'Status', sortable: true },
+  { field: 'aging', label: 'Aging', sortable: true },
+  { field: 'created_at', label: 'Created', sortable: true },
+  { field: 'updated_at', label: 'Updated On', sortable: true },
+  { label: 'Actions', sortable: false, align: 'left' },
+];
 
 export default function LeadsPage() {
   const navigate = useNavigate();
@@ -265,6 +279,14 @@ export default function LeadsPage() {
 
     return true;
   });
+
+  const { sortState, handleSort, sortData } = useTableSort<ApplicationItem>({
+    getValue: {
+      aging: (app) => app.created_at,
+    },
+  });
+
+  const sortedRows = useMemo(() => sortData(rows), [rows, sortData]);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -620,29 +642,21 @@ export default function LeadsPage() {
                           />
                         </th>
                       )}
-                      {['App ID', 'Customer', 'Vehicle', 'Amount', 'Status', 'Aging', 'Created', 'Updated On', 'Actions'].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            background: 'var(--primary-lighter)',
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.6,
-                            textAlign: 'left',
-                            padding: '10px 16px',
-                            borderBottom: '1px solid var(--border)',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {h}
-                        </th>
+                      {LEAD_TABLE_COLUMNS.map((col) => (
+                        <ErpSortHeaderCell
+                          key={col.label}
+                          field={col.field}
+                          label={col.label}
+                          sortState={sortState}
+                          onSort={handleSort}
+                          sortable={col.sortable}
+                          align={col.align}
+                        />
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((app) => (
+                    {sortedRows.map((app) => (
                       <tr
                         key={app.id}
                         onClick={() => !isOpportunityRoute && navigate(`${detailPrefix}/${app.id}`)}

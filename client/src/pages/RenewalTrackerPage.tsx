@@ -55,6 +55,8 @@ import {
   Building,
   Send,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useTestSmtpConnectionMutation } from '../api/smtpApi';
 import { useToast } from '@/components/ui/ToastHost';
 
@@ -973,6 +975,18 @@ export default function RenewalTrackerPage() {
     return matchesSearch && matchesCategory && matchesDepartment && matchesStatus;
   });
 
+  const { sortState: renewalSortState, handleSort: handleRenewalSort, sortData: sortRenewals } = useTableSort<RenewalItem>({
+    getValue: {
+      days_remaining: (r) => getDaysRemaining(r.due_date),
+      amount: (r) => r.amount ?? r.cost ?? 0,
+    },
+  });
+
+  const { sortState: categorySortState, handleSort: handleCategorySort, sortData: sortCategories } = useTableSort<any>();
+
+  const sortedRenewals = useMemo(() => sortRenewals(filteredRenewals), [filteredRenewals, sortRenewals]);
+  const sortedCategories = useMemo(() => sortCategories(categories), [categories, sortCategories]);
+
   // Metrics
   const totalCount = renewals.length;
   const expiringSoonCount = renewals.filter((r) => getItemEffectiveStatus(r) === 'EXPIRING_SOON').length;
@@ -1263,21 +1277,21 @@ export default function RenewalTrackerPage() {
             <Table size="medium" sx={{ width: '100%', tableLayout: 'auto' }}>
               <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 160, width: '18%' }}>Renewal Item / Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Vendor</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }}>Plan</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Department</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }}>Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 95, width: '8%' }}>Renewal Cycle</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 120, width: '10%' }}>Days Remaining</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '9%' }}>Last Renewed Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 90, width: '8%' }}>Amount (₹)</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '14%' }}>Renewal Owner</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700, color: '#44584C', fontSize: 14.5, px: 1, py: 1.5, minWidth: 60, width: '5%' }}>Actions</TableCell>
+                  <ErpSortHeaderCell variant="mui" field="item_service" label="Renewal Item / Service" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 160, width: '18%' }} />
+                  <ErpSortHeaderCell variant="mui" field="vendor" label="Vendor" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }} />
+                  <ErpSortHeaderCell variant="mui" field="plan" label="Plan" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '10%' }} />
+                  <ErpSortHeaderCell variant="mui" field="department" label="Department" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }} />
+                  <ErpSortHeaderCell variant="mui" field="due_date" label="Due Date" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 100, width: '9%' }} />
+                  <ErpSortHeaderCell variant="mui" field="renewal_cycle" label="Renewal Cycle" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 95, width: '8%' }} />
+                  <ErpSortHeaderCell variant="mui" field="days_remaining" label="Days Remaining" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 120, width: '10%' }} />
+                  <ErpSortHeaderCell variant="mui" field="last_renewed_date" label="Last Renewed Date" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '9%' }} />
+                  <ErpSortHeaderCell variant="mui" field="amount" label="Amount (₹)" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 90, width: '8%' }} />
+                  <ErpSortHeaderCell variant="mui" field="renewal_owner" label="Renewal Owner" sortState={renewalSortState} onSort={handleRenewalSort} sx={{ fontSize: 14.5, px: 1.5, py: 1.5, minWidth: 110, width: '14%' }} />
+                  <ErpSortHeaderCell variant="mui" label="Actions" align="center" sortable={false} sx={{ fontSize: 14.5, px: 1, py: 1.5, minWidth: 60, width: '5%' }} />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredRenewals.length === 0 ? (
+                {sortedRenewals.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={11} align="center" sx={{ py: 6, color: '#7A8B80' }}>
                       <Typography variant="body1" sx={{ fontWeight: 600, color: '#64748B' }}>
@@ -1286,7 +1300,7 @@ export default function RenewalTrackerPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredRenewals.map((r) => {
+                  sortedRenewals.map((r) => {
                     const displayAmt = r.amount ?? r.cost;
                     return (
                       <TableRow key={r.id} hover sx={{ '& td': { px: 1.5, py: 1.2 } }}>
@@ -1566,16 +1580,16 @@ export default function RenewalTrackerPage() {
               <Table size="small">
                 <TableHead sx={{ backgroundColor: '#F8FAF7' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Category Name</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Color Badge</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Default Validity (Months)</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Default Advance Reminder</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#44584C' }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: '#44584C' }}>Actions</TableCell>
+                    <ErpSortHeaderCell variant="mui" field="name" label="Category Name" sortState={categorySortState} onSort={handleCategorySort} />
+                    <ErpSortHeaderCell variant="mui" field="color" label="Color Badge" sortState={categorySortState} onSort={handleCategorySort} />
+                    <ErpSortHeaderCell variant="mui" field="default_validity_months" label="Default Validity (Months)" sortState={categorySortState} onSort={handleCategorySort} />
+                    <ErpSortHeaderCell variant="mui" field="default_reminder_days" label="Default Advance Reminder" sortState={categorySortState} onSort={handleCategorySort} />
+                    <ErpSortHeaderCell variant="mui" field="is_active" label="Status" sortState={categorySortState} onSort={handleCategorySort} />
+                    <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {categories.map((c) => (
+                  {sortedCategories.map((c) => (
                     <TableRow key={c.id} hover>
                       <TableCell sx={{ fontWeight: 700, color: '#16231B' }}>{c.name}</TableCell>
                       <TableCell>

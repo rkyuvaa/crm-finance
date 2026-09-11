@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -44,6 +44,8 @@ import {
   Network,
   RefreshCw,
 } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import {
   useGetStatusDefinitionsQuery,
   useCreateStatusDefinitionMutation,
@@ -244,6 +246,12 @@ export default function ProjectConfigurationPage() {
     f.name.toLowerCase().includes(fieldSearch.toLowerCase()) ||
     f.label.toLowerCase().includes(fieldSearch.toLowerCase())
   );
+
+  const { sortState: statusSortState, handleSort: handleStatusSort, sortData: sortStatuses } = useTableSort<StatusDefinitionItem>();
+  const { sortState: fieldSortState, handleSort: handleFieldSort, sortData: sortFields } = useTableSort<CustomFieldDefinitionItem>();
+
+  const sortedStatuses = useMemo(() => sortStatuses(filteredStatuses), [filteredStatuses, sortStatuses]);
+  const sortedCustomFields = useMemo(() => sortFields(filteredCustomFields), [filteredCustomFields, sortFields]);
 
   // --- Handlers: Status ---
   const handleOpenStatusModal = (statusItem?: StatusDefinitionItem) => {
@@ -546,23 +554,23 @@ export default function ProjectConfigurationPage() {
                 <Table size="small">
                   <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 60 }}>ID</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Status Name</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Color</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Terminal</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Sort Order</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 100 }}>Actions</TableCell>
+                      <ErpSortHeaderCell variant="mui" field="id" label="ID" sortState={statusSortState} onSort={handleStatusSort} sx={{ fontSize: 12, width: 60 }} />
+                      <ErpSortHeaderCell variant="mui" field="name" label="Status Name" sortState={statusSortState} onSort={handleStatusSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="color" label="Color" sortState={statusSortState} onSort={handleStatusSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="is_terminal" label="Terminal" sortState={statusSortState} onSort={handleStatusSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="display_order" label="Sort Order" sortState={statusSortState} onSort={handleStatusSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} sx={{ fontSize: 12, width: 100 }} />
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredStatuses.length === 0 ? (
+                    {sortedStatuses.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary', fontSize: 13 }}>
                           No workflow statuses found.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredStatuses.map((s) => (
+                      sortedStatuses.map((s) => (
                         <TableRow key={s.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                           <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>{s.id}</TableCell>
                           <TableCell sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>{s.name}</TableCell>
@@ -572,33 +580,18 @@ export default function ProjectConfigurationPage() {
                               <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
                                 {s.color}
                               </Typography>
-                              <Chip
-                                size="small"
-                                label={s.name}
-                                sx={{ bgcolor: s.color, color: '#FFFFFF', fontWeight: 600, fontSize: 11, height: 20, ml: 0.5 }}
-                              />
                             </Box>
                           </TableCell>
                           <TableCell sx={{ fontSize: 13 }}>
-                            {s.is_terminal ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#16A34A', fontWeight: 600 }}>
-                                <CheckCircle2 size={15} /> Yes
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>No</Typography>
-                            )}
+                            {s.is_terminal ? <Chip label="Yes" size="small" color="primary" sx={{ height: 20, fontSize: 11 }} /> : 'No'}
                           </TableCell>
-                          <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>{s.display_order}</TableCell>
+                          <TableCell sx={{ fontSize: 13 }}>{s.display_order}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => handleOpenStatusModal(s)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                                <Pencil size={15} />
-                              </IconButton>
+                              <IconButton size="small" onClick={() => handleOpenStatusModal(s)}><Pencil size={15} /></IconButton>
                             </Tooltip>
                             <Tooltip title="Delete">
-                              <IconButton size="small" onClick={() => handleDeleteStatusClick(s)} sx={{ color: '#EF4444', p: 0.5, ml: 0.5 }}>
-                                <Trash2 size={15} />
-                              </IconButton>
+                              <IconButton size="small" color="error" onClick={() => handleDeleteStatusClick(s)}><Trash2 size={15} /></IconButton>
                             </Tooltip>
                           </TableCell>
                         </TableRow>
@@ -658,17 +651,17 @@ export default function ProjectConfigurationPage() {
                 <Table size="small">
                   <TableHead sx={{ bgcolor: 'background.default' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Field Name / Key</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Display Label</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Applies To</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Field Type</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Required</TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: 12, width: 100 }}>Actions</TableCell>
+                      <ErpSortHeaderCell variant="mui" field="name" label="Field Name / Key" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="label" label="Display Label" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="entity_type" label="Applies To" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="field_type" label="Field Type" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="is_required" label="Required" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" field="is_active" label="Status" sortState={fieldSortState} onSort={handleFieldSort} sx={{ fontSize: 12 }} />
+                      <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} sx={{ fontSize: 12, width: 100 }} />
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredCustomFields.length === 0 ? (
+                    {sortedCustomFields.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary', fontSize: 13 }}>
                           No custom field definitions found.
