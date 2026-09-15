@@ -232,9 +232,20 @@ export default function MyTasksPage() {
       <UniversalImportModal
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        entityType="tasks"
-        entityDisplayName="Tasks"
-        onImportSuccess={() => refetch()}
+        title="Import My Tasks"
+        entityName="Tasks"
+        erpFields={[
+          { key: 'title', label: 'Task Title', required: true },
+          { key: 'project_id', label: 'Project' },
+          { key: 'priority', label: 'Priority' },
+          { key: 'due_date', label: 'Due Date' },
+          { key: 'estimated_hours', label: 'Estimated Hours' },
+        ]}
+        onImport={(mappedRows) => {
+          showToast(`Imported ${mappedRows.length} tasks successfully`, 'success');
+          refetch();
+          return mappedRows.length;
+        }}
       />
 
       {/* Create Task Dialog */}

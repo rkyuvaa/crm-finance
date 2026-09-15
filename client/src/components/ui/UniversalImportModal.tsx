@@ -54,10 +54,11 @@ export default function UniversalImportModal({
   open,
   onClose,
   title,
-  entityName,
-  erpFields,
+  entityName = 'Records',
+  erpFields = [],
   onImport,
 }: UniversalImportModalProps) {
+  const safeErpFields = Array.isArray(erpFields) ? erpFields : [];
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -180,7 +181,7 @@ export default function UniversalImportModal({
       });
 
       setRawRows(parsedDataRows);
-      generateSuggestedMapping(detectedHeaders, erpFields);
+      generateSuggestedMapping(detectedHeaders, safeErpFields);
       setActiveStep(1); // Advance directly to Step 2: Mapping
     } catch (err: any) {
       setErrorMsg(`Failed to parse file: ${err?.message || 'Invalid spreadsheet structure'}`);
@@ -220,7 +221,7 @@ export default function UniversalImportModal({
   };
 
   // Validate mapping before moving to preview
-  const requiredFields = erpFields.filter((f) => f.required);
+  const requiredFields = safeErpFields.filter((f) => f.required);
   const mappedErpKeys = Object.values(fieldMapping).filter((k) => k !== '__IGNORE__');
   
   const unmappedRequiredFields = requiredFields.filter((rf) => !mappedErpKeys.includes(rf.key));
@@ -251,7 +252,7 @@ export default function UniversalImportModal({
       return;
     }
     if (duplicateErpKeys.length > 0) {
-      const dupLabels = duplicateErpKeys.map((k) => erpFields.find((f) => f.key === k)?.label || k);
+      const dupLabels = duplicateErpKeys.map((k) => safeErpFields.find((f) => f.key === k)?.label || k);
       setErrorMsg(`Duplicate mapping detected for ERP field(s): ${dupLabels.join(', ')}. Please assign each ERP field to only one Excel column.`);
       return;
     }
@@ -447,7 +448,7 @@ export default function UniversalImportModal({
                             <MenuItem value="__IGNORE__" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
                               ⛔ — Ignore Column (Do Not Import) —
                             </MenuItem>
-                            {erpFields.map((f) => (
+                            {safeErpFields.map((f) => (
                               <MenuItem key={f.key} value={f.key}>
                                 {f.label} {f.required ? ' * (Required)' : ''}
                               </MenuItem>
@@ -501,7 +502,7 @@ export default function UniversalImportModal({
                     {Object.entries(fieldMapping)
                       .filter(([_, erpKey]) => erpKey !== '__IGNORE__')
                       .map(([uploadedHeader, erpKey]) => {
-                        const erpLabel = erpFields.find((f) => f.key === erpKey)?.label || erpKey;
+                        const erpLabel = safeErpFields.find((f) => f.key === erpKey)?.label || erpKey;
                         return (
                           <TableCell key={erpKey} sx={{ fontWeight: 700, color: '#334155', bgcolor: '#f1f5f9', py: 1 }}>
                             <Box>
