@@ -17,15 +17,16 @@ interface MyTasksViewProps {
   onOpenTaskDetail: (task: TaskItem) => void;
 }
 
-export default function MyTasksView({ tasks, onOpenTaskDetail }: MyTasksViewProps) {
+export default function MyTasksView({ tasks = [], onOpenTaskDetail }: MyTasksViewProps) {
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
   const now = new Date();
 
-  const overdueTasks = tasks.filter(
-    (t) => t.due_date && new Date(t.due_date) < now && !t.is_completed
+  const overdueTasks = safeTasks.filter(
+    (t) => t && t.due_date && new Date(t.due_date) < now && !t.is_completed
   );
 
-  const todayTasks = tasks.filter((t) => {
-    if (!t.due_date || t.is_completed) return false;
+  const todayTasks = safeTasks.filter((t) => {
+    if (!t || !t.due_date || t.is_completed) return false;
     const d = new Date(t.due_date);
     return (
       d.getFullYear() === now.getFullYear() &&
@@ -34,13 +35,13 @@ export default function MyTasksView({ tasks, onOpenTaskDetail }: MyTasksViewProp
     );
   });
 
-  const upcomingTasks = tasks.filter((t) => {
-    if (!t.due_date || t.is_completed) return false;
+  const upcomingTasks = safeTasks.filter((t) => {
+    if (!t || !t.due_date || t.is_completed) return false;
     const d = new Date(t.due_date);
     return d > now;
   });
 
-  const completedTasks = tasks.filter((t) => t.is_completed);
+  const completedTasks = safeTasks.filter((t) => t && t.is_completed);
 
   const renderSection = (title: string, icon: React.ReactNode, list: TaskItem[], toneColor: string) => (
     <Box sx={{ mb: 4 }}>

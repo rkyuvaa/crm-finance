@@ -95,13 +95,18 @@ export default function MyTasksPage() {
     setPanelOpen(true);
   };
 
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeCostCenters = Array.isArray(costCenters) ? costCenters : [];
+
   // Filter tasks specifically for current user
   const myFilteredTasks = (selectedCostCenterId
-    ? tasks.filter((t) => t.cost_center_id === Number(selectedCostCenterId))
-    : tasks
+    ? safeTasks.filter((t) => t && t.cost_center_id === Number(selectedCostCenterId))
+    : safeTasks
   ).filter((t) => {
+    if (!t) return false;
     if (!currentUser) return true;
-    const isAssignee = t.assignees?.some((a) => a.user_id === currentUser.id);
+    const isAssignee = Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === currentUser.id);
     const isDirectAssignee = (t as any).assignee_id === currentUser.id;
     const isCreator = t.created_by_id === currentUser.id;
     return isAssignee || isDirectAssignee || isCreator;
@@ -172,7 +177,7 @@ export default function MyTasksPage() {
             sx={{ width: 220, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
           >
             <MenuItem value="">All Projects</MenuItem>
-            {projects.map((p) => (
+            {safeProjects.map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
             ))}
           </Select>
@@ -185,7 +190,7 @@ export default function MyTasksPage() {
             sx={{ width: 200, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
           >
             <MenuItem value="">All Cost Centers</MenuItem>
-            {costCenters.map((cc) => (
+            {safeCostCenters.map((cc) => (
               <MenuItem key={cc.id} value={cc.id}>{cc.name} ({cc.code})</MenuItem>
             ))}
           </Select>
@@ -262,7 +267,7 @@ export default function MyTasksPage() {
               fullWidth
             >
               <MenuItem value="">Select Project</MenuItem>
-              {projects.map((p) => (
+              {safeProjects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
               ))}
             </Select>
@@ -274,7 +279,7 @@ export default function MyTasksPage() {
               fullWidth
             >
               <MenuItem value="">Select Cost Center</MenuItem>
-              {costCenters.map((cc) => (
+              {safeCostCenters.map((cc) => (
                 <MenuItem key={cc.id} value={cc.id}>{cc.name} ({cc.code})</MenuItem>
               ))}
             </Select>
