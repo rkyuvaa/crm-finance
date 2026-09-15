@@ -210,27 +210,43 @@ export default function Sidebar({
     getParentForPath(location.pathname),
   );
 
-  // Filtered menu items based on search query
+  // Filtered menu items based on search query and permissions
   const filteredNavGroups = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return NAV_GROUPS;
 
     return NAV_GROUPS.map((group) => {
-      const matchingItems = group.items
+      const permittedItems = group.items
         .map((item) => {
-          const parentMatch = item.label.toLowerCase().includes(query);
           if (item.children) {
-            const matchingChildren = item.children.filter((child) =>
+            const validChildren = item.children.filter((child) =>
+              child.key === 'crm_dashboard' ? true : can('view', child.key),
+            );
+
+            if (validChildren.length === 0) return null;
+
+            if (!query) {
+              return { ...item, children: validChildren };
+            }
+
+            const parentMatch = item.label.toLowerCase().includes(query);
+            const matchingChildren = validChildren.filter((child) =>
               child.label.toLowerCase().includes(query),
             );
+
             if (parentMatch || matchingChildren.length > 0) {
               return {
                 ...item,
-                children: parentMatch ? item.children : matchingChildren,
+                children: parentMatch ? validChildren : matchingChildren,
               };
             }
             return null;
           } else {
+            const isPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
+            if (!isPermitted) return null;
+
+            if (!query) return item;
+
+            const parentMatch = item.label.toLowerCase().includes(query);
             return parentMatch ? item : null;
           }
         })
@@ -238,10 +254,10 @@ export default function Sidebar({
 
       return {
         ...group,
-        items: matchingItems,
+        items: permittedItems,
       };
     }).filter((group) => group.items.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, can]);
 
   // Auto-expand sections that have matching children when searching
   useEffect(() => {
@@ -591,34 +607,6 @@ export default function Sidebar({
                         {item.children.map((child) => {
                           const ChildIcon = child.icon;
                           const badgeCount = child.badge ? (counts?.[child.badge] ?? 0) : null;
-                          const isChildPermitted =
-                            child.key === 'crm_dashboard' ? true : can('view', child.key);
-
-                          if (!isChildPermitted) {
-                            return (
-                              <div
-                                key={child.key}
-                                onClick={() =>
-                                  showError(`Access Restricted: Permission required to view ${child.label}.`)
-                                }
-                                className="sb-sub-item"
-                                style={{
-                                  paddingLeft: collapsed ? 10 : 42,
-                                  color: 'rgba(255, 255, 255, 0.35)',
-                                  cursor: 'not-allowed',
-                                }}
-                                title={`Permission required for ${child.label}`}
-                              >
-                                <span style={{ display: 'flex', flexShrink: 0 }}>
-                                  <ChildIcon size={15} color="rgba(255, 255, 255, 0.35)" />
-                                </span>
-                                <span style={{ flex: 1, textDecoration: 'line-through opacity' }}>
-                                  {child.label}
-                                </span>
-                                <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />
-                              </div>
-                            );
-                          }
 
                           return (
                             <NavLink
@@ -669,32 +657,7 @@ export default function Sidebar({
 
                 /* ── Leaf nav item (PLM, Notifications, Settings) ─────── */
                 const badgeCount = item.badge ? (counts?.[item.badge] ?? 0) : null;
-                const isLeafPermitted = item.key === 'crm_dashboard' ? true : can('view', item.key);
 
-                if (!isLeafPermitted) {
-                  return (
-                    <div
-                      key={item.key}
-                      onClick={() =>
-                        showError(`Access Restricted: Permission required to view ${item.label}.`)
-                      }
-                      className="sb-parent-btn"
-                      style={{
-                        justifyContent: collapsed ? 'center' : 'flex-start',
-                        padding: collapsed ? '10px 0' : '8.5px 10px',
-                        color: 'rgba(255, 255, 255, 0.35)',
-                        cursor: 'not-allowed',
-                      }}
-                      title={`Permission required for ${item.label}`}
-                    >
-                      <span style={{ display: 'flex', flexShrink: 0 }}>
-                        <Icon size={17} color="rgba(255, 255, 255, 0.35)" />
-                      </span>
-                      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                      {!collapsed && <Lock size={13} color="rgba(255, 255, 255, 0.35)" style={{ flexShrink: 0 }} />}
-                    </div>
-                  );
-                }
 
                 return (
                   <NavLink
