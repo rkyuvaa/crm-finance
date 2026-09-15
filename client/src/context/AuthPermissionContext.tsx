@@ -76,6 +76,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     
     if (path === '/projects/configuration') return can('view', 'project_configuration');
     if (path.startsWith('/projects')) return can('view', 'projects');
+    if (path.startsWith('/my-tasks')) return can('view', 'my_tasks') || can('view', 'tasks');
     if (path.startsWith('/tasks')) return can('view', 'tasks');
 
     if (path.startsWith('/hr')) {

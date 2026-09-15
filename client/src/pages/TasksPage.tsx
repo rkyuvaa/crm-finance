@@ -41,6 +41,7 @@ import {
 import { useCostCentersQuery, useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 
+import { useAppSelector } from '@/app/hooks';
 import TaskListView from '@/components/projects/TaskListView';
 import TaskBoardView from '@/components/projects/TaskBoardView';
 import TaskCalendarView from '@/components/projects/TaskCalendarView';
@@ -52,8 +53,17 @@ import TaskBulkActionBar from '@/components/projects/TaskBulkActionBar';
 
 type ActiveView = 'list' | 'board' | 'calendar' | 'gantt' | 'mytasks' | 'workload';
 
-export default function TasksPage() {
-  const [activeView, setActiveView] = useState<ActiveView>('board');
+interface TasksPageProps {
+  defaultView?: ActiveView;
+}
+
+export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
+  const [activeView, setActiveView] = useState<ActiveView>(defaultView);
+  const currentUser = useAppSelector((state) => state.auth.user);
+
+  React.useEffect(() => {
+    setActiveView(defaultView);
+  }, [defaultView]);
   const [searchQ, setSearchQ] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<number | ''>('');
   const [selectedStatusId, setSelectedStatusId] = useState<number | ''>('');
@@ -149,10 +159,19 @@ export default function TasksPage() {
     setPanelOpen(true);
   };
 
-  // Filter tasks locally by Cost Center if selected
-  const filteredTasks = selectedCostCenterId
+  // Filter tasks locally by Cost Center and activeView (e.g. My Tasks)
+  const filteredTasks = (selectedCostCenterId
     ? tasks.filter((t) => t.cost_center_id === Number(selectedCostCenterId))
-    : tasks;
+    : tasks
+  ).filter((t) => {
+    if (activeView === 'mytasks' && currentUser) {
+      const isAssignee = t.assignees?.some((a) => a.user_id === currentUser.id);
+      const isDirectAssignee = (t as any).assignee_id === currentUser.id;
+      const isCreator = t.created_by_id === currentUser.id;
+      return isAssignee || isDirectAssignee || isCreator;
+    }
+    return true;
+  });
 
   return (
     <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>

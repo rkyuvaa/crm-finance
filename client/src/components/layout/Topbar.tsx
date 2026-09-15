@@ -17,6 +17,7 @@ const BREADCRUMBS: Record<string, [string, string]> = {
   '/opportunities': ['CRM', 'Opportunities'],
   '/projects': ['Projects', 'All Projects'],
   '/tasks': ['Task', 'All Tasks'],
+  '/my-tasks': ['Project & Task', 'My Task'],
   '/plm': ['PLM', 'Product Lifecycle Management'],
   '/applications': ['Applications', 'All Applications'],
   '/documents': ['Documents', 'Upload & Manage'],

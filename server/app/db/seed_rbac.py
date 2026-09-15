@@ -70,7 +70,8 @@ def seed_rbac_data(db: Session) -> None:
         # Project & Task
         {"module_code": "project_task", "name": "Projects", "code": "projects", "display_order": 1},
         {"module_code": "project_task", "name": "Tasks", "code": "tasks", "display_order": 2},
-        {"module_code": "project_task", "name": "Project Configuration", "code": "project_configuration", "display_order": 3},
+        {"module_code": "project_task", "name": "My Task", "code": "my_tasks", "display_order": 3},
+        {"module_code": "project_task", "name": "Project Configuration", "code": "project_configuration", "display_order": 4},
 
         # HR & Employee
         {"module_code": "hr_employee", "name": "Employee On/off boarding", "code": "hr_onboarding", "display_order": 1},
@@ -258,12 +259,12 @@ def seed_rbac_data(db: Session) -> None:
 
     # Module allocations for standard roles
     role_resource_allocations = {
-        "sales_executive": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks"],
-        "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "summary_reports"],
+        "sales_executive": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks"],
+        "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks", "summary_reports"],
         "finance_officer": ["crm_dashboard", "leads", "opportunities", "crm_reports", "summary_reports"],
         "delivery_team": ["crm_dashboard", "leads", "opportunities"],
         "hr_manager": ["hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration"],
-        "employee": ["hr_self_service", "hr_attendance", "hr_leave"],
+        "employee": ["hr_self_service", "hr_attendance", "hr_leave", "my_tasks", "tasks"],
     }
 
     for role_code, res_codes in role_resource_allocations.items():

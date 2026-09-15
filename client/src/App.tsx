@@ -86,6 +86,7 @@ export default function App() {
                 <Route path="/projects/configuration" element={<ProjectConfigurationPage />} />
                 <Route path="/projects/:id" element={<ProjectWorkspace />} />
                 <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/my-tasks" element={<TasksPage defaultView="mytasks" />} />
                 
                 {/* Renewal Tracker */}
                 <Route path="/renewal" element={<Navigate to="/renewal/tracker" replace />} />
