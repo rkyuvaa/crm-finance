@@ -63,9 +63,9 @@ from app.schemas.projects import (
     ProjectPmSettingsOut,
     ProjectPmSettingsUpdate,
 )
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_permission("view", "tasks"))])
 
 UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "tasks")
 os.makedirs(UPLOAD_DIR, exist_ok=True)

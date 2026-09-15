@@ -38,14 +38,14 @@ class CalendarConfigOut(BaseModel):
 
 @router.get("/config", response_model=CalendarConfigOut)
 def get_calendar_config(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    holidays = db.query(WorkingCalendarHoliday).order_by(WorkingCalendarHoliday.date.asc()).all()
+    holidays = db.query(WorkingCalendarHoliday).order_by(WorkingCalendarHoliday.holiday_date.asc()).all()
     weekly_off_rows = db.query(WeeklyOffDay).all()
     weekly_off_days = [row.day_of_week for row in weekly_off_rows]
 
     holiday_list = [
         HolidayOut(
             id=h.id,
-            holiday_date=h.date,
+            holiday_date=h.holiday_date,
             description=h.description,
             recurs_yearly=h.recurs_yearly
         )
@@ -59,7 +59,7 @@ def get_calendar_config(db: Session = Depends(get_db), current_user: User = Depe
 
 @router.post("/holidays", response_model=HolidayOut)
 def add_holiday(data: HolidayCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    existing = db.query(WorkingCalendarHoliday).filter(WorkingCalendarHoliday.date == data.holiday_date).first()
+    existing = db.query(WorkingCalendarHoliday).filter(WorkingCalendarHoliday.holiday_date == data.holiday_date).first()
     if existing:
         existing.description = data.description
         existing.recurs_yearly = data.recurs_yearly
@@ -67,13 +67,13 @@ def add_holiday(data: HolidayCreate, db: Session = Depends(get_db), current_user
         db.refresh(existing)
         return HolidayOut(
             id=existing.id,
-            holiday_date=existing.date,
+            holiday_date=existing.holiday_date,
             description=existing.description,
             recurs_yearly=existing.recurs_yearly
         )
 
     new_holiday = WorkingCalendarHoliday(
-        date=data.holiday_date,
+        holiday_date=data.holiday_date,
         description=data.description,
         recurs_yearly=data.recurs_yearly
     )
@@ -82,7 +82,7 @@ def add_holiday(data: HolidayCreate, db: Session = Depends(get_db), current_user
     db.refresh(new_holiday)
     return HolidayOut(
         id=new_holiday.id,
-        holiday_date=new_holiday.date,
+        holiday_date=new_holiday.holiday_date,
         description=new_holiday.description,
         recurs_yearly=new_holiday.recurs_yearly
     )

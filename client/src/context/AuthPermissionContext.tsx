@@ -52,12 +52,13 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (key in effectivePermissionsMap) {
       return effectivePermissionsMap[key];
     }
-    return true; // Default allow for standard navigation if unmapped
+    return false; // Default Deny for unallocated/unmapped resources
   };
 
   const canAccessRoute = (path: string): boolean => {
     if (!user) return false;
     if (isSuperAdmin) return true;
+    if (path === '/') return true;
 
     if (path === '/plm') return can('view', 'plm');
     if (path.startsWith('/leads')) return can('view', 'leads');
@@ -68,39 +69,58 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (path.startsWith('/projects')) return can('view', 'projects');
     if (path.startsWith('/tasks')) return can('view', 'tasks');
 
-    if (path === '/hr/onboarding') return can('view', 'hr_onboarding');
-    if (path === '/hr/master') return can('view', 'hr_master');
-    if (path === '/hr/attendance') return can('view', 'hr_attendance');
-    if (path === '/hr/leave') return can('view', 'hr_leave');
-    if (path === '/hr/payroll') return can('view', 'hr_payroll');
-    if (path === '/hr/self-service') return can('view', 'hr_self_service');
-    if (path === '/hr/reports') return can('view', 'hr_reports');
-    if (path === '/hr/configuration') return can('view', 'hr_configuration');
+    if (path.startsWith('/hr')) {
+      if (path === '/hr/onboarding') return can('view', 'hr_onboarding');
+      if (path === '/hr/master') return can('view', 'hr_master');
+      if (path === '/hr/attendance') return can('view', 'hr_attendance');
+      if (path === '/hr/leave') return can('view', 'hr_leave');
+      if (path === '/hr/payroll') return can('view', 'hr_payroll');
+      if (path === '/hr/self-service') return can('view', 'hr_self_service');
+      if (path === '/hr/reports') return can('view', 'hr_reports');
+      if (path === '/hr/configuration') return can('view', 'hr_configuration');
+      return can('view', 'hr_master') || can('view', 'hr_onboarding');
+    }
 
-    if (path === '/renewal/dashboard' || path === '/renewal') return can('view', 'renewal_dashboard');
-    if (path === '/renewal/tracker') return can('view', 'renewal_tracker');
-    if (path === '/renewal/reports') return can('view', 'renewal_reports');
-    if (path === '/renewal/configuration') return can('view', 'renewal_configuration');
+    if (path.startsWith('/renewal')) {
+      if (path === '/renewal/dashboard' || path === '/renewal') return can('view', 'renewal_dashboard');
+      if (path === '/renewal/tracker') return can('view', 'renewal_tracker');
+      if (path === '/renewal/reports') return can('view', 'renewal_reports');
+      if (path === '/renewal/configuration') return can('view', 'renewal_configuration');
+      return can('view', 'renewal_tracker');
+    }
 
-    if (path === '/requirements/material') return can('view', 'req_material');
-    if (path === '/requirements/it') return can('view', 'req_it');
+    if (path.startsWith('/requirements')) {
+      if (path === '/requirements/material') return can('view', 'req_material');
+      if (path === '/requirements/it') return can('view', 'req_it');
+      return can('view', 'req_material') || can('view', 'req_it');
+    }
 
-    if (path === '/compliance/policies') return can('view', 'compliance_policies');
-    if (path === '/compliance/audit') return can('view', 'compliance_audit');
-    if (path === '/compliance/sops') return can('view', 'compliance_sops');
-    if (path === '/compliance/acknowledgements') return can('view', 'compliance_acknowledgements');
+    if (path.startsWith('/compliance')) {
+      if (path === '/compliance/policies') return can('view', 'compliance_policies');
+      if (path === '/compliance/audit') return can('view', 'compliance_audit');
+      if (path === '/compliance/sops') return can('view', 'compliance_sops');
+      if (path === '/compliance/acknowledgements') return can('view', 'compliance_acknowledgements');
+      return can('view', 'compliance_policies');
+    }
 
-    if (path.startsWith('/admin/users')) return can('view', 'users');
-    if (path.startsWith('/admin/roles')) return can('view', 'roles');
-    if (path.startsWith('/admin/departments')) return can('view', 'departments');
-    if (path.startsWith('/admin/audit-logs')) return can('view', 'audit_logs');
-    if (path.startsWith('/admin/permissions')) return can('view', 'permissions');
+    if (path.startsWith('/admin')) {
+      if (path.startsWith('/admin/users')) return can('view', 'users');
+      if (path.startsWith('/admin/roles')) return can('view', 'roles');
+      if (path.startsWith('/admin/departments')) return can('view', 'departments');
+      if (path.startsWith('/admin/audit-logs')) return can('view', 'audit_logs');
+      if (path.startsWith('/admin/permissions')) return can('view', 'permissions');
+      return can('view', 'users') || can('view', 'roles');
+    }
 
     if (path.startsWith('/reports')) return can('view', 'summary_reports') || can('view', 'crm_reports');
-    if (path.startsWith('/notifications')) return can('view', 'notifications');
-    if (path.startsWith('/settings')) return can('view', 'settings');
+    if (path.startsWith('/notifications')) return true;
+    if (path.startsWith('/settings')) return true;
 
-    return true;
+    if (['/documents', '/verification', '/finance', '/sanction', '/delivery', '/disbursement'].includes(path)) {
+      return can('view', 'leads') || can('view', 'opportunities') || can('view', 'crm_dashboard');
+    }
+
+    return false;
   };
 
   return (

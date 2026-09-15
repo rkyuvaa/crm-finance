@@ -238,6 +238,26 @@ def seed_rbac_data(db: Session) -> None:
             if not rp:
                 db.add(RolePermission(role_id=admin_role.id, permission_id=p.id, granted=True))
 
+    # Module allocations for standard roles
+    role_resource_allocations = {
+        "sales_executive": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks"],
+        "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "summary_reports"],
+        "finance_officer": ["crm_dashboard", "leads", "opportunities", "crm_reports", "summary_reports"],
+        "delivery_team": ["crm_dashboard", "leads", "opportunities"],
+        "hr_manager": ["hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration"],
+        "employee": ["hr_self_service", "hr_attendance", "hr_leave"],
+    }
+
+    for role_code, res_codes in role_resource_allocations.items():
+        role_obj = roles_map.get(role_code)
+        if not role_obj:
+            continue
+        for p in all_perms:
+            if p.resource and p.resource.code in res_codes:
+                rp = db.query(RolePermission).filter(RolePermission.role_id == role_obj.id, RolePermission.permission_id == p.id).first()
+                if not rp:
+                    db.add(RolePermission(role_id=role_obj.id, permission_id=p.id, granted=True))
+
     # Link Super Admin role to default admin user
     admin_user = db.query(User).filter(User.email == "admin@kim.com").first()
     if admin_user and super_admin_role:

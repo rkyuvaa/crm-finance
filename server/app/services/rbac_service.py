@@ -8,6 +8,7 @@ from app.models.rbac import (
     AuditLog,
     DepartmentUser,
     Permission,
+    PermissionStatus,
     Role,
     RoleDataScope,
     RoleFieldPermission,
@@ -64,6 +65,22 @@ def log_audit_event(
     return audit_entry
 
 
+def get_user_active_roles(db: Session, user: User) -> list[Role]:
+    """Gather all active roles assigned to a user via RbacUserRole table or matching User.role code."""
+    rbac_user_roles = db.query(RbacUserRole).filter(RbacUserRole.user_id == user.id).all()
+    roles_list = [ur.role for ur in rbac_user_roles if ur.role and ur.role.status == PermissionStatus.ACTIVE]
+    role_ids = {r.id for r in roles_list if r}
+
+    if user.role:
+        role_code = user.role.value if hasattr(user.role, "value") else str(user.role)
+        role_code = role_code.lower()
+        role_by_code = db.query(Role).filter(Role.status == PermissionStatus.ACTIVE, Role.code.ilike(role_code)).first()
+        if role_by_code and role_by_code.id not in role_ids:
+            roles_list.append(role_by_code)
+
+    return roles_list
+
+
 def get_user_effective_permissions_data(db: Session, user: User) -> EffectiveAccessSummary:
     """Calculate and return effective permissions for a user with source metadata."""
     # Active check
@@ -77,8 +94,7 @@ def get_user_effective_permissions_data(db: Session, user: User) -> EffectiveAcc
         )
 
     # Gather user roles
-    rbac_user_roles = db.query(RbacUserRole).filter(RbacUserRole.user_id == user.id).all()
-    roles = [ur.role for ur in rbac_user_roles if ur.role and ur.role.status.value == "ACTIVE"]
+    roles = get_user_active_roles(db, user)
 
     # If primary user.role is ADMIN or has super_admin role
     is_super_admin = user.role == UserRole.ADMIN or any(r.code in ["super_admin", "admin"] for r in roles)
@@ -195,8 +211,7 @@ def can_user(
     if user.role == UserRole.ADMIN:
         return True
 
-    rbac_user_roles = db.query(RbacUserRole).filter(RbacUserRole.user_id == user.id).all()
-    roles = [ur.role for ur in rbac_user_roles if ur.role and ur.role.status.value == "ACTIVE"]
+    roles = get_user_active_roles(db, user)
     if any(r.code in ["super_admin", "admin"] for r in roles):
         return True
 
@@ -211,8 +226,8 @@ def can_user(
     )
 
     if not perm:
-        # Fallback allowing default action for authenticated users if permission not registered
-        return True
+        # Permission not registered or resource unmapped -> Default Deny
+        return False
 
     # 1. Direct User Override
     user_perm = (

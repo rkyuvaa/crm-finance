@@ -24,9 +24,9 @@ from app.schemas.projects import (
     StatusDefinitionUpdate,
     StatusDefinitionOut,
 )
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(prefix="/projects", tags=["projects"], dependencies=[Depends(require_permission("view", "projects"))])
 
 
 def _format_project_out(p: Project, db: Session) -> ProjectOut:

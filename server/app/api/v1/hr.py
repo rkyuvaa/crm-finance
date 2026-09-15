@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import get_current_user, require_roles, require_permission
 from app.db.session import get_db
 from app.models import User, UserRole, Activity
 from app.models.hr import (
@@ -38,7 +38,7 @@ from app.schemas.hr import (
     DepartmentAttendanceReport,
 )
 
-router = APIRouter(prefix="/hr", tags=["hr"])
+router = APIRouter(prefix="/hr", tags=["hr"], dependencies=[Depends(require_permission("view", "hr_master"))])
 
 
 def _log_activity(
