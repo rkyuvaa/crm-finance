@@ -19,28 +19,29 @@ interface TeamWorkloadViewProps {
 
 export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
   const { data: users = [] } = useUsersQuery();
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Users size={20} color="#04552B" />
+          <Users size={22} color="#04552B" />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            Team Capacity & Workload Allocation
+            Team Workload & Capacity Overview
           </Typography>
         </Box>
 
         <Grid container spacing={3}>
           {users.map((user) => {
             // Find tasks assigned to this user
-            const userTasks = tasks.filter((t) =>
-              t.assignees?.some((a) => a.user_id === user.id)
+            const userTasks = safeTasks.filter((t) =>
+              t && Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === user.id)
             );
 
             const totalEstimatedMins = userTasks.reduce((acc, t) => acc + (t.estimated_minutes || 0), 0);
             const totalActualMins = userTasks.reduce((acc, t) => acc + (t.actual_minutes || 0), 0);
             const overdueCount = userTasks.filter(
-              (t) => t.due_date && new Date(t.due_date) < new Date() && !t.is_completed
+              (t) => t && t.due_date && new Date(t.due_date) < new Date() && !t.is_completed
             ).length;
 
             const estHours = Math.round((totalEstimatedMins / 60) * 10) / 10;

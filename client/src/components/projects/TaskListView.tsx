@@ -88,8 +88,10 @@ export default function TaskListView({
     }
   };
 
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
   // Group into root tasks (parent_task_id is null/undefined)
-  const rootTasks = tasks.filter((t) => !t.parent_task_id);
+  const rootTasks = safeTasks.filter((t) => t && !t.parent_task_id);
 
   const { sortState, handleSort, sortData } = useTableSort<TaskItem>({
     getValue: {

@@ -159,13 +159,18 @@ export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
     setPanelOpen(true);
   };
 
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeCostCenters = Array.isArray(costCenters) ? costCenters : [];
+
   // Filter tasks locally by Cost Center and activeView (e.g. My Tasks)
   const filteredTasks = (selectedCostCenterId
-    ? tasks.filter((t) => t.cost_center_id === Number(selectedCostCenterId))
-    : tasks
+    ? safeTasks.filter((t) => t && t.cost_center_id === Number(selectedCostCenterId))
+    : safeTasks
   ).filter((t) => {
+    if (!t) return false;
     if (activeView === 'mytasks' && currentUser) {
-      const isAssignee = t.assignees?.some((a) => a.user_id === currentUser.id);
+      const isAssignee = Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === currentUser.id);
       const isDirectAssignee = (t as any).assignee_id === currentUser.id;
       const isCreator = t.created_by_id === currentUser.id;
       return isAssignee || isDirectAssignee || isCreator;

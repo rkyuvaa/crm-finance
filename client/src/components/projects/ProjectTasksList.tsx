@@ -97,7 +97,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     q: searchQ || undefined,
   });
 
-  const filteredTasks = tasks.filter((t) => {
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
+  const filteredTasks = safeTasks.filter((t) => {
+    if (!t) return false;
     if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
     return true;
   });
