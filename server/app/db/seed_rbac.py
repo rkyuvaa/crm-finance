@@ -29,10 +29,13 @@ def seed_rbac_data(db: Session) -> None:
         {"name": "CRM Management", "code": "crm", "display_order": 2, "icon": "Users"},
         {"name": "Project & Task Management", "code": "project_task", "display_order": 3, "icon": "FolderPlus"},
         {"name": "HR & Employee Management", "code": "hr_employee", "display_order": 4, "icon": "Users"},
-        {"name": "Administration", "code": "administration", "display_order": 5, "icon": "ShieldCheck"},
-        {"name": "Reports & Analytics", "code": "reports", "display_order": 6, "icon": "BarChart3"},
-        {"name": "System Configuration", "code": "configuration", "display_order": 7, "icon": "Settings2"},
-        {"name": "Other", "code": "other", "display_order": 8, "icon": "Settings"},
+        {"name": "Renewal Tracker", "code": "renewal_tracker_module", "display_order": 5, "icon": "RefreshCw"},
+        {"name": "Requirements Management", "code": "requirements_module", "display_order": 6, "icon": "ClipboardList"},
+        {"name": "KIM - Policy & Compliance", "code": "policy_compliance_module", "display_order": 7, "icon": "ShieldCheck"},
+        {"name": "Administration", "code": "administration", "display_order": 8, "icon": "ShieldCheck"},
+        {"name": "Reports & Analytics", "code": "reports", "display_order": 9, "icon": "BarChart3"},
+        {"name": "System Configuration", "code": "configuration", "display_order": 10, "icon": "Settings2"},
+        {"name": "Other", "code": "other", "display_order": 11, "icon": "Settings"},
     ]
 
     modules_map = {}
@@ -78,6 +81,21 @@ def seed_rbac_data(db: Session) -> None:
         {"module_code": "hr_employee", "name": "Self Service", "code": "hr_self_service", "display_order": 6},
         {"module_code": "hr_employee", "name": "HR Reports", "code": "hr_reports", "display_order": 7},
         {"module_code": "hr_employee", "name": "HR Configuration", "code": "hr_configuration", "display_order": 8},
+
+        # Renewal Tracker
+        {"module_code": "renewal_tracker_module", "name": "Renewal Tracker", "code": "renewal_tracker", "display_order": 1},
+        {"module_code": "renewal_tracker_module", "name": "Renewal Reports", "code": "renewal_reports", "display_order": 2},
+        {"module_code": "renewal_tracker_module", "name": "Renewal Configuration", "code": "renewal_configuration", "display_order": 3},
+
+        # Requirements
+        {"module_code": "requirements_module", "name": "Material Requirement", "code": "req_material", "display_order": 1},
+        {"module_code": "requirements_module", "name": "IT Requirement", "code": "req_it", "display_order": 2},
+
+        # Policy & Compliance
+        {"module_code": "policy_compliance_module", "name": "Company Policies", "code": "compliance_policies", "display_order": 1},
+        {"module_code": "policy_compliance_module", "name": "Compliance Audit", "code": "compliance_audit", "display_order": 2},
+        {"module_code": "policy_compliance_module", "name": "SOPs", "code": "compliance_sops", "display_order": 3},
+        {"module_code": "policy_compliance_module", "name": "Acknowledgements", "code": "compliance_acknowledgements", "display_order": 4},
 
         # Administration
         {"module_code": "administration", "name": "Users", "code": "users", "display_order": 1},

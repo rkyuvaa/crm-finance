@@ -24,6 +24,8 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
 
   const { data: effectiveData, isLoading } = useGetUserEffectivePermissionsQuery(userId ?? 0, {
     skip: !userId,
+    pollingInterval: 10000,
+    refetchOnMountOrArgChange: true,
   });
 
   const isSuperAdmin = useMemo(() => {
@@ -51,6 +53,13 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     const key = `${resource}:${action}`;
     if (key in effectivePermissionsMap) {
       return effectivePermissionsMap[key];
+    }
+    const altKey = `${action}:${resource}`;
+    if (altKey in effectivePermissionsMap) {
+      return effectivePermissionsMap[altKey];
+    }
+    if (resource in effectivePermissionsMap) {
+      return effectivePermissionsMap[resource];
     }
     return false; // Default Deny for unallocated/unmapped resources
   };
