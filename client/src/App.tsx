@@ -19,6 +19,7 @@ import ProjectsPage from '@/pages/ProjectsPage';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import ProjectConfigurationPage from '@/pages/ProjectConfigurationPage';
 import TasksPage from '@/pages/TasksPage';
+import MyTasksPage from '@/pages/MyTasksPage';
 import RenewalTrackerPage from '@/pages/RenewalTrackerPage';
 import RequirementsPage from '@/pages/RequirementsPage';
 import PolicyCompliancePage from '@/pages/PolicyCompliancePage';
@@ -86,7 +87,7 @@ export default function App() {
                 <Route path="/projects/configuration" element={<ProjectConfigurationPage />} />
                 <Route path="/projects/:id" element={<ProjectWorkspace />} />
                 <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/my-tasks" element={<TasksPage defaultView="mytasks" />} />
+                <Route path="/my-tasks" element={<MyTasksPage />} />
                 
                 {/* Renewal Tracker */}
                 <Route path="/renewal" element={<Navigate to="/renewal/tracker" replace />} />

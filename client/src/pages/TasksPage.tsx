@@ -232,7 +232,6 @@ export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
             <Tab value="calendar" label="Calendar" icon={<CalendarIcon size={16} />} iconPosition="start" />
             <Tab value="gantt" label="Gantt Chart" icon={<GanttChartSquare size={16} />} iconPosition="start" />
-            <Tab value="mytasks" label="My Tasks" icon={<UserCheck size={16} />} iconPosition="start" />
             <Tab value="workload" label="Team Workload" icon={<Users size={16} />} iconPosition="start" />
           </Tabs>
         </Box>
@@ -330,10 +329,6 @@ export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
 
           {activeView === 'gantt' && (
             <TaskGanttView tasks={filteredTasks} onOpenTaskDetail={handleOpenDetail} />
-          )}
-
-          {activeView === 'mytasks' && (
-            <MyTasksView tasks={filteredTasks} onOpenTaskDetail={handleOpenDetail} />
           )}
 
           {activeView === 'workload' && (
