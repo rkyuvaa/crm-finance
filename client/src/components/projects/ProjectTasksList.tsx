@@ -202,6 +202,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setCreateOpen(true);
   };
 
+  const handleCellUpdate = async (taskId: number, field: string, value: any) => {
+    try {
+      await updateTask({ id: taskId, body: { [field]: value } }).unwrap();
+      toast.showSuccess('Task updated');
+    } catch {
+      toast.showError('Failed to update task');
+    }
+  };
+
   // Inline Quick Task Creation ("Type & Enter")
   const handleQuickCreateTask = async (targetStatusId: number) => {
     const taskTitle = quickTaskInputs[targetStatusId]?.trim();
@@ -467,9 +476,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
     return (
       <React.Fragment key={task.id}>
-        <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => openTask(task)}>
-          {/* Expander Cell */}
-          <TableCell align="center" width={40}>
+        <TableRow
+          hover
+          sx={{
+            cursor: 'pointer',
+            '&:hover .sticky-cell': { bgcolor: '#F8FAFC' },
+          }}
+          onClick={() => openTask(task)}
+        >
+          {/* Expander Cell (Sticky) */}
+          <TableCell
+            className="sticky-cell"
+            align="center"
+            width={40}
+            sx={{
+              position: 'sticky',
+              left: 0,
+              zIndex: 1,
+              bgcolor: 'background.paper',
+              whiteSpace: 'nowrap',
+              transition: 'background-color 0.15s ease',
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
               {hasChildren ? (
                 <IconButton size="small" onClick={(e) => toggleSubtasksExpand(task.id, e)} sx={{ p: 0.2 }}>
@@ -481,8 +509,21 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 1. Name */}
-          <TableCell>
+          {/* 1. Name Cell (Sticky & Inline Editable) */}
+          <TableCell
+            className="sticky-cell"
+            sx={{
+              position: 'sticky',
+              left: 40,
+              zIndex: 1,
+              bgcolor: 'background.paper',
+              whiteSpace: 'nowrap',
+              borderRight: '2px solid',
+              borderColor: 'divider',
+              minWidth: 220,
+              transition: 'background-color 0.15s ease',
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {task.task_number && (
                 <Chip
@@ -498,9 +539,34 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   }}
                 />
               )}
-              <Typography variant="body2" sx={{ fontWeight: depth === 0 ? 600 : 500, color: 'text.primary' }}>
-                {task.title}
-              </Typography>
+              <TextField
+                size="small"
+                variant="standard"
+                defaultValue={task.title}
+                onClick={(e) => e.stopPropagation()}
+                onBlur={(e) => {
+                  const val = e.target.value.trim();
+                  if (val && val !== task.title) {
+                    handleCellUpdate(task.id, 'title', val);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiInputBase-input': {
+                    fontWeight: depth === 0 ? 600 : 500,
+                    fontSize: '0.875rem',
+                    color: 'text.primary',
+                    px: 0.5,
+                    py: 0.25,
+                    borderRadius: '4px',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                  },
+                }}
+              />
 
               {hasChildren && (
                 <Chip
@@ -512,11 +578,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 2. Dependencies */}
-          <TableCell>
-            {task.dependencies && task.dependencies.length > 0 ? (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {task.dependencies.slice(0, 2).map((dep) => {
+          {/* 2. Dependencies (Click to edit/add) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {task.dependencies && task.dependencies.length > 0 ? (
+                task.dependencies.slice(0, 2).map((dep) => {
                   const dt = dep.dep_type || 'FS';
                   const num = dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`;
                   return (
@@ -525,6 +591,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         icon={<Link2 size={10} color="#065F46" />}
                         label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                         size="small"
+                        onClick={() => openTask(task)}
                         sx={{
                           height: 20,
                           fontSize: '0.65rem',
@@ -532,104 +599,310 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           bgcolor: '#D1FAE5',
                           color: '#065F46',
                           fontFamily: 'monospace',
+                          cursor: 'pointer',
                         }}
                       />
                     </Tooltip>
                   );
-                })}
-                {task.dependencies.length > 2 && (
-                  <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', alignSelf: 'center' }}>
-                    +{task.dependencies.length - 2}
-                  </Typography>
-                )}
-              </Box>
-            ) : (
-              <Typography variant="body2" sx={{ color: 'text.disabled' }}>—</Typography>
-            )}
-          </TableCell>
-
-          {/* 3. Assigned To */}
-          <TableCell>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-              {task.assignees && task.assignees.length > 0 ? (
-                task.assignees.map((a) => (
-                  <Tooltip key={a.user_id} title={a.user?.full_name || `User #${a.user_id}`}>
-                    <Chip
-                      avatar={
-                        <Avatar sx={{ width: 22, height: 22, fontSize: '0.7rem', bgcolor: '#04552B', color: '#fff' }}>
-                          {(a.user?.full_name || '?').charAt(0)}
-                        </Avatar>
-                      }
-                      label={a.user?.full_name || `User #${a.user_id}`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ height: 24, fontSize: '0.72rem', fontWeight: 600 }}
-                    />
-                  </Tooltip>
-                ))
+                })
               ) : (
-                <Typography variant="body2" color="textSecondary">
-                  {task.assignee_name || 'Unassigned'}
+                <Typography
+                  variant="body2"
+                  onClick={() => openTask(task)}
+                  sx={{ color: 'text.disabled', cursor: 'pointer', fontSize: '0.75rem', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                >
+                  —
                 </Typography>
               )}
             </Box>
           </TableCell>
 
-          {/* 4. Start Date */}
-          <TableCell>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-              {task.start_date || '—'}
-            </Typography>
+          {/* 3. Assigned To (Inline Select Dropdown) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <FormControl size="small" variant="standard">
+              <Select
+                multiple
+                displayEmpty
+                value={(task.assignees || []).map((a) => a.user_id)}
+                onChange={(e) => {
+                  const val = e.target.value as number[];
+                  handleCellUpdate(task.id, 'assignee_ids', val);
+                }}
+                renderValue={(selected) => {
+                  const selectedIds = selected as number[];
+                  if (selectedIds.length === 0) return <Typography variant="body2" color="textSecondary">Unassigned</Typography>;
+                  const matched = users.filter((u) => selectedIds.includes(u.id));
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+                      {matched.map((u) => (
+                        <Chip
+                          key={u.id}
+                          avatar={
+                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: '#04552B', color: '#fff' }}>
+                              {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
+                            </Avatar>
+                          }
+                          label={u.full_name || u.email}
+                          size="small"
+                          variant="outlined"
+                          sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600 }}
+                        />
+                      ))}
+                    </Box>
+                  );
+                }}
+                disableUnderline
+                sx={{
+                  fontSize: '0.8rem',
+                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: '#F1F5F9' } },
+                }}
+              >
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    <Checkbox size="small" checked={(task.assignees || []).some((a) => a.user_id === u.id)} />
+                    <ListItemText primary={u.full_name || u.email} primaryTypographyProps={{ fontSize: 13 }} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </TableCell>
 
-          {/* 5. End Date */}
-          <TableCell>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-              {task.due_date || '—'}
-            </Typography>
-          </TableCell>
-
-          {/* 6. Duration */}
-          <TableCell>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-              {task.is_parent ? `${task.duration_working_days || 0} CD` : `${task.duration_working_days || 0} WD`}
-            </Typography>
-          </TableCell>
-
-          {/* 7. Status */}
-          <TableCell>
-            <Chip
-              label={task.status_name || (task.is_completed ? 'Done' : 'To Do')}
+          {/* 4. Start Date (Inline Date Picker) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <TextField
+              type="date"
               size="small"
+              variant="standard"
+              defaultValue={task.start_date || ''}
+              onBlur={(e) => {
+                const val = e.target.value;
+                if (val !== (task.start_date || '')) {
+                  handleCellUpdate(task.id, 'start_date', val || null);
+                }
+              }}
+              InputProps={{ disableUnderline: true }}
               sx={{
-                height: 22,
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                bgcolor: task.status_color || (task.is_completed ? '#16A34A' : '#64748B'),
-                color: '#FFFFFF',
+                '& .MuiInputBase-input': {
+                  fontSize: '0.8rem',
+                  color: 'text.secondary',
+                  py: 0.25,
+                  px: 0.5,
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  cursor: 'pointer',
+                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                },
               }}
             />
           </TableCell>
 
-          {/* 8. Completion Date */}
-          <TableCell>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-              {task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '—')}
-            </Typography>
+          {/* 5. End Date (Inline Date Picker) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <TextField
+              type="date"
+              size="small"
+              variant="standard"
+              defaultValue={task.due_date || ''}
+              onBlur={(e) => {
+                const val = e.target.value;
+                if (val !== (task.due_date || '')) {
+                  handleCellUpdate(task.id, 'due_date', val || null);
+                }
+              }}
+              InputProps={{ disableUnderline: true }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.8rem',
+                  color: 'text.secondary',
+                  py: 0.25,
+                  px: 0.5,
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  cursor: 'pointer',
+                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                },
+              }}
+            />
           </TableCell>
 
-          {/* 9. Estimated Cost */}
-          <TableCell>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-              ₹{(task.estimated_cost || 0).toLocaleString('en-IN')}
-            </Typography>
+          {/* 6. Duration (Inline Numeric Edit) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="number"
+                size="small"
+                variant="standard"
+                defaultValue={task.duration_working_days || 0}
+                onBlur={(e) => {
+                  const val = Number(e.target.value);
+                  if (val !== (task.duration_working_days || 0)) {
+                    handleCellUpdate(task.id, 'duration_working_days', val);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  width: 45,
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    fontFamily: 'monospace',
+                    color: 'text.primary',
+                    py: 0.25,
+                    px: 0.5,
+                    textAlign: 'right',
+                    borderRadius: '4px',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                  },
+                }}
+              />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+                {task.is_parent ? 'CD' : 'WD'}
+              </Typography>
+            </Box>
           </TableCell>
 
-          {/* 10. Actual Cost */}
-          <TableCell>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-              ₹{(task.actual_cost || 0).toLocaleString('en-IN')}
-            </Typography>
+          {/* 7. Status (Inline Status Selector) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <FormControl size="small" variant="standard">
+              <Select
+                value={task.status_id || 1}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  handleCellUpdate(task.id, 'status_id', val);
+                }}
+                disableUnderline
+                renderValue={(stId) => {
+                  const st = activeStatuses.find((s) => s.id === stId);
+                  return (
+                    <Chip
+                      label={st?.name || task.status_name || 'To Do'}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        bgcolor: st?.color || task.status_color || '#64748B',
+                        color: '#FFFFFF',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  );
+                }}
+                sx={{
+                  '& .MuiSelect-select': { p: 0 },
+                }}
+              >
+                {activeStatuses.map((st) => (
+                  <MenuItem key={st.id} value={st.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: st.color }} />
+                      <Typography variant="body2">{st.name}</Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </TableCell>
+
+          {/* 8. Completion Date (Inline Date Picker) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <TextField
+              type="date"
+              size="small"
+              variant="standard"
+              defaultValue={task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '')}
+              onBlur={(e) => {
+                const val = e.target.value;
+                if (val !== (task.completion_date || '')) {
+                  handleCellUpdate(task.id, 'completion_date', val || null);
+                }
+              }}
+              InputProps={{ disableUnderline: true }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.8rem',
+                  color: 'text.secondary',
+                  py: 0.25,
+                  px: 0.5,
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  cursor: 'pointer',
+                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                },
+              }}
+            />
+          </TableCell>
+
+          {/* 9. Estimated Cost (Inline Numeric Input) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>₹</Typography>
+              <TextField
+                type="number"
+                size="small"
+                variant="standard"
+                defaultValue={task.estimated_cost || 0}
+                onBlur={(e) => {
+                  const val = Number(e.target.value);
+                  if (val !== (task.estimated_cost || 0)) {
+                    handleCellUpdate(task.id, 'estimated_cost', val);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  width: 80,
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.82rem',
+                    fontFamily: 'monospace',
+                    color: 'text.primary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                  },
+                }}
+              />
+            </Box>
+          </TableCell>
+
+          {/* 10. Actual Cost (Inline Numeric Input) */}
+          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>₹</Typography>
+              <TextField
+                type="number"
+                size="small"
+                variant="standard"
+                defaultValue={task.actual_cost || 0}
+                onBlur={(e) => {
+                  const val = Number(e.target.value);
+                  if (val !== (task.actual_cost || 0)) {
+                    handleCellUpdate(task.id, 'actual_cost', val);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  width: 80,
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.82rem',
+                    fontFamily: 'monospace',
+                    color: 'text.primary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
         </TableRow>
 
@@ -1046,21 +1319,45 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
       {/* ── CLICKUP GROUPED LIST VIEW ───────────────────────────────────── */}
       {viewMode === 'list' && (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px' }}>
-          <Table size="small">
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 1200 }}>
             <TableHead sx={{ bgcolor: 'background.default' }}>
               <TableRow>
-                <TableCell width={40}></TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Dependencies</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Assigned To</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Start Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>End Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Duration</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Completion Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Estimated Cost</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Actual Cost</TableCell>
+                <TableCell
+                  width={40}
+                  sx={{
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 3,
+                    bgcolor: 'background.default',
+                    whiteSpace: 'nowrap',
+                  }}
+                ></TableCell>
+                <TableCell
+                  sx={{
+                    position: 'sticky',
+                    left: 40,
+                    zIndex: 3,
+                    bgcolor: 'background.default',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                    borderRight: '2px solid',
+                    borderColor: 'divider',
+                    minWidth: 220,
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Dependencies</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Assigned To</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Start Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>End Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Duration</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Completion Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Estimated Cost</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Actual Cost</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1091,12 +1388,29 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     <React.Fragment key={`status-${status.id}`}>
                       {/* Group Header */}
                       <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(status.id)}>
-                        <TableCell>
+                        <TableCell
+                          sx={{
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 2,
+                            bgcolor: 'background.default',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <IconButton size="small">
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell colSpan={10}>
+                        <TableCell
+                          colSpan={10}
+                          sx={{
+                            position: 'sticky',
+                            left: 40,
+                            zIndex: 2,
+                            bgcolor: 'background.default',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip label={status.name} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
                             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
@@ -1122,12 +1436,29 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <React.Fragment key={`milestone-${groupId}`}>
                       <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
-                        <TableCell>
+                        <TableCell
+                          sx={{
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 2,
+                            bgcolor: 'background.default',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <IconButton size="small">
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell colSpan={10}>
+                        <TableCell
+                          colSpan={10}
+                          sx={{
+                            position: 'sticky',
+                            left: 40,
+                            zIndex: 2,
+                            bgcolor: 'background.default',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700 }}>
                               {milestone.name}
