@@ -78,8 +78,8 @@ import {
   useAddDependencyMutation,
   useRemoveDependencyMutation,
   useGetTaskQuery,
-  useGetTasksQuery,
   useGetStatusDefinitionsQuery,
+  useGetProjectMilestonesQuery,
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
 } from '@/api/projectsApi';
@@ -173,6 +173,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   );
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
   const currentTask = liveTask || task;
+  const { data: projectMilestones = [] } = useGetProjectMilestonesQuery(currentTask?.project_id || 0, {
+    skip: !currentTask?.project_id,
+  });
 
   const handleConfirmOverrideCompletion = async () => {
     try {
@@ -286,6 +289,15 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       showToast('Status updated', 'success');
     } catch {
       showToast('Failed to update status', 'error');
+    }
+  };
+
+  const handleMilestoneChange = async (milestoneId: number | '') => {
+    try {
+      await updateTask({ id: currentTaskId, body: { milestone_id: milestoneId ? Number(milestoneId) : (null as any) } }).unwrap();
+      showToast('Milestone updated', 'success');
+    } catch {
+      showToast('Failed to update milestone', 'error');
     }
   };
 
@@ -1111,6 +1123,28 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: st.color || '#64748B' }} />
                       {st.name}
                     </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Milestone Selector */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Milestone
+              </Typography>
+              <Select
+                size="small"
+                fullWidth
+                value={currentTask.milestone_id || ''}
+                onChange={(e) => handleMilestoneChange(e.target.value as any)}
+                displayEmpty
+                sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
+              >
+                <MenuItem value=""><em>No Milestone (Unassigned)</em></MenuItem>
+                {projectMilestones.map((m) => (
+                  <MenuItem key={m.id} value={m.id}>
+                    🚩 {m.title}
                   </MenuItem>
                 ))}
               </Select>

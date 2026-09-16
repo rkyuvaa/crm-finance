@@ -136,6 +136,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('05:00 PM');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
+  const [milestoneId, setMilestoneId] = useState<number | ''>('');
 
   const defaultStatuses = [
     { id: 1, name: 'To Do', color: '#64748B', is_terminal: false },
@@ -195,10 +196,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setPanelOpen(true);
   };
 
-  const handleOpenCreateModal = (defaultStatusId: number = 1) => {
+  const handleOpenCreateModal = (defaultStatusId: number = 1, defaultMilestoneId?: number) => {
     setTitle('');
     setDescription('');
     setStatusId(defaultStatusId);
+    setMilestoneId(defaultMilestoneId || '');
     setPriority('NORMAL');
     setAssigneeIds([]);
     setStartDate('');
@@ -270,6 +272,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         description: description.trim() || undefined,
         project_id: numericProjectId,
         status_id: statusId,
+        milestone_id: milestoneId ? Number(milestoneId) : undefined,
         priority,
         assignee_id: assigneeIds.length > 0 ? assigneeIds[0] : undefined,
         assignee_ids: assigneeIds,
@@ -289,6 +292,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       setDueDate('');
       setDueTime('05:00 PM');
       setEstimatedHours(0);
+      setMilestoneId('');
     } catch (err: any) {
       toast.showError(err?.data?.detail || 'Failed to create task');
     }
@@ -1572,9 +1576,29 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             onChange={(e) => setDescription(e.target.value)}
           />
           <FormControl size="small" fullWidth>
-            <Select value={statusId} onChange={(e) => setStatusId(Number(e.target.value))}>
+            <InputLabel id="create-task-status-label">Status</InputLabel>
+            <Select
+              labelId="create-task-status-label"
+              value={statusId}
+              onChange={(e) => setStatusId(Number(e.target.value))}
+              input={<OutlinedInput label="Status" />}
+            >
               {activeStatuses.map((st) => (
                 <MenuItem key={st.id} value={st.id}>{st.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" fullWidth>
+            <InputLabel id="create-task-milestone-label">Milestone (Optional)</InputLabel>
+            <Select
+              labelId="create-task-milestone-label"
+              value={milestoneId}
+              onChange={(e) => setMilestoneId(e.target.value ? Number(e.target.value) : '')}
+              input={<OutlinedInput label="Milestone (Optional)" />}
+            >
+              <MenuItem value=""><em>No Milestone (Unassigned)</em></MenuItem>
+              {milestones.map((m) => (
+                <MenuItem key={m.id} value={m.id}>🚩 {m.title}</MenuItem>
               ))}
             </Select>
           </FormControl>
