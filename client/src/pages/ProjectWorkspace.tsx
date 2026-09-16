@@ -149,72 +149,69 @@ export default function ProjectWorkspace() {
           borderColor: 'divider',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <IconButton onClick={() => navigate('/projects')} size="small">
-            <ArrowLeft size={20} />
-          </IconButton>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1.5, color: 'text.primary' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', flex: 1 }}>
+            <IconButton onClick={() => navigate('/projects')} size="small">
+              <ArrowLeft size={20} />
+            </IconButton>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
               {project.name}
-              <Chip size="small" label={projectCode} variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
             </Typography>
+            <Chip size="small" label={projectCode} variant="outlined" sx={{ fontWeight: 600, fontSize: 12, borderRadius: '6px' }} />
+
+            {/* Beautiful Solid Green Pill Badges (Button Size & Rounded) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', ml: { xs: 0, sm: 1 } }}>
+              <Chip
+                label={`Progress: ${progressPercent}%`}
+                sx={{
+                  bgcolor: '#04552B',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  height: 32,
+                  borderRadius: '9999px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  '& .MuiChip-label': { px: 1.5 },
+                }}
+              />
+              <Chip
+                label={`Tasks Completion: ${doneTasks}/${totalTasks}`}
+                sx={{
+                  bgcolor: '#04552B',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  height: 32,
+                  borderRadius: '9999px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  '& .MuiChip-label': { px: 1.5 },
+                }}
+              />
+              <Chip
+                label={`Budget Usage: ₹${(project.actual_cost || 0).toLocaleString()} / ₹${(project.budget || 0).toLocaleString()}`}
+                sx={{
+                  bgcolor: '#04552B',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  height: 32,
+                  borderRadius: '9999px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  '& .MuiChip-label': { px: 1.5 },
+                }}
+              />
+            </Box>
           </Box>
           <Button
             variant="outlined"
             size="small"
             startIcon={<Settings size={16} />}
             onClick={() => navigate('/projects/configuration')}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '8px' }}
           >
             Settings
           </Button>
         </Box>
-
-        {/* KPI Strip */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Health</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#16A34A' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: 'text.primary' }}>On Track</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Progress</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>{progressPercent}%</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Tasks Completion</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>
-                  {doneTasks} / {totalTasks}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Typography color="textSecondary" variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600 }}>Budget Usage</Typography>
-                <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 700, fontSize: 18, color: 'text.primary' }}>
-                  ₹{(project.actual_cost || 0).toLocaleString()} / ₹{(project.budget || 0).toLocaleString()}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
 
         {/* Workspace Tabs */}
         <Tabs
