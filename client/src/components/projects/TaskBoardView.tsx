@@ -81,8 +81,11 @@ export default function TaskBoardView({
     try {
       await updateTask({ id: taskId, body: { status_id: newStatusId } }).unwrap();
       showToast('Task moved successfully', 'success');
-    } catch {
-      showToast('Failed to update task status', 'error');
+    } catch (err: any) {
+      const msg = typeof err?.data?.detail === 'string'
+        ? err.data.detail
+        : err?.data?.detail?.message || err?.message || 'Failed to update task status';
+      showToast(msg, 'error');
     }
   };
 

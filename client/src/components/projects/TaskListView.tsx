@@ -83,8 +83,11 @@ export default function TaskListView({
     try {
       await updateTask({ id: taskId, body: { [field]: value } }).unwrap();
       showToast('Task updated', 'success');
-    } catch {
-      showToast('Failed to update task', 'error');
+    } catch (err: any) {
+      const msg = typeof err?.data?.detail === 'string'
+        ? err.data.detail
+        : err?.data?.detail?.message || err?.message || 'Failed to update task';
+      showToast(msg, 'error');
     }
   };
 

@@ -725,16 +725,17 @@ def update_task(
 
     update_dict = data.model_dump(exclude_unset=True)
 
-    new_start_val = update_dict.get("start_date", task.start_date)
-    new_due_val = update_dict.get("due_date", task.due_date)
-    if new_start_val and new_due_val and new_due_val < new_start_val:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Due date cannot be earlier than start date"
-        )
-    if new_start_val and new_due_val:
-        holiday_dates, weekly_off_days = _get_working_calendar(db)
-        task.duration_working_days = _count_working_days(new_start_val, new_due_val, holiday_dates, weekly_off_days)
+    if "start_date" in update_dict or "due_date" in update_dict:
+        new_start_val = update_dict.get("start_date", task.start_date)
+        new_due_val = update_dict.get("due_date", task.due_date)
+        if new_start_val and new_due_val and new_due_val < new_start_val:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Due date cannot be earlier than start date"
+            )
+        if new_start_val and new_due_val:
+            holiday_dates, weekly_off_days = _get_working_calendar(db)
+            task.duration_working_days = _count_working_days(new_start_val, new_due_val, holiday_dates, weekly_off_days)
 
     if "title" in update_dict:
         if not update_dict["title"] or not update_dict["title"].strip():
@@ -832,7 +833,7 @@ def update_task(
     # Update task fields
     task.updated_by = current_user.id
     for field, val in update_dict.items():
-        if field not in ["assignee_ids", "follower_ids", "tag_ids"]:
+        if field not in ["assignee_ids", "follower_ids", "tag_ids", "override_dependencies"]:
             setattr(task, field, val)
 
     # Multi assignees update

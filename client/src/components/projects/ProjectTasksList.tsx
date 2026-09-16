@@ -215,8 +215,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     try {
       await updateTask({ id: taskId, body: { [field]: value } }).unwrap();
       toast.showSuccess('Task updated');
-    } catch {
-      toast.showError('Failed to update task');
+    } catch (err: any) {
+      const msg = typeof err?.data?.detail === 'string'
+        ? err.data.detail
+        : err?.data?.detail?.message || err?.message || 'Failed to update task';
+      toast.showError(msg);
     }
   };
 
@@ -235,7 +238,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       setQuickTaskInputs((prev) => ({ ...prev, [targetStatusId]: '' }));
       toast.showSuccess(`Task "${taskTitle}" created!`);
     } catch (err: any) {
-      toast.showError(err?.data?.detail || 'Failed to create task');
+      const msg = typeof err?.data?.detail === 'string'
+        ? err.data.detail
+        : err?.data?.detail?.message || err?.message || 'Failed to create task';
+      toast.showError(msg);
     }
   };
 
@@ -257,7 +263,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       await updateTask({ id: taskId, body: { status_id: targetStatusId } }).unwrap();
       toast.showSuccess('Task status updated!');
     } catch (err: any) {
-      toast.showError('Failed to update task status');
+      const msg = typeof err?.data?.detail === 'string'
+        ? err.data.detail
+        : err?.data?.detail?.message || err?.message || 'Failed to update task status';
+      toast.showError(msg);
     }
   };
 
