@@ -318,6 +318,7 @@ class TaskCreate(TaskBase):
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
     duration_working_days: Optional[int] = None
+    auto_schedule: Optional[bool] = True
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
     completion_date: Optional[date] = None
@@ -354,6 +355,7 @@ class TaskUpdate(BaseModel):
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
     duration_working_days: Optional[int] = None
+    auto_schedule: Optional[bool] = None
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
     completion_date: Optional[date] = None
@@ -384,6 +386,7 @@ class TaskOut(TaskBase):
     completed_by: Optional[int] = None
 
     duration_working_days: Optional[int] = 0
+    auto_schedule: bool = True
     estimated_cost: Optional[float] = 0.0
     actual_cost: Optional[float] = 0.0
     completion_date: Optional[date] = None
@@ -392,6 +395,7 @@ class TaskOut(TaskBase):
     is_date_controlled_by: Optional[int] = None
     start_date_locked: bool = False
     end_date_locked: bool = False
+    dependency_conflict: Optional[dict] = None
 
     rollup_start_date: Optional[date] = None
     rollup_end_date: Optional[date] = None

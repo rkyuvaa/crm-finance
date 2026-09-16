@@ -489,6 +489,10 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
     out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
     out.nested_subtasks = [_format_task_out(st, db) for st in subtasks]
 
+    from app.services.scheduling_engine import check_dependency_conflict
+    out.dependency_conflict = check_dependency_conflict(db, t)
+    out.auto_schedule = getattr(t, 'auto_schedule', True)
+
     return out
 
 
@@ -621,16 +625,23 @@ def create_task(
     task_num = _generate_task_number(db, data.project_id)
 
     holiday_dates, weekly_off_days = _get_working_calendar(db)
-    if data.start_date and data.due_date:
+    if data.start_date and data.duration_working_days:
+        from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
+        due_dt = add_working_days(data.start_date, max(1, data.duration_working_days) - 1, get_cal(db))
+        dur_days = data.duration_working_days
+    elif data.start_date and data.due_date:
         dur_days = _count_working_days(data.start_date, data.due_date, holiday_dates, weekly_off_days)
+        due_dt = data.due_date
     else:
-        dur_days = 1
+        dur_days = data.duration_working_days or 1
+        due_dt = data.due_date
 
     task = Task(
         task_number=task_num,
         project_id=data.project_id,
         phase_id=data.phase_id,
         parent_task_id=data.parent_task_id,
+        milestone_id=data.milestone_id,
         title=data.title.strip(),
         description=data.description,
         type_id=data.type_id,
@@ -641,9 +652,10 @@ def create_task(
         updated_by=current_user.id,
         start_date=data.start_date,
         start_time=data.start_time,
-        due_date=data.due_date,
+        due_date=due_dt,
         due_time=data.due_time,
         duration_working_days=dur_days,
+        auto_schedule=data.auto_schedule if data.auto_schedule is not None else True,
         estimated_minutes=data.estimated_minutes or int(data.estimated_hours * 60),
         estimated_hours=data.estimated_hours or ((data.estimated_minutes or 0) / 60.0),
         tags=data.tags,
@@ -688,6 +700,12 @@ def create_task(
     # Log activity
     _log_activity(db, task.id, current_user.id, "CREATED", new_val=task.title)
 
+    if task.parent_task_id or task.milestone_id or task.project_id:
+        from app.services.scheduling_engine import propagate_task_schedule_changes
+        propagate_task_schedule_changes(db, task.id, current_user.id)
+
+    db.commit()
+
     db.commit()
     db.refresh(task)
 
@@ -725,7 +743,14 @@ def update_task(
 
     update_dict = data.model_dump(exclude_unset=True)
 
-    if "start_date" in update_dict or "due_date" in update_dict:
+    # Duration ↔ Due Date automatic recalculation
+    if "duration_working_days" in update_dict and update_dict["duration_working_days"]:
+        dur = max(1, update_dict["duration_working_days"])
+        task.duration_working_days = dur
+        if task.start_date:
+            from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
+            task.due_date = add_working_days(task.start_date, dur - 1, get_cal(db))
+    elif "start_date" in update_dict or "due_date" in update_dict:
         new_start_val = update_dict.get("start_date", task.start_date)
         new_due_val = update_dict.get("due_date", task.due_date)
         if new_start_val and new_due_val and new_due_val < new_start_val:
@@ -736,6 +761,13 @@ def update_task(
         if new_start_val and new_due_val:
             holiday_dates, weekly_off_days = _get_working_calendar(db)
             task.duration_working_days = _count_working_days(new_start_val, new_due_val, holiday_dates, weekly_off_days)
+
+    # Parent task due date manual shift check
+    if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != task.due_date:
+        has_subtasks = db.query(Task).filter(Task.parent_task_id == task.id, Task.is_deleted.is_(False)).count() > 0
+        if has_subtasks:
+            from app.services.scheduling_engine import handle_parent_due_date_shift
+            handle_parent_due_date_shift(db, task, update_dict["due_date"], current_user.id)
 
     if "title" in update_dict:
         if not update_dict["title"] or not update_dict["title"].strip():
@@ -755,7 +787,8 @@ def update_task(
 
     if "parent_task_id" in update_dict and update_dict["parent_task_id"] != task.parent_task_id:
         if update_dict["parent_task_id"]:
-            _detect_circular_dependency(db, task.id, update_dict["parent_task_id"])
+            from app.services.scheduling_engine import validate_circular_dependency
+            validate_circular_dependency(db, task.id, update_dict["parent_task_id"])
             depth = _get_task_depth(db, update_dict["parent_task_id"])
             if depth > 3:
                 raise HTTPException(
@@ -858,6 +891,14 @@ def update_task(
 
     db.commit()
     db.refresh(task)
+
+    from app.services.scheduling_engine import propagate_task_schedule_changes
+    propagate_task_schedule_changes(db, task.id, current_user.id)
+    db.commit()
+    db.refresh(task)
+
+    if task.parent_task_id:
+        _update_parent_progress(db, task.parent_task_id)
 
     if task.parent_task_id:
         _update_parent_progress(db, task.parent_task_id)
@@ -1499,7 +1540,8 @@ def create_task_dependency(
         blocking_id = target_task.id
         target_display = target_task
 
-    _detect_circular_dependency(db, blocked_id, blocking_id)
+    from app.services.scheduling_engine import validate_circular_dependency, propagate_task_schedule_changes
+    validate_circular_dependency(db, blocked_id, blocking_id)
 
     existing_dep = db.query(TaskDependency).filter(
         TaskDependency.task_id == blocked_id,
@@ -1524,6 +1566,10 @@ def create_task_dependency(
     _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=f"{target_display.task_number} ({dep_type_val}+{lag}d)")
     db.commit()
     db.refresh(dep)
+
+    # Automatically propagate dependency schedule to successor
+    propagate_task_schedule_changes(db, blocked_id, current_user.id)
+    db.commit()
 
     blocker = db.get(Task, blocking_id)
     return TaskDependencyOut(
@@ -1605,6 +1651,20 @@ def delete_task_dependency(
     db.delete(dep)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{task_id}/auto-adjust-date", response_model=TaskOut)
+def auto_adjust_task_date_endpoint(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Auto Adjust Date endpoint to resolve dependency conflicts on task_id"""
+    from app.services.scheduling_engine import auto_adjust_task_dates
+    task = auto_adjust_task_dates(db, task_id, current_user.id)
+    db.commit()
+    db.refresh(task)
+    return _format_task_out(task, db)
 
 
 # --- Bulk Actions API ---

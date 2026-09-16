@@ -218,6 +218,14 @@ export interface TaskItem {
   completed_subtask_count?: number;
   milestone_id?: number;
   duration_working_days?: number;
+  auto_schedule?: boolean;
+  dependency_conflict?: {
+    has_conflict: boolean;
+    conflict_message: string;
+    recommended_start_date: string;
+    predecessor_task_number?: string;
+    predecessor_title?: string;
+  };
   estimated_cost: number;
   actual_cost: number;
   cost_variance: number;
@@ -704,6 +712,13 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Tasks'],
     }),
+    autoAdjustTaskDate: builder.mutation<TaskItem, number>({
+      query: (taskId) => ({
+        url: `/tasks/${taskId}/auto-adjust-date`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Tasks', 'Projects'],
+    }),
 
     // Bulk Actions
     bulkTaskAction: builder.mutation<{ message: string; affected: number }, { task_ids: number[]; action: string; value?: any }>({
@@ -831,6 +846,7 @@ export const {
   useConvertTaskToSubtaskMutation,
   useReorderSubtasksMutation,
   useRescheduleDependenciesMutation,
+  useAutoAdjustTaskDateMutation,
   useBulkTaskActionMutation,
   useGetTaskTemplatesQuery,
   useCreateTaskTemplateMutation,

@@ -83,6 +83,7 @@ import {
   useGetProjectMilestonesQuery,
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
+  useAutoAdjustTaskDateMutation,
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -154,6 +155,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const [addDependencyApi] = useAddDependencyMutation();
   const [removeDependencyApi] = useRemoveDependencyMutation();
+  const [autoAdjustTaskDateApi, { isLoading: isAutoAdjusting }] = useAutoAdjustTaskDateMutation();
 
   const { data: users = [] } = useUsersQuery();
   const { data: costCenters = [] } = useCostCentersQuery();
@@ -344,6 +346,37 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       showToast('Due time updated', 'success');
     } catch {
       showToast('Failed to update due time', 'error');
+    }
+  };
+
+  const handleToggleAutoSchedule = async () => {
+    if (!currentTask) return;
+    try {
+      const nextVal = !currentTask.auto_schedule;
+      await updateTask({ id: currentTaskId, body: { auto_schedule: nextVal } as any }).unwrap();
+      showToast(`Auto Schedule turned ${nextVal ? 'ON' : 'OFF'}`, 'success');
+    } catch {
+      showToast('Failed to toggle Auto Schedule', 'error');
+    }
+  };
+
+  const handleDurationChange = async (days: number) => {
+    if (!currentTaskId || days < 1) return;
+    try {
+      await updateTask({ id: currentTaskId, body: { duration_working_days: days } as any }).unwrap();
+      showToast('Duration updated', 'success');
+    } catch {
+      showToast('Failed to update duration', 'error');
+    }
+  };
+
+  const handleAutoAdjustDate = async () => {
+    if (!currentTaskId) return;
+    try {
+      await autoAdjustTaskDateApi(currentTaskId).unwrap();
+      showToast('Dates automatically adjusted to resolve conflict', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail || 'Failed to auto adjust date', 'error');
     }
   };
 
@@ -658,6 +691,50 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               sx: { fontSize: '1.4rem', fontWeight: 700, color: 'text.primary', mb: 2 },
             }}
           />
+
+          {/* Dependency Conflict Banner */}
+          {currentTask?.dependency_conflict?.has_conflict && (
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                mb: 3,
+                borderRadius: '8px',
+                bgcolor: '#FEF2F2',
+                borderColor: '#EF4444',
+                boxShadow: '0 1px 3px rgba(239,68,68,0.1)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                <AlertTriangle size={20} color="#DC2626" style={{ marginTop: 2, flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#991B1B' }}>
+                    {currentTask.dependency_conflict.conflict_message}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#B91C1C', display: 'block', mt: 0.5 }}>
+                    Recommended Start Date: <strong>{currentTask.dependency_conflict.recommended_start_date}</strong>
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleAutoAdjustDate}
+                    disabled={isAutoAdjusting}
+                    sx={{
+                      mt: 1.5,
+                      bgcolor: '#DC2626',
+                      '&:hover': { bgcolor: '#991B1B' },
+                      textTransform: 'none',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      px: 2,
+                    }}
+                  >
+                    {isAutoAdjusting ? 'Adjusting...' : 'Auto Adjust Date'}
+                  </Button>
+                </Box>
+              </Box>
+            </Paper>
+          )}
 
           {/* Rich Description */}
           <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
@@ -1246,14 +1323,65 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Box>
             )}
 
-            {/* Duration Display */}
+            {/* Auto Schedule Mode Switch */}
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: '8px',
+                bgcolor: currentTask.auto_schedule !== false ? '#F0FDF4' : '#F8FAFC',
+                border: '1px solid',
+                borderColor: currentTask.auto_schedule !== false ? '#BBF7D0' : 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: currentTask.auto_schedule !== false ? '#04552B' : 'text.primary', fontSize: 13 }}>
+                  🔄 Auto Schedule
+                </Typography>
+                <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>
+                  {currentTask.auto_schedule !== false ? 'Engine controls dates & dependencies' : 'Manual date control'}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant={currentTask.auto_schedule !== false ? 'contained' : 'outlined'}
+                onClick={handleToggleAutoSchedule}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  bgcolor: currentTask.auto_schedule !== false ? '#04552B' : undefined,
+                  '&:hover': { bgcolor: currentTask.auto_schedule !== false ? '#034422' : undefined },
+                }}
+              >
+                {currentTask.auto_schedule !== false ? 'ON' : 'OFF'}
+              </Button>
+            </Box>
+
+            {/* Duration Display & Edit */}
             <Box>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                Duration
+                Duration ({currentTask.is_parent ? 'Calendar Days' : 'Working Days'})
               </Typography>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                {currentTask.duration_display || (currentTask.is_parent ? `${currentTask.duration_working_days || 0} CD` : `${currentTask.duration_working_days || 0} WD`)}
-              </Typography>
+              {currentTask.is_parent ? (
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                  {currentTask.duration_working_days || 0} CD (Parent Rollup)
+                </Typography>
+              ) : (
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={currentTask.duration_working_days || 1}
+                  onChange={(e) => handleDurationChange(Number(e.target.value))}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">Days</InputAdornment>,
+                  }}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                />
+              )}
             </Box>
 
             {/* Financials */}
