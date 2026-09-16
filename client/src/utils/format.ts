@@ -71,3 +71,39 @@ export const ROLE_LABELS: Record<string, string> = {
   DELIVERY_TEAM: 'Delivery Team',
   ADMIN: 'Admin',
 };
+
+export function time24To12(time24?: string | null): string {
+  if (!time24) return '';
+  if (time24.includes('AM') || time24.includes('PM')) return time24;
+  const parts = time24.split(':');
+  if (parts.length < 2) return time24;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? '0' + hours : '' + hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
+export function time12To24(time12?: string | null): string {
+  if (!time12) return '';
+  if (!time12.includes('AM') && !time12.includes('PM')) return time12;
+  const parts = time12.trim().split(' ');
+  if (parts.length < 2) return time12;
+  const [time, modifier] = parts;
+  let [hours, minutes] = time.split(':');
+  let h = parseInt(hours, 10);
+  if (modifier.toUpperCase() === 'PM' && h < 12) h += 12;
+  if (modifier.toUpperCase() === 'AM' && h === 12) h = 0;
+  const strH = h < 10 ? '0' + h : '' + h;
+  return `${strH}:${minutes}`;
+}
+
+export function formatDateTime12h(dateStr?: string | null, timeStr?: string | null): string {
+  if (!dateStr) return '—';
+  if (!timeStr) return dateStr;
+  const formattedTime = time24To12(timeStr);
+  return `${dateStr} ${formattedTime}`;
+}
+

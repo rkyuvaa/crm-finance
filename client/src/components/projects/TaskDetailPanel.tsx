@@ -85,6 +85,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { time24To12, time12To24 } from '@/utils/format';
 
 interface TaskDetailPanelProps {
   open: boolean;
@@ -306,12 +307,30 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
+  const handleStartTimeChange = async (t: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { start_time: t || undefined as any } }).unwrap();
+      showToast('Start time updated', 'success');
+    } catch {
+      showToast('Failed to update start time', 'error');
+    }
+  };
+
   const handleDueDateChange = async (d: string) => {
     try {
       await updateTask({ id: currentTaskId, body: { due_date: d || undefined as any } }).unwrap();
       showToast('Due date updated', 'success');
     } catch {
       showToast('Failed to update due date', 'error');
+    }
+  };
+
+  const handleDueTimeChange = async (t: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { due_time: t || undefined as any } }).unwrap();
+      showToast('Due time updated', 'success');
+    } catch {
+      showToast('Failed to update due time', 'error');
     }
   };
 
@@ -1116,7 +1135,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Select>
             </Box>
 
-            {/* Start & Due Dates */}
+            {/* Start Date & Time */}
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
@@ -1135,6 +1154,24 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Start Time
+                </Typography>
+                <TextField
+                  type="time"
+                  size="small"
+                  fullWidth
+                  value={time12To24(currentTask.start_time || '09:00 AM')}
+                  onChange={(e) => handleStartTimeChange(e.target.value ? time24To12(e.target.value) : '')}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Due Date & Time */}
+            <Grid container spacing={1}>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
                   Due Date {currentTask.end_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
                 </Typography>
                 <TextField
@@ -1144,6 +1181,20 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   value={currentTask.due_date || ''}
                   onChange={(e) => handleDueDateChange(e.target.value)}
                   disabled={currentTask.end_date_locked}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Due Time
+                </Typography>
+                <TextField
+                  type="time"
+                  size="small"
+                  fullWidth
+                  value={time12To24(currentTask.due_time || '05:00 PM')}
+                  onChange={(e) => handleDueTimeChange(e.target.value ? time24To12(e.target.value) : '')}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />

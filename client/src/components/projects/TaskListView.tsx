@@ -38,6 +38,7 @@ import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useTableSort } from '@/hooks/useTableSort';
 import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
+import { time24To12, time12To24 } from '@/utils/format';
 
 const DEP_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   FS: { bg: '#D1FAE5', color: '#065F46' },
@@ -341,62 +342,116 @@ export default function TaskListView({
             </FormControl>
           </TableCell>
 
-          {/* 4. Start Date (Inline Edit) */}
+          {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              defaultValue={task.start_date || ''}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val !== (task.start_date || '')) {
-                  handleCellUpdate(task.id, 'start_date', val || null);
-                }
-              }}
-              InputProps={{ disableUnderline: true }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.8rem',
-                  color: 'text.secondary',
-                  py: 0.25,
-                  px: 0.5,
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
-                },
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                variant="standard"
+                defaultValue={task.start_date || ''}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== (task.start_date || '')) {
+                    handleCellUpdate(task.id, 'start_date', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                variant="standard"
+                defaultValue={time12To24(task.start_time || '')}
+                onBlur={(e) => {
+                  const val = e.target.value ? time24To12(e.target.value) : '';
+                  if (val !== (task.start_time || '')) {
+                    handleCellUpdate(task.id, 'start_time', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.25,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
 
-          {/* 5. End Date (Inline Edit) */}
+          {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              defaultValue={task.due_date || ''}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val !== (task.due_date || '')) {
-                  handleCellUpdate(task.id, 'due_date', val || null);
-                }
-              }}
-              InputProps={{ disableUnderline: true }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.8rem',
-                  color: 'text.secondary',
-                  py: 0.25,
-                  px: 0.5,
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
-                },
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                variant="standard"
+                defaultValue={task.due_date || ''}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== (task.due_date || '')) {
+                    handleCellUpdate(task.id, 'due_date', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                variant="standard"
+                defaultValue={time12To24(task.due_time || '')}
+                onBlur={(e) => {
+                  const val = e.target.value ? time24To12(e.target.value) : '';
+                  if (val !== (task.due_time || '')) {
+                    handleCellUpdate(task.id, 'due_time', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.25,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
 
           {/* 6. Duration (Inline Edit) */}

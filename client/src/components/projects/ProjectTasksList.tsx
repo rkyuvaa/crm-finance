@@ -62,6 +62,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { time24To12, time12To24, formatDateTime12h } from '@/utils/format';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 
 interface ProjectTasksListProps {
@@ -130,7 +131,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [statusId, setStatusId] = useState<number>(1);
   const [priority, setPriority] = useState<'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'>('NORMAL');
   const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('09:00 AM');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('05:00 PM');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
 
   const defaultStatuses = [
@@ -197,7 +201,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setStatusId(defaultStatusId);
     setPriority('NORMAL');
     setAssigneeIds([]);
+    setStartDate('');
+    setStartTime('09:00 AM');
     setDueDate('');
+    setDueTime('05:00 PM');
     setEstimatedHours(0);
     setCreateOpen(true);
   };
@@ -266,7 +273,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         priority,
         assignee_id: assigneeIds.length > 0 ? assigneeIds[0] : undefined,
         assignee_ids: assigneeIds,
+        start_date: startDate || undefined,
+        start_time: startTime || undefined,
         due_date: dueDate || undefined,
+        due_time: dueTime || undefined,
         estimated_hours: Number(estimatedHours) || 0,
       } as any).unwrap();
       toast.showSuccess(`Task "${title}" created successfully!`);
@@ -274,7 +284,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       setTitle('');
       setDescription('');
       setAssigneeIds([]);
+      setStartDate('');
+      setStartTime('09:00 AM');
       setDueDate('');
+      setDueTime('05:00 PM');
       setEstimatedHours(0);
     } catch (err: any) {
       toast.showError(err?.data?.detail || 'Failed to create task');
@@ -670,62 +683,116 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </FormControl>
           </TableCell>
 
-          {/* 4. Start Date (Inline Date Picker) */}
+          {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              defaultValue={task.start_date || ''}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val !== (task.start_date || '')) {
-                  handleCellUpdate(task.id, 'start_date', val || null);
-                }
-              }}
-              InputProps={{ disableUnderline: true }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.8rem',
-                  color: 'text.secondary',
-                  py: 0.25,
-                  px: 0.5,
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
-                },
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                variant="standard"
+                defaultValue={task.start_date || ''}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== (task.start_date || '')) {
+                    handleCellUpdate(task.id, 'start_date', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                variant="standard"
+                defaultValue={time12To24(task.start_time || '')}
+                onBlur={(e) => {
+                  const val = e.target.value ? time24To12(e.target.value) : '';
+                  if (val !== (task.start_time || '')) {
+                    handleCellUpdate(task.id, 'start_time', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.25,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
 
-          {/* 5. End Date (Inline Date Picker) */}
+          {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              defaultValue={task.due_date || ''}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val !== (task.due_date || '')) {
-                  handleCellUpdate(task.id, 'due_date', val || null);
-                }
-              }}
-              InputProps={{ disableUnderline: true }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.8rem',
-                  color: 'text.secondary',
-                  py: 0.25,
-                  px: 0.5,
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
-                },
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                variant="standard"
+                defaultValue={task.due_date || ''}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== (task.due_date || '')) {
+                    handleCellUpdate(task.id, 'due_date', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                variant="standard"
+                defaultValue={time12To24(task.due_time || '')}
+                onBlur={(e) => {
+                  const val = e.target.value ? time24To12(e.target.value) : '';
+                  if (val !== (task.due_time || '')) {
+                    handleCellUpdate(task.id, 'due_time', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.25,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
 
           {/* 6. Duration (Inline Numeric Edit) */}
@@ -1575,15 +1642,46 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               ))}
             </Select>
           </FormControl>
-          <TextField
-            label="Due Date"
-            type="date"
-            size="small"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              label="Start Date"
+              type="date"
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <TextField
+              label="Start Time"
+              type="time"
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={time12To24(startTime)}
+              onChange={(e) => setStartTime(e.target.value ? time24To12(e.target.value) : '')}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              label="Due Date"
+              type="date"
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+            <TextField
+              label="Due Time"
+              type="time"
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={time12To24(dueTime)}
+              onChange={(e) => setDueTime(e.target.value ? time24To12(e.target.value) : '')}
+            />
+          </Box>
           <TextField
             label="Estimated Hours"
             type="number"
