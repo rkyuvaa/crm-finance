@@ -491,7 +491,8 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
 
     from app.services.scheduling_engine import check_dependency_conflict
     out.dependency_conflict = check_dependency_conflict(db, t)
-    out.auto_schedule = getattr(t, 'auto_schedule', True)
+    raw_auto = getattr(t, 'auto_schedule', True)
+    out.auto_schedule = True if raw_auto is None else bool(raw_auto)
 
     return out
 

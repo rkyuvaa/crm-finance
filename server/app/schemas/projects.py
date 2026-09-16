@@ -386,7 +386,7 @@ class TaskOut(TaskBase):
     completed_by: Optional[int] = None
 
     duration_working_days: Optional[int] = 0
-    auto_schedule: bool = True
+    auto_schedule: Optional[bool] = True
     estimated_cost: Optional[float] = 0.0
     actual_cost: Optional[float] = 0.0
     completion_date: Optional[date] = None

@@ -80,6 +80,15 @@ def _ensure_schema_migrations():
                             import logging
                             logging.error(f"Failed to auto-add column {table_name}.{col_name}: {col_err}")
 
+        # Ensure auto_schedule column on tasks table
+        if "tasks" in existing_tables:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS auto_schedule BOOLEAN DEFAULT TRUE'))
+                    conn.execute(text('UPDATE tasks SET auto_schedule = TRUE WHERE auto_schedule IS NULL'))
+            except Exception:
+                pass
+
         # 3. Seed default task statuses if empty
         if "task_statuses" in existing_tables:
             try:

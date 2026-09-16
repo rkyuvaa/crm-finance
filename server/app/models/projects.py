@@ -241,7 +241,7 @@ class Task(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     # KIM PM v1.1 — scheduling & cost fields
     duration_working_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # leaf: user-entered working days
-    auto_schedule: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default="1")
+    auto_schedule: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True, server_default="true")
     estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # monetary
     actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)     # monetary
     completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)          # auto-stamped on completed-type status
