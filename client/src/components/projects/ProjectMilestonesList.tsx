@@ -18,8 +18,9 @@ import {
   FormControl,
   InputLabel,
   Collapse,
+  LinearProgress,
 } from '@mui/material';
-import { Plus, Flag, Trash2, Info, Edit2, ChevronDown, ChevronRight, CheckCircle2, Circle, Link2 } from 'lucide-react';
+import { Plus, Flag, Trash2, Edit2, ChevronDown, ChevronRight, CheckCircle2, Circle, Link2 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
 import {
   useGetProjectMilestonesQuery,
@@ -233,6 +234,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
             const milestoneTasks = tasks.filter((t) => t.milestone_id === m.id);
             const isExpanded = expandedMilestones[m.id] !== false; // default open
             const completedTaskCount = milestoneTasks.filter((t) => t.is_completed).length;
+            const progressPct = milestoneTasks.length > 0 ? Math.round((completedTaskCount / milestoneTasks.length) * 100) : 0;
 
             return (
               <Paper
@@ -252,13 +254,15 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     p: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     bgcolor: '#F8FAFC',
                     borderBottom: isExpanded ? '1px solid' : 'none',
                     borderColor: 'divider',
+                    flexWrap: 'wrap',
+                    gap: 2,
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: '1 1 240px' }}>
                     <IconButton size="small" onClick={() => toggleExpand(m.id)}>
                       {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </IconButton>
@@ -282,48 +286,38 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     </Box>
                   </Box>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {/* Progress Bar (0 to 100%) */}
+                    <Box sx={{ minWidth: 160, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem' }}>
+                          Progress
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#04552B', fontSize: '0.75rem' }}>
+                          {progressPct}%
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={progressPct}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: '#E2E8F0',
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: '#04552B',
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
+                    </Box>
+
                     <IconButton size="small" onClick={() => handleOpenEdit(m)} sx={{ color: '#475569' }}>
                       <Edit2 size={16} />
                     </IconButton>
                     <IconButton size="small" onClick={() => handleDeleteMilestone(m.id)} sx={{ color: '#EF4444' }}>
                       <Trash2 size={16} />
                     </IconButton>
-                  </Box>
-                </Box>
-
-                {/* Rolled Up Metrics Banner */}
-                <Box sx={{ p: 2, display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', bgcolor: 'background.paper', borderBottom: isExpanded ? '1px dashed' : 'none', borderColor: 'divider' }}>
-                  <Tooltip title="Server-calculated rollup from assigned tasks">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
-                      <Info size={15} />
-                      <Typography variant="caption" sx={{ fontWeight: 700 }}>ROLLUPS</Typography>
-                    </Box>
-                  </Tooltip>
-
-                  <Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontWeight: 600 }}>Start Date</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{m.rollup_start_date || '—'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontWeight: 600 }}>End Date</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{m.rollup_end_date || '—'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontWeight: 600 }}>Duration</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{m.rollup_duration_days != null ? `${m.rollup_duration_days} CD` : '—'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontWeight: 600 }}>Est. Cost</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{m.rollup_estimated_cost ? `₹${m.rollup_estimated_cost.toLocaleString('en-IN')}` : '₹0'}</Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontWeight: 600 }}>Actual Cost</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{m.rollup_actual_cost ? `₹${m.rollup_actual_cost.toLocaleString('en-IN')}` : '₹0'}</Typography>
                   </Box>
                 </Box>
 
