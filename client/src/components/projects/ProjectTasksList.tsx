@@ -78,7 +78,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [searchQ, setSearchQ] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
-  const [groupBy, setGroupBy] = useState<'status' | 'milestone'>('status');
+  const [groupBy, setGroupBy] = useState<'status' | 'milestone'>('milestone');
 
   const { data: milestones = [] } = useGetProjectMilestonesQuery(numericProjectId);
 
