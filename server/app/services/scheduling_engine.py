@@ -68,6 +68,29 @@ def validate_circular_dependency(db: Session, task_id: int, predecessor_id: int)
             queue.append(d.task_id)
 
 
+def validate_parent_child_dependency(db: Session, task_id: int, predecessor_id: int) -> None:
+    """
+    Validates that a dependency cannot be created between a parent task and any of its descendants/subtasks.
+    """
+    curr = db.query(Task).filter(Task.id == predecessor_id, Task.is_deleted.is_(False)).first()
+    while curr and curr.parent_task_id:
+        if curr.parent_task_id == task_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="⚠️ Cannot create a dependency between a parent task and its subtask."
+            )
+        curr = db.query(Task).filter(Task.id == curr.parent_task_id, Task.is_deleted.is_(False)).first()
+
+    curr = db.query(Task).filter(Task.id == task_id, Task.is_deleted.is_(False)).first()
+    while curr and curr.parent_task_id:
+        if curr.parent_task_id == predecessor_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="⚠️ Cannot create a dependency between a parent task and its subtask."
+            )
+        curr = db.query(Task).filter(Task.id == curr.parent_task_id, Task.is_deleted.is_(False)).first()
+
+
 def compute_successor_dates(
     pred_start: Optional[date],
     pred_due: Optional[date],
