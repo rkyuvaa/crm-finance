@@ -74,7 +74,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
   const [quickTaskTitles, setQuickTaskTitles] = useState<Record<number, string>>({});
 
   const toggleExpand = (id: number) => {
-    setExpandedMilestones((prev) => ({ ...prev, [id]: prev[id] === undefined ? true : !prev[id] }));
+    setExpandedMilestones((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleCreate = async () => {
@@ -232,7 +232,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {milestones.map((m) => {
             const milestoneTasks = tasks.filter((t) => t.milestone_id === m.id);
-            const isExpanded = expandedMilestones[m.id] !== false; // default open
+            const isExpanded = Boolean(expandedMilestones[m.id]); // default collapsed
             const completedTaskCount = milestoneTasks.filter((t) => t.is_completed).length;
             const progressPct = milestoneTasks.length > 0 ? Math.round((completedTaskCount / milestoneTasks.length) * 100) : 0;
 
