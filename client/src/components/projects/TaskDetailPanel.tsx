@@ -1609,7 +1609,17 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           />
 
           <Box sx={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {searchTasksResult.filter((t: any) => t.id !== currentTask.id).map((t: any) => (
+            {searchTasksResult
+              .filter((t: any) => {
+                if (!t || !currentTask) return false;
+                if (t.id === currentTask.id) return false;
+                if (t.parent_task_id === currentTask.id) return false;
+                if (currentTask.parent_task_id === t.id) return false;
+                const existingDepIds = (currentTask.dependencies || []).map((d: any) => d.depends_on_task_id || d.predecessor_task_id);
+                if (existingDepIds.includes(t.id)) return false;
+                return true;
+              })
+              .map((t: any) => (
               <Paper
                 key={t.id}
                 variant="outlined"
@@ -1663,9 +1673,17 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 />
               </Paper>
             ))}
-            {searchTasksResult.filter((t: any) => t.id !== currentTask.id).length === 0 && (
+            {searchTasksResult.filter((t: any) => {
+              if (!t || !currentTask) return false;
+              if (t.id === currentTask.id) return false;
+              if (t.parent_task_id === currentTask.id) return false;
+              if (currentTask.parent_task_id === t.id) return false;
+              const existingDepIds = (currentTask.dependencies || []).map((d: any) => d.depends_on_task_id || d.predecessor_task_id);
+              if (existingDepIds.includes(t.id)) return false;
+              return true;
+            }).length === 0 && (
               <Typography variant="body2" color="textSecondary" align="center" sx={{ py: 3 }}>
-                No matching tasks found. Type a title or task number above.
+                No matching valid tasks found for dependency.
               </Typography>
             )}
           </Box>
