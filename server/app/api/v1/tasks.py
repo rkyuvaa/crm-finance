@@ -180,19 +180,33 @@ def _unpad_task_number(val: Optional[str]) -> Optional[str]:
 
 
 def _generate_task_number(db: Session, project_id: Optional[int] = None) -> str:
-    """Generate server-side unique human-readable task number e.g. TASK-1 or PRJ-TASK-1 without zero padding"""
+    """Generate server-side unique human-readable task number e.g. NTP-1 or TASK-1 starting from 1 per project"""
     if project_id:
         proj = db.get(Project, project_id)
-        if proj and proj.code:
-            prefix = f"{proj.code.upper()}"
-            max_num = db.query(func.count(Task.id)).filter(Task.project_id == project_id).scalar() or 0
-            return f"{prefix}-TASK-{max_num + 1}"
-    
-    total = db.query(func.count(Task.id)).scalar() or 0
-    num = total + 1
-    while db.query(Task).filter(Task.task_number == f"TASK-{num}").first():
-        num += 1
-    return f"TASK-{num}"
+        if proj:
+            p_prefix = (proj.prefix or proj.code or "").strip().upper()
+            if p_prefix:
+                max_num = db.query(func.count(Task.id)).filter(
+                    Task.project_id == project_id,
+                    Task.is_deleted.is_(False)
+                ).scalar() or 0
+                seq = max_num + 1
+                task_num = f"{p_prefix}-{seq}"
+                while db.query(Task).filter(Task.task_number == task_num).first():
+                    seq += 1
+                    task_num = f"{p_prefix}-{seq}"
+                return task_num
+
+    total = db.query(func.count(Task.id)).filter(
+        Task.project_id.is_(None),
+        Task.is_deleted.is_(False)
+    ).scalar() or 0
+    seq = total + 1
+    task_num = f"TASK-{seq}"
+    while db.query(Task).filter(Task.task_number == task_num).first():
+        seq += 1
+        task_num = f"TASK-{seq}"
+    return task_num
 
 
 def _get_task_depth(db: Session, parent_task_id: Optional[int]) -> int:

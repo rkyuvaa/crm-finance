@@ -112,6 +112,30 @@ def _ensure_schema_migrations():
         except Exception as seed_err:
             import logging
             logging.error(f"RBAC seed error: {seed_err}")
+
+        # 5. Resequence existing project task numbers to match project prefix/code starting from 1
+        try:
+            from app.db.session import SessionLocal
+            from app.models.projects import Project, Task
+            with SessionLocal() as db:
+                projects = db.query(Project).all()
+                for proj in projects:
+                    p_prefix = (proj.prefix or proj.code or "").strip().upper()
+                    if not p_prefix:
+                        continue
+                    p_tasks = db.query(Task).filter(
+                        Task.project_id == proj.id,
+                        Task.is_deleted.is_(False)
+                    ).order_by(Task.id.asc()).all()
+                    for idx, t in enumerate(p_tasks, start=1):
+                        expected_num = f"{p_prefix}-{idx}"
+                        if t.task_number != expected_num:
+                            t.task_number = expected_num
+                            db.add(t)
+                db.commit()
+        except Exception as reseq_err:
+            import logging
+            logging.error(f"Task resequence error: {reseq_err}")
     except Exception as err:
         import logging
         logging.error(f"Migration check error: {err}")
