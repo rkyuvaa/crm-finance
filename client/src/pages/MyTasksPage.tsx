@@ -108,7 +108,7 @@ export default function MyTasksPage() {
     if (!currentUser) return true;
     const isAssignee = Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === currentUser.id);
     const isDirectAssignee = (t as any).assignee_id === currentUser.id;
-    const isCreator = t.created_by_id === currentUser.id;
+    const isCreator = (t as any).created_by_id === currentUser.id || t.created_by === currentUser.id;
     return isAssignee || isDirectAssignee || isCreator;
   });
 
