@@ -96,9 +96,12 @@ export default function TaskListView({
   const { sortState, handleSort, sortData } = useTableSort<TaskItem>({
     getValue: {
       task_title: (t) => t.title,
-      project: (t) => t.project_name || '',
-      progress: (t) => t.progress_percentage || 0,
-      time_tracked: (t) => t.actual_minutes || 0,
+      start_date: (t) => t.start_date || '',
+      due_date: (t) => t.due_date || '',
+      status: (t) => t.status_name || '',
+      completion_date: (t) => t.completion_date || t.completed_at || '',
+      estimated_cost: (t) => t.estimated_cost || 0,
+      actual_cost: (t) => t.actual_cost || 0,
     },
   });
 
@@ -137,7 +140,7 @@ export default function TaskListView({
             />
           </TableCell>
 
-          {/* Task Title & Hierarchy Indentation */}
+          {/* 1. Name */}
           <TableCell>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 3 }}>
               {hasChildren ? (
@@ -187,50 +190,51 @@ export default function TaskListView({
                   sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569' }}
                 />
               )}
-
-              {task.dependencies && task.dependencies.length > 0 && (
-                <Tooltip title={`${task.dependencies.length} task dependencies`}>
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, ml: 0.5 }}>
-                    <Lock size={13} color="#D97706" />
-                    <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 700, color: '#D97706' }}>
-                      {task.dependencies.length}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              )}
             </Box>
           </TableCell>
 
-          {/* Project & Cost Center */}
-          <TableCell>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                {task.project_name || 'General'}
-              </Typography>
-              {task.cost_center_code && (
-                <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11 }}>
-                  {task.cost_center_code} ({task.cost_center_name})
-                </Typography>
-              )}
-            </Box>
-          </TableCell>
-
-          {/* Status */}
+          {/* 2. Dependencies */}
           <TableCell onClick={(e) => e.stopPropagation()}>
-            <Chip
-              label={task.status_name || (task.is_completed ? 'Completed' : 'Open')}
-              size="small"
-              sx={{
-                height: 22,
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                bgcolor: task.status_color || (task.is_completed ? '#DCFCE7' : '#E2E8F0'),
-                color: task.is_completed ? '#166534' : '#1E293B',
-              }}
-            />
+            {task.dependencies && task.dependencies.length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.4, maxWidth: 180 }}>
+                {task.dependencies.slice(0, 2).map((dep) => {
+                  const dt = dep.dep_type || 'FS';
+                  const colors = DEP_TYPE_COLORS[dt] || DEP_TYPE_COLORS.FS;
+                  const num = dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`;
+                  return (
+                    <Tooltip
+                      key={dep.id}
+                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} · ${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}`}
+                    >
+                      <Chip
+                        icon={<Link2 size={9} color={colors.color} />}
+                        label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
+                        size="small"
+                        sx={{
+                          height: 18,
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          fontFamily: 'monospace',
+                          bgcolor: colors.bg,
+                          color: colors.color,
+                          '& .MuiChip-icon': { ml: 0.5 },
+                        }}
+                      />
+                    </Tooltip>
+                  );
+                })}
+                {task.dependencies.length > 2 && (
+                  <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', alignSelf: 'center' }}>
+                    +{task.dependencies.length - 2}
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>—</Typography>
+            )}
           </TableCell>
 
-          {/* Assignees */}
+          {/* 3. Assigned To */}
           <TableCell>
             {task.assignees && task.assignees.length > 0 ? (
               <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 11, bgcolor: '#04552B', color: '#FFFFFF' } }}>
@@ -247,88 +251,14 @@ export default function TaskListView({
             )}
           </TableCell>
 
-          {/* Priority */}
-          <TableCell onClick={(e) => e.stopPropagation()}>
-            <Chip
-              label={task.priority}
-              size="small"
-              sx={{
-                height: 20,
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                bgcolor:
-                  task.priority === 'URGENT'
-                    ? '#FEE2E2'
-                    : task.priority === 'HIGH'
-                    ? '#FFEDD5'
-                    : task.priority === 'NORMAL'
-                    ? '#DBEAFE'
-                    : '#F1F5F9',
-                color:
-                  task.priority === 'URGENT'
-                    ? '#DC2626'
-                    : task.priority === 'HIGH'
-                    ? '#EA580C'
-                    : task.priority === 'NORMAL'
-                    ? '#2563EB'
-                    : '#64748B',
-                border: '1px solid',
-                borderColor:
-                  task.priority === 'URGENT'
-                    ? '#EF4444'
-                    : task.priority === 'HIGH'
-                    ? '#F97316'
-                    : task.priority === 'NORMAL'
-                    ? '#3B82F6'
-                    : '#94A3B8',
-              }}
-            />
+          {/* 4. Start Date */}
+          <TableCell>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11 }}>
+              {task.start_date || '—'}
+            </Typography>
           </TableCell>
 
-          {/* Predecessors */}
-          <TableCell onClick={(e) => e.stopPropagation()}>
-            {task.dependencies && task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 0 ? (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.4, maxWidth: 180 }}>
-                {task.dependencies
-                  .filter((d) => d.direction !== 'BLOCKING')
-                  .slice(0, 3)
-                  .map((dep) => {
-                    const dt = dep.dep_type || 'FS';
-                    const colors = DEP_TYPE_COLORS[dt] || DEP_TYPE_COLORS.FS;
-                    return (
-                      <Tooltip
-                        key={dep.id}
-                        title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} · ${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}`}
-                      >
-                        <Chip
-                          icon={<Link2 size={9} color={colors.color} />}
-                          label={`${(dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`).replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
-                          size="small"
-                          sx={{
-                            height: 18,
-                            fontSize: '0.62rem',
-                            fontWeight: 700,
-                            fontFamily: 'monospace',
-                            bgcolor: colors.bg,
-                            color: colors.color,
-                            '& .MuiChip-icon': { ml: 0.5 },
-                          }}
-                        />
-                      </Tooltip>
-                    );
-                  })}
-                {task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 3 && (
-                  <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', alignSelf: 'center' }}>
-                    +{task.dependencies.filter((d) => d.direction !== 'BLOCKING').length - 3} more
-                  </Typography>
-                )}
-              </Box>
-            ) : (
-              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>—</Typography>
-            )}
-          </TableCell>
-
-          {/* Due Date */}
+          {/* 5. End Date */}
           <TableCell>
             {task.due_date ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -345,35 +275,51 @@ export default function TaskListView({
               </Box>
             ) : (
               <Typography variant="caption" color="textSecondary">
-                -
+                —
               </Typography>
             )}
           </TableCell>
 
-          {/* Progress */}
+          {/* 6. Duration */}
           <TableCell>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 90 }}>
-              <LinearProgress
-                variant="determinate"
-                value={task.progress_percentage || 0}
-                sx={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: 'divider',
-                  '& .MuiLinearProgress-bar': { bgcolor: '#04552B' },
-                }}
-              />
-              <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 30 }}>
-                {task.progress_percentage || 0}%
-              </Typography>
-            </Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+              {task.is_parent ? `${task.duration_working_days || 0} CD` : `${task.duration_working_days || 0} WD`}
+            </Typography>
           </TableCell>
 
-          {/* Time Tracking */}
+          {/* 7. Status */}
+          <TableCell onClick={(e) => e.stopPropagation()}>
+            <Chip
+              label={task.status_name || (task.is_completed ? 'Done' : 'To Do')}
+              size="small"
+              sx={{
+                height: 22,
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                bgcolor: task.status_color || (task.is_completed ? '#16A34A' : '#64748B'),
+                color: '#FFFFFF',
+              }}
+            />
+          </TableCell>
+
+          {/* 8. Completion Date */}
           <TableCell>
-            <Typography variant="caption" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
-              {Math.round(((task.actual_minutes || 0) / 60) * 10) / 10}h / {Math.round(((task.estimated_minutes || 0) / 60) * 10) / 10}h
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11 }}>
+              {task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '—')}
+            </Typography>
+          </TableCell>
+
+          {/* 9. Estimated Cost */}
+          <TableCell>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+              ₹{(task.estimated_cost || 0).toLocaleString('en-IN')}
+            </Typography>
+          </TableCell>
+
+          {/* 10. Actual Cost */}
+          <TableCell>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+              ₹{(task.actual_cost || 0).toLocaleString('en-IN')}
             </Typography>
           </TableCell>
 
@@ -410,22 +356,23 @@ export default function TaskListView({
                 sx={{ color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
               />
             </TableCell>
-            <ErpSortHeaderCell variant="mui" field="task_title" label="TASK / SUBTASK" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
-            <ErpSortHeaderCell variant="mui" field="project" label="PROJECT / COST CENTER" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="task_title" label="NAME" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
+            <ErpSortHeaderCell variant="mui" label="DEPENDENCIES" sortable={false} />
+            <ErpSortHeaderCell variant="mui" label="ASSIGNED TO" sortable={false} />
+            <ErpSortHeaderCell variant="mui" field="start_date" label="START DATE" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="due_date" label="END DATE" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" label="DURATION" sortable={false} />
             <ErpSortHeaderCell variant="mui" field="status" label="STATUS" sortState={sortState} onSort={handleSort} />
-            <ErpSortHeaderCell variant="mui" label="ASSIGNEES" sortable={false} />
-            <ErpSortHeaderCell variant="mui" field="priority" label="PRIORITY" sortState={sortState} onSort={handleSort} />
-            <ErpSortHeaderCell variant="mui" label="PREDECESSORS" sortable={false} sx={{ whiteSpace: 'nowrap' }} />
-            <ErpSortHeaderCell variant="mui" field="due_date" label="DUE DATE" sortState={sortState} onSort={handleSort} />
-            <ErpSortHeaderCell variant="mui" field="progress" label="PROGRESS" sortState={sortState} onSort={handleSort} />
-            <ErpSortHeaderCell variant="mui" field="time_tracked" label="TIME TRACKED" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="completion_date" label="COMPLETION DATE" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="estimated_cost" label="ESTIMATED COST" sortState={sortState} onSort={handleSort} />
+            <ErpSortHeaderCell variant="mui" field="actual_cost" label="ACTUAL COST" sortState={sortState} onSort={handleSort} />
             <ErpSortHeaderCell variant="mui" label="ACTIONS" align="right" sortable={false} />
           </TableRow>
         </TableHead>
         <TableBody>
           {sortedRootTasks.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+              <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                 <Typography variant="body2" color="textSecondary">
                   No tasks found in this view.
                 </Typography>

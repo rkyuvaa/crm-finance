@@ -48,6 +48,7 @@ import {
   Trash2,
   Lock,
   RefreshCw,
+  Link2,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -467,7 +468,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     return (
       <React.Fragment key={task.id}>
         <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => openTask(task)}>
-          <TableCell align="center">
+          {/* Expander Cell */}
+          <TableCell align="center" width={40}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
               {hasChildren ? (
                 <IconButton size="small" onClick={(e) => toggleSubtasksExpand(task.id, e)} sx={{ p: 0.2 }}>
@@ -478,8 +480,24 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               )}
             </Box>
           </TableCell>
+
+          {/* 1. Name */}
           <TableCell>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {task.task_number && (
+                <Chip
+                  label={task.task_number.replace(/0+([1-9]\d*)$/, '$1')}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: '#F1F5F9',
+                    color: '#475569',
+                    fontFamily: 'monospace',
+                  }}
+                />
+              )}
               <Typography variant="body2" sx={{ fontWeight: depth === 0 ? 600 : 500, color: 'text.primary' }}>
                 {task.title}
               </Typography>
@@ -493,6 +511,44 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               )}
             </Box>
           </TableCell>
+
+          {/* 2. Dependencies */}
+          <TableCell>
+            {task.dependencies && task.dependencies.length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {task.dependencies.slice(0, 2).map((dep) => {
+                  const dt = dep.dep_type || 'FS';
+                  const num = dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`;
+                  return (
+                    <Tooltip key={dep.id} title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${dt})`}>
+                      <Chip
+                        icon={<Link2 size={10} color="#065F46" />}
+                        label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          bgcolor: '#D1FAE5',
+                          color: '#065F46',
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                    </Tooltip>
+                  );
+                })}
+                {task.dependencies.length > 2 && (
+                  <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', alignSelf: 'center' }}>
+                    +{task.dependencies.length - 2}
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <Typography variant="body2" sx={{ color: 'text.disabled' }}>—</Typography>
+            )}
+          </TableCell>
+
+          {/* 3. Assigned To */}
           <TableCell>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
               {task.assignees && task.assignees.length > 0 ? (
@@ -518,46 +574,61 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               )}
             </Box>
           </TableCell>
+
+          {/* 4. Start Date */}
           <TableCell>
-            <Chip
-              icon={<Flag size={12} color={getPriorityFlagColor(task.priority)} fill={getPriorityFlagColor(task.priority)} />}
-              label={task.priority}
-              size="small"
-              sx={{
-                fontWeight: 700,
-                fontSize: '0.7rem',
-                color: getPriorityFlagColor(task.priority),
-                bgcolor:
-                  task.priority === 'URGENT'
-                    ? '#FEE2E2'
-                    : task.priority === 'HIGH'
-                    ? '#FFEDD5'
-                    : task.priority === 'NORMAL'
-                    ? '#DBEAFE'
-                    : '#F1F5F9',
-                border: '1px solid',
-                borderColor: getPriorityFlagColor(task.priority),
-              }}
-            />
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+              {task.start_date || '—'}
+            </Typography>
           </TableCell>
+
+          {/* 5. End Date */}
+          <TableCell>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+              {task.due_date || '—'}
+            </Typography>
+          </TableCell>
+
+          {/* 6. Duration */}
           <TableCell>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
               {task.is_parent ? `${task.duration_working_days || 0} CD` : `${task.duration_working_days || 0} WD`}
             </Typography>
           </TableCell>
+
+          {/* 7. Status */}
+          <TableCell>
+            <Chip
+              label={task.status_name || (task.is_completed ? 'Done' : 'To Do')}
+              size="small"
+              sx={{
+                height: 22,
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                bgcolor: task.status_color || (task.is_completed ? '#16A34A' : '#64748B'),
+                color: '#FFFFFF',
+              }}
+            />
+          </TableCell>
+
+          {/* 8. Completion Date */}
+          <TableCell>
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+              {task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '—')}
+            </Typography>
+          </TableCell>
+
+          {/* 9. Estimated Cost */}
           <TableCell>
             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
               ₹{(task.estimated_cost || 0).toLocaleString('en-IN')}
             </Typography>
           </TableCell>
+
+          {/* 10. Actual Cost */}
           <TableCell>
             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
               ₹{(task.actual_cost || 0).toLocaleString('en-IN')}
-            </Typography>
-          </TableCell>
-          <TableCell>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace', color: (task.cost_variance || 0) > 0 ? '#DC2626' : '#16A34A' }}>
-              ₹{(task.cost_variance || 0).toLocaleString('en-IN')}
             </Typography>
           </TableCell>
         </TableRow>
@@ -981,19 +1052,21 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               <TableRow>
                 <TableCell width={40}></TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Assignee</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={150}>Due Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Priority</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={100}>Duration</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Est. Cost</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Actual Cost</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }} width={120}>Variance</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Dependencies</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Assigned To</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Start Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>End Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Duration</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Completion Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Estimated Cost</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Actual Cost</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
                     <Typography color="textSecondary" variant="body2" sx={{ mb: 1 }}>
                       No tasks found in this project yet.
                     </Typography>
@@ -1023,7 +1096,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={10}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip label={status.name} size="small" sx={{ bgcolor: status.color, color: 'white', fontWeight: 600, height: 20, fontSize: '0.7rem' }} />
                             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>{statusTasks.length} Tasks</Typography>
@@ -1054,7 +1127,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </IconButton>
                         </TableCell>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={10}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700 }}>
                               {milestone.name}
