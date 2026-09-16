@@ -1554,23 +1554,8 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         </DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            Specify the relationship between this task and another task:
+            Select the target task to add as a predecessor dependency:
           </Typography>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
-              RELATIONSHIP DIRECTION
-            </Typography>
-            <Select
-              fullWidth
-              size="small"
-              value={depDirection}
-              onChange={(e) => setDepDirection(e.target.value as any)}
-            >
-              <MenuItem value="BLOCKED_BY">This task is BLOCKED BY (waiting on target task)</MenuItem>
-              <MenuItem value="BLOCKING">This task BLOCKS (target task must wait on this task)</MenuItem>
-            </Select>
-          </Box>
 
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={6}>
@@ -1633,7 +1618,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                     await addDependencyApi({
                       taskId: currentTask.id,
                       depends_on_task_id: t.id,
-                      direction: depDirection,
+                      direction: 'BLOCKED_BY',
                       dep_type: depRelType,
                       lag_days: depLagDays,
                     }).unwrap();
