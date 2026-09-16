@@ -7,7 +7,17 @@ interface AuthState {
   token: string | null;
 }
 
+export const MAX_SESSION_MS = 10 * 60 * 60 * 1000; // 10 hours
+
+function isSessionExpired(): boolean {
+  const loggedInAt = localStorage.getItem('logged_in_at');
+  if (!loggedInAt) return false;
+  const elapsed = Date.now() - Number(loggedInAt);
+  return elapsed > MAX_SESSION_MS;
+}
+
 function readStoredUser(): User | null {
+  if (isSessionExpired()) return null;
   try {
     const raw = localStorage.getItem('user');
     return raw ? (JSON.parse(raw) as User) : null;
@@ -16,9 +26,19 @@ function readStoredUser(): User | null {
   }
 }
 
+function readStoredToken(): string | null {
+  if (isSessionExpired()) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('logged_in_at');
+    return null;
+  }
+  return localStorage.getItem('access_token');
+}
+
 const initialState: AuthState = {
   user: readStoredUser(),
-  token: localStorage.getItem('access_token'),
+  token: readStoredToken(),
 };
 
 const authSlice = createSlice({
@@ -30,6 +50,9 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       localStorage.setItem('access_token', action.payload.token);
       localStorage.setItem('user', JSON.stringify(action.payload.user));
+      if (!localStorage.getItem('logged_in_at')) {
+        localStorage.setItem('logged_in_at', Date.now().toString());
+      }
     },
     setUser(state, action: PayloadAction<User>) {
       state.user = action.payload;
@@ -40,9 +63,11 @@ const authSlice = createSlice({
       state.user = null;
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      localStorage.removeItem('logged_in_at');
     },
   },
 });
 
 export const { setCredentials, setUser, logout } = authSlice.actions;
+export { isSessionExpired };
 export default authSlice.reducer;

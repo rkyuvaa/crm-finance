@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production-use-a-random-64-char-string"
     algorithm: str = "HS256"
     access_token_minutes: int = 15
-    refresh_token_days: int = 7
+    refresh_token_hours: float = 10.0
+    refresh_token_days: float = 10 / 24
 
     access_token_cookie_secure: bool = False
     refresh_token_cookie_name: str = "refresh_token"

@@ -40,6 +40,7 @@ export default function LoginPage() {
   }, [token, navigate]);
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/';
+  const sessionExpired = (location.state as { sessionExpired?: boolean } | null)?.sessionExpired;
 
   if (token) {
     return <Navigate to="/" replace />;
@@ -147,6 +148,12 @@ export default function LoginPage() {
           <Typography sx={{ color: '#7A8B80', fontSize: 13, mt: 0.5, mb: 4 }}>
             Sign in to the KIM finance dashboard.
           </Typography>
+
+          {sessionExpired && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+              Your session has expired after 10 hours of activity. Please sign in again.
+            </Alert>
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
