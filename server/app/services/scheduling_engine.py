@@ -126,6 +126,14 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
     if not task.start_date:
         return None
 
+    # Parent tasks derive dates from subtask rollups; skip predecessor conflict check for parent tasks
+    has_subtasks = db.query(Task).filter(
+        Task.parent_task_id == task.id,
+        Task.is_deleted.is_(False)
+    ).count() > 0
+    if has_subtasks:
+        return None
+
     deps = db.query(TaskDependency).filter(
         TaskDependency.task_id == task.id
     ).all()

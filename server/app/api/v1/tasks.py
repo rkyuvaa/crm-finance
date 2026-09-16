@@ -1541,8 +1541,9 @@ def create_task_dependency(
         blocking_id = target_task.id
         target_display = target_task
 
-    from app.services.scheduling_engine import validate_circular_dependency, propagate_task_schedule_changes
+    from app.services.scheduling_engine import validate_circular_dependency, validate_parent_child_dependency, propagate_task_schedule_changes
     validate_circular_dependency(db, blocked_id, blocking_id)
+    validate_parent_child_dependency(db, blocked_id, blocking_id)
 
     existing_dep = db.query(TaskDependency).filter(
         TaskDependency.task_id == blocked_id,
