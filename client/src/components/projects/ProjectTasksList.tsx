@@ -1453,7 +1453,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Dependencies</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Assigned To</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Start Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>End Date</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Due Date</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Duration</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Completion Date</TableCell>
