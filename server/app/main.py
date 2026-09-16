@@ -129,9 +129,19 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+cors_origins = settings.cors_origin_list
+allow_origin_regex = None
+
+if "*" in cors_origins:
+    cors_origins = []
+    allow_origin_regex = r".*"
+elif not any("192.168." in o or "10." in o or "172." in o for o in cors_origins):
+    allow_origin_regex = r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
+    allow_origins=cors_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -32,7 +32,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-0123456789abcdef0123456789abcdef}
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-15}
       REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-7}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://127.0.0.1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       ENABLE_SSL: ${ENABLE_SSL:-false}
       SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Kim@2025}
       APP_ENV: ${APP_ENV:-development}
