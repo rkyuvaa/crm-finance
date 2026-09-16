@@ -72,7 +72,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const numericProjectId = Number(projectId);
   const { data: users = [] } = useUsersQuery();
 
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('list');
   const [searchQ, setSearchQ] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [quickTaskInputs, setQuickTaskInputs] = useState<Record<number, string>>({});
@@ -611,11 +611,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               },
             }}
           >
-            <ToggleButton value="board">
-              <LayoutGrid size={14} style={{ marginRight: 6 }} /> Board
-            </ToggleButton>
             <ToggleButton value="list">
               <ListIcon size={14} style={{ marginRight: 6 }} /> List
+            </ToggleButton>
+            <ToggleButton value="board">
+              <LayoutGrid size={14} style={{ marginRight: 6 }} /> Board
             </ToggleButton>
           </ToggleButtonGroup>
 

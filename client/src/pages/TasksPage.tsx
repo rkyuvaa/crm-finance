@@ -57,7 +57,7 @@ interface TasksPageProps {
   defaultView?: ActiveView;
 }
 
-export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
+export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
   const [activeView, setActiveView] = useState<ActiveView>(defaultView);
   const currentUser = useAppSelector((state) => state.auth.user);
 
@@ -233,8 +233,8 @@ export default function TasksPage({ defaultView = 'board' }: TasksPageProps) {
               '& .MuiTabs-indicator': { bgcolor: '#04552B', height: 3 },
             }}
           >
-            <Tab value="board" label="Board View" icon={<LayoutGrid size={16} />} iconPosition="start" />
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
+            <Tab value="board" label="Board View" icon={<LayoutGrid size={16} />} iconPosition="start" />
             <Tab value="calendar" label="Calendar" icon={<CalendarIcon size={16} />} iconPosition="start" />
             <Tab value="gantt" label="Gantt Chart" icon={<GanttChartSquare size={16} />} iconPosition="start" />
             <Tab value="workload" label="Team Workload" icon={<Users size={16} />} iconPosition="start" />
