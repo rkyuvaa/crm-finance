@@ -444,7 +444,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     if (!newSubtaskTitle.trim()) return;
     try {
       await addSubtask({
-        taskId: task.id,
+        taskId: currentTaskId,
         title: newSubtaskTitle.trim(),
       }).unwrap();
       setNewSubtaskTitle('');
@@ -457,7 +457,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const handleAddChecklist = async () => {
     if (!newChecklistTitle.trim()) return;
     try {
-      await addChecklistApi({ taskId: task.id, title: newChecklistTitle.trim() }).unwrap();
+      await addChecklistApi({ taskId: currentTaskId, title: newChecklistTitle.trim() }).unwrap();
       setNewChecklistTitle('');
       showToast('Checklist created', 'success');
     } catch {
@@ -469,7 +469,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     const itemTitle = newChecklistItemTitles[checklistId];
     if (!itemTitle || !itemTitle.trim()) return;
     try {
-      await addChecklistItemApi({ taskId: task.id, checklistId, title: itemTitle.trim() }).unwrap();
+      await addChecklistItemApi({ taskId: currentTaskId, checklistId, title: itemTitle.trim() }).unwrap();
       setNewChecklistItemTitles((prev) => ({ ...prev, [checklistId]: '' }));
       showToast('Item added to checklist', 'success');
     } catch {
@@ -479,7 +479,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleToggleChecklistItem = async (itemId: number) => {
     try {
-      await toggleChecklistItemApi({ taskId: task.id, itemId }).unwrap();
+      await toggleChecklistItemApi({ taskId: currentTaskId, itemId }).unwrap();
     } catch {
       showToast('Failed to toggle item', 'error');
     }
@@ -487,7 +487,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleConvertChecklistItemToSubtask = async (itemId: number) => {
     try {
-      await convertChecklistItemApi({ taskId: task.id, itemId }).unwrap();
+      await convertChecklistItemApi({ taskId: currentTaskId, itemId }).unwrap();
       showToast('Converted checklist item to subtask!', 'success');
     } catch {
       showToast('Failed to convert to subtask', 'error');
@@ -498,7 +498,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     if (!depTaskId) return;
     try {
       await addDependencyApi({
-        taskId: task.id,
+        taskId: currentTaskId,
         depends_on_task_id: Number(depTaskId),
         dependency_type: depType,
       }).unwrap();
@@ -511,7 +511,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleRemoveDependency = async (depId: number) => {
     try {
-      await removeDependencyApi({ taskId: task.id, dependencyId: depId }).unwrap();
+      await removeDependencyApi({ taskId: currentTaskId, dependencyId: depId }).unwrap();
       showToast('Dependency removed', 'info');
     } catch {
       showToast('Failed to remove dependency', 'error');
@@ -522,7 +522,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     if (!commentText.trim()) return;
     try {
       await addComment({
-        taskId: task.id,
+        taskId: currentTaskId,
         content: commentText.trim(),
       }).unwrap();
       setCommentText('');
@@ -540,7 +540,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         const fileSizeFormatted = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
         try {
           await addTaskAttachment({
-            taskId: task.id,
+            taskId: currentTaskId,
             filename: file.name,
             file_size: fileSizeFormatted,
           }).unwrap();
@@ -564,7 +564,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const handleSaveCustomField = async (fieldId: number) => {
     try {
       await saveCustomField({
-        taskId: task.id,
+        taskId: currentTaskId,
         field_id: fieldId,
         value: editFieldValue.trim() || undefined,
       }).unwrap();
@@ -877,8 +877,8 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Box>
             </Box>
 
-            {task.checklists && task.checklists.length > 0 ? (
-              task.checklists.map((chk) => (
+            {currentTask?.checklists && currentTask.checklists.length > 0 ? (
+              currentTask.checklists.map((chk) => (
                 <Paper key={chk.id} variant="outlined" sx={{ p: 2, mb: 2, borderRadius: '8px', bgcolor: 'background.default' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
                     {chk.title}
@@ -976,9 +976,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1, letterSpacing: 0.5 }}>
                 BLOCKING (Tasks blocked by this task)
               </Typography>
-              {task.dependencies && task.dependencies.filter((d) => d.direction === 'BLOCKING').length > 0 ? (
+              {currentTask?.dependencies && currentTask.dependencies.filter((d) => d.direction === 'BLOCKING').length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {task.dependencies.filter((d) => d.direction === 'BLOCKING').map((dep) => (
+                  {currentTask.dependencies.filter((d) => d.direction === 'BLOCKING').map((dep) => (
                     <Paper
                       key={dep.id}
                       variant="outlined"
@@ -1019,9 +1019,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1, letterSpacing: 0.5 }}>
                 BLOCKED BY (Tasks blocking this task)
               </Typography>
-              {task.dependencies && task.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 0 ? (
+              {currentTask?.dependencies && currentTask.dependencies.filter((d) => d.direction !== 'BLOCKING').length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {task.dependencies.filter((d) => d.direction !== 'BLOCKING').map((dep) => (
+                  {currentTask.dependencies.filter((d) => d.direction !== 'BLOCKING').map((dep) => (
                     <Paper
                       key={dep.id}
                       variant="outlined"
@@ -1145,12 +1145,12 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             ))}
 
             {/* Immutable Audit Log */}
-            {task.activities && task.activities.length > 0 && (
+            {currentTask?.activities && currentTask.activities.length > 0 && (
               <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 700, display: 'block', mb: 1 }}>
                   AUDIT TIMELINE
                 </Typography>
-                {task.activities.map((act) => (
+                {currentTask.activities.map((act) => (
                   <Box key={act.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
                     <ActivityIcon size={13} color="#64748B" />
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -1424,7 +1424,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 size="small"
                 fullWidth
                 displayEmpty
-                value={(task.assignees || []).map((a) => a.user_id || a.id)}
+                value={(currentTask?.assignees || []).map((a) => a.user_id || a.id)}
                 onChange={(e) => {
                   const vals = typeof e.target.value === 'string' ? e.target.value.split(',').map(Number) : (e.target.value as number[]);
                   handleAssigneeChange(vals);
@@ -1436,7 +1436,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   return (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((uid) => {
-                        const u = (users as any[]).find((usr) => usr.id === uid) || (task.assignees || []).find((a) => (a.user_id || a.id) === uid);
+                        const u = (users as any[]).find((usr) => usr.id === uid) || (currentTask?.assignees || []).find((a) => (a.user_id || a.id) === uid);
                         const name = u ? (u.full_name || u.username || 'User') : `User ${uid}`;
                         return (
                           <Chip
@@ -1472,7 +1472,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 size="small"
                 fullWidth
                 displayEmpty
-                value={(task.followers || []).map((f) => f.user_id || f.id)}
+                value={(currentTask?.followers || []).map((f) => f.user_id || f.id)}
                 onChange={(e) => {
                   const vals = typeof e.target.value === 'string' ? e.target.value.split(',').map(Number) : (e.target.value as number[]);
                   handleFollowerChange(vals);
@@ -1484,7 +1484,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   return (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((uid) => {
-                        const u = (users as any[]).find((usr) => usr.id === uid) || (task.followers || []).find((f) => (f.user_id || f.id) === uid);
+                        const u = (users as any[]).find((usr) => usr.id === uid) || (currentTask?.followers || []).find((f) => (f.user_id || f.id) === uid);
                         const name = u ? (u.full_name || u.username || 'Follower') : `User ${uid}`;
                         return (
                           <Chip
