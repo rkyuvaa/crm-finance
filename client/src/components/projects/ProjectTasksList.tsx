@@ -567,23 +567,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   }}
                 />
               )}
-              {task.auto_schedule !== false && (
-                <Tooltip title="Auto Scheduled by scheduling engine">
-                  <Chip
-                    label="🔄 Auto"
-                    size="small"
-                    sx={{
-                      height: 18,
-                      fontSize: '0.62rem',
-                      fontWeight: 700,
-                      bgcolor: '#F0FDF4',
-                      color: '#04552B',
-                      border: '1px solid #BBF7D0',
-                      flexShrink: 0,
-                    }}
-                  />
-                </Tooltip>
-              )}
               {task.dependency_conflict?.has_conflict && (
                 <Tooltip title={task.dependency_conflict.conflict_message}>
                   <Chip

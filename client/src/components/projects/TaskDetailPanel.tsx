@@ -349,17 +349,6 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
-  const handleToggleAutoSchedule = async () => {
-    if (!currentTask) return;
-    try {
-      const nextVal = !currentTask.auto_schedule;
-      await updateTask({ id: currentTaskId, body: { auto_schedule: nextVal } as any }).unwrap();
-      showToast(`Auto Schedule turned ${nextVal ? 'ON' : 'OFF'}`, 'success');
-    } catch {
-      showToast('Failed to toggle Auto Schedule', 'error');
-    }
-  };
-
   const handleDurationChange = async (days: number) => {
     if (!currentTaskId || days < 1) return;
     try {
@@ -1322,43 +1311,6 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 <Typography variant="body2">{currentTask.completion_date}</Typography>
               </Box>
             )}
-
-            {/* Auto Schedule Mode Switch */}
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: '8px',
-                bgcolor: currentTask.auto_schedule !== false ? '#F0FDF4' : '#F8FAFC',
-                border: '1px solid',
-                borderColor: currentTask.auto_schedule !== false ? '#BBF7D0' : 'divider',
-                display: 'flex',
-                alignItems: 'center',
-                justify: 'space-between',
-              }}
-            >
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: currentTask.auto_schedule !== false ? '#04552B' : 'text.primary', fontSize: 13 }}>
-                  🔄 Auto Schedule
-                </Typography>
-                <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>
-                  {currentTask.auto_schedule !== false ? 'Engine controls dates & dependencies' : 'Manual date control'}
-                </Typography>
-              </Box>
-              <Button
-                size="small"
-                variant={currentTask.auto_schedule !== false ? 'contained' : 'outlined'}
-                onClick={handleToggleAutoSchedule}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  bgcolor: currentTask.auto_schedule !== false ? '#04552B' : undefined,
-                  '&:hover': { bgcolor: currentTask.auto_schedule !== false ? '#034422' : undefined },
-                }}
-              >
-                {currentTask.auto_schedule !== false ? 'ON' : 'OFF'}
-              </Button>
-            </Box>
 
             {/* Duration Display & Edit */}
             <Box>
