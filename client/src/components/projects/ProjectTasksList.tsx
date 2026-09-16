@@ -520,11 +520,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               whiteSpace: 'nowrap',
               borderRight: '2px solid',
               borderColor: 'divider',
-              minWidth: 220,
+              minWidth: 360,
+              width: 360,
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
               {task.task_number && (
                 <Chip
                   label={task.task_number.replace(/0+([1-9]\d*)$/, '$1')}
@@ -536,6 +537,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     bgcolor: '#F1F5F9',
                     color: '#475569',
                     fontFamily: 'monospace',
+                    flexShrink: 0,
                   }}
                 />
               )}
@@ -556,6 +558,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 InputProps={{ disableUnderline: true }}
                 sx={{
                   flex: 1,
+                  minWidth: 180,
                   '& .MuiInputBase-input': {
                     fontWeight: depth === 0 ? 600 : 500,
                     fontSize: '0.875rem',
@@ -572,7 +575,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <Chip
                   label={`${task.completed_subtask_count || 0}/${task.subtask_count || subtaskList.length} subtasks`}
                   size="small"
-                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569' }}
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569', flexShrink: 0 }}
                 />
               )}
             </Box>
@@ -1344,7 +1347,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     whiteSpace: 'nowrap',
                     borderRight: '2px solid',
                     borderColor: 'divider',
-                    minWidth: 220,
+                    minWidth: 360,
+                    width: 360,
                   }}
                 >
                   Name

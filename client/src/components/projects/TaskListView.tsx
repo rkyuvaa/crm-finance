@@ -165,17 +165,18 @@ export default function TaskListView({
               whiteSpace: 'nowrap',
               borderRight: '2px solid',
               borderColor: 'divider',
-              minWidth: 220,
+              minWidth: 360,
+              width: 360,
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 3, width: '100%' }}>
               {hasChildren ? (
-                <IconButton size="small" onClick={(e) => toggleExpand(task.id, e)} sx={{ p: 0.5 }}>
+                <IconButton size="small" onClick={(e) => toggleExpand(task.id, e)} sx={{ p: 0.5, flexShrink: 0 }}>
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </IconButton>
               ) : (
-                <Box sx={{ width: 24 }} />
+                <Box sx={{ width: 24, flexShrink: 0 }} />
               )}
 
               <Chip
@@ -188,6 +189,7 @@ export default function TaskListView({
                   bgcolor: '#F1F5F9',
                   color: '#475569',
                   fontFamily: 'monospace',
+                  flexShrink: 0,
                 }}
               />
 
@@ -208,6 +210,7 @@ export default function TaskListView({
                 InputProps={{ disableUnderline: true }}
                 sx={{
                   flex: 1,
+                  minWidth: 180,
                   '& .MuiInputBase-input': {
                     fontWeight: depth === 0 ? 700 : 500,
                     fontSize: '0.875rem',
@@ -225,7 +228,7 @@ export default function TaskListView({
                 <Chip
                   label="BLOCKED"
                   size="small"
-                  sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#FEE2E2', color: '#DC2626' }}
+                  sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#FEE2E2', color: '#DC2626', flexShrink: 0 }}
                 />
               )}
 
@@ -233,7 +236,7 @@ export default function TaskListView({
                 <Chip
                   label={`${task.completed_subtask_count || 0}/${task.subtask_count} subtasks`}
                   size="small"
-                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569' }}
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569', flexShrink: 0 }}
                 />
               )}
             </Box>
@@ -632,6 +635,8 @@ export default function TaskListView({
                 whiteSpace: 'nowrap',
                 borderRight: '2px solid',
                 borderColor: 'divider',
+                minWidth: 360,
+                width: 360,
                 py: 1.5,
               }}
             />
