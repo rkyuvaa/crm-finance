@@ -2,6 +2,18 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    command: >
+      postgres
+        -c shared_buffers=512MB
+        -c effective_cache_size=1536MB
+        -c work_mem=16MB
+        -c maintenance_work_mem=128MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kim}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kimdev123}
@@ -36,6 +48,7 @@ services:
       ENABLE_SSL: ${ENABLE_SSL:-false}
       SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Kim@2025}
       APP_ENV: ${APP_ENV:-development}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-4}
     depends_on:
       db:
         condition: service_healthy
