@@ -5,8 +5,8 @@ from datetime import datetime, timezone, date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form, status, Response
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import func, or_, and_, case
 
 from app.db.session import get_db
 from app.models.projects import (
@@ -316,7 +316,133 @@ def _update_parent_progress(db: Session, parent_id: Optional[int]):
         _update_parent_progress(db, parent.parent_task_id)
 
 
-def _format_task_out(t: Task, db: Session) -> TaskOut:
+def _batch_load_task_metadata(db: Session, task_ids: list[int]):
+    if not task_ids:
+        return {}, {}, {}, {}
+
+    # 1. Dependencies
+    deps = (
+        db.query(TaskDependency)
+        .options(
+            joinedload(TaskDependency.task).joinedload(Task.status_def),
+            joinedload(TaskDependency.depends_on_task).joinedload(Task.status_def),
+        )
+        .filter(or_(TaskDependency.task_id.in_(task_ids), TaskDependency.depends_on_task_id.in_(task_ids)))
+        .all()
+    )
+    deps_by_task: dict[int, list[TaskDependencyOut]] = {tid: [] for tid in task_ids}
+    is_blocked_by_task: dict[int, bool] = {tid: False for tid in task_ids}
+
+    for dep in deps:
+        if dep.task_id in deps_by_task:
+            blocker = dep.depends_on_task
+            if blocker and not blocker.is_deleted:
+                if not blocker.is_completed:
+                    is_blocked_by_task[dep.task_id] = True
+                deps_by_task[dep.task_id].append(TaskDependencyOut(
+                    id=dep.id,
+                    task_id=dep.task_id,
+                    depends_on_task_id=dep.depends_on_task_id,
+                    depends_on_task_number=blocker.task_number,
+                    depends_on_task_title=blocker.title,
+                    depends_on_status_name=blocker.status_def.name if blocker.status_def else None,
+                    depends_on_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                    depends_on_due_date=blocker.due_date,
+                    depends_on_is_completed=blocker.is_completed,
+                    direction="BLOCKED_BY",
+                    dependency_type=dep.dependency_type,
+                    predecessor_task_id=dep.depends_on_task_id,
+                    predecessor_task_number=blocker.task_number,
+                    predecessor_task_title=blocker.title,
+                    predecessor_status_name=blocker.status_def.name if blocker.status_def else None,
+                    predecessor_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                    predecessor_due_date=blocker.due_date,
+                    predecessor_is_completed=blocker.is_completed,
+                    dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                    lag_days=getattr(dep, 'lag_days', 0) or 0,
+                    created_at=dep.created_at,
+                ))
+        if dep.depends_on_task_id in deps_by_task:
+            blocked_task = dep.task
+            if blocked_task and not blocked_task.is_deleted:
+                deps_by_task[dep.depends_on_task_id].append(TaskDependencyOut(
+                    id=dep.id,
+                    task_id=dep.task_id,
+                    depends_on_task_id=dep.depends_on_task_id,
+                    depends_on_task_number=blocked_task.task_number,
+                    depends_on_task_title=blocked_task.title,
+                    depends_on_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                    depends_on_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                    depends_on_due_date=blocked_task.due_date,
+                    depends_on_is_completed=blocked_task.is_completed,
+                    direction="BLOCKING",
+                    dependency_type=dep.dependency_type,
+                    predecessor_task_id=dep.depends_on_task_id,
+                    predecessor_task_number=blocked_task.task_number,
+                    predecessor_task_title=blocked_task.title,
+                    predecessor_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                    predecessor_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                    predecessor_due_date=blocked_task.due_date,
+                    predecessor_is_completed=blocked_task.is_completed,
+                    dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                    lag_days=getattr(dep, 'lag_days', 0) or 0,
+                    created_at=dep.created_at,
+                ))
+
+    # 2. Relationships
+    rels = (
+        db.query(TaskRelationship)
+        .options(
+            joinedload(TaskRelationship.task),
+            joinedload(TaskRelationship.related_task),
+        )
+        .filter(or_(TaskRelationship.task_id.in_(task_ids), TaskRelationship.related_task_id.in_(task_ids)))
+        .all()
+    )
+    rels_by_task: dict[int, list[TaskRelationshipOut]] = {tid: [] for tid in task_ids}
+    for rel in rels:
+        rel_out = TaskRelationshipOut(
+            id=rel.id,
+            task_id=rel.task_id,
+            related_task_id=rel.related_task_id,
+            related_task_number=rel.related_task.task_number if rel.related_task else None,
+            related_task_title=rel.related_task.title if rel.related_task else None,
+            relationship_type=rel.relationship_type,
+            created_at=rel.created_at,
+        )
+        if rel.task_id in rels_by_task:
+            rels_by_task[rel.task_id].append(rel_out)
+        if rel.related_task_id in rels_by_task and rel.related_task_id != rel.task_id:
+            rels_by_task[rel.related_task_id].append(rel_out)
+
+    # 3. Subtask counts
+    subtask_counts_rows = (
+        db.query(
+            Task.parent_task_id,
+            func.count(Task.id).label("total"),
+            func.count(case((Task.is_completed.is_(True), 1))).label("completed"),
+        )
+        .filter(Task.parent_task_id.in_(task_ids), Task.is_deleted.is_(False))
+        .group_by(Task.parent_task_id)
+        .all()
+    )
+    subtask_counts = {tid: {"total": 0, "completed": 0} for tid in task_ids}
+    for pid, total, completed in subtask_counts_rows:
+        if pid in subtask_counts:
+            subtask_counts[pid] = {"total": total or 0, "completed": completed or 0}
+
+    return deps_by_task, is_blocked_by_task, rels_by_task, subtask_counts
+
+
+def _format_task_out(
+    t: Task,
+    db: Session,
+    batch_deps: Optional[list] = None,
+    batch_is_blocked: Optional[bool] = None,
+    batch_rels: Optional[list] = None,
+    batch_subtask_counts: Optional[dict] = None,
+    skip_nested: bool = False,
+) -> TaskOut:
     out = TaskOut.model_validate(t)
     if out.task_number:
         out.task_number = _unpad_task_number(out.task_number)
@@ -404,93 +530,112 @@ def _format_task_out(t: Task, db: Session) -> TaskOut:
         ) for te in t.time_entries
     ]
 
-    dependencies_out = []
-    # 1. BLOCKED_BY dependencies (task t is blocked by depends_on_task_id)
-    blocked_by_deps = db.query(TaskDependency).filter(TaskDependency.task_id == t.id).all()
-    is_blocked = False
-    for dep in blocked_by_deps:
-        blocker = dep.depends_on_task
-        if blocker and not blocker.is_deleted:
-            if not blocker.is_completed:
-                is_blocked = True
-            dependencies_out.append(TaskDependencyOut(
-                id=dep.id,
-                task_id=dep.task_id,
-                depends_on_task_id=dep.depends_on_task_id,
-                depends_on_task_number=blocker.task_number,
-                depends_on_task_title=blocker.title,
-                depends_on_status_name=blocker.status_def.name if blocker.status_def else None,
-                depends_on_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
-                depends_on_due_date=blocker.due_date,
-                depends_on_is_completed=blocker.is_completed,
-                direction="BLOCKED_BY",
-                dependency_type=dep.dependency_type,
-                predecessor_task_id=dep.depends_on_task_id,
-                predecessor_task_number=blocker.task_number,
-                predecessor_task_title=blocker.title,
-                predecessor_status_name=blocker.status_def.name if blocker.status_def else None,
-                predecessor_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
-                predecessor_due_date=blocker.due_date,
-                predecessor_is_completed=blocker.is_completed,
-                dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
-                lag_days=getattr(dep, 'lag_days', 0) or 0,
-                created_at=dep.created_at,
-            ))
+    if batch_deps is not None:
+        dependencies_out = batch_deps
+        is_blocked = batch_is_blocked if batch_is_blocked is not None else False
+    else:
+        dependencies_out = []
+        # 1. BLOCKED_BY dependencies (task t is blocked by depends_on_task_id)
+        blocked_by_deps = db.query(TaskDependency).filter(TaskDependency.task_id == t.id).all()
+        is_blocked = False
+        for dep in blocked_by_deps:
+            blocker = dep.depends_on_task
+            if blocker and not blocker.is_deleted:
+                if not blocker.is_completed:
+                    is_blocked = True
+                dependencies_out.append(TaskDependencyOut(
+                    id=dep.id,
+                    task_id=dep.task_id,
+                    depends_on_task_id=dep.depends_on_task_id,
+                    depends_on_task_number=blocker.task_number,
+                    depends_on_task_title=blocker.title,
+                    depends_on_status_name=blocker.status_def.name if blocker.status_def else None,
+                    depends_on_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                    depends_on_due_date=blocker.due_date,
+                    depends_on_is_completed=blocker.is_completed,
+                    direction="BLOCKED_BY",
+                    dependency_type=dep.dependency_type,
+                    predecessor_task_id=dep.depends_on_task_id,
+                    predecessor_task_number=blocker.task_number,
+                    predecessor_task_title=blocker.title,
+                    predecessor_status_name=blocker.status_def.name if blocker.status_def else None,
+                    predecessor_priority=blocker.priority.value if hasattr(blocker.priority, 'value') else str(blocker.priority),
+                    predecessor_due_date=blocker.due_date,
+                    predecessor_is_completed=blocker.is_completed,
+                    dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                    lag_days=getattr(dep, 'lag_days', 0) or 0,
+                    created_at=dep.created_at,
+                ))
 
-    # 2. BLOCKING dependencies (task t blocks task_id)
-    blocking_deps = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == t.id).all()
-    for dep in blocking_deps:
-        blocked_task = dep.task
-        if blocked_task and not blocked_task.is_deleted:
-            dependencies_out.append(TaskDependencyOut(
-                id=dep.id,
-                task_id=dep.task_id,
-                depends_on_task_id=dep.depends_on_task_id,
-                depends_on_task_number=blocked_task.task_number,
-                depends_on_task_title=blocked_task.title,
-                depends_on_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
-                depends_on_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
-                depends_on_due_date=blocked_task.due_date,
-                depends_on_is_completed=blocked_task.is_completed,
-                direction="BLOCKING",
-                dependency_type=dep.dependency_type,
-                predecessor_task_id=dep.depends_on_task_id,
-                predecessor_task_number=blocked_task.task_number,
-                predecessor_task_title=blocked_task.title,
-                predecessor_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
-                predecessor_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
-                predecessor_due_date=blocked_task.due_date,
-                predecessor_is_completed=blocked_task.is_completed,
-                dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
-                lag_days=getattr(dep, 'lag_days', 0) or 0,
-                created_at=dep.created_at,
-            ))
+        # 2. BLOCKING dependencies (task t blocks task_id)
+        blocking_deps = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == t.id).all()
+        for dep in blocking_deps:
+            blocked_task = dep.task
+            if blocked_task and not blocked_task.is_deleted:
+                dependencies_out.append(TaskDependencyOut(
+                    id=dep.id,
+                    task_id=dep.task_id,
+                    depends_on_task_id=dep.depends_on_task_id,
+                    depends_on_task_number=blocked_task.task_number,
+                    depends_on_task_title=blocked_task.title,
+                    depends_on_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                    depends_on_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                    depends_on_due_date=blocked_task.due_date,
+                    depends_on_is_completed=blocked_task.is_completed,
+                    direction="BLOCKING",
+                    dependency_type=dep.dependency_type,
+                    predecessor_task_id=dep.depends_on_task_id,
+                    predecessor_task_number=blocked_task.task_number,
+                    predecessor_task_title=blocked_task.title,
+                    predecessor_status_name=blocked_task.status_def.name if blocked_task.status_def else None,
+                    predecessor_priority=blocked_task.priority.value if hasattr(blocked_task.priority, 'value') else str(blocked_task.priority),
+                    predecessor_due_date=blocked_task.due_date,
+                    predecessor_is_completed=blocked_task.is_completed,
+                    dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
+                    lag_days=getattr(dep, 'lag_days', 0) or 0,
+                    created_at=dep.created_at,
+                ))
 
     out.dependencies = dependencies_out
     out.is_blocked = is_blocked
 
-    out.relationships = [
-        TaskRelationshipOut(
-            id=rel.id,
-            task_id=rel.task_id,
-            related_task_id=rel.related_task_id,
-            related_task_number=rel.related_task.task_number if rel.related_task else None,
-            related_task_title=rel.related_task.title if rel.related_task else None,
-            relationship_type=rel.relationship_type,
-            created_at=rel.created_at,
-        ) for rel in db.query(TaskRelationship).filter(or_(TaskRelationship.task_id == t.id, TaskRelationship.related_task_id == t.id)).all()
-    ]
+    if batch_rels is not None:
+        out.relationships = batch_rels
+    else:
+        out.relationships = [
+            TaskRelationshipOut(
+                id=rel.id,
+                task_id=rel.task_id,
+                related_task_id=rel.related_task_id,
+                related_task_number=rel.related_task.task_number if rel.related_task else None,
+                related_task_title=rel.related_task.title if rel.related_task else None,
+                relationship_type=rel.relationship_type,
+                created_at=rel.created_at,
+            ) for rel in db.query(TaskRelationship).filter(or_(TaskRelationship.task_id == t.id, TaskRelationship.related_task_id == t.id)).all()
+        ]
 
-    subtasks = db.query(Task).filter(
-        Task.parent_task_id == t.id,
-        Task.is_deleted.is_(False)
-    ).order_by(Task.sort_order.asc(), Task.id.asc()).all()
-    out.subtask_count = len(subtasks)
-    out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
-    out.nested_subtasks = [_format_task_out(st, db) for st in subtasks]
+    if batch_subtask_counts is not None:
+        out.subtask_count = batch_subtask_counts.get("total", 0)
+        out.completed_subtask_count = batch_subtask_counts.get("completed", 0)
+        out.nested_subtasks = []
+    elif skip_nested:
+        out.subtask_count = 0
+        out.completed_subtask_count = 0
+        out.nested_subtasks = []
+    else:
+        subtasks = db.query(Task).filter(
+            Task.parent_task_id == t.id,
+            Task.is_deleted.is_(False)
+        ).order_by(Task.sort_order.asc(), Task.id.asc()).all()
+        out.subtask_count = len(subtasks)
+        out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
+        out.nested_subtasks = [_format_task_out(st, db) for st in subtasks]
 
-    from app.services.scheduling_engine import check_dependency_conflict
-    out.dependency_conflict = check_dependency_conflict(db, t)
+    if batch_deps is not None:
+        out.dependency_conflict = None
+    else:
+        from app.services.scheduling_engine import check_dependency_conflict
+        out.dependency_conflict = check_dependency_conflict(db, t)
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
 
@@ -516,10 +661,12 @@ def list_tasks(
     is_completed: Optional[bool] = None,
     is_archived: bool = False,
     my_tasks_only: bool = False,
+    limit: Optional[int] = Query(None, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List tasks with comprehensive ClickUp filtering"""
+    """List tasks with comprehensive ClickUp filtering and batch metadata resolution"""
     query = db.query(Task).filter(Task.is_deleted.is_(False))
 
     if not is_archived:
@@ -582,8 +729,43 @@ def list_tasks(
             )
         )
 
-    tasks = query.order_by(Task.created_at.desc()).all()
-    return [_format_task_out(t, db) for t in tasks]
+    query = (
+        query.options(
+            joinedload(Task.project),
+            joinedload(Task.assignee),
+            joinedload(Task.status_def),
+            joinedload(Task.cost_center),
+            joinedload(Task.department),
+            selectinload(Task.assignees).joinedload(TaskAssignee.user),
+            selectinload(Task.followers).joinedload(TaskFollower.user),
+            selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
+            selectinload(Task.checklists).selectinload(TaskChecklist.items),
+            selectinload(Task.time_entries).joinedload(TaskTimeEntry.user),
+        )
+        .order_by(Task.created_at.desc())
+    )
+
+    if limit is not None:
+        query = query.offset(offset).limit(limit)
+    else:
+        query = query.offset(offset).limit(300)
+
+    tasks = query.all()
+    task_ids = [t.id for t in tasks]
+    deps_map, blocked_map, rels_map, subtask_counts_map = _batch_load_task_metadata(db, task_ids)
+
+    return [
+        _format_task_out(
+            t,
+            db,
+            batch_deps=deps_map.get(t.id, []),
+            batch_is_blocked=blocked_map.get(t.id, False),
+            batch_rels=rels_map.get(t.id, []),
+            batch_subtask_counts=subtask_counts_map.get(t.id),
+            skip_nested=not include_subtasks,
+        )
+        for t in tasks
+    ]
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)

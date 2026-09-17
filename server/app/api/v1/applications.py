@@ -82,27 +82,21 @@ def _to_out(app: Application) -> ApplicationOut:
     )
 
 
-def _pending_action_app_ids(db: Session) -> list[int]:
-    q1 = (
-        db.query(Application.id)
-        .join(FinanceSubmission, FinanceSubmission.application_id == Application.id)
-        .filter(
-            Application.status == ApplicationStatus.QUERY,
-            FinanceSubmission.status == FinanceStatus.QUERY,
-            FinanceSubmission.query_note.isnot(None),
-        )
-        .all()
+def _pending_action_condition():
+    from sqlalchemy import exists, or_
+    sub1 = exists().where(
+        (FinanceSubmission.application_id == Application.id)
+        & (FinanceSubmission.status == FinanceStatus.QUERY)
+        & (FinanceSubmission.query_note.isnot(None))
     )
-    q2 = (
-        db.query(Application.id)
-        .join(Disbursement, Disbursement.application_id == Application.id)
-        .filter(
-            Application.status == ApplicationStatus.DISBURSEMENT,
-            Disbursement.status == DisbursementStatus.PENDING_UTR,
-        )
-        .all()
+    sub2 = exists().where(
+        (Disbursement.application_id == Application.id)
+        & (Disbursement.status == DisbursementStatus.PENDING_UTR)
     )
-    return [r[0] for r in q1] + [r[0] for r in q2]
+    return or_(
+        (Application.status == ApplicationStatus.QUERY) & sub1,
+        (Application.status == ApplicationStatus.DISBURSEMENT) & sub2,
+    )
 
 
 def _recent_ids(db: Session) -> list[int]:
@@ -124,10 +118,7 @@ def _tab_counts(db: Session, user: User, scope: str) -> TabCounts:
             base = base.filter(Application.id.in_(recent_ids))
     all_count = base.count()
     mine = base.filter(Application.assigned_to == user.id).count()
-    pending_ids = _pending_action_app_ids(db)
-    pending = (
-        base.filter(Application.id.in_(pending_ids)).count() if pending_ids else 0
-    )
+    pending = base.filter(_pending_action_condition()).count()
     return TabCounts(all=all_count, mine=mine, pending=pending)
 
 
@@ -191,8 +182,7 @@ def _filtered_query(
     if tab == "mine":
         query = query.filter(Application.assigned_to == user.id)
     elif tab == "pending":
-        pending_ids = _pending_action_app_ids(db)
-        query = query.filter(Application.id.in_(pending_ids)) if pending_ids else query.filter(False)
+        query = query.filter(_pending_action_condition())
     if status_filter:
         query = query.filter(Application.status == status_filter)
     if finance_company_id:

@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user, require_roles, require_permission
 from app.db.session import get_db
@@ -137,11 +137,13 @@ def list_attendance(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     status_filter: Optional[AttendanceStatus] = Query(None),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List attendance records with filters"""
-    query = db.query(Attendance)
+    """List attendance records with filters and eager-loaded user profiles"""
+    query = db.query(Attendance).options(joinedload(Attendance.user))
 
     if user_id:
         query = query.filter(Attendance.user_id == user_id)
@@ -152,7 +154,7 @@ def list_attendance(
     if status_filter:
         query = query.filter(Attendance.status == status_filter)
 
-    records = query.order_by(Attendance.attendance_date.desc()).all()
+    records = query.order_by(Attendance.attendance_date.desc()).offset(offset).limit(limit).all()
 
     return [_format_attendance(rec) for rec in records]
 
@@ -269,18 +271,26 @@ def create_leave_request(
 def list_leave_requests(
     user_id: Optional[int] = Query(None),
     status_filter: Optional[LeaveStatus] = Query(None),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List leave requests with filters"""
-    query = db.query(LeaveRequest)
+    """List leave requests with filters and eager loaded relations"""
+    query = (
+        db.query(LeaveRequest)
+        .options(
+            joinedload(LeaveRequest.user),
+            joinedload(LeaveRequest.approved_by),
+        )
+    )
 
     if user_id:
         query = query.filter(LeaveRequest.user_id == user_id)
     if status_filter:
         query = query.filter(LeaveRequest.status == status_filter)
 
-    requests = query.order_by(LeaveRequest.created_at.desc()).all()
+    requests = query.order_by(LeaveRequest.created_at.desc()).offset(offset).limit(limit).all()
 
     return [_format_leave(req) for req in requests]
 
@@ -397,11 +407,13 @@ def list_payroll_records(
     status_filter: Optional[PayrollStatus] = Query(None),
     start_month: Optional[date] = Query(None),
     end_month: Optional[date] = Query(None),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List payroll records with filters"""
-    query = db.query(PayrollRecord)
+    """List payroll records with filters and eager loaded user"""
+    query = db.query(PayrollRecord).options(joinedload(PayrollRecord.user))
 
     if user_id:
         query = query.filter(PayrollRecord.user_id == user_id)
@@ -412,7 +424,7 @@ def list_payroll_records(
     if end_month:
         query = query.filter(PayrollRecord.payroll_month <= end_month)
 
-    records = query.order_by(PayrollRecord.payroll_month.desc()).all()
+    records = query.order_by(PayrollRecord.payroll_month.desc()).offset(offset).limit(limit).all()
 
     return [_format_payroll(rec) for rec in records]
 
@@ -497,18 +509,26 @@ def create_performance_review(
 def list_performance_reviews(
     user_id: Optional[int] = Query(None),
     reviewer_id: Optional[int] = Query(None),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List performance reviews"""
-    query = db.query(PerformanceReview)
+    """List performance reviews with eager-loaded reviewers"""
+    query = (
+        db.query(PerformanceReview)
+        .options(
+            joinedload(PerformanceReview.user),
+            joinedload(PerformanceReview.reviewer),
+        )
+    )
 
     if user_id:
         query = query.filter(PerformanceReview.user_id == user_id)
     if reviewer_id:
         query = query.filter(PerformanceReview.reviewer_id == reviewer_id)
 
-    reviews = query.order_by(PerformanceReview.review_date.desc()).all()
+    reviews = query.order_by(PerformanceReview.review_date.desc()).offset(offset).limit(limit).all()
 
     return [_format_performance(rev) for rev in reviews]
 

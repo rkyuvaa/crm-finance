@@ -2,7 +2,7 @@ from datetime import timedelta
 from datetime import date as date_type
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import (
     Activity,
@@ -174,6 +174,8 @@ def _attention_candidates(db: Session) -> list[dict]:
             FinanceSubmission.status == FinanceStatus.QUERY,
             FinanceSubmission.query_note.isnot(None),
         )
+        .order_by(Application.updated_at.desc())
+        .limit(20)
         .all()
     )
     for app, sub in query_apps:
@@ -200,6 +202,8 @@ def _attention_candidates(db: Session) -> list[dict]:
             Application.status == ApplicationStatus.DISBURSEMENT,
             Disbursement.status == DisbursementStatus.PENDING_UTR,
         )
+        .order_by(Application.updated_at.desc())
+        .limit(20)
         .all()
     )
     for app, disb in disb_apps:
@@ -228,11 +232,14 @@ def _waiting_candidates(db: Session) -> list[dict]:
 
     fin_apps = (
         db.query(Application, FinanceSubmission)
+        .options(joinedload(Application.finance_company))
         .join(FinanceSubmission, FinanceSubmission.application_id == Application.id)
         .filter(
             Application.status == ApplicationStatus.FINANCE,
             FinanceSubmission.status == FinanceStatus.PROCESSING,
         )
+        .order_by(Application.updated_at.desc())
+        .limit(20)
         .all()
     )
     for app, sub in fin_apps:
@@ -252,7 +259,13 @@ def _waiting_candidates(db: Session) -> list[dict]:
 
     verif_apps = (
         db.query(Application)
+        .options(
+            selectinload(Application.verifications),
+            selectinload(Application.documents),
+        )
         .filter(Application.status == ApplicationStatus.VERIFICATION)
+        .order_by(Application.updated_at.desc())
+        .limit(20)
         .all()
     )
     for app in verif_apps:
