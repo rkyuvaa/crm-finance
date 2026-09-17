@@ -289,12 +289,23 @@ export default function ProjectWorkspace() {
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE</Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE & TIME</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Calendar size={14} color="#64748B" /> {project.target_end_date || 'Not set'}
+                        <Calendar size={14} color="#64748B" /> {project.target_end_date ? `${project.target_end_date}${project.target_end_time ? ' ' + project.target_end_time : ''}` : 'Not set'}
                       </Typography>
                     </Box>
                   </Grid>
+
+                  {project.completion_date && (
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>ACTUAL COMPLETION DATE & TIME</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#04552B', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CheckCircle2 size={14} color="#04552B" /> {project.completion_date}{project.completion_time ? ' ' + project.completion_time : ''}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
                 </Grid>
               </Paper>
 

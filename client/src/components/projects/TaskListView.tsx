@@ -538,33 +538,61 @@ export default function TaskListView({
             </FormControl>
           </TableCell>
 
-          {/* 8. Completion Date (Inline Edit) */}
+          {/* 8. Completion Date & Time (Inline Edit) */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              defaultValue={task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '')}
-              onBlur={(e) => {
-                const val = e.target.value;
-                if (val !== (task.completion_date || '')) {
-                  handleCellUpdate(task.id, 'completion_date', val || null);
-                }
-              }}
-              InputProps={{ disableUnderline: true }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.8rem',
-                  color: 'text.secondary',
-                  py: 0.25,
-                  px: 0.5,
-                  borderRadius: '4px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
-                },
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TextField
+                type="date"
+                size="small"
+                variant="standard"
+                defaultValue={task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '')}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== (task.completion_date || '')) {
+                    handleCellUpdate(task.id, 'completion_date', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.5,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+              <TextField
+                type="time"
+                size="small"
+                variant="standard"
+                defaultValue={time12To24(task.completion_time || '')}
+                onBlur={(e) => {
+                  const val = e.target.value ? time24To12(e.target.value) : '';
+                  if (val !== (task.completion_time || '')) {
+                    handleCellUpdate(task.id, 'completion_time', val || null);
+                  }
+                }}
+                InputProps={{ disableUnderline: true }}
+                sx={{
+                  width: 70,
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    py: 0.25,
+                    px: 0.25,
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    cursor: 'pointer',
+                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                  },
+                }}
+              />
+            </Box>
           </TableCell>
 
           {/* 9. Estimated Cost (Inline Edit) */}

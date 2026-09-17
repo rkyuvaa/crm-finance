@@ -322,6 +322,7 @@ class TaskCreate(TaskBase):
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
     completion_date: Optional[date] = None
+    completion_time: Optional[str] = None
     assignee_ids: Optional[List[int]] = None
     follower_ids: Optional[List[int]] = None
     tag_ids: Optional[List[int]] = None
@@ -359,6 +360,7 @@ class TaskUpdate(BaseModel):
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
     completion_date: Optional[date] = None
+    completion_time: Optional[str] = None
     is_completed: Optional[bool] = None
     is_archived: Optional[bool] = None
     is_deleted: Optional[bool] = None
@@ -390,6 +392,7 @@ class TaskOut(TaskBase):
     estimated_cost: Optional[float] = 0.0
     actual_cost: Optional[float] = 0.0
     completion_date: Optional[date] = None
+    completion_time: Optional[str] = None
 
     is_parent: bool = False
     is_date_controlled_by: Optional[int] = None
@@ -538,6 +541,9 @@ class ProjectBase(BaseModel):
     actual_cost: float = 0.0
     target_start_date: Optional[date] = None
     target_end_date: Optional[date] = None
+    target_end_time: Optional[str] = None
+    completion_date: Optional[date] = None
+    completion_time: Optional[str] = None
     owner_id: Optional[int] = None
 
 class ProjectCreate(ProjectBase):
@@ -560,6 +566,9 @@ class ProjectUpdate(BaseModel):
     actual_cost: Optional[float] = None
     target_start_date: Optional[date] = None
     target_end_date: Optional[date] = None
+    target_end_time: Optional[str] = None
+    completion_date: Optional[date] = None
+    completion_time: Optional[str] = None
     owner_id: Optional[int] = None
 
 

@@ -157,6 +157,9 @@ class Project(Base):
     actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     target_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     target_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    target_end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    completion_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     # KIM PM v1.1 — project ID prefix (3-char, immutable after first task created)
     prefix: Mapped[str | None] = mapped_column(String(3), nullable=True)
@@ -245,6 +248,7 @@ class Task(Base):
     estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # monetary
     actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)     # monetary
     completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)          # auto-stamped on completed-type status
+    completion_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)

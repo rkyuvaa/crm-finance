@@ -349,6 +349,24 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     }
   };
 
+  const handleCompletionDateChange = async (d: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { completion_date: d || undefined as any } }).unwrap();
+      showToast('Completion date updated', 'success');
+    } catch {
+      showToast('Failed to update completion date', 'error');
+    }
+  };
+
+  const handleCompletionTimeChange = async (t: string) => {
+    try {
+      await updateTask({ id: currentTaskId, body: { completion_time: t || undefined as any } }).unwrap();
+      showToast('Completion time updated', 'success');
+    } catch {
+      showToast('Failed to update completion time', 'error');
+    }
+  };
+
   const handleDurationChange = async (days: number) => {
     if (!currentTaskId || days < 1) return;
     try {
@@ -1302,14 +1320,38 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
               </Grid>
             </Grid>
 
-            {/* Completion Date (if set) */}
-            {currentTask.completion_date && (
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Completion Date
-                </Typography>
-                <Typography variant="body2">{currentTask.completion_date}</Typography>
-              </Box>
+            {/* Completion Date & Time (if set or completed) */}
+            {(currentTask.is_completed || currentTask.completion_date) && (
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                    Completion Date
+                  </Typography>
+                  <TextField
+                    type="date"
+                    size="small"
+                    fullWidth
+                    value={currentTask.completion_date || ''}
+                    onChange={(e) => handleCompletionDateChange(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                    Completion Time
+                  </Typography>
+                  <TextField
+                    type="time"
+                    size="small"
+                    fullWidth
+                    value={time12To24(currentTask.completion_time || '05:00 PM')}
+                    onChange={(e) => handleCompletionTimeChange(e.target.value ? time24To12(e.target.value) : '')}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                  />
+                </Grid>
+              </Grid>
             )}
 
             {/* Duration Display & Edit */}

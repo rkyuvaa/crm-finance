@@ -847,6 +847,8 @@ def create_task(
         department_id=data.department_id,
         cost_center_id=data.cost_center_id,
         recurrence_rule=data.recurrence_rule,
+        completion_date=data.completion_date,
+        completion_time=data.completion_time,
     )
 
     if not task.status_id:
@@ -1009,6 +1011,10 @@ def update_task(
         task.is_completed = True
         task.completed_at = datetime.now(timezone.utc)
         task.completed_by = current_user.id
+        if not task.completion_date and "completion_date" not in update_dict:
+            task.completion_date = datetime.now(timezone.utc).date()
+        if not task.completion_time and "completion_time" not in update_dict:
+            task.completion_time = datetime.now(timezone.utc).strftime("%I:%M %p")
 
         # Notify downstream dependent tasks that they are unblocked
         dependents = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == task.id).all()
@@ -1030,6 +1036,10 @@ def update_task(
         task.is_completed = False
         task.completed_at = None
         task.completed_by = None
+        if "completion_date" not in update_dict:
+            task.completion_date = None
+        if "completion_time" not in update_dict:
+            task.completion_time = None
     elif "status_id" in update_dict and update_dict["status_id"] != task.status_id:
         new_status = db.get(TaskStatusDef, update_dict["status_id"])
         old_status_name = task.status_def.name if task.status_def else None
@@ -1038,6 +1048,10 @@ def update_task(
             task.is_completed = False
             task.completed_at = None
             task.completed_by = None
+            if "completion_date" not in update_dict:
+                task.completion_date = None
+            if "completion_time" not in update_dict:
+                task.completion_time = None
         _log_activity(db, task.id, current_user.id, "STATUS_CHANGED", old_val=old_status_name, new_val=new_status_name)
 
     if "priority" in update_dict and update_dict["priority"] != task.priority:
@@ -1131,6 +1145,18 @@ def toggle_legacy_subtask(
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subtask not found")
     task.is_completed = not task.is_completed
+    if task.is_completed:
+        task.completed_at = datetime.now(timezone.utc)
+        task.completed_by = current_user.id
+        if not task.completion_date:
+            task.completion_date = datetime.now(timezone.utc).date()
+        if not task.completion_time:
+            task.completion_time = datetime.now(timezone.utc).strftime("%I:%M %p")
+    else:
+        task.completed_at = None
+        task.completed_by = None
+        task.completion_date = None
+        task.completion_time = None
     db.commit()
     db.refresh(task)
     return TaskSubtaskOut(

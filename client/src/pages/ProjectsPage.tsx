@@ -51,6 +51,7 @@ import {
 import { useApplicationsQuery } from '@/api/applicationsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { time24To12, time12To24 } from '@/utils/format';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -95,6 +96,7 @@ export default function ProjectsPage() {
   const [budget, setBudget] = useState<number | ''>('');
   const [targetStartDate, setTargetStartDate] = useState('');
   const [targetEndDate, setTargetEndDate] = useState('');
+  const [targetEndTime, setTargetEndTime] = useState('');
   const [prefix, setPrefix] = useState('');
 
   const handleCreate = async () => {
@@ -111,6 +113,7 @@ export default function ProjectsPage() {
         budget: budget ? Number(budget) : 0,
         target_start_date: targetStartDate || undefined,
         target_end_date: targetEndDate || undefined,
+        target_end_time: targetEndTime || undefined,
         prefix: prefix.toUpperCase().slice(0, 3),
       } as any).unwrap();
       showToast('Project created successfully', 'success');
@@ -120,6 +123,9 @@ export default function ProjectsPage() {
       setManagerId('');
       setMemberIds([]);
       setBudget('');
+      setTargetStartDate('');
+      setTargetEndDate('');
+      setTargetEndTime('');
       setPrefix('');
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to create project', 'error');
@@ -499,7 +505,7 @@ export default function ProjectsPage() {
             />
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Target Start Date"
                   type="date"
@@ -510,7 +516,7 @@ export default function ProjectsPage() {
                   onChange={(e) => setTargetStartDate(e.target.value)}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Target End Date"
                   type="date"
@@ -519,6 +525,17 @@ export default function ProjectsPage() {
                   InputLabelProps={{ shrink: true }}
                   value={targetEndDate}
                   onChange={(e) => setTargetEndDate(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Target End Time"
+                  type="time"
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  value={time12To24(targetEndTime)}
+                  onChange={(e) => setTargetEndTime(e.target.value ? time24To12(e.target.value) : '')}
                 />
               </Grid>
             </Grid>

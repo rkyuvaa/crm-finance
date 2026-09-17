@@ -21,6 +21,9 @@ export interface ProjectItem {
   actual_cost: float;
   target_start_date?: string;
   target_end_date?: string;
+  target_end_time?: string;
+  completion_date?: string;
+  completion_time?: string;
   owner_id?: number;
   owner_name?: string;
   tasks_count: { total: number; done: number };
@@ -230,6 +233,7 @@ export interface TaskItem {
   actual_cost: number;
   cost_variance: number;
   completion_date?: string;
+  completion_time?: string;
   is_parent: boolean;
   start_date_locked: boolean;
   end_date_locked: boolean;
