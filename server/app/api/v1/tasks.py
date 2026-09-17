@@ -928,24 +928,48 @@ def update_task(
 
     update_dict = data.model_dump(exclude_unset=True)
 
-    # Duration ↔ Due Date automatic recalculation
-    if "duration_working_days" in update_dict and update_dict["duration_working_days"]:
+    # Bidirectional Date / Duration logic
+    if "duration_working_days" in update_dict and update_dict["duration_working_days"] is not None:
         dur = max(1, update_dict["duration_working_days"])
         task.duration_working_days = dur
         if task.start_date:
             from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
             task.due_date = add_working_days(task.start_date, dur - 1, get_cal(db))
-    elif "start_date" in update_dict or "due_date" in update_dict:
-        new_start_val = update_dict.get("start_date", task.start_date)
-        new_due_val = update_dict.get("due_date", task.due_date)
-        if new_start_val and new_due_val and new_due_val < new_start_val:
+    elif "start_date" in update_dict and "due_date" not in update_dict:
+        # Start date manually changed → preserve duration and recalculate due date
+        new_start = update_dict["start_date"]
+        task.start_date = new_start
+        if new_start:
+            dur = max(1, task.duration_working_days or 1)
+            from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
+            task.due_date = add_working_days(new_start, dur - 1, get_cal(db))
+            task.duration_working_days = dur
+    elif "due_date" in update_dict and "start_date" not in update_dict:
+        # Due date manually changed → recalculate duration if start_date exists
+        new_due = update_dict["due_date"]
+        task.due_date = new_due
+        if task.start_date and new_due:
+            if new_due < task.start_date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Due date cannot be earlier than start date"
+                )
+            holiday_dates, weekly_off_days = _get_working_calendar(db)
+            task.duration_working_days = _count_working_days(task.start_date, new_due, holiday_dates, weekly_off_days)
+    elif "start_date" in update_dict and "due_date" in update_dict:
+        # Both start and due date explicitly provided
+        new_start = update_dict["start_date"]
+        new_due = update_dict["due_date"]
+        if new_start and new_due and new_due < new_start:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Due date cannot be earlier than start date"
             )
-        if new_start_val and new_due_val:
+        task.start_date = new_start
+        task.due_date = new_due
+        if new_start and new_due:
             holiday_dates, weekly_off_days = _get_working_calendar(db)
-            task.duration_working_days = _count_working_days(new_start_val, new_due_val, holiday_dates, weekly_off_days)
+            task.duration_working_days = _count_working_days(new_start, new_due, holiday_dates, weekly_off_days)
 
     # Parent task due date manual shift check
     if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != task.due_date:
@@ -1778,7 +1802,7 @@ def create_task_dependency(
     db.refresh(dep)
 
     # Automatically propagate dependency schedule to successor
-    propagate_task_schedule_changes(db, blocked_id, current_user.id)
+    propagate_task_schedule_changes(db, blocking_id, current_user.id)
     db.commit()
 
     blocker = db.get(Task, blocking_id)
@@ -1824,6 +1848,10 @@ def update_task_dependency(
                   new_val=f"{dep.pm_dep_type}+{dep.lag_days}d")
     db.commit()
     db.refresh(dep)
+
+    from app.services.scheduling_engine import propagate_task_schedule_changes
+    propagate_task_schedule_changes(db, dep.depends_on_task_id, current_user.id)
+    db.commit()
 
     blocker = db.get(Task, dep.depends_on_task_id)
     blocked = db.get(Task, dep.task_id)

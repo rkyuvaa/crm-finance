@@ -93,11 +93,21 @@ def add_working_days(start: date, n: int, calendar: Tuple[Set[date], Set[int]]) 
 
 
 def subtract_working_days(end: date, n: int, calendar: Tuple[Set[date], Set[int]]) -> date:
-    """Subtract n working days from end. end counts as day 1."""
+    """
+    Subtract n working days from end.
+    n=0 returns end (rolled to preceding working day if non-working).
+    Positive n steps backward n working days.
+    """
     holidays, off_weekdays = calendar
-    current = next_working_day(end, holidays, off_weekdays)
+    current = end
+    # If end is on a non-working day, roll backward to the latest working day
+    while not is_working_day(current, holidays, off_weekdays):
+        current -= timedelta(days=1)
 
-    remaining = n - 1  # end itself counts as day 1
+    if n <= 0:
+        return current
+
+    remaining = n
     while remaining > 0:
         current -= timedelta(days=1)
         if is_working_day(current, holidays, off_weekdays):

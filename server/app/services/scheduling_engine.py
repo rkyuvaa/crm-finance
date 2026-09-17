@@ -167,6 +167,8 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
     calendar = get_working_calendar(db)
     max_recommended_start: Optional[date] = None
     triggering_pred: Optional[Task] = None
+    triggering_desc: Optional[str] = None
+    dur = max(1, task.duration_working_days or 1)
 
     for dep in deps:
         pred = db.query(Task).filter(
@@ -174,27 +176,57 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
             Task.is_deleted.is_(False)
         ).first()
 
-        if not pred:
+        if not pred or (not pred.start_date and not pred.due_date):
             continue
 
+        p_start = pred.start_date or pred.due_date
+        p_due = pred.due_date or pred.start_date
         dep_type_str = dep.pm_dep_type.value if hasattr(dep.pm_dep_type, 'value') else str(dep.pm_dep_type or 'FS')
         lag = dep.lag_days or 0
-        dur = task.duration_working_days or 1
 
-        rec_start, _ = compute_successor_dates(
-            pred.start_date, pred.due_date, dep_type_str, lag, dur, calendar
-        )
+        is_conflict = False
+        desc = ""
+        rec_start: Optional[date] = None
 
-        if rec_start and task.start_date < rec_start:
+        if dep_type_str == "FS":
+            min_start = add_working_days(p_due, 1 + lag, calendar)
+            if task.start_date < min_start:
+                is_conflict = True
+                desc = "starts before predecessor finishes"
+                rec_start = min_start
+
+        elif dep_type_str == "SS":
+            min_start = add_working_days(p_start, lag, calendar)
+            if task.start_date < min_start:
+                is_conflict = True
+                desc = "starts before predecessor starts"
+                rec_start = min_start
+
+        elif dep_type_str == "FF":
+            min_due = add_working_days(p_due, lag, calendar)
+            if task.due_date and task.due_date < min_due:
+                is_conflict = True
+                desc = "finishes before predecessor finishes"
+                rec_start = subtract_working_days(min_due, dur - 1, calendar)
+
+        elif dep_type_str == "SF":
+            min_due = add_working_days(p_start, lag, calendar)
+            if task.due_date and task.due_date < min_due:
+                is_conflict = True
+                desc = "finishes before predecessor starts"
+                rec_start = subtract_working_days(min_due, dur - 1, calendar)
+
+        if is_conflict and rec_start:
             if max_recommended_start is None or rec_start > max_recommended_start:
                 max_recommended_start = rec_start
                 triggering_pred = pred
+                triggering_desc = desc
 
     if max_recommended_start and triggering_pred:
         pred_label = triggering_pred.title or triggering_pred.task_number
         return {
             "has_conflict": True,
-            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} starts before predecessor '{pred_label}' is completed.",
+            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} {triggering_desc or 'conflicts with'} predecessor '{pred_label}'.",
             "recommended_start_date": max_recommended_start.isoformat(),
             "predecessor_task_number": triggering_pred.task_number,
             "predecessor_title": triggering_pred.title,
@@ -241,35 +273,74 @@ def propagate_task_schedule_changes(
             if not succ:
                 continue
 
+            # Do not auto-shift already completed tasks
+            if succ.is_completed:
+                continue
+
             # Respect auto_schedule lock — if auto_schedule is OFF, do not auto-shift dates
             if not succ.auto_schedule:
                 continue
 
-            dep_type_str = dep.pm_dep_type.value if hasattr(dep.pm_dep_type, 'value') else str(dep.pm_dep_type or 'FS')
-            lag = dep.lag_days or 0
-            succ_dur = succ.duration_working_days or 1
+            succ_dur = max(1, succ.duration_working_days or 1)
 
-            new_start, new_due = compute_successor_dates(
-                curr_task.start_date, curr_task.due_date, dep_type_str, lag, succ_dur, calendar
-            )
+            # Evaluate ALL predecessor dependencies attached to succ to satisfy all constraints
+            all_succ_deps = db.query(TaskDependency).filter(
+                TaskDependency.task_id == succ.id
+            ).all()
 
-            if not new_start or not new_due:
+            max_req_start: Optional[date] = None
+            max_req_due: Optional[date] = None
+
+            for s_dep in all_succ_deps:
+                p_task = db.query(Task).filter(
+                    Task.id == s_dep.depends_on_task_id,
+                    Task.is_deleted.is_(False)
+                ).first()
+                if not p_task or (not p_task.start_date and not p_task.due_date):
+                    continue
+
+                d_type = s_dep.pm_dep_type.value if hasattr(s_dep.pm_dep_type, 'value') else str(s_dep.pm_dep_type or 'FS')
+                l_days = s_dep.lag_days or 0
+
+                cand_start, cand_due = compute_successor_dates(
+                    p_task.start_date, p_task.due_date, d_type, l_days, succ_dur, calendar
+                )
+                if cand_start:
+                    if max_req_start is None or cand_start > max_req_start:
+                        max_req_start = cand_start
+                        max_req_due = cand_due
+
+            if not max_req_start or not max_req_due:
                 continue
 
-            # Check if dates changed
-            if succ.start_date != new_start or succ.due_date != new_due:
+            # Determine if succ needs to be shifted forward to meet the constraints
+            should_shift = False
+            if succ.start_date is None:
+                should_shift = True
+                new_start = max_req_start
+                new_due = max_req_due
+            elif max_req_start > succ.start_date:
+                should_shift = True
+                new_start = max_req_start
+                new_due = max_req_due
+            else:
+                # Current schedule already satisfies all predecessor constraints;
+                # do not pull backward (preserves later manual dates)
+                should_shift = False
+
+            if should_shift and (succ.start_date != new_start or succ.due_date != new_due):
                 old_start = succ.start_date
                 old_due = succ.due_date
 
                 succ.start_date = new_start
                 succ.due_date = new_due
-                succ.duration_working_days = count_working_days(new_start, new_due, calendar)
+                succ.duration_working_days = succ_dur
                 db.add(succ)
 
                 # Log activity audit trail
                 reason = (
-                    f"Due date automatically changed from {old_due} to {new_due} because "
-                    f"predecessor '{curr_task.title or curr_task.task_number}' was updated."
+                    f"Schedule automatically shifted from ({old_start} - {old_due}) to "
+                    f"({new_start} - {new_due}) to satisfy dependency constraints."
                 )
                 act = TaskActivity(
                     task_id=succ.id,
