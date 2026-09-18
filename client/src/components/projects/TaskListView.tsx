@@ -120,7 +120,7 @@ export default function TaskListView({
 
   const renderTaskRow = (task: TaskItem, depth = 0) => {
     const subtaskList = task.nested_subtasks || task.subtasks || [];
-    const hasChildren = subtaskList.length > 0;
+    const hasChildren = Boolean(task.is_parent || (task.subtask_count && task.subtask_count > 0) || subtaskList.length > 0);
     const isExpanded = !!expandedTaskIds[task.id];
     const isSelected = selectedTaskIds.includes(task.id);
 
