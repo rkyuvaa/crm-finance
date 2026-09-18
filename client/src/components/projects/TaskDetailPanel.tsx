@@ -106,6 +106,14 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [description, setDescription] = useState('');
   const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Failed'>('Saved');
 
+  // Editable Date & Time State
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [completionDate, setCompletionDate] = useState('');
+  const [completionTime, setCompletionTime] = useState('');
+
   // Checklist State
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
   const [newChecklistItemTitles, setNewChecklistItemTitles] = useState<Record<number, string>>({});
@@ -215,13 +223,29 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const { data: customValues = [] } = useGetTaskCustomFieldsQuery(currentTaskId, { skip: !currentTaskId });
   const [saveCustomField] = useSaveTaskCustomFieldMutation();
 
-  // Populate local title and description on task change
+  // Populate local title, description and dates on task change
   useEffect(() => {
     if (currentTask) {
       setTitle(currentTask.title || '');
       setDescription(currentTask.description || '');
+      setStartDate(currentTask.start_date ? currentTask.start_date.split('T')[0].split(' ')[0] : '');
+      setStartTime(currentTask.start_time || '');
+      setDueDate(currentTask.due_date ? currentTask.due_date.split('T')[0].split(' ')[0] : '');
+      setDueTime(currentTask.due_time || '');
+      setCompletionDate(currentTask.completion_date ? currentTask.completion_date.split('T')[0].split(' ')[0] : '');
+      setCompletionTime(currentTask.completion_time || '');
     }
-  }, [currentTask?.id, currentTask?.title, currentTask?.description]);
+  }, [
+    currentTask?.id,
+    currentTask?.title,
+    currentTask?.description,
+    currentTask?.start_date,
+    currentTask?.start_time,
+    currentTask?.due_date,
+    currentTask?.due_time,
+    currentTask?.completion_date,
+    currentTask?.completion_time,
+  ]);
 
   // Timer Tick Effect
   useEffect(() => {
@@ -320,56 +344,71 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   };
 
   const handleStartDateChange = async (d: string) => {
+    const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
+    setStartDate(cleanDate);
     try {
-      await updateTask({ id: currentTaskId, body: { start_date: d || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { start_date: cleanDate || (null as any) } }).unwrap();
       showToast('Start date updated', 'success');
-    } catch {
-      showToast('Failed to update start date', 'error');
+    } catch (err: any) {
+      setStartDate(currentTask?.start_date ? currentTask.start_date.split('T')[0].split(' ')[0] : '');
+      showToast(err?.data?.detail || 'Failed to update start date', 'error');
     }
   };
 
   const handleStartTimeChange = async (t: string) => {
+    setStartTime(t);
     try {
-      await updateTask({ id: currentTaskId, body: { start_time: t || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { start_time: t || (null as any) } }).unwrap();
       showToast('Start time updated', 'success');
-    } catch {
-      showToast('Failed to update start time', 'error');
+    } catch (err: any) {
+      setStartTime(currentTask?.start_time || '');
+      showToast(err?.data?.detail || 'Failed to update start time', 'error');
     }
   };
 
   const handleDueDateChange = async (d: string) => {
+    const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
+    setDueDate(cleanDate);
     try {
-      await updateTask({ id: currentTaskId, body: { due_date: d || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { due_date: cleanDate || (null as any) } }).unwrap();
       showToast('Due date updated', 'success');
-    } catch {
-      showToast('Failed to update due date', 'error');
+    } catch (err: any) {
+      setDueDate(currentTask?.due_date ? currentTask.due_date.split('T')[0].split(' ')[0] : '');
+      showToast(err?.data?.detail || 'Failed to update due date', 'error');
     }
   };
 
   const handleDueTimeChange = async (t: string) => {
+    setDueTime(t);
     try {
-      await updateTask({ id: currentTaskId, body: { due_time: t || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { due_time: t || (null as any) } }).unwrap();
       showToast('Due time updated', 'success');
-    } catch {
-      showToast('Failed to update due time', 'error');
+    } catch (err: any) {
+      setDueTime(currentTask?.due_time || '');
+      showToast(err?.data?.detail || 'Failed to update due time', 'error');
     }
   };
 
   const handleCompletionDateChange = async (d: string) => {
+    const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
+    setCompletionDate(cleanDate);
     try {
-      await updateTask({ id: currentTaskId, body: { completion_date: d || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { completion_date: cleanDate || (null as any) } }).unwrap();
       showToast('Completion date updated', 'success');
-    } catch {
-      showToast('Failed to update completion date', 'error');
+    } catch (err: any) {
+      setCompletionDate(currentTask?.completion_date ? currentTask.completion_date.split('T')[0].split(' ')[0] : '');
+      showToast(err?.data?.detail || 'Failed to update completion date', 'error');
     }
   };
 
   const handleCompletionTimeChange = async (t: string) => {
+    setCompletionTime(t);
     try {
-      await updateTask({ id: currentTaskId, body: { completion_time: t || undefined as any } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { completion_time: t || (null as any) } }).unwrap();
       showToast('Completion time updated', 'success');
-    } catch {
-      showToast('Failed to update completion time', 'error');
+    } catch (err: any) {
+      setCompletionTime(currentTask?.completion_time || '');
+      showToast(err?.data?.detail || 'Failed to update completion time', 'error');
     }
   };
 
@@ -1338,7 +1377,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   type="date"
                   size="small"
                   fullWidth
-                  value={currentTask.start_date || ''}
+                  value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
                   disabled={currentTask.start_date_locked}
                   InputLabelProps={{ shrink: true }}
@@ -1353,7 +1392,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   type="time"
                   size="small"
                   fullWidth
-                  value={time12To24(currentTask.start_time || '09:00 AM')}
+                  value={time12To24(startTime || '09:00 AM')}
                   onChange={(e) => handleStartTimeChange(e.target.value ? time24To12(e.target.value) : '')}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
@@ -1371,7 +1410,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   type="date"
                   size="small"
                   fullWidth
-                  value={currentTask.due_date || ''}
+                  value={dueDate}
                   onChange={(e) => handleDueDateChange(e.target.value)}
                   disabled={currentTask.end_date_locked}
                   InputLabelProps={{ shrink: true }}
@@ -1386,7 +1425,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   type="time"
                   size="small"
                   fullWidth
-                  value={time12To24(currentTask.due_time || '05:00 PM')}
+                  value={time12To24(dueTime || '05:00 PM')}
                   onChange={(e) => handleDueTimeChange(e.target.value ? time24To12(e.target.value) : '')}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
@@ -1395,7 +1434,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
             </Grid>
 
             {/* Completion Date & Time (if set or completed) */}
-            {(currentTask.is_completed || currentTask.completion_date) && (
+            {(currentTask.is_completed || completionDate || currentTask.completion_date) && (
               <Grid container spacing={1}>
                 <Grid item xs={6}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
@@ -1405,7 +1444,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                     type="date"
                     size="small"
                     fullWidth
-                    value={currentTask.completion_date || ''}
+                    value={completionDate}
                     onChange={(e) => handleCompletionDateChange(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
@@ -1419,7 +1458,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                     type="time"
                     size="small"
                     fullWidth
-                    value={time12To24(currentTask.completion_time || '05:00 PM')}
+                    value={time12To24(completionTime || '05:00 PM')}
                     onChange={(e) => handleCompletionTimeChange(e.target.value ? time24To12(e.target.value) : '')}
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}

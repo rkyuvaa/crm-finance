@@ -352,12 +352,10 @@ export default function TaskListView({
                 type="date"
                 size="small"
                 variant="standard"
-                defaultValue={task.start_date || ''}
-                onBlur={(e) => {
+                value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
+                onChange={(e) => {
                   const val = e.target.value;
-                  if (val !== (task.start_date || '')) {
-                    handleCellUpdate(task.id, 'start_date', val || null);
-                  }
+                  handleCellUpdate(task.id, 'start_date', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -377,12 +375,10 @@ export default function TaskListView({
                 type="time"
                 size="small"
                 variant="standard"
-                defaultValue={time12To24(task.start_time || '')}
-                onBlur={(e) => {
+                value={time12To24(task.start_time || '')}
+                onChange={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  if (val !== (task.start_time || '')) {
-                    handleCellUpdate(task.id, 'start_time', val || null);
-                  }
+                  handleCellUpdate(task.id, 'start_time', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -408,12 +404,10 @@ export default function TaskListView({
                 type="date"
                 size="small"
                 variant="standard"
-                defaultValue={task.due_date || ''}
-                onBlur={(e) => {
+                value={task.due_date ? task.due_date.split('T')[0].split(' ')[0] : ''}
+                onChange={(e) => {
                   const val = e.target.value;
-                  if (val !== (task.due_date || '')) {
-                    handleCellUpdate(task.id, 'due_date', val || null);
-                  }
+                  handleCellUpdate(task.id, 'due_date', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -433,12 +427,10 @@ export default function TaskListView({
                 type="time"
                 size="small"
                 variant="standard"
-                defaultValue={time12To24(task.due_time || '')}
-                onBlur={(e) => {
+                value={time12To24(task.due_time || '')}
+                onChange={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  if (val !== (task.due_time || '')) {
-                    handleCellUpdate(task.id, 'due_time', val || null);
-                  }
+                  handleCellUpdate(task.id, 'due_time', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -545,12 +537,10 @@ export default function TaskListView({
                 type="date"
                 size="small"
                 variant="standard"
-                defaultValue={task.completion_date || (task.completed_at ? task.completed_at.split('T')[0] : '')}
-                onBlur={(e) => {
+                value={task.completion_date ? task.completion_date.split('T')[0].split(' ')[0] : (task.completed_at ? task.completed_at.split('T')[0] : '')}
+                onChange={(e) => {
                   const val = e.target.value;
-                  if (val !== (task.completion_date || '')) {
-                    handleCellUpdate(task.id, 'completion_date', val || null);
-                  }
+                  handleCellUpdate(task.id, 'completion_date', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -570,12 +560,10 @@ export default function TaskListView({
                 type="time"
                 size="small"
                 variant="standard"
-                defaultValue={time12To24(task.completion_time || '')}
-                onBlur={(e) => {
+                value={time12To24(task.completion_time || '')}
+                onChange={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  if (val !== (task.completion_time || '')) {
-                    handleCellUpdate(task.id, 'completion_time', val || null);
-                  }
+                  handleCellUpdate(task.id, 'completion_time', val || null);
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{

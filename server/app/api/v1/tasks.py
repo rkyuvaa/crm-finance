@@ -927,6 +927,8 @@ def update_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     update_dict = data.model_dump(exclude_unset=True)
+    old_due_date = task.due_date
+    old_start_date = task.start_date
 
     # Bidirectional Date / Duration logic
     if "duration_working_days" in update_dict and update_dict["duration_working_days"] is not None:
@@ -972,7 +974,7 @@ def update_task(
             task.duration_working_days = _count_working_days(new_start, new_due, holiday_dates, weekly_off_days)
 
     # Parent task due date manual shift check
-    if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != task.due_date:
+    if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != old_due_date:
         has_subtasks = db.query(Task).filter(Task.parent_task_id == task.id, Task.is_deleted.is_(False)).count() > 0
         if has_subtasks:
             from app.services.scheduling_engine import handle_parent_due_date_shift
@@ -1081,8 +1083,8 @@ def update_task(
     if "priority" in update_dict and update_dict["priority"] != task.priority:
         _log_activity(db, task.id, current_user.id, "PRIORITY_CHANGED", old_val=task.priority, new_val=update_dict["priority"])
 
-    if "due_date" in update_dict and update_dict["due_date"] != task.due_date:
-        _log_activity(db, task.id, current_user.id, "DUE_DATE_CHANGED", old_val=task.due_date, new_val=update_dict["due_date"])
+    if "due_date" in update_dict and update_dict["due_date"] != old_due_date:
+        _log_activity(db, task.id, current_user.id, "DUE_DATE_CHANGED", old_val=old_due_date, new_val=update_dict["due_date"])
 
     # Update task fields
     task.updated_by = current_user.id
