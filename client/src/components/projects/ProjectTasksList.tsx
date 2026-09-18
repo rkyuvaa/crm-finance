@@ -824,12 +824,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 type="number"
                 size="small"
                 variant="standard"
-                defaultValue={task.duration_working_days || 0}
-                onBlur={(e) => {
+                value={task.duration_working_days ?? 0}
+                disabled={task.is_parent}
+                onChange={(e) => {
                   const val = Number(e.target.value);
-                  if (val !== (task.duration_working_days || 0)) {
-                    handleCellUpdate(task.id, 'duration_working_days', val);
-                  }
+                  handleCellUpdate(task.id, 'duration_working_days', val);
                 }}
                 onKeyDown={(e: any) => {
                   if (e.key === 'Enter') e.target.blur();

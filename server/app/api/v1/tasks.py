@@ -638,6 +638,7 @@ def _format_task_out(
         out.dependency_conflict = check_dependency_conflict(db, t)
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
+    out.is_parent = out.subtask_count > 0
 
     return out
 
@@ -937,27 +938,42 @@ def update_task(
         if task.start_date:
             from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
             task.due_date = add_working_days(task.start_date, dur - 1, get_cal(db))
+        elif task.due_date:
+            from app.services.calendar_service import subtract_working_days, get_working_calendar as get_cal
+            task.start_date = subtract_working_days(task.due_date, dur - 1, get_cal(db))
     elif "start_date" in update_dict and "due_date" not in update_dict:
-        # Start date manually changed → preserve duration and recalculate due date
+        # Start date manually changed
         new_start = update_dict["start_date"]
         task.start_date = new_start
         if new_start:
-            dur = max(1, task.duration_working_days or 1)
-            from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
-            task.due_date = add_working_days(new_start, dur - 1, get_cal(db))
-            task.duration_working_days = dur
+            holiday_dates, weekly_off_days = _get_working_calendar(db)
+            if task.due_date and task.due_date >= new_start:
+                task.duration_working_days = _count_working_days(new_start, task.due_date, holiday_dates, weekly_off_days)
+            else:
+                dur = max(1, task.duration_working_days or 1)
+                from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
+                task.due_date = add_working_days(new_start, dur - 1, get_cal(db))
+                task.duration_working_days = dur
+        else:
+            task.duration_working_days = None
     elif "due_date" in update_dict and "start_date" not in update_dict:
-        # Due date manually changed → recalculate duration if start_date exists
+        # Due date manually changed
         new_due = update_dict["due_date"]
         task.due_date = new_due
-        if task.start_date and new_due:
-            if new_due < task.start_date:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Due date cannot be earlier than start date"
-                )
+        if new_due:
             holiday_dates, weekly_off_days = _get_working_calendar(db)
-            task.duration_working_days = _count_working_days(task.start_date, new_due, holiday_dates, weekly_off_days)
+            if task.start_date:
+                if new_due < task.start_date:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Due date cannot be earlier than start date"
+                    )
+                task.duration_working_days = _count_working_days(task.start_date, new_due, holiday_dates, weekly_off_days)
+            elif task.duration_working_days:
+                from app.services.calendar_service import subtract_working_days, get_working_calendar as get_cal
+                task.start_date = subtract_working_days(new_due, max(1, task.duration_working_days) - 1, get_cal(db))
+        else:
+            task.duration_working_days = None
     elif "start_date" in update_dict and "due_date" in update_dict:
         # Both start and due date explicitly provided
         new_start = update_dict["start_date"]
@@ -972,6 +988,8 @@ def update_task(
         if new_start and new_due:
             holiday_dates, weekly_off_days = _get_working_calendar(db)
             task.duration_working_days = _count_working_days(new_start, new_due, holiday_dates, weekly_off_days)
+        elif not new_start and not new_due:
+            task.duration_working_days = None
 
     # Parent task due date manual shift check
     if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != old_due_date:

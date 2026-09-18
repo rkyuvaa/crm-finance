@@ -113,6 +113,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [dueTime, setDueTime] = useState('');
   const [completionDate, setCompletionDate] = useState('');
   const [completionTime, setCompletionTime] = useState('');
+  const [duration, setDuration] = useState<number | ''>(1);
 
   // Checklist State
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
@@ -234,6 +235,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       setDueTime(currentTask.due_time || '');
       setCompletionDate(currentTask.completion_date ? currentTask.completion_date.split('T')[0].split(' ')[0] : '');
       setCompletionTime(currentTask.completion_time || '');
+      setDuration(currentTask.duration_working_days ?? 1);
     }
   }, [
     currentTask?.id,
@@ -245,6 +247,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     currentTask?.due_time,
     currentTask?.completion_date,
     currentTask?.completion_time,
+    currentTask?.duration_working_days,
   ]);
 
   // Timer Tick Effect
@@ -414,11 +417,13 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   const handleDurationChange = async (days: number) => {
     if (!currentTaskId || days < 1) return;
+    setDuration(days);
     try {
       await updateTask({ id: currentTaskId, body: { duration_working_days: days } as any }).unwrap();
       showToast('Duration updated', 'success');
-    } catch {
-      showToast('Failed to update duration', 'error');
+    } catch (err: any) {
+      setDuration(currentTask?.duration_working_days ?? 1);
+      showToast(err?.data?.detail || 'Failed to update duration', 'error');
     }
   };
 
@@ -1473,7 +1478,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                 Duration ({currentTask.is_parent ? 'Calendar Days' : 'Working Days'})
               </Typography>
               {currentTask.is_parent ? (
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, py: 0.75 }}>
                   {currentTask.duration_working_days || 0} CD (Parent Rollup)
                 </Typography>
               ) : (
@@ -1481,8 +1486,20 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   type="number"
                   size="small"
                   fullWidth
-                  value={currentTask.duration_working_days || 1}
-                  onChange={(e) => handleDurationChange(Number(e.target.value))}
+                  value={duration}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                    setDuration(val);
+                    if (typeof val === 'number' && val >= 1) {
+                      handleDurationChange(val);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!duration || duration < 1) {
+                      setDuration(1);
+                      handleDurationChange(1);
+                    }
+                  }}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">Days</InputAdornment>,
                   }}

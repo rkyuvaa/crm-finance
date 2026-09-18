@@ -35,16 +35,19 @@ def rollup_work_item(db: Session, task_id: int) -> None:
         start_dates = [c.start_date for c in children if c.start_date]
         end_dates = [c.due_date for c in children if c.due_date]
 
-        task.start_date = min(start_dates) if start_dates else None
-        task.due_date = max(end_dates) if end_dates else None
+        if start_dates:
+            task.start_date = min(start_dates)
+        if end_dates:
+            task.due_date = max(end_dates)
+
         task.estimated_cost = sum(c.estimated_cost or 0.0 for c in children)
         task.actual_cost = sum(c.actual_cost or 0.0 for c in children)
 
         # parent duration = calendar days (read-only span, not working-day count)
         if task.start_date and task.due_date:
-            task.duration_working_days = (task.due_date - task.start_date).days + 1
-        else:
-            task.duration_working_days = None
+            task.duration_working_days = max(1, (task.due_date - task.start_date).days + 1)
+        elif not task.duration_working_days or task.duration_working_days < 1:
+            task.duration_working_days = 1
 
         db.add(task)
 
