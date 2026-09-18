@@ -1211,7 +1211,22 @@ export default function HierarchicalGanttView({
               <IconButton size="small" onClick={() => setDepPopover(null)}><X size={14} /></IconButton>
             </Box>
 
-            {!depPopover.existingDep && (
+            {depPopover.existingDep ? (
+              <Box sx={{ mb: 2, p: 1.5, borderRadius: 1.5, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 700, color: 'text.secondary', display: 'block', mb: 0.5, letterSpacing: 0.5 }}>
+                  LINKED TASKS (READ-ONLY)
+                </Typography>
+                <Typography variant="caption" sx={{ fontSize: 11, color: 'text.primary', fontWeight: 600, display: 'block' }}>
+                  From: {depPopover.existingDep.predecessor_task_title ? `${depPopover.existingDep.predecessor_task_number || `Task #${depPopover.existingDep.fromTaskId}`} - ${depPopover.existingDep.predecessor_task_title}` : `Task #${depPopover.existingDep.fromTaskId}`}
+                </Typography>
+                <Typography variant="caption" sx={{ fontSize: 11, color: 'text.primary', fontWeight: 600, display: 'block' }}>
+                  To: {depPopover.existingDep.depends_on_task_title ? `${depPopover.existingDep.depends_on_task_number || `Task #${depPopover.existingDep.toTaskId}`} - ${depPopover.existingDep.depends_on_task_title}` : `Task #${depPopover.existingDep.toTaskId}`}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, fontStyle: 'italic', fontSize: 10 }}>
+                  Task details cannot be changed here. Only dependency type and lag days are editable.
+                </Typography>
+              </Box>
+            ) : (
               <Box sx={{ mb: 2, p: 1.5, borderRadius: 1.5, bgcolor: 'action.hover' }}>
                 <Typography variant="caption" sx={{ fontSize: 11, color: 'text.secondary' }}>
                   From: Task #{depPopover.fromTaskId} → To: Task #{depPopover.toTaskId}

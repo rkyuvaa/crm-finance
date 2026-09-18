@@ -54,6 +54,7 @@ import {
 } from 'lucide-react';
 import {
   TaskItem,
+  TaskDependencyInfo,
   useToggleSubtaskMutation,
   useAddSubtaskMutation,
   useDeleteSubtaskMutation,
@@ -76,6 +77,7 @@ import {
   useAddFollowerMutation,
   useRemoveFollowerMutation,
   useAddDependencyMutation,
+  useUpdateDependencyMutation,
   useRemoveDependencyMutation,
   useGetTaskQuery,
   useGetTasksQuery,
@@ -110,6 +112,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
 
   // Dependency Dialog & Warning State
   const [isAddDepDialogOpen, setIsAddDepDialogOpen] = useState(false);
+  const [editingDep, setEditingDep] = useState<TaskDependencyInfo | null>(null);
+  const [editDepType, setEditDepType] = useState<'FS' | 'SS' | 'FF' | 'SF'>('FS');
+  const [editDepLagDays, setEditDepLagDays] = useState<number>(0);
   const [depDirection, setDepDirection] = useState<'BLOCKING' | 'BLOCKED_BY'>('BLOCKED_BY');
   const [depSearchQuery, setDepSearchQuery] = useState('');
   const [depRelType, setDepRelType] = useState<'FS' | 'SS' | 'FF' | 'SF'>('FS');
@@ -154,6 +159,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   const [removeFollowerApi] = useRemoveFollowerMutation();
 
   const [addDependencyApi] = useAddDependencyMutation();
+  const [updateDependencyApi, { isLoading: isUpdatingDep }] = useUpdateDependencyMutation();
   const [removeDependencyApi] = useRemoveDependencyMutation();
   const [autoAdjustTaskDateApi, { isLoading: isAutoAdjusting }] = useAutoAdjustTaskDateMutation();
 
@@ -533,6 +539,28 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       showToast('Dependency removed', 'info');
     } catch {
       showToast('Failed to remove dependency', 'error');
+    }
+  };
+
+  const handleOpenEditDep = (dep: TaskDependencyInfo) => {
+    setEditingDep(dep);
+    const resolvedType = (dep.dep_type || 'FS').toUpperCase();
+    setEditDepType((['FS', 'SS', 'FF', 'SF'].includes(resolvedType) ? resolvedType : 'FS') as 'FS' | 'SS' | 'FF' | 'SF');
+    setEditDepLagDays(dep.lag_days ?? 0);
+  };
+
+  const handleUpdateDependency = async () => {
+    if (!editingDep) return;
+    try {
+      await updateDependencyApi({
+        dependencyId: editingDep.id,
+        dep_type: editDepType,
+        lag_days: Number(editDepLagDays) || 0,
+      }).unwrap();
+      showToast('Dependency updated successfully', 'success');
+      setEditingDep(null);
+    } catch (err: any) {
+      showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to update dependency', 'error');
     }
   };
 
@@ -1012,15 +1040,38 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         >
                           {dep.depends_on_task_title}
                         </Typography>
-                        <Chip label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+                        <Tooltip title="Click to edit dependency type & lag days">
+                          <Chip
+                            label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`}
+                            size="small"
+                            onClick={() => handleOpenEditDep(dep)}
+                            sx={{
+                              height: 18,
+                              fontSize: '0.65rem',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              bgcolor: '#FEF3C7',
+                              color: '#92400E',
+                              border: '1px solid #FDE68A',
+                              '&:hover': { bgcolor: '#FDE68A' },
+                            }}
+                          />
+                        </Tooltip>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         {dep.depends_on_status_name && (
                           <Chip label={dep.depends_on_status_name} size="small" sx={{ height: 18, fontSize: '0.6rem' }} />
                         )}
-                        <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
-                          <Trash2 size={14} color="#DC2626" />
-                        </IconButton>
+                        <Tooltip title="Edit dependency type & lag days">
+                          <IconButton size="small" onClick={() => handleOpenEditDep(dep)}>
+                            <Edit2 size={14} color="#D97706" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Remove dependency">
+                          <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
+                            <Trash2 size={14} color="#DC2626" />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </Paper>
                   ))}
@@ -1074,15 +1125,38 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                         >
                           {dep.depends_on_task_title}
                         </Typography>
-                        <Chip label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+                        <Tooltip title="Click to edit dependency type & lag days">
+                          <Chip
+                            label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`}
+                            size="small"
+                            onClick={() => handleOpenEditDep(dep)}
+                            sx={{
+                              height: 18,
+                              fontSize: '0.65rem',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              bgcolor: '#E0F2FE',
+                              color: '#0369A1',
+                              border: '1px solid #BAE6FD',
+                              '&:hover': { bgcolor: '#BAE6FD' },
+                            }}
+                          />
+                        </Tooltip>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         {dep.depends_on_status_name && (
                           <Chip label={dep.depends_on_status_name} size="small" sx={{ height: 18, fontSize: '0.6rem' }} />
                         )}
-                        <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
-                          <Trash2 size={14} color="#DC2626" />
-                        </IconButton>
+                        <Tooltip title="Edit dependency type & lag days">
+                          <IconButton size="small" onClick={() => handleOpenEditDep(dep)}>
+                            <Edit2 size={14} color="#D97706" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Remove dependency">
+                          <IconButton size="small" onClick={() => handleRemoveDependency(dep.id)}>
+                            <Trash2 size={14} color="#DC2626" />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </Paper>
                   ))}
@@ -1732,6 +1806,134 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsAddDepDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── EDIT DEPENDENCY DIALOG ───────────────────────────── */}
+      <Dialog
+        open={Boolean(editingDep)}
+        onClose={() => setEditingDep(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Lock size={20} color="#D97706" /> Edit Task Dependency
+        </DialogTitle>
+        <DialogContent dividers>
+          {editingDep && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {/* Linked Task Details (Read-only) */}
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: '8px',
+                  bgcolor: 'action.hover',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
+                    LINKED TASK (READ-ONLY)
+                  </Typography>
+                  <Chip
+                    label={editingDep.direction === 'BLOCKING' ? 'BLOCKING SUCCESSOR' : 'PREDECESSOR'}
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      bgcolor: editingDep.direction === 'BLOCKING' ? '#FEF3C7' : '#DCFCE7',
+                      color: editingDep.direction === 'BLOCKING' ? '#D97706' : '#166534',
+                    }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Chip
+                    label={editingDep.depends_on_task_number ? editingDep.depends_on_task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${editingDep.depends_on_task_id}`}
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.7rem', fontFamily: 'monospace', fontWeight: 700 }}
+                  />
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                    {editingDep.depends_on_task_title || editingDep.predecessor_task_title || 'Untitled Task'}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', fontSize: '0.75rem' }}>
+                  Task details cannot be changed from dependency settings. Only dependency type and lag days are editable.
+                </Typography>
+              </Paper>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={7}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                    DEPENDENCY TYPE
+                  </Typography>
+                  <Select
+                    fullWidth
+                    size="small"
+                    value={editDepType}
+                    onChange={(e) => setEditDepType(e.target.value as 'FS' | 'SS' | 'FF' | 'SF')}
+                  >
+                    <MenuItem value="FS">
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Finish to Start (FS)</Typography>
+                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>Successor starts after predecessor finishes</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="SS">
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Start to Start (SS)</Typography>
+                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>Successor starts after predecessor starts</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="FF">
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Finish to Finish (FF)</Typography>
+                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>Successor finishes after predecessor finishes</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="SF">
+                      <Box sx={{ py: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Start to Finish (SF)</Typography>
+                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11, display: 'block' }}>Successor finishes after predecessor starts</Typography>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                    LAG DAYS
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    value={editDepLagDays}
+                    onChange={(e) => setEditDepLagDays(parseInt(e.target.value, 10) || 0)}
+                    placeholder="0"
+                    helperText="Positive = delay, negative = lead"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setEditingDep(null)}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateDependency}
+            disabled={isUpdatingDep}
+            startIcon={isUpdatingDep ? <CircularProgress size={14} color="inherit" /> : <Check size={14} />}
+            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', px: 2.5 }}
+          >
+            {isUpdatingDep ? 'Saving...' : 'Save Changes'}
+          </Button>
         </DialogActions>
       </Dialog>
 
