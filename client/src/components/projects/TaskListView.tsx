@@ -38,7 +38,7 @@ import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useTableSort } from '@/hooks/useTableSort';
 import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
-import { time24To12, time12To24 } from '@/utils/format';
+import { time24To12, time12To24, getTaskIdBadgeStyle } from '@/utils/format';
 
 const DEP_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   FS: { bg: '#D1FAE5', color: '#065F46' },
@@ -220,11 +220,7 @@ export default function TaskListView({
                 sx={{
                   height: 20,
                   fontSize: '0.7rem',
-                  fontWeight: 700,
-                  bgcolor: '#F1F5F9',
-                  color: '#475569',
-                  fontFamily: 'monospace',
-                  flexShrink: 0,
+                  ...getTaskIdBadgeStyle(depth),
                 }}
               />
 

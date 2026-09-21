@@ -89,7 +89,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { time24To12, time12To24 } from '@/utils/format';
+import { time24To12, time12To24, getTaskIdBadgeStyle } from '@/utils/format';
 
 interface TaskDetailPanelProps {
   open: boolean;
@@ -710,7 +710,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
           <Chip
             label={currentTask?.task_number ? currentTask.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${currentTask?.id}`}
             size="small"
-            sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 700, fontFamily: 'monospace' }}
+            sx={{ ...getTaskIdBadgeStyle(currentTask) }}
           />
           <Chip
             label={currentTask?.priority || 'NORMAL'}
@@ -892,7 +892,11 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                       <Chip
                         label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
                         size="small"
-                        sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }}
+                        sx={{
+                          height: 18,
+                          fontSize: '0.65rem',
+                          ...getTaskIdBadgeStyle(currentTask?.parent_task_id ? 2 : 1),
+                        }}
                       />
                       <Typography
                         variant="body2"

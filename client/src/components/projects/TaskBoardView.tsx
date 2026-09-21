@@ -34,6 +34,7 @@ import {
   useGetStatusDefinitionsQuery,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { getTaskIdBadgeStyle } from '@/utils/format';
 
 interface TaskBoardViewProps {
   tasks: TaskItem[];
@@ -168,10 +169,7 @@ export default function TaskBoardView({
                       sx={{
                         height: 16,
                         fontSize: '0.6rem',
-                        fontWeight: 700,
-                        fontFamily: 'monospace',
-                        bgcolor: '#E2E8F0',
-                        color: '#334155',
+                        ...getTaskIdBadgeStyle(depth),
                       }}
                     />
                     <Typography
@@ -395,10 +393,7 @@ export default function TaskBoardView({
                                       sx={{
                                         height: 18,
                                         fontSize: '0.65rem',
-                                        fontWeight: 700,
-                                        fontFamily: 'monospace',
-                                        bgcolor: '#F1F5F9',
-                                        color: '#475569',
+                                        ...getTaskIdBadgeStyle(task),
                                       }}
                                     />
                                     <Chip

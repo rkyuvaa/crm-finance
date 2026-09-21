@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { CheckCircle2, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
+import { getTaskIdBadgeStyle } from '@/utils/format';
 
 interface MyTasksViewProps {
   tasks: TaskItem[];
@@ -77,7 +78,7 @@ export default function MyTasksView({ tasks = [], onOpenTaskDetail }: MyTasksVie
                   <Chip
                     label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}
                     size="small"
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, fontFamily: 'monospace' }}
+                    sx={{ height: 18, fontSize: '0.65rem', ...getTaskIdBadgeStyle(task) }}
                   />
                   <Chip label={task.priority} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
                 </Box>

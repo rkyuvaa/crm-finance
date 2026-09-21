@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import { Plus, Flag, Trash2, Edit2, ChevronDown, ChevronRight, CheckCircle2, Circle, Link2 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
+import { getTaskIdBadgeStyle } from '@/utils/format';
 import {
   useGetProjectMilestonesQuery,
   useCreateProjectMilestoneMutation,
@@ -357,7 +358,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                               <Chip
                                 label={t.task_number ? t.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${t.id}`}
                                 size="small"
-                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, fontFamily: 'monospace' }}
+                                sx={{ height: 20, fontSize: '0.7rem', ...getTaskIdBadgeStyle(t) }}
                               />
                               <Typography variant="body2" sx={{ fontWeight: 600, color: t.is_completed ? 'text.secondary' : 'text.primary', textDecoration: t.is_completed ? 'line-through' : 'none' }}>
                                 {t.title}

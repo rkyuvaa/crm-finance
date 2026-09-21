@@ -107,3 +107,70 @@ export function formatDateTime12h(dateStr?: string | null, timeStr?: string | nu
   return `${dateStr} ${formattedTime}`;
 }
 
+export interface TaskBadgeStyle {
+  bgcolor: string;
+  color: string;
+  fontWeight: number;
+  fontFamily: string;
+  flexShrink: number;
+}
+
+/**
+ * Returns badge style for Task IDs:
+ * - Main Task (depth 0 / top-level): Solid Blue (#2563EB) with white text
+ * - Sub Task (depth 1): Solid Green (#16A34A) with white text
+ * - Nested Task (depth >= 2): Solid Yellow (#EAB308) with dark text
+ */
+export function getTaskIdBadgeStyle(
+  depthOrTask?: number | { parent_task_id?: number | null; depth?: number } | null,
+  allTasksMap?: Map<number, { parent_task_id?: number | null }> | Record<number, { parent_task_id?: number | null }>
+): TaskBadgeStyle {
+  let depth = 0;
+  if (typeof depthOrTask === 'number') {
+    depth = depthOrTask;
+  } else if (depthOrTask && typeof depthOrTask === 'object') {
+    if (typeof depthOrTask.depth === 'number') {
+      depth = depthOrTask.depth;
+    } else if (depthOrTask.parent_task_id) {
+      depth = 1;
+      if (allTasksMap) {
+        const parent = allTasksMap instanceof Map
+          ? allTasksMap.get(depthOrTask.parent_task_id)
+          : allTasksMap[depthOrTask.parent_task_id];
+        if (parent && parent.parent_task_id) {
+          depth = 2;
+        }
+      }
+    }
+  }
+
+  if (depth === 0) {
+    // Main task -> Solid Blue
+    return {
+      bgcolor: '#2563EB',
+      color: '#FFFFFF',
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      flexShrink: 0,
+    };
+  } else if (depth === 1) {
+    // Sub task -> Solid Green
+    return {
+      bgcolor: '#16A34A',
+      color: '#FFFFFF',
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      flexShrink: 0,
+    };
+  } else {
+    // Nested task (depth >= 2) -> Solid Yellow
+    return {
+      bgcolor: '#EAB308',
+      color: '#0F172A',
+      fontWeight: 700,
+      fontFamily: 'monospace',
+      flexShrink: 0,
+    };
+  }
+}
+

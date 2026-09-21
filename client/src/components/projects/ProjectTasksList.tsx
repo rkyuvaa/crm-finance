@@ -62,7 +62,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { time24To12, time12To24, formatDateTime12h } from '@/utils/format';
+import { time24To12, time12To24, formatDateTime12h, getTaskIdBadgeStyle } from '@/utils/format';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 
 interface ProjectTasksListProps {
@@ -404,10 +404,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       sx={{
                         height: 16,
                         fontSize: '0.6rem',
-                        fontWeight: 700,
-                        fontFamily: 'monospace',
-                        bgcolor: '#E2E8F0',
-                        color: '#334155',
+                        ...getTaskIdBadgeStyle(depth + 1),
                       }}
                     />
                     <Typography
@@ -609,11 +606,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   sx={{
                     height: 20,
                     fontSize: '0.7rem',
-                    fontWeight: 700,
-                    bgcolor: depth > 0 ? '#E2E8F0' : '#F1F5F9',
-                    color: depth > 0 ? '#334155' : '#475569',
-                    fontFamily: 'monospace',
-                    flexShrink: 0,
+                    ...getTaskIdBadgeStyle(depth),
                   }}
                 />
               )}

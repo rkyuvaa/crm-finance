@@ -47,6 +47,7 @@ import {
   useRemoveDependencyMutation,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { getTaskIdBadgeStyle } from '@/utils/format';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 type TimeScale = 'DAY' | 'WEEK' | 'MONTH';
@@ -904,7 +905,7 @@ export default function HierarchicalGanttView({
                     <Chip
                       label={node.task_number ? node.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${node.id}`}
                       size="small"
-                      sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, mr: 0.75, bgcolor: '#F1F5F9', color: '#475569', fontFamily: 'monospace' }}
+                      sx={{ height: 18, fontSize: '0.65rem', mr: 0.75, ...getTaskIdBadgeStyle(node.depth || 0) }}
                     />
 
                     <Typography
