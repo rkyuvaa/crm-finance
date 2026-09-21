@@ -43,13 +43,15 @@ def rollup_work_item(db: Session, task_id: int) -> None:
         task.estimated_cost = sum(c.estimated_cost or 0.0 for c in children)
         task.actual_cost = sum(c.actual_cost or 0.0 for c in children)
 
-        # parent duration = calendar days (read-only span, not working-day count)
-        if task.start_date and task.due_date:
-            task.duration_working_days = max(1, (task.due_date - task.start_date).days + 1)
-        elif not task.duration_working_days or task.duration_working_days < 1:
-            task.duration_working_days = 1
+        # Parent duration is a read-only calendar-day span for display only.
+        # Do NOT store it in duration_working_days — the scheduling engine uses that
+        # field as working days when computing successor dates, and a calendar-day value
+        # (e.g. 633 days) would cause subtract_working_days to go back to year 0002.
+        # Leave duration_working_days as None for parent tasks.
+        task.duration_working_days = None
 
         db.add(task)
+
 
     # Recurse up the chain
     if task.parent_task_id:
