@@ -396,6 +396,8 @@ class TaskOut(TaskBase):
 
     is_parent: bool = False
     is_date_controlled_by: Optional[int] = None
+    controlled_by_task_number: Optional[str] = None
+    controlled_by_dep_type: Optional[str] = None
     start_date_locked: bool = False
     end_date_locked: bool = False
     dependency_conflict: Optional[dict] = None
