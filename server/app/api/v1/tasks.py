@@ -449,9 +449,13 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
         .all()
     )
     subtasks_by_parent: dict[int, list[Task]] = {tid: [] for tid in task_ids}
+    seen_subtask_ids_by_parent: dict[int, set[int]] = {tid: set() for tid in task_ids}
     for st in subtasks_rows:
-        if st.parent_task_id in subtasks_by_parent:
-            subtasks_by_parent[st.parent_task_id].append(st)
+        pid = st.parent_task_id
+        if pid in subtasks_by_parent:
+            if st.id not in seen_subtask_ids_by_parent[pid]:
+                seen_subtask_ids_by_parent[pid].add(st.id)
+                subtasks_by_parent[pid].append(st)
 
     # Also batch load level-2 subtasks if any child tasks exist
     child_ids = [st.id for st in subtasks_rows]
@@ -473,9 +477,13 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
             .all()
         )
         for sst in sub_subtasks:
-            if sst.parent_task_id not in subtasks_by_parent:
-                subtasks_by_parent[sst.parent_task_id] = []
-            subtasks_by_parent[sst.parent_task_id].append(sst)
+            pid = sst.parent_task_id
+            if pid not in subtasks_by_parent:
+                subtasks_by_parent[pid] = []
+                seen_subtask_ids_by_parent[pid] = set()
+            if sst.id not in seen_subtask_ids_by_parent[pid]:
+                seen_subtask_ids_by_parent[pid].add(sst.id)
+                subtasks_by_parent[pid].append(sst)
 
     return deps_by_task, is_blocked_by_task, rels_by_task, subtask_counts, subtasks_by_parent
 
@@ -672,8 +680,15 @@ def _format_task_out(
         out.nested_subtasks = []
     else:
         if batch_subtasks is not None:
-            out.subtask_count = len(batch_subtasks)
-            out.completed_subtask_count = sum(1 for st in batch_subtasks if st.is_completed)
+            unique_subtasks = []
+            seen_ids = set()
+            for st in batch_subtasks:
+                if st.id not in seen_ids:
+                    seen_ids.add(st.id)
+                    unique_subtasks.append(st)
+
+            out.subtask_count = len(unique_subtasks)
+            out.completed_subtask_count = sum(1 for st in unique_subtasks if st.is_completed)
             out.nested_subtasks = [
                 _format_task_out(
                     st,
@@ -681,7 +696,7 @@ def _format_task_out(
                     batch_subtasks=batch_subtasks_map.get(st.id, []) if batch_subtasks_map else None,
                     batch_subtasks_map=batch_subtasks_map,
                     skip_nested=False,
-                ) for st in batch_subtasks
+                ) for st in unique_subtasks
             ]
         else:
             subtasks = db.query(Task).filter(

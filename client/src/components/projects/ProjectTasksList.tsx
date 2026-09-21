@@ -110,23 +110,32 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   // Map of subtasks by parent_id for quick and foolproof hierarchy resolution
   const subtasksByParentId = React.useMemo(() => {
-    const map: Record<number, TaskItem[]> = {};
+    const map: Record<number, Map<number, TaskItem>> = {};
     safeTasks.forEach((t) => {
       if (t.parent_task_id) {
-        if (!map[t.parent_task_id]) map[t.parent_task_id] = [];
-        map[t.parent_task_id].push(t);
+        if (!map[t.parent_task_id]) map[t.parent_task_id] = new Map();
+        map[t.parent_task_id].set(t.id, t);
       }
     });
-    return map;
+    const res: Record<number, TaskItem[]> = {};
+    Object.keys(map).forEach((key) => {
+      const pid = Number(key);
+      res[pid] = Array.from(map[pid].values());
+    });
+    return res;
   }, [safeTasks]);
 
   const getSubtasksForTask = React.useCallback((task: TaskItem): TaskItem[] => {
+    const combinedMap = new Map<number, TaskItem>();
     const directNested = task.nested_subtasks || task.subtasks || [];
-    if (directNested.length > 0) return directNested;
-    if (subtasksByParentId[task.id] && subtasksByParentId[task.id].length > 0) {
-      return subtasksByParentId[task.id];
-    }
-    return [];
+    directNested.forEach((st) => {
+      if (st && st.id) combinedMap.set(st.id, st);
+    });
+    const fromMap = subtasksByParentId[task.id] || [];
+    fromMap.forEach((st) => {
+      if (st && st.id) combinedMap.set(st.id, st);
+    });
+    return Array.from(combinedMap.values());
   }, [subtasksByParentId]);
 
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
