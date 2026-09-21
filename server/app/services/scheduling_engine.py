@@ -112,7 +112,7 @@ def compute_successor_dates(
 
     if dep_type == "FS":
         # Finish-to-Start: successor starts lag days after predecessor finish date
-        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
+        succ_start = add_working_days(p_due, lag_days, calendar)
         succ_due = add_working_days(succ_start, dur - 1, calendar)
         return succ_start, succ_due
 
@@ -136,7 +136,7 @@ def compute_successor_dates(
 
     else:
         # Default FS
-        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
+        succ_start = add_working_days(p_due, lag_days, calendar)
         succ_due = add_working_days(succ_start, dur - 1, calendar)
         return succ_start, succ_due
 
@@ -296,14 +296,23 @@ def propagate_task_schedule_changes(
                     Task.id == s_dep.depends_on_task_id,
                     Task.is_deleted.is_(False)
                 ).first()
-                if not p_task or (not p_task.start_date and not p_task.due_date):
+                if not p_task:
+                    continue
+
+                if p_task.is_completed:
+                    p_finish = p_task.completion_date or (p_task.completed_at.date() if p_task.completed_at else None) or p_task.due_date or p_task.start_date
+                else:
+                    p_finish = p_task.due_date or p_task.start_date
+
+                p_start = p_task.start_date or p_finish
+                if not p_start and not p_finish:
                     continue
 
                 d_type = s_dep.pm_dep_type.value if hasattr(s_dep.pm_dep_type, 'value') else str(s_dep.pm_dep_type or 'FS')
                 l_days = s_dep.lag_days or 0
 
                 cand_start, cand_due = compute_successor_dates(
-                    p_task.start_date, p_task.due_date, d_type, l_days, succ_dur, calendar
+                    p_start, p_finish, d_type, l_days, succ_dur, calendar
                 )
                 if cand_start:
                     if max_req_start is None or cand_start > max_req_start:
@@ -313,29 +322,15 @@ def propagate_task_schedule_changes(
             if not max_req_start or not max_req_due:
                 continue
 
-            # Determine if succ needs to be shifted forward to meet the constraints
-            should_shift = False
-            if succ.start_date is None:
-                should_shift = True
-                new_start = max_req_start
-                new_due = max_req_due
-            elif max_req_start > succ.start_date:
-                should_shift = True
-                new_start = max_req_start
-                new_due = max_req_due
-            else:
-                # Current schedule already satisfies all predecessor constraints;
-                # do not pull backward (preserves later manual dates)
-                should_shift = False
-
-            if should_shift and (succ.start_date != new_start or succ.due_date != new_due):
+            if succ.start_date != max_req_start or succ.due_date != max_req_due:
                 old_start = succ.start_date
                 old_due = succ.due_date
 
-                succ.start_date = new_start
-                succ.due_date = new_due
+                succ.start_date = max_req_start
+                succ.due_date = max_req_due
                 succ.duration_working_days = succ_dur
                 db.add(succ)
+                queue.append(succ.id)
 
                 # Log activity audit trail
                 reason = (

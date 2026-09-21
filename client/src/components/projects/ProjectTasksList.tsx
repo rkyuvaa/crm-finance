@@ -779,13 +779,18 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </FormControl>
           </TableCell>
 
-          {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {task.start_date_locked && (
+                <Tooltip title={`Start Date is controlled by dependency from ${task.controlled_by_task_number || 'predecessor'}`}>
+                  <Lock size={12} color="#D97706" style={{ flexShrink: 0 }} />
+                </Tooltip>
+              )}
               <TextField
                 type="date"
                 size="small"
                 variant="standard"
+                disabled={task.start_date_locked}
                 value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -795,13 +800,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 sx={{
                   '& .MuiInputBase-input': {
                     fontSize: '0.8rem',
-                    color: 'text.secondary',
+                    color: task.start_date_locked ? 'text.disabled' : 'text.secondary',
                     py: 0.25,
                     px: 0.5,
                     borderRadius: '4px',
                     fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    cursor: task.start_date_locked ? 'not-allowed' : 'pointer',
+                    '&:hover, &:focus': { bgcolor: task.start_date_locked ? 'transparent' : '#F1F5F9', color: 'text.primary' },
                   },
                 }}
               />
