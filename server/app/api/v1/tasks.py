@@ -892,6 +892,18 @@ def create_task(
             detail="Due date cannot be earlier than start date"
         )
 
+    # Reject dates with unreasonable year (e.g. year 0002 caused by rollup/scheduling bugs)
+    if data.start_date and data.start_date.year < 1900:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start date year is invalid. Please enter a valid date."
+        )
+    if data.due_date and data.due_date.year < 1900:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Due date year is invalid. Please enter a valid date."
+        )
+
     # Validate Cost Center master reference if provided
     if data.cost_center_id:
         cc = db.get(CostCenter, data.cost_center_id)
@@ -1040,6 +1052,18 @@ def update_task(
     update_dict = data.model_dump(exclude_unset=True)
     old_due_date = task.due_date
     old_start_date = task.start_date
+
+    # Reject dates with unreasonable year (e.g. year 0002 caused by scheduling bugs)
+    if "start_date" in update_dict and update_dict["start_date"] and update_dict["start_date"].year < 1900:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start date year is invalid. Please enter a valid date."
+        )
+    if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"].year < 1900:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Due date year is invalid. Please enter a valid date."
+        )
 
     # Bidirectional Date / Duration logic
     if "duration_working_days" in update_dict and update_dict["duration_working_days"] is not None:

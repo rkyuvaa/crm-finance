@@ -227,13 +227,21 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
   // Populate local title, description and dates on task change
   useEffect(() => {
     if (currentTask) {
+      // Sanitize date: if year < 1900, treat as empty (corrupted DB value e.g. year 0002)
+      const sanitizeDate = (raw: string | null | undefined): string => {
+        if (!raw) return '';
+        const d = raw.split('T')[0].split(' ')[0]; // YYYY-MM-DD
+        const year = parseInt(d.split('-')[0] || '0', 10);
+        return year >= 1900 ? d : '';
+      };
+
       setTitle(currentTask.title || '');
       setDescription(currentTask.description || '');
-      setStartDate(currentTask.start_date ? currentTask.start_date.split('T')[0].split(' ')[0] : '');
+      setStartDate(sanitizeDate(currentTask.start_date));
       setStartTime(currentTask.start_time || '');
-      setDueDate(currentTask.due_date ? currentTask.due_date.split('T')[0].split(' ')[0] : '');
+      setDueDate(sanitizeDate(currentTask.due_date));
       setDueTime(currentTask.due_time || '');
-      setCompletionDate(currentTask.completion_date ? currentTask.completion_date.split('T')[0].split(' ')[0] : '');
+      setCompletionDate(sanitizeDate(currentTask.completion_date));
       setCompletionTime(currentTask.completion_time || '');
       setDuration(currentTask.duration_working_days ?? 1);
     }
@@ -249,6 +257,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
     currentTask?.completion_time,
     currentTask?.duration_working_days,
   ]);
+
 
   // Timer Tick Effect
   useEffect(() => {
@@ -1386,6 +1395,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   onChange={(e) => handleStartDateChange(e.target.value)}
                   disabled={currentTask.start_date_locked}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
               </Grid>
@@ -1419,6 +1429,7 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
                   onChange={(e) => handleDueDateChange(e.target.value)}
                   disabled={currentTask.end_date_locked}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
               </Grid>
