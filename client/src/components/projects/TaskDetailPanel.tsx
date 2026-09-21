@@ -95,9 +95,10 @@ interface TaskDetailPanelProps {
   open: boolean;
   onClose: () => void;
   task: TaskItem | null;
+  initialEditingDep?: TaskDependencyInfo | null;
 }
 
-export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanelProps) {
+export default function TaskDetailPanel({ open, onClose, task, initialEditingDep }: TaskDetailPanelProps) {
   const [commentText, setCommentText] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
@@ -182,6 +183,12 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       setActiveTaskId(task.id);
     }
   }, [task?.id]);
+
+  useEffect(() => {
+    if (initialEditingDep) {
+      handleOpenEditDep(initialEditingDep);
+    }
+  }, [initialEditingDep]);
 
   const currentTaskId = activeTaskId || task?.id || 0;
   const { data: liveTask } = useGetTaskQuery(currentTaskId, { skip: !currentTaskId });
@@ -612,6 +619,9 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       }).unwrap();
       showToast('Dependency updated successfully', 'success');
       setEditingDep(null);
+      if (initialEditingDep) {
+        onClose();
+      }
     } catch (err: any) {
       showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to update dependency', 'error');
     }
@@ -1883,7 +1893,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
       {/* ── EDIT DEPENDENCY DIALOG ───────────────────────────── */}
       <Dialog
         open={Boolean(editingDep)}
-        onClose={() => setEditingDep(null)}
+        onClose={() => {
+          setEditingDep(null);
+          if (initialEditingDep) onClose();
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -1991,7 +2004,10 @@ export default function TaskDetailPanel({ open, onClose, task }: TaskDetailPanel
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
-            onClick={() => setEditingDep(null)}
+            onClick={() => {
+              setEditingDep(null);
+              if (initialEditingDep) onClose();
+            }}
             sx={{ textTransform: 'none', color: 'text.secondary' }}
           >
             Cancel

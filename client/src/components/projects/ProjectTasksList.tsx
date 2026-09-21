@@ -59,6 +59,7 @@ import {
   useGetStatusDefinitionsQuery,
   useGetProjectMilestonesQuery,
   TaskItem,
+  TaskDependencyInfo,
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -222,8 +223,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     }
   };
 
+  const [selectedDep, setSelectedDep] = useState<TaskDependencyInfo | null>(null);
+
   const openTask = (task: TaskItem) => {
     setSelectedTask(task);
+    setSelectedDep(null);
+    setPanelOpen(true);
+  };
+
+  const openTaskWithDep = (task: TaskItem, dep: TaskDependencyInfo) => {
+    setSelectedTask(task);
+    setSelectedDep(dep);
     setPanelOpen(true);
   };
 
@@ -690,7 +700,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         icon={<Link2 size={10} color="#065F46" />}
                         label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                         size="small"
-                        onClick={() => openTask(task)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTaskWithDep(task, dep);
+                        }}
                         sx={{
                           height: 20,
                           fontSize: '0.65rem',
@@ -1877,8 +1890,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       {/* Task Detail Slide-over Panel */}
       <TaskDetailPanel
         open={panelOpen}
-        onClose={() => setPanelOpen(false)}
+        onClose={() => {
+          setPanelOpen(false);
+          setSelectedDep(null);
+        }}
         task={selectedTask}
+        initialEditingDep={selectedDep}
       />
     </Box>
   );

@@ -53,6 +53,7 @@ interface TaskListViewProps {
   onToggleSelectTask: (id: number) => void;
   onSelectAllTasks: (ids: number[]) => void;
   onOpenTaskDetail: (task: TaskItem) => void;
+  onOpenTaskDetailWithDep?: (task: TaskItem, dep: any) => void;
   onDeleteTask: (id: number) => void;
 }
 
@@ -62,6 +63,7 @@ export default function TaskListView({
   onToggleSelectTask,
   onSelectAllTasks,
   onOpenTaskDetail,
+  onOpenTaskDetailWithDep,
   onDeleteTask,
 }: TaskListViewProps) {
   const [expandedTaskIds, setExpandedTaskIds] = useState<Record<number, boolean>>({});
@@ -290,7 +292,14 @@ export default function TaskListView({
                         icon={<Link2 size={9} color={colors.color} />}
                         label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                         size="small"
-                        onClick={() => onOpenTaskDetail(task)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenTaskDetailWithDep) {
+                            onOpenTaskDetailWithDep(task, dep);
+                          } else {
+                            onOpenTaskDetail(task);
+                          }
+                        }}
                         sx={{
                           height: 18,
                           fontSize: '0.62rem',

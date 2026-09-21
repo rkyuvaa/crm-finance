@@ -37,6 +37,7 @@ import {
   useGetProjectsQuery,
   useGetStatusDefinitionsQuery,
   TaskItem,
+  TaskDependencyInfo,
 } from '@/api/projectsApi';
 import { useCostCentersQuery, useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -75,6 +76,7 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [selectedDep, setSelectedDep] = useState<TaskDependencyInfo | null>(null);
 
   const { showToast } = useToast();
 
@@ -156,6 +158,13 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
 
   const handleOpenDetail = (task: TaskItem) => {
     setSelectedTask(task);
+    setSelectedDep(null);
+    setPanelOpen(true);
+  };
+
+  const handleOpenDetailWithDep = (task: TaskItem, dep: TaskDependencyInfo) => {
+    setSelectedTask(task);
+    setSelectedDep(dep);
     setPanelOpen(true);
   };
 
@@ -324,6 +333,7 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
               onToggleSelectTask={handleToggleSelectTask}
               onSelectAllTasks={handleSelectAllTasks}
               onOpenTaskDetail={handleOpenDetail}
+              onOpenTaskDetailWithDep={handleOpenDetailWithDep}
               onDeleteTask={handleDeleteTask}
             />
           )}
@@ -343,7 +353,15 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
       )}
 
       {/* Detail Drawer */}
-      <TaskDetailPanel open={panelOpen} onClose={() => setPanelOpen(false)} task={selectedTask} />
+      <TaskDetailPanel
+        open={panelOpen}
+        onClose={() => {
+          setPanelOpen(false);
+          setSelectedDep(null);
+        }}
+        task={selectedTask}
+        initialEditingDep={selectedDep}
+      />
 
       {/* Bulk Action Toolbar */}
       <TaskBulkActionBar
