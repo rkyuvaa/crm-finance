@@ -848,7 +848,7 @@ def list_tasks(
             selectinload(Task.checklists).selectinload(TaskChecklist.items),
             selectinload(Task.time_entries).joinedload(TaskTimeEntry.user),
         )
-        .order_by(Task.created_at.desc())
+        .order_by(Task.sort_order.asc(), Task.created_at.asc(), Task.id.asc())
     )
 
     if limit is not None:
