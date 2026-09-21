@@ -1216,17 +1216,25 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Soft delete a task"""
+    """Soft delete a task and its nested child tasks"""
     task = db.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     
+    parent_id = task.parent_task_id
     task.is_deleted = True
     _log_activity(db, task.id, current_user.id, "DELETED")
+
+    # Soft delete all child subtasks recursively
+    child_subtasks = db.query(Task).filter(Task.parent_task_id == task.id, Task.is_deleted.is_(False)).all()
+    for child in child_subtasks:
+        child.is_deleted = True
+        _log_activity(db, child.id, current_user.id, "DELETED")
+
     db.commit()
 
-    if task.parent_task_id:
-        _update_parent_progress(db, task.parent_task_id)
+    if parent_id:
+        _update_parent_progress(db, parent_id)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -1274,6 +1282,46 @@ def toggle_legacy_subtask(
         display_order=0,
         created_at=task.created_at
     )
+
+
+@router.delete("/subtasks/{subtask_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_subtask(
+    subtask_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a subtask (compatible with legacy TaskSubtask and ClickUp Task entity subtasks)"""
+    # 1. Legacy TaskSubtask table check
+    legacy_subtask = db.get(TaskSubtask, subtask_id)
+    if legacy_subtask:
+        parent_id = legacy_subtask.task_id
+        db.delete(legacy_subtask)
+        db.commit()
+        if parent_id:
+            _update_parent_progress(db, parent_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    # 2. ClickUp Task entity subtask check
+    task = db.get(Task, subtask_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subtask not found")
+
+    parent_id = task.parent_task_id
+    task.is_deleted = True
+    _log_activity(db, task.id, current_user.id, "DELETED")
+
+    # Soft delete any nested child subtasks under this subtask
+    child_subtasks = db.query(Task).filter(Task.parent_task_id == task.id, Task.is_deleted.is_(False)).all()
+    for child in child_subtasks:
+        child.is_deleted = True
+        _log_activity(db, child.id, current_user.id, "DELETED")
+
+    db.commit()
+
+    if parent_id:
+        _update_parent_progress(db, parent_id)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{task_id}/subtasks", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
