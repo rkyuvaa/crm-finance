@@ -1161,14 +1161,19 @@ def update_task(
 
     # Status & completion change logic
     is_completion_requested = False
+    is_start_or_active_requested = False
+
     if "is_completed" in update_dict and update_dict["is_completed"] is True:
         is_completion_requested = True
     elif "status_id" in update_dict and update_dict["status_id"] != task.status_id:
         new_status = db.get(TaskStatusDef, update_dict["status_id"])
-        if new_status and (new_status.category in [TaskStatusCategory.DONE, TaskStatusCategory.CLOSED] or new_status.is_terminal):
-            is_completion_requested = True
+        if new_status:
+            if new_status.category in [TaskStatusCategory.DONE, TaskStatusCategory.CLOSED] or new_status.is_terminal:
+                is_completion_requested = True
+            elif new_status.category != TaskStatusCategory.NOT_STARTED:
+                is_start_or_active_requested = True
 
-    if is_completion_requested and not task.is_completed:
+    if (is_completion_requested or is_start_or_active_requested) and not task.is_completed:
         # Check if task is blocked by incomplete tasks
         blocking_deps = db.query(TaskDependency).filter(TaskDependency.task_id == task.id).all()
         incomplete_blockers = []
@@ -1177,14 +1182,17 @@ def update_task(
                 incomplete_blockers.append(dep.depends_on_task.task_number)
 
         if incomplete_blockers and not data.override_dependencies:
+            action_type = "finish" if is_completion_requested else "start"
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
                     "code": "TASK_BLOCKED",
-                    "message": f"Task is blocked by incomplete tasks: {', '.join(incomplete_blockers)}.",
+                    "message": f"Task {task.task_number} is blocked by incomplete task(s): {', '.join(incomplete_blockers)}. Predecessor must be completed before this task can {action_type}.",
                     "blocking_tasks": incomplete_blockers
                 }
             )
+
+    if is_completion_requested and not task.is_completed:
 
         task.is_completed = True
         task.completed_at = datetime.now(timezone.utc)
