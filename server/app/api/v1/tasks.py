@@ -347,7 +347,7 @@ def _sync_parent_due_date(db: Session, parent_id: Optional[int]) -> None:
 
 def _batch_load_task_metadata(db: Session, task_ids: list[int]):
     if not task_ids:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}
 
     # 1. Dependencies
     deps = (
@@ -474,7 +474,7 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
             selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
         )
         .filter(Task.parent_task_id.in_(task_ids), Task.is_deleted.is_(False))
-        .order_by(Task.sort_order.asc(), Task.id.asc())
+        .order_by(Task.id.asc())
         .all()
     )
     subtasks_by_parent: dict[int, list[Task]] = {tid: [] for tid in task_ids}
@@ -502,7 +502,7 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
                 selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
             )
             .filter(Task.parent_task_id.in_(child_ids), Task.is_deleted.is_(False))
-            .order_by(Task.sort_order.asc(), Task.id.asc())
+            .order_by(Task.id.asc())
             .all()
         )
         for sst in sub_subtasks:
@@ -856,13 +856,12 @@ def list_tasks(
             selectinload(Task.checklists).selectinload(TaskChecklist.items),
             selectinload(Task.time_entries).joinedload(TaskTimeEntry.user),
         )
-        .order_by(Task.sort_order.asc(), Task.created_at.asc(), Task.id.asc())
+        .order_by(Task.created_at.asc(), Task.id.asc())
     )
 
-    if limit is not None:
-        query = query.offset(offset).limit(limit)
-    else:
-        query = query.offset(offset).limit(300)
+    safe_limit = limit if isinstance(limit, int) else 300
+    safe_offset = offset if isinstance(offset, int) else 0
+    query = query.offset(safe_offset).limit(safe_limit)
 
     tasks = query.all()
     task_ids = [t.id for t in tasks]
