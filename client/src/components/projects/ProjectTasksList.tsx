@@ -97,6 +97,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const { data: tasks = [], isLoading } = useGetTasksQuery({
     project_id: numericProjectId,
     q: searchQ || undefined,
+    include_subtasks: true,
   });
 
   const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -106,6 +107,27 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
     return true;
   });
+
+  // Map of subtasks by parent_id for quick and foolproof hierarchy resolution
+  const subtasksByParentId = React.useMemo(() => {
+    const map: Record<number, TaskItem[]> = {};
+    safeTasks.forEach((t) => {
+      if (t.parent_task_id) {
+        if (!map[t.parent_task_id]) map[t.parent_task_id] = [];
+        map[t.parent_task_id].push(t);
+      }
+    });
+    return map;
+  }, [safeTasks]);
+
+  const getSubtasksForTask = React.useCallback((task: TaskItem): TaskItem[] => {
+    const directNested = task.nested_subtasks || task.subtasks || [];
+    if (directNested.length > 0) return directNested;
+    if (subtasksByParentId[task.id] && subtasksByParentId[task.id].length > 0) {
+      return subtasksByParentId[task.id];
+    }
+    return [];
+  }, [subtasksByParentId]);
 
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
   const [createTask] = useCreateTaskMutation();
@@ -496,9 +518,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
   // Render Table Row for List View
   const renderListTableRow = (task: TaskItem, depth = 0) => {
-    const subtaskList = task.nested_subtasks || task.subtasks || [];
-    const hasChildren = Boolean(task.is_parent || (task.subtask_count && task.subtask_count > 0) || subtaskList.length > 0);
+    const subtaskList = getSubtasksForTask(task);
+    const subtaskCount = task.subtask_count || subtaskList.length;
+    const hasChildren = Boolean(task.is_parent || subtaskCount > 0 || subtaskList.length > 0);
     const isExpanded = !!expandedTaskIds[task.id];
+    const completedCount = task.completed_subtask_count ?? subtaskList.filter((s) => s.is_completed).length;
 
     return (
       <React.Fragment key={task.id}>
@@ -506,7 +530,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           hover
           sx={{
             cursor: 'pointer',
-            '&:hover .sticky-cell': { bgcolor: '#F8FAFC' },
+            bgcolor: depth > 0 ? '#F8FAFC' : 'inherit',
+            borderLeft: depth > 0 ? `${Math.min(depth, 3) * 3}px solid #04552B` : 'none',
+            '&:hover .sticky-cell': { bgcolor: depth > 0 ? '#F1F5F9' : '#F8FAFC' },
           }}
           onClick={() => openTask(task)}
         >
@@ -519,18 +545,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               position: 'sticky',
               left: 0,
               zIndex: 1,
-              bgcolor: 'background.paper',
+              bgcolor: depth > 0 ? '#F8FAFC' : 'background.paper',
               whiteSpace: 'nowrap',
               transition: 'background-color 0.15s ease',
+              p: 0,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
               {hasChildren ? (
-                <IconButton size="small" onClick={(e) => toggleSubtasksExpand(task.id, e)} sx={{ p: 0.2 }}>
-                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <IconButton
+                  size="small"
+                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
+                  sx={{
+                    p: 0.4,
+                    color: isExpanded ? '#04552B' : '#64748B',
+                    '&:hover': { color: '#04552B', bgcolor: 'rgba(4, 85, 43, 0.08)' },
+                  }}
+                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                >
+                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </IconButton>
               ) : (
-                <Box sx={{ width: 18 }} />
+                <Box sx={{ width: 24 }} />
               )}
             </Box>
           </TableCell>
@@ -542,7 +578,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               position: 'sticky',
               left: 40,
               zIndex: 1,
-              bgcolor: 'background.paper',
+              bgcolor: depth > 0 ? '#F8FAFC' : 'background.paper',
               whiteSpace: 'nowrap',
               borderRight: '2px solid',
               borderColor: 'divider',
@@ -551,7 +587,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 2.5, width: '100%' }}>
+              {depth > 0 && (
+                <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 700, fontSize: '0.85rem', userSelect: 'none', mr: -0.25 }}>
+                  ↳
+                </Typography>
+              )}
               {task.task_number && (
                 <Chip
                   label={task.task_number.replace(/0+([1-9]\d*)$/, '$1')}
@@ -560,8 +601,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     height: 20,
                     fontSize: '0.7rem',
                     fontWeight: 700,
-                    bgcolor: '#F1F5F9',
-                    color: '#475569',
+                    bgcolor: depth > 0 ? '#E2E8F0' : '#F1F5F9',
+                    color: depth > 0 ? '#334155' : '#475569',
                     fontFamily: 'monospace',
                     flexShrink: 0,
                   }}
@@ -616,9 +657,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
               {hasChildren && (
                 <Chip
-                  label={`${task.completed_subtask_count || 0}/${task.subtask_count || subtaskList.length} subtasks`}
+                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
+                  label={`${completedCount}/${subtaskCount} subtasks`}
                   size="small"
-                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569', flexShrink: 0 }}
+                  sx={{
+                    height: 18,
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    bgcolor: isExpanded ? 'rgba(4, 85, 43, 0.1)' : '#F1F5F9',
+                    color: isExpanded ? '#04552B' : '#475569',
+                    flexShrink: 0,
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(4, 85, 43, 0.18)' },
+                  }}
                 />
               )}
             </Box>
@@ -1024,6 +1075,62 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
         {/* List View Recursive Subtasks */}
         {hasChildren && isExpanded && subtaskList.map((subtask) => renderListTableRow(subtask, depth + 1))}
+
+        {/* Inline Add Subtask Row under task when expanded */}
+        {hasChildren && isExpanded && (
+          <TableRow sx={{ bgcolor: '#F8FAFC' }} onClick={(e) => e.stopPropagation()}>
+            <TableCell sx={{ bgcolor: '#F8FAFC', p: 0 }} />
+            <TableCell sx={{ bgcolor: '#F8FAFC', pl: (depth + 1) * 2.5 + 2, borderRight: '2px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+                <TextField
+                  size="small"
+                  placeholder="+ Add a subtask (press Enter)..."
+                  value={addingSubtaskId === task.id ? newSubtaskTitle : ''}
+                  onFocus={() => setAddingSubtaskId(task.id)}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateSubtask(task.id);
+                    }
+                  }}
+                  variant="standard"
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    maxWidth: 260,
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.78rem',
+                      fontStyle: 'italic',
+                      py: 0.25,
+                      px: 0.75,
+                      borderRadius: '4px',
+                      bgcolor: 'background.paper',
+                      border: '1px dashed #CBD5E1',
+                    },
+                  }}
+                />
+                {addingSubtaskId === task.id && newSubtaskTitle.trim() && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => handleCreateSubtask(task.id)}
+                    sx={{
+                      height: 24,
+                      fontSize: '0.68rem',
+                      bgcolor: '#04552B',
+                      '&:hover': { bgcolor: '#034120' },
+                      textTransform: 'none',
+                      px: 1,
+                    }}
+                  >
+                    Add
+                  </Button>
+                )}
+              </Box>
+            </TableCell>
+            <TableCell colSpan={9} sx={{ bgcolor: '#F8FAFC' }} />
+          </TableRow>
+        )}
       </React.Fragment>
     );
   };

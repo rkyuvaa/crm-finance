@@ -118,9 +118,31 @@ export default function TaskListView({
   const allTaskIds = tasks.map((t) => t.id);
   const isAllSelected = allTaskIds.length > 0 && selectedTaskIds.length === allTaskIds.length;
 
+  // Map of subtasks by parent_id for quick and foolproof hierarchy resolution
+  const subtasksByParentId = React.useMemo(() => {
+    const map: Record<number, TaskItem[]> = {};
+    tasks.forEach((t) => {
+      if (t.parent_task_id) {
+        if (!map[t.parent_task_id]) map[t.parent_task_id] = [];
+        map[t.parent_task_id].push(t);
+      }
+    });
+    return map;
+  }, [tasks]);
+
+  const getSubtasksForTask = React.useCallback((task: TaskItem): TaskItem[] => {
+    const directNested = task.nested_subtasks || task.subtasks || [];
+    if (directNested.length > 0) return directNested;
+    if (subtasksByParentId[task.id] && subtasksByParentId[task.id].length > 0) {
+      return subtasksByParentId[task.id];
+    }
+    return [];
+  }, [subtasksByParentId]);
+
   const renderTaskRow = (task: TaskItem, depth = 0) => {
-    const subtaskList = task.nested_subtasks || task.subtasks || [];
-    const hasChildren = Boolean(task.is_parent || (task.subtask_count && task.subtask_count > 0) || subtaskList.length > 0);
+    const subtaskList = getSubtasksForTask(task);
+    const subtaskCount = task.subtask_count || subtaskList.length;
+    const hasChildren = Boolean(task.is_parent || subtaskCount > 0 || subtaskList.length > 0);
     const isExpanded = !!expandedTaskIds[task.id];
     const isSelected = selectedTaskIds.includes(task.id);
 

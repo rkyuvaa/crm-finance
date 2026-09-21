@@ -453,6 +453,30 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
         if st.parent_task_id in subtasks_by_parent:
             subtasks_by_parent[st.parent_task_id].append(st)
 
+    # Also batch load level-2 subtasks if any child tasks exist
+    child_ids = [st.id for st in subtasks_rows]
+    if child_ids:
+        sub_subtasks = (
+            db.query(Task)
+            .options(
+                joinedload(Task.project),
+                joinedload(Task.assignee),
+                joinedload(Task.status_def),
+                joinedload(Task.cost_center),
+                joinedload(Task.department),
+                selectinload(Task.assignees).joinedload(TaskAssignee.user),
+                selectinload(Task.followers).joinedload(TaskFollower.user),
+                selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
+            )
+            .filter(Task.parent_task_id.in_(child_ids), Task.is_deleted.is_(False))
+            .order_by(Task.sort_order.asc(), Task.id.asc())
+            .all()
+        )
+        for sst in sub_subtasks:
+            if sst.parent_task_id not in subtasks_by_parent:
+                subtasks_by_parent[sst.parent_task_id] = []
+            subtasks_by_parent[sst.parent_task_id].append(sst)
+
     return deps_by_task, is_blocked_by_task, rels_by_task, subtask_counts, subtasks_by_parent
 
 
@@ -464,6 +488,7 @@ def _format_task_out(
     batch_rels: Optional[list] = None,
     batch_subtask_counts: Optional[dict] = None,
     batch_subtasks: Optional[list] = None,
+    batch_subtasks_map: Optional[dict] = None,
     skip_nested: bool = False,
 ) -> TaskOut:
     out = TaskOut.model_validate(t)
@@ -649,7 +674,15 @@ def _format_task_out(
         if batch_subtasks is not None:
             out.subtask_count = len(batch_subtasks)
             out.completed_subtask_count = sum(1 for st in batch_subtasks if st.is_completed)
-            out.nested_subtasks = [_format_task_out(st, db, skip_nested=True) for st in batch_subtasks]
+            out.nested_subtasks = [
+                _format_task_out(
+                    st,
+                    db,
+                    batch_subtasks=batch_subtasks_map.get(st.id, []) if batch_subtasks_map else None,
+                    batch_subtasks_map=batch_subtasks_map,
+                    skip_nested=False,
+                ) for st in batch_subtasks
+            ]
         else:
             subtasks = db.query(Task).filter(
                 Task.parent_task_id == t.id,
@@ -657,7 +690,7 @@ def _format_task_out(
             ).order_by(Task.sort_order.asc(), Task.id.asc()).all()
             out.subtask_count = len(subtasks)
             out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
-            out.nested_subtasks = [_format_task_out(st, db, skip_nested=True) for st in subtasks]
+            out.nested_subtasks = [_format_task_out(st, db, skip_nested=False) for st in subtasks]
 
     if batch_deps is not None:
         out.dependency_conflict = None
@@ -792,7 +825,8 @@ def list_tasks(
             batch_rels=rels_map.get(t.id, []),
             batch_subtask_counts=subtask_counts_map.get(t.id),
             batch_subtasks=subtasks_by_parent_map.get(t.id, []),
-            skip_nested=not include_subtasks if include_subtasks else False,
+            batch_subtasks_map=subtasks_by_parent_map,
+            skip_nested=False,
         )
         for t in tasks
     ]
