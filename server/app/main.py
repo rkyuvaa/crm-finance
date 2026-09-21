@@ -57,15 +57,20 @@ def _ensure_schema_migrations():
                         default_sql = f" DEFAULT '{col.default.arg}'"
 
                     added = False
+                    # Check dialect to use appropriate syntax
+                    is_sqlite = engine.dialect.name == "sqlite"
+                    alter_prefix = f'ALTER TABLE "{table_name}" ADD COLUMN'
+                    if_not_exists = "" if is_sqlite else " IF NOT EXISTS"
+
                     try:
                         with engine.begin() as conn:
                             conn.execute(
                                 text(
-                                    f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" {col_type_sql}{default_sql}'
+                                    f'{alter_prefix}{if_not_exists} "{col_name}" {col_type_sql}{default_sql}'
                                 )
                             )
                         added = True
-                    except Exception:
+                    except Exception as first_err:
                         pass
 
                     if not added:
@@ -73,7 +78,7 @@ def _ensure_schema_migrations():
                             with engine.begin() as conn:
                                 conn.execute(
                                     text(
-                                        f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col_name}" VARCHAR(255)'
+                                        f'{alter_prefix}{if_not_exists} "{col_name}" VARCHAR(255)'
                                     )
                                 )
                         except Exception as col_err:
@@ -82,12 +87,16 @@ def _ensure_schema_migrations():
 
         # Ensure auto_schedule column on tasks table
         if "tasks" in existing_tables:
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS auto_schedule BOOLEAN DEFAULT TRUE'))
-                    conn.execute(text('UPDATE tasks SET auto_schedule = TRUE WHERE auto_schedule IS NULL'))
-            except Exception:
-                pass
+            task_cols = {c["name"] for c in inspector.get_columns("tasks")}
+            if "auto_schedule" not in task_cols:
+                try:
+                    with engine.begin() as conn:
+                        is_sqlite = engine.dialect.name == "sqlite"
+                        if_not_exists = "" if is_sqlite else " IF NOT EXISTS"
+                        conn.execute(text(f'ALTER TABLE tasks ADD COLUMN{if_not_exists} auto_schedule BOOLEAN DEFAULT TRUE'))
+                        conn.execute(text('UPDATE tasks SET auto_schedule = TRUE WHERE auto_schedule IS NULL'))
+                except Exception:
+                    pass
 
         # 3. Seed default task statuses if empty
         if "task_statuses" in existing_tables:
