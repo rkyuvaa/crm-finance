@@ -192,12 +192,13 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
 
   const currentTaskId = activeTaskId || task?.id || 0;
   const { data: liveTask } = useGetTaskQuery(currentTaskId, { skip: !currentTaskId });
+  const currentTask = liveTask || task;
+  const targetProjectId = currentTask?.project_id ? Number(currentTask.project_id) : undefined;
   const { data: searchTasksResult = [] } = useGetTasksQuery(
-    { q: depSearchQuery, include_subtasks: true },
+    { q: depSearchQuery, project_id: targetProjectId, include_subtasks: true },
     { skip: !isAddDepDialogOpen }
   );
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
-  const currentTask = liveTask || task;
   const { data: projectMilestones = [] } = useGetProjectMilestonesQuery(currentTask?.project_id || 0, {
     skip: !currentTask?.project_id,
   });
@@ -1810,6 +1811,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               .filter((t: any) => {
                 if (!t || !currentTask) return false;
                 if (t.id === currentTask.id) return false;
+                if (targetProjectId && t.project_id && Number(t.project_id) !== targetProjectId) return false;
                 if (t.parent_task_id === currentTask.id) return false;
                 if (currentTask.parent_task_id === t.id) return false;
                 const existingDepIds = (currentTask.dependencies || []).map((d: any) => d.depends_on_task_id || d.predecessor_task_id);
