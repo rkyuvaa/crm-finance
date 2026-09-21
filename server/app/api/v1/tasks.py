@@ -316,6 +316,35 @@ def _update_parent_progress(db: Session, parent_id: Optional[int]):
         _update_parent_progress(db, parent.parent_task_id)
 
 
+def _sync_parent_due_date(db: Session, parent_id: Optional[int]) -> None:
+    """Sync parent task due date to be the latest due date among all its child tasks (recursive upward)."""
+    if not parent_id:
+        return
+    parent = db.get(Task, parent_id)
+    if not parent:
+        return
+
+    children = db.query(Task).filter(
+        Task.parent_task_id == parent_id,
+        Task.is_deleted.is_(False)
+    ).all()
+    if not children:
+        return
+
+    child_due_dates = [c.due_date for c in children if c.due_date is not None]
+    if not child_due_dates:
+        return
+
+    latest_due = max(child_due_dates)
+    if parent.due_date != latest_due:
+        parent.due_date = latest_due
+        db.add(parent)
+
+    # Recurse up if parent also has a parent
+    if parent.parent_task_id:
+        _sync_parent_due_date(db, parent.parent_task_id)
+
+
 def _batch_load_task_metadata(db: Session, task_ids: list[int]):
     if not task_ids:
         return {}, {}, {}, {}
@@ -975,8 +1004,11 @@ def create_task(
 
     if task.parent_task_id:
         _update_parent_progress(db, task.parent_task_id)
+        _sync_parent_due_date(db, task.parent_task_id)
+        db.commit()
 
     return _format_task_out(task, db)
+
 
 
 @router.get("/{task_id}", response_model=TaskOut)
@@ -1218,11 +1250,11 @@ def update_task(
 
     if task.parent_task_id:
         _update_parent_progress(db, task.parent_task_id)
-
-    if task.parent_task_id:
-        _update_parent_progress(db, task.parent_task_id)
+        _sync_parent_due_date(db, task.parent_task_id)
+        db.commit()
 
     return _format_task_out(task, db)
+
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1250,8 +1282,11 @@ def delete_task(
 
     if parent_id:
         _update_parent_progress(db, parent_id)
+        _sync_parent_due_date(db, parent_id)
+        db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 
 # --- Subtasks API ---
@@ -1335,8 +1370,11 @@ def delete_subtask(
 
     if parent_id:
         _update_parent_progress(db, parent_id)
+        _sync_parent_due_date(db, parent_id)
+        db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 
 @router.post("/{task_id}/subtasks", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
