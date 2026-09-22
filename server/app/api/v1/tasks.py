@@ -316,29 +316,49 @@ def _update_parent_progress(db: Session, parent_id: Optional[int]):
         _update_parent_progress(db, parent.parent_task_id)
 
 
+def _get_all_descendants(db: Session, parent_id: int) -> list[Task]:
+    res = []
+    children = db.query(Task).filter(Task.parent_task_id == parent_id, Task.is_deleted.is_(False)).all()
+    for c in children:
+        res.append(c)
+        res.extend(_get_all_descendants(db, c.id))
+    return res
+
+
 def _sync_parent_due_date(db: Session, parent_id: Optional[int]) -> None:
-    """Sync parent task due date to be the latest due date among all its child tasks (recursive upward)."""
+    """Sync parent task due date to be the latest date among all its child tasks (recursive upward)."""
     if not parent_id:
         return
     parent = db.get(Task, parent_id)
     if not parent:
         return
 
-    children = db.query(Task).filter(
-        Task.parent_task_id == parent_id,
-        Task.is_deleted.is_(False)
-    ).all()
-    if not children:
+    descendants = _get_all_descendants(db, parent_id)
+    if not descendants:
         return
 
-    child_due_dates = [c.due_date for c in children if c.due_date is not None]
-    if not child_due_dates:
-        return
-
-    latest_due = max(child_due_dates)
-    if parent.due_date != latest_due:
-        parent.due_date = latest_due
-        db.add(parent)
+    if all(d.is_completed for d in descendants):
+        dates = []
+        for d in descendants:
+            dt = d.completion_date or (d.completed_at.date() if d.completed_at else None) or d.due_date
+            if dt:
+                dates.append(dt)
+        if dates:
+            highest_date = max(dates)
+            if parent.due_date != highest_date:
+                parent.due_date = highest_date
+                db.add(parent)
+    else:
+        children = db.query(Task).filter(
+            Task.parent_task_id == parent_id,
+            Task.is_deleted.is_(False)
+        ).all()
+        child_due_dates = [c.due_date for c in children if c.due_date is not None]
+        if child_due_dates:
+            latest_due = max(child_due_dates)
+            if parent.due_date != latest_due:
+                parent.due_date = latest_due
+                db.add(parent)
 
     # Recurse up if parent also has a parent
     if parent.parent_task_id:

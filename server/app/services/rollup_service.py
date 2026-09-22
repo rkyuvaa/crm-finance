@@ -16,6 +16,15 @@ from sqlalchemy.orm import Session
 from app.models.projects import Task, ProjectMilestone, Project
 
 
+def get_all_descendants(db: Session, parent_id: int) -> list[Task]:
+    res = []
+    children = db.query(Task).filter(Task.parent_task_id == parent_id, Task.is_deleted.is_(False)).all()
+    for c in children:
+        res.append(c)
+        res.extend(get_all_descendants(db, c.id))
+    return res
+
+
 def rollup_work_item(db: Session, task_id: int) -> None:
     """
     If task has children: recompute its start_date, due_date, estimated_cost, actual_cost.
@@ -32,22 +41,28 @@ def rollup_work_item(db: Session, task_id: int) -> None:
     ).all()
 
     if children:
-        start_dates = [c.start_date for c in children if c.start_date]
-        end_dates = [c.due_date for c in children if c.due_date]
+        descendants = get_all_descendants(db, task_id)
+        if descendants and all(d.is_completed for d in descendants):
+            dates = []
+            for d in descendants:
+                dt = d.completion_date or (d.completed_at.date() if d.completed_at else None) or d.due_date
+                if dt:
+                    dates.append(dt)
+            if dates:
+                task.due_date = max(dates)
+        else:
+            end_dates = [c.due_date for c in children if c.due_date]
+            if end_dates:
+                task.due_date = max(end_dates)
 
+        start_dates = [c.start_date for c in children if c.start_date]
         if start_dates:
             task.start_date = min(start_dates)
-        if end_dates:
-            task.due_date = max(end_dates)
 
         task.estimated_cost = sum(c.estimated_cost or 0.0 for c in children)
         task.actual_cost = sum(c.actual_cost or 0.0 for c in children)
 
         # Parent duration is a read-only calendar-day span for display only.
-        # Do NOT store it in duration_working_days — the scheduling engine uses that
-        # field as working days when computing successor dates, and a calendar-day value
-        # (e.g. 633 days) would cause subtract_working_days to go back to year 0002.
-        # Leave duration_working_days as None for parent tasks.
         task.duration_working_days = None
 
         db.add(task)
