@@ -335,7 +335,7 @@ def propagate_task_schedule_changes(
                 # Log activity audit trail
                 reason = (
                     f"Schedule automatically shifted from ({old_start} - {old_due}) to "
-                    f"({new_start} - {new_due}) to satisfy dependency constraints."
+                    f"({max_req_start} - {max_req_due}) to satisfy dependency constraints."
                 )
                 act = TaskActivity(
                     task_id=succ.id,
@@ -343,7 +343,7 @@ def propagate_task_schedule_changes(
                     action="AUTO_SCHEDULED",
                     field_name="start_date / due_date",
                     old_value=f"Start: {old_start}, Due: {old_due}",
-                    new_value=f"Start: {new_start}, Due: {new_due} | {reason}",
+                    new_value=f"Start: {max_req_start}, Due: {max_req_due} | {reason}",
                 )
                 db.add(act)
 
