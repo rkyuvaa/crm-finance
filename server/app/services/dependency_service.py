@@ -67,14 +67,9 @@ def apply_dependency_schedule(db: Session, task: Task) -> bool:
         dep_type = dep.pm_dep_type
 
         if dep_type == PMDepType.FS:
-            # Start = Predecessor.End + lag working-day gap
-            # lag=0: start immediately after pred ends (next working day)
-            # lag=2: 2 working days gap → e.g. pred ends Wed, lag 2 → start Mon (skipping holidays/weekends)
+            # Start = Predecessor.End + 1 + lag working days (next working day after predecessor finish date)
             if pred.due_date:
-                from app.services.calendar_service import next_working_day
-                from datetime import timedelta
-                after_lag = add_working_days(pred.due_date, lag, calendar)
-                computed = next_working_day(after_lag, calendar[0], calendar[1])
+                computed = add_working_days(pred.due_date, 1 + lag, calendar)
                 if new_start is None or computed > new_start:
                     new_start = computed
 

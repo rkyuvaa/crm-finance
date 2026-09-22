@@ -111,8 +111,8 @@ def compute_successor_dates(
     dur = max(1, dur_working_days or 1)
 
     if dep_type == "FS":
-        # Finish-to-Start: successor starts lag days after predecessor finish date
-        succ_start = add_working_days(p_due, lag_days, calendar)
+        # Finish-to-Start: successor starts 1 + lag_days working days after predecessor finish date (next working day)
+        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
         succ_due = add_working_days(succ_start, dur - 1, calendar)
         return succ_start, succ_due
 
@@ -136,7 +136,7 @@ def compute_successor_dates(
 
     else:
         # Default FS
-        succ_start = add_working_days(p_due, lag_days, calendar)
+        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
         succ_due = add_working_days(succ_start, dur - 1, calendar)
         return succ_start, succ_due
 
