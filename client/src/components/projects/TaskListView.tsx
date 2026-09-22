@@ -81,15 +81,44 @@ export default function TaskListView({
   ];
   const activeStatuses = statusDefs.length > 0 ? statusDefs : defaultStatuses;
 
+  const getTaskDurationDisplay = (t: TaskItem): number => {
+    if (t.duration_working_days && t.duration_working_days > 0) {
+      return t.duration_working_days;
+    }
+    if (t.start_date && t.due_date) {
+      const s = new Date(t.start_date.split('T')[0]);
+      const d = new Date(t.due_date.split('T')[0]);
+      if (!isNaN(s.getTime()) && !isNaN(d.getTime()) && d >= s) {
+        let count = 0;
+        const cur = new Date(s);
+        while (cur <= d) {
+          const day = cur.getDay();
+          if (day !== 0 && day !== 6) count++;
+          cur.setDate(cur.getDate() + 1);
+        }
+        return count || 1;
+      }
+    }
+    return t.duration_working_days ?? 0;
+  };
+
+  const getErrorMessage = (err: any): string => {
+    if (typeof err?.data?.detail === 'string') return err.data.detail;
+    if (Array.isArray(err?.data?.detail) && err.data.detail.length > 0) {
+      return err.data.detail[0]?.msg || err.data.detail[0]?.message || 'Invalid value or date entered';
+    }
+    if (typeof err?.data?.detail === 'object' && err?.data?.detail !== null) {
+      return err.data.detail.message || err.data.detail.detail || 'Invalid value or date entered';
+    }
+    return err?.data?.message || err?.message || 'Failed to update task';
+  };
+
   const handleCellUpdate = async (taskId: number, field: string, value: any) => {
     try {
       await updateTask({ id: taskId, body: { [field]: value } }).unwrap();
       showToast('Task updated', 'success');
     } catch (err: any) {
-      const msg = typeof err?.data?.detail === 'string'
-        ? err.data.detail
-        : err?.data?.detail?.message || err?.message || 'Failed to update task';
-      showToast(msg, 'error');
+      showToast(getErrorMessage(err), 'error');
     }
   };
 
@@ -209,12 +238,25 @@ export default function TaskListView({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 3, width: '100%' }}>
               {hasChildren ? (
-                <IconButton size="small" onClick={(e) => toggleExpand(task.id, e)} sx={{ p: 0.5, flexShrink: 0 }}>
-                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                </IconButton>
-              ) : (
-                <Box sx={{ width: 24, flexShrink: 0 }} />
-              )}
+                <Typography
+                  component="span"
+                  onClick={(e) => toggleExpand(task.id, e)}
+                  sx={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                    color: isExpanded ? '#04552B' : '#64748B',
+                    mr: 0.25,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    '&:hover': { color: '#04552B' },
+                  }}
+                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                >
+                  {isExpanded ? '▼' : '▶'}
+                </Typography>
+              ) : null}
 
               <Chip
                 label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}
@@ -492,7 +534,7 @@ export default function TaskListView({
                 type="number"
                 size="small"
                 variant="standard"
-                value={task.duration_working_days ?? 0}
+                value={getTaskDurationDisplay(task)}
                 disabled={task.is_parent}
                 onChange={(e) => {
                   const val = Number(e.target.value);

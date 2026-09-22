@@ -252,15 +252,67 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setCreateOpen(true);
   };
 
+  const [isAllExpanded, setIsAllExpanded] = useState(false);
+
+  const handleToggleExpandAll = () => {
+    if (isAllExpanded) {
+      setExpandedTaskIds({});
+      setIsAllExpanded(false);
+    } else {
+      const allIds: Record<number, boolean> = {};
+      const collectIds = (taskList: TaskItem[]) => {
+        taskList.forEach((t) => {
+          allIds[t.id] = true;
+          const subList = getSubtasksForTask(t);
+          if (subList.length > 0) {
+            collectIds(subList);
+          }
+        });
+      };
+      collectIds(safeTasks);
+      setExpandedTaskIds(allIds);
+      setIsAllExpanded(true);
+    }
+  };
+
+  const getTaskDurationDisplay = (t: TaskItem): number => {
+    if (t.duration_working_days && t.duration_working_days > 0) {
+      return t.duration_working_days;
+    }
+    if (t.start_date && t.due_date) {
+      const s = new Date(t.start_date.split('T')[0]);
+      const d = new Date(t.due_date.split('T')[0]);
+      if (!isNaN(s.getTime()) && !isNaN(d.getTime()) && d >= s) {
+        let count = 0;
+        const cur = new Date(s);
+        while (cur <= d) {
+          const day = cur.getDay();
+          if (day !== 0 && day !== 6) count++;
+          cur.setDate(cur.getDate() + 1);
+        }
+        return count || 1;
+      }
+    }
+    return t.duration_working_days ?? 0;
+  };
+
+  const getErrorMessage = (err: any): string => {
+    if (typeof err?.data?.detail === 'string') return err.data.detail;
+    if (Array.isArray(err?.data?.detail) && err.data.detail.length > 0) {
+      return err.data.detail[0]?.msg || err.data.detail[0]?.message || 'Invalid value or date entered';
+    }
+    if (typeof err?.data?.detail === 'object' && err?.data?.detail !== null) {
+      return err.data.detail.message || err.data.detail.detail || 'Invalid value or date entered';
+    }
+    return err?.data?.message || err?.message || 'Failed to update task';
+  };
+
   const handleCellUpdate = async (taskId: number, field: string, value: any) => {
     try {
       await updateTask({ id: taskId, body: { [field]: value } }).unwrap();
       toast.showSuccess('Task updated');
     } catch (err: any) {
-      const msg = typeof err?.data?.detail === 'string'
-        ? err.data.detail
-        : err?.data?.detail?.message || err?.message || 'Failed to update task';
-      toast.showError(msg);
+      toast.showError(getErrorMessage(err));
     }
   };
 
@@ -579,7 +631,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   }}
                   title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
                 >
-                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    {isExpanded ? '▼' : '▶'}
+                  </Typography>
                 </IconButton>
               ) : (
                 <Box sx={{ width: 24 }} />
@@ -603,10 +657,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: depth * 2.5, width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, pl: depth * 2.5, width: '100%' }}>
               {depth > 0 && (
                 <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 700, fontSize: '0.85rem', userSelect: 'none', mr: -0.25 }}>
                   ↳
+                </Typography>
+              )}
+              {hasChildren && (
+                <Typography
+                  component="span"
+                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
+                  sx={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem',
+                    color: isExpanded ? '#04552B' : '#64748B',
+                    mr: 0.25,
+                    '&:hover': { color: '#04552B' },
+                  }}
+                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                >
+                  {isExpanded ? '▼' : '▶'}
                 </Typography>
               )}
               {task.task_number && (
@@ -889,7 +961,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 type="number"
                 size="small"
                 variant="standard"
-                value={task.duration_working_days ?? 0}
+                value={getTaskDurationDisplay(task)}
                 disabled={task.is_parent}
                 onChange={(e) => {
                   const val = Number(e.target.value);
@@ -1210,6 +1282,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               <MenuItem value="milestone">Group: Milestone</MenuItem>
             </Select>
           </FormControl>
+
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleToggleExpandAll}
+            sx={{ height: 32, fontSize: 12, textTransform: 'none', color: '#475569', borderColor: '#CBD5E1', fontWeight: 600 }}
+          >
+            {isAllExpanded ? 'Collapse All' : 'Expand All'}
+          </Button>
         </Box>
 
         {/* Right Search & Add Task Action */}

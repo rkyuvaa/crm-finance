@@ -746,6 +746,9 @@ def _format_task_out(
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
     out.is_parent = out.subtask_count > 0
+    if (out.is_parent or not out.duration_working_days) and t.start_date and t.due_date:
+        holiday_dates, weekly_off_days = _get_working_calendar(db)
+        out.duration_working_days = _count_working_days(t.start_date, t.due_date, holiday_dates, weekly_off_days)
 
     return out
 
