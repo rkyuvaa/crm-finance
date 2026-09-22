@@ -226,7 +226,7 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
         pred_label = triggering_pred.title or triggering_pred.task_number
         return {
             "has_conflict": True,
-            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} {triggering_desc or 'conflicts with'} predecessor '{pred_label}'.",
+            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} {triggering_desc or 'conflicts with'} predecessor '{pred_label}'. Recommended start date is {max_recommended_start.isoformat()}.",
             "recommended_start_date": max_recommended_start.isoformat(),
             "predecessor_task_number": triggering_pred.task_number,
             "predecessor_title": triggering_pred.title,

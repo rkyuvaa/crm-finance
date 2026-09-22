@@ -738,11 +738,8 @@ def _format_task_out(
             out.completed_subtask_count = sum(1 for st in subtasks if st.is_completed)
             out.nested_subtasks = [_format_task_out(st, db, skip_nested=False) for st in subtasks]
 
-    if batch_deps is not None:
-        out.dependency_conflict = None
-    else:
-        from app.services.scheduling_engine import check_dependency_conflict
-        out.dependency_conflict = check_dependency_conflict(db, t)
+    from app.services.scheduling_engine import check_dependency_conflict
+    out.dependency_conflict = check_dependency_conflict(db, t)
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
     out.is_parent = out.subtask_count > 0
@@ -1134,6 +1131,16 @@ def update_task(
             task.start_date = None
             task.due_date = None
             task.duration_working_days = 0
+
+    # Reject dates that conflict with predecessor dependencies unless override_dependencies is requested
+    if ("start_date" in update_dict or "due_date" in update_dict or "duration_working_days" in update_dict) and not data.override_dependencies:
+        from app.services.scheduling_engine import check_dependency_conflict
+        conflict = check_dependency_conflict(db, task)
+        if conflict and conflict.get("has_conflict"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=conflict["conflict_message"]
+            )
 
     # Parent task due date manual shift check
     if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != old_due_date:
