@@ -1090,7 +1090,9 @@ def update_task(
                 task.due_date = add_working_days(new_start, dur - 1, get_cal(db))
                 task.duration_working_days = dur
         else:
-            task.duration_working_days = None
+            task.start_date = None
+            task.due_date = None
+            task.duration_working_days = 0
     elif "due_date" in update_dict and "start_date" not in update_dict:
         # Due date manually changed
         new_due = update_dict["due_date"]
@@ -1108,7 +1110,9 @@ def update_task(
                 from app.services.calendar_service import subtract_working_days, get_working_calendar as get_cal
                 task.start_date = subtract_working_days(new_due, max(1, task.duration_working_days) - 1, get_cal(db))
         else:
-            task.duration_working_days = None
+            task.start_date = None
+            task.due_date = None
+            task.duration_working_days = 0
     elif "start_date" in update_dict and "due_date" in update_dict:
         # Both start and due date explicitly provided
         new_start = update_dict["start_date"]
@@ -1124,7 +1128,9 @@ def update_task(
             holiday_dates, weekly_off_days = _get_working_calendar(db)
             task.duration_working_days = _count_working_days(new_start, new_due, holiday_dates, weekly_off_days)
         elif not new_start and not new_due:
-            task.duration_working_days = None
+            task.start_date = None
+            task.due_date = None
+            task.duration_working_days = 0
 
     # Parent task due date manual shift check
     if "due_date" in update_dict and update_dict["due_date"] and update_dict["due_date"] != old_due_date:
