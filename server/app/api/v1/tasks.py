@@ -683,14 +683,8 @@ def _format_task_out(
 
     out.dependencies = dependencies_out
     out.is_blocked = is_blocked
-    blocked_by_items = [d for d in dependencies_out if d.direction == "BLOCKED_BY"]
-    if blocked_by_items:
-        out.start_date_locked = True
-        num_str = ", ".join(d.depends_on_task_number or d.predecessor_task_number or "" for d in blocked_by_items if d.depends_on_task_number or d.predecessor_task_number)
-        out.controlled_by_task_number = num_str or None
-    else:
-        out.start_date_locked = False
-        out.controlled_by_task_number = None
+    out.start_date_locked = False
+    out.controlled_by_task_number = None
 
     if batch_rels is not None:
         out.relationships = batch_rels
@@ -1071,26 +1065,6 @@ def update_task(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Due date year is invalid. Please enter a valid date."
         )
-    # Check if task's start date is locked by predecessor dependencies
-    pred_deps = db.query(TaskDependency).filter(TaskDependency.task_id == task.id).all()
-    has_predecessor_deps = len(pred_deps) > 0
-
-    if "start_date" in update_dict and update_dict["start_date"] != task.start_date:
-        if has_predecessor_deps:
-            blockers = []
-            for d in pred_deps:
-                if d.depends_on_task and not d.depends_on_task.is_deleted:
-                    dep_t = getattr(d.pm_dep_type, 'value', str(d.pm_dep_type or 'FS'))
-                    blockers.append(f"{d.depends_on_task.task_number} ({dep_t})")
-            pred_str = ", ".join(blockers) if blockers else "predecessor dependency"
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "START_DATE_LOCKED",
-                    "message": f"Start Date is controlled by dependency from {pred_str}. Manual editing of Start Date is not allowed while dependency exists.",
-                    "controlled_by": pred_str
-                }
-            )
 
     # Bidirectional Date / Duration logic
     if "duration_working_days" in update_dict and update_dict["duration_working_days"] is not None:

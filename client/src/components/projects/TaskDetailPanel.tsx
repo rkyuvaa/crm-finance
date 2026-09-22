@@ -1400,7 +1400,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Start Date {currentTask.start_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
+                  Start Date
                 </Typography>
                 <TextField
                   type="date"
@@ -1408,7 +1408,6 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   fullWidth
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  disabled={currentTask.start_date_locked}
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
