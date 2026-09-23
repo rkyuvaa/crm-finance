@@ -24,8 +24,6 @@ import {
   Select,
   MenuItem,
   Grid,
-  Card,
-  CardContent,
   Tooltip,
   Drawer,
   Divider,
@@ -36,7 +34,6 @@ import {
   Laptop,
   Plus,
   Search,
-  Filter,
   Download,
   Trash2,
   Edit3,
@@ -45,37 +42,15 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-  Building,
-  Layers,
-  Calendar,
-  User,
-  FileText,
-  Building2,
   DollarSign,
 } from 'lucide-react';
 import { useTableSort } from '../hooks/useTableSort';
 import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
-
-export interface RequirementItem {
-  id: string; // e.g. REQ-MAT-1 or REQ-IT-1
-  type: 'MATERIAL' | 'IT';
-  title: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  estimated_unit_cost: number;
-  total_cost: number;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'IN_PROCUREMENT' | 'FULFILLED' | 'REJECTED';
-  department: string;
-  requested_by: string;
-  required_by_date: string;
-  justification: string;
-  specifications: string;
-  vendor_suggestion?: string;
-  created_at: string;
-}
+import { useAppSelector } from '../app/hooks';
+import { RequirementItem } from '@/types/requirements';
+import ITRequirementFormModal from '@/components/requirements/ITRequirementFormModal';
+import ITRequirementDetailDrawer from '@/components/requirements/ITRequirementDetailDrawer';
 
 const LOCAL_STORAGE_KEY = 'crm_requirements_items_data';
 
@@ -83,8 +58,9 @@ export default function RequirementsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const loggedUser = useAppSelector((state) => state.auth.user);
 
-  // Determine active tab from URL path
+  // Active tab check
   const isIT = location.pathname.includes('/requirements/it');
   const reqType: 'MATERIAL' | 'IT' = isIT ? 'IT' : 'MATERIAL';
 
@@ -121,14 +97,14 @@ export default function RequirementsPage() {
   const [editingItem, setEditingItem] = useState<RequirementItem | null>(null);
   const [selectedDetailItem, setSelectedDetailItem] = useState<RequirementItem | null>(null);
 
-  // Form State
+  // Legacy Material Form State
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState('');
   const [formQuantity, setFormQuantity] = useState<number>(1);
   const [formUnit, setFormUnit] = useState('Pcs');
   const [formUnitCost, setFormUnitCost] = useState<number>(0);
   const [formPriority, setFormPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('MEDIUM');
-  const [formStatus, setFormStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | 'IN_PROCUREMENT' | 'FULFILLED' | 'REJECTED'>('PENDING');
+  const [formStatus, setFormStatus] = useState<string>('PENDING');
   const [formDepartment, setFormDepartment] = useState('Operations');
   const [formRequestedBy, setFormRequestedBy] = useState('Admin User');
   const [formRequiredByDate, setFormRequiredByDate] = useState(new Date().toISOString().split('T')[0]);
@@ -136,33 +112,29 @@ export default function RequirementsPage() {
   const [formSpecifications, setFormSpecifications] = useState('');
   const [formVendorSuggestion, setFormVendorSuggestion] = useState('');
 
-  // Categories list based on active requirement type
+  // Categories list
   const materialCategories = ['Raw Materials', 'Consumables', 'Safety Equipment', 'Tools & Machinery', 'Office Supplies', 'Packaging'];
-  const itCategories = ['Hardware & Laptops', 'Software & SaaS Licenses', 'Cloud Infrastructure', 'Network Equipment', 'Peripherals & Monitors', 'Security & Storage'];
-
+  const itCategories = ['New Feature / Module', 'Enhancement / Change', 'Bug Fix', 'Hardware / Device', 'Access / Permission', 'Other'];
   const categoryOptions = reqType === 'IT' ? itCategories : materialCategories;
 
-  // Filter items matching active type & filter criteria
+  // Filter items matching active type & criteria
   const typeFiltered = useMemo(() => {
     return requirements.filter((item) => item.type === reqType);
   }, [requirements, reqType]);
 
   const filteredItems = useMemo(() => {
     return typeFiltered.filter((item) => {
-      // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = item.title.toLowerCase().includes(q);
         const matchId = item.id.toLowerCase().includes(q);
         const matchDept = item.department.toLowerCase().includes(q);
-        const matchCat = item.category.toLowerCase().includes(q);
-        if (!matchTitle && !matchId && !matchDept && !matchCat) return false;
+        const matchCat = (item.category || '').toLowerCase().includes(q);
+        const matchReq = (item.requested_by || '').toLowerCase().includes(q);
+        if (!matchTitle && !matchId && !matchDept && !matchCat && !matchReq) return false;
       }
-      // Status
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
-      // Priority
       if (priorityFilter !== 'ALL' && item.priority !== priorityFilter) return false;
-      // Department
       if (departmentFilter !== 'ALL' && item.department !== departmentFilter) return false;
 
       return true;
@@ -174,23 +146,23 @@ export default function RequirementsPage() {
 
   // Statistics KPIs
   const totalCount = typeFiltered.length;
-  const pendingCount = typeFiltered.filter((i) => i.status === 'PENDING' || i.status === 'DRAFT').length;
-  const approvedCount = typeFiltered.filter((i) => i.status === 'APPROVED' || i.status === 'IN_PROCUREMENT').length;
-  const fulfilledCount = typeFiltered.filter((i) => i.status === 'FULFILLED').length;
+  const pendingCount = typeFiltered.filter((i) => i.status === 'PENDING' || i.status === 'DRAFT' || i.status === 'SUBMITTED' || i.status === 'MANAGER_APPROVAL').length;
+  const approvedCount = typeFiltered.filter((i) => i.status === 'APPROVED' || i.status === 'IN_PROCUREMENT' || i.status === 'IT_PROCESSING' || i.status === 'IT_MANAGER_REVIEW' || i.status === 'DEPT_HEAD_APPROVAL').length;
+  const fulfilledCount = typeFiltered.filter((i) => i.status === 'FULFILLED' || i.status === 'COMPLETED').length;
   const totalCostEstimate = typeFiltered.reduce((acc, curr) => acc + (curr.total_cost || 0), 0);
 
-  // Form Reset
+  // Form Reset for Material
   const resetForm = () => {
     setEditingItem(null);
     setFormTitle('');
     setFormCategory(categoryOptions[0] || '');
     setFormQuantity(1);
-    setFormUnit(reqType === 'IT' ? 'Units' : 'Pcs');
+    setFormUnit('Pcs');
     setFormUnitCost(0);
     setFormPriority('MEDIUM');
     setFormStatus('PENDING');
     setFormDepartment('Operations');
-    setFormRequestedBy('Admin User');
+    setFormRequestedBy(loggedUser?.full_name || 'Admin User');
     setFormRequiredByDate(new Date().toISOString().split('T')[0]);
     setFormJustification('');
     setFormSpecifications('');
@@ -204,23 +176,79 @@ export default function RequirementsPage() {
 
   const handleOpenEdit = (item: RequirementItem) => {
     setEditingItem(item);
-    setFormTitle(item.title);
-    setFormCategory(item.category);
-    setFormQuantity(item.quantity);
-    setFormUnit(item.unit);
-    setFormUnitCost(item.estimated_unit_cost);
-    setFormPriority(item.priority);
-    setFormStatus(item.status);
-    setFormDepartment(item.department);
-    setFormRequestedBy(item.requested_by);
-    setFormRequiredByDate(item.required_by_date);
-    setFormJustification(item.justification);
-    setFormSpecifications(item.specifications);
-    setFormVendorSuggestion(item.vendor_suggestion || '');
+    if (!isIT) {
+      setFormTitle(item.title);
+      setFormCategory(item.category);
+      setFormQuantity(item.quantity);
+      setFormUnit(item.unit);
+      setFormUnitCost(item.estimated_unit_cost);
+      setFormPriority(item.priority);
+      setFormStatus(item.status);
+      setFormDepartment(item.department);
+      setFormRequestedBy(item.requested_by);
+      setFormRequiredByDate(item.required_by_date);
+      setFormJustification(item.justification);
+      setFormSpecifications(item.specifications);
+      setFormVendorSuggestion(item.vendor_suggestion || '');
+    }
     setIsCreateOpen(true);
   };
 
-  const handleSaveRequirement = (e: React.FormEvent) => {
+  // Save IT Requirement from modal
+  const handleSaveITRequirement = (payload: Partial<RequirementItem>, isDraft: boolean) => {
+    if (editingItem) {
+      setRequirements((prev) =>
+        prev.map((r) =>
+          r.id === editingItem.id
+            ? {
+                ...r,
+                ...payload,
+                status: isDraft ? 'DRAFT' : payload.status || r.status,
+              }
+            : r,
+        ),
+      );
+      showSuccess(`Updated ${editingItem.id} successfully`);
+    } else {
+      const prefix = 'REQ-IT';
+      const maxId = requirements.reduce((max, r) => {
+        if (!r.id.startsWith('REQ-IT')) return max;
+        const parts = r.id.split('-');
+        const num = parseInt(parts[parts.length - 1], 10);
+        return !isNaN(num) && num > max ? num : max;
+      }, 0);
+
+      const newId = `${prefix}-${maxId + 1}`;
+      const newItem: RequirementItem = {
+        id: newId,
+        type: 'IT',
+        title: payload.title || 'Untitled Request',
+        category: payload.category || 'New Feature / Module',
+        quantity: 1,
+        unit: 'System Request',
+        estimated_unit_cost: 0,
+        total_cost: 0,
+        priority: payload.priority || 'MEDIUM',
+        status: isDraft ? 'DRAFT' : payload.status || 'SUBMITTED',
+        department: payload.department || 'Operations',
+        requested_by: payload.requested_by || loggedUser?.full_name || 'Admin User',
+        required_by_date: payload.required_by_date || new Date().toISOString().split('T')[0],
+        justification: payload.justification || '',
+        specifications: payload.specifications || '',
+        created_at: new Date().toISOString(),
+        ...payload,
+      };
+
+      setRequirements((prev) => [newItem, ...prev]);
+      showSuccess(`${isDraft ? 'Saved draft' : 'Created request'} ${newId} successfully`);
+    }
+
+    setIsCreateOpen(false);
+    setEditingItem(null);
+  };
+
+  // Save Material Requirement from standard dialog
+  const handleSaveMaterialRequirement = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
       showError('Please enter a requirement title');
@@ -230,7 +258,6 @@ export default function RequirementsPage() {
     const calculatedTotal = formQuantity * formUnitCost;
 
     if (editingItem) {
-      // Update existing item
       setRequirements((prev) =>
         prev.map((r) =>
           r.id === editingItem.id
@@ -256,9 +283,9 @@ export default function RequirementsPage() {
       );
       showSuccess(`Updated ${editingItem.id} successfully`);
     } else {
-      // Create new requirement
-      const prefix = reqType === 'IT' ? 'REQ-IT' : 'REQ-MAT';
+      const prefix = 'REQ-MAT';
       const maxId = requirements.reduce((max, r) => {
+        if (!r.id.startsWith('REQ-MAT')) return max;
         const parts = r.id.split('-');
         const num = parseInt(parts[parts.length - 1], 10);
         return !isNaN(num) && num > max ? num : max;
@@ -267,7 +294,7 @@ export default function RequirementsPage() {
       const newId = `${prefix}-${maxId + 1}`;
       const newItem: RequirementItem = {
         id: newId,
-        type: reqType,
+        type: 'MATERIAL',
         title: formTitle.trim(),
         category: formCategory || categoryOptions[0],
         quantity: Number(formQuantity),
@@ -303,28 +330,71 @@ export default function RequirementsPage() {
     }
   };
 
+  const handleUpdateStatus = (id: string, newStatus: string, rejectionReason?: string) => {
+    setRequirements((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: newStatus,
+              rejection_reason: rejectionReason || r.rejection_reason,
+            }
+          : r,
+      ),
+    );
+    if (selectedDetailItem?.id === id) {
+      setSelectedDetailItem((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: newStatus,
+              rejection_reason: rejectionReason || prev.rejection_reason,
+            }
+          : null,
+      );
+    }
+    showSuccess(`Updated ${id} status to ${newStatus.replace('_', ' ')}`);
+  };
+
   const handleExportCSV = () => {
     if (filteredItems.length === 0) {
       showError('No items available to export');
       return;
     }
 
-    const headers = ['ID', 'Type', 'Title', 'Category', 'Quantity', 'Unit', 'Unit Cost', 'Total Cost', 'Priority', 'Status', 'Department', 'Requested By', 'Required By Date'];
-    const rows = filteredItems.map((i) => [
-      i.id,
-      i.type,
-      `"${i.title.replace(/"/g, '""')}"`,
-      `"${i.category}"`,
-      i.quantity,
-      i.unit,
-      i.estimated_unit_cost,
-      i.total_cost,
-      i.priority,
-      i.status,
-      i.department,
-      `"${i.requested_by}"`,
-      i.required_by_date,
-    ]);
+    const headers = isIT
+      ? ['Request ID', 'Title', 'Type', 'Department', 'Requested By', 'Urgency', 'Preferred Go-Live Date', 'Status', 'Created At']
+      : ['ID', 'Type', 'Title', 'Category', 'Quantity', 'Unit', 'Unit Cost', 'Total Cost', 'Priority', 'Status', 'Department', 'Requested By', 'Required By Date'];
+
+    const rows = filteredItems.map((i) =>
+      isIT
+        ? [
+            i.id,
+            `"${i.title.replace(/"/g, '""')}"`,
+            `"${i.requirement_type || i.category}"`,
+            `"${i.department}"`,
+            `"${i.requested_by}"`,
+            `"${i.urgency || i.priority}"`,
+            i.preferred_go_live_date || i.required_by_date,
+            i.status,
+            i.created_at,
+          ]
+        : [
+            i.id,
+            i.type,
+            `"${i.title.replace(/"/g, '""')}"`,
+            `"${i.category}"`,
+            i.quantity,
+            i.unit,
+            i.estimated_unit_cost,
+            i.total_cost,
+            i.priority,
+            i.status,
+            i.department,
+            `"${i.requested_by}"`,
+            i.required_by_date,
+          ],
+    );
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -355,11 +425,20 @@ export default function RequirementsPage() {
   const getStatusChip = (status: string) => {
     switch (status) {
       case 'FULFILLED':
-        return <Chip label="FULFILLED" size="small" icon={<CheckCircle2 size={12} />} sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'COMPLETED':
+        return <Chip label="COMPLETED" size="small" icon={<CheckCircle2 size={12} />} sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700, fontSize: '0.68rem' }} />;
       case 'APPROVED':
         return <Chip label="APPROVED" size="small" sx={{ bgcolor: '#DBEAFE', color: '#1D4ED8', fontWeight: 700, fontSize: '0.68rem' }} />;
-      case 'IN_PROCUREMENT':
-        return <Chip label="IN PROCURE" size="small" icon={<Clock size={12} />} sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'SUBMITTED':
+        return <Chip label="SUBMITTED" size="small" icon={<Clock size={12} />} sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'MANAGER_APPROVAL':
+        return <Chip label="MANAGER APPROVAL" size="small" icon={<Clock size={12} />} sx={{ bgcolor: '#DBEAFE', color: '#1D4ED8', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'IT_MANAGER_REVIEW':
+        return <Chip label="IT REVIEW" size="small" icon={<Clock size={12} />} sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'DEPT_HEAD_APPROVAL':
+        return <Chip label="DEPT APPROVAL" size="small" icon={<Clock size={12} />} sx={{ bgcolor: '#F3E8FF', color: '#7E22CE', fontWeight: 700, fontSize: '0.68rem' }} />;
+      case 'IT_PROCESSING':
+        return <Chip label="IT PROCESSING" size="small" icon={<Laptop size={12} />} sx={{ bgcolor: '#CCFBF1', color: '#0F766E', fontWeight: 700, fontSize: '0.68rem' }} />;
       case 'REJECTED':
         return <Chip label="REJECTED" size="small" icon={<XCircle size={12} />} sx={{ bgcolor: '#FEE2E2', color: '#B91C1C', fontWeight: 700, fontSize: '0.68rem' }} />;
       case 'DRAFT':
@@ -431,7 +510,7 @@ export default function RequirementsPage() {
             onClick={handleOpenCreate}
             sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, borderRadius: '8px', textTransform: 'none', fontWeight: 600, px: 2 }}
           >
-            New Requisition
+            {isIT ? 'New Request' : 'New Requisition'}
           </Button>
         </Box>
       </Box>
@@ -442,7 +521,7 @@ export default function RequirementsPage() {
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, fontSize: 13 }}>
-                Total Requisitions
+                {isIT ? 'Total Requests' : 'Total Requisitions'}
               </Typography>
               <Box sx={{ p: 0.8, borderRadius: '8px', bgcolor: '#F1F5F9', color: '#475569' }}>
                 <ClipboardList size={18} />
@@ -474,7 +553,7 @@ export default function RequirementsPage() {
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, fontSize: 13 }}>
-                Approved / Procuring
+                {isIT ? 'In Processing / Review' : 'Approved / Procuring'}
               </Typography>
               <Box sx={{ p: 0.8, borderRadius: '8px', bgcolor: '#DBEAFE', color: '#1D4ED8' }}>
                 <CheckCircle2 size={18} />
@@ -490,14 +569,14 @@ export default function RequirementsPage() {
           <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 600, fontSize: 13 }}>
-                Est. Total Investment
+                {isIT ? 'Completed Requests' : 'Est. Total Investment'}
               </Typography>
               <Box sx={{ p: 0.8, borderRadius: '8px', bgcolor: '#DCFCE7', color: '#15803D' }}>
-                <DollarSign size={18} />
+                {isIT ? <CheckCircle2 size={18} /> : <DollarSign size={18} />}
               </Box>
             </Box>
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#15803D' }}>
-              ₹{totalCostEstimate.toLocaleString()}
+              {isIT ? fulfilledCount : `₹${totalCostEstimate.toLocaleString()}`}
             </Typography>
           </Paper>
         </Grid>
@@ -510,7 +589,7 @@ export default function RequirementsPage() {
             <TextField
               fullWidth
               size="small"
-              placeholder={`Search ${reqType.toLowerCase()} requisitions by Title, ID, Department...`}
+              placeholder={`Search ${reqType.toLowerCase()} requests by Title, ID, Department...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{
@@ -529,10 +608,12 @@ export default function RequirementsPage() {
               <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
                 <MenuItem value="ALL">All Statuses</MenuItem>
                 <MenuItem value="DRAFT">Draft</MenuItem>
-                <MenuItem value="PENDING">Pending</MenuItem>
-                <MenuItem value="APPROVED">Approved</MenuItem>
-                <MenuItem value="IN_PROCUREMENT">In Procurement</MenuItem>
-                <MenuItem value="FULFILLED">Fulfilled</MenuItem>
+                <MenuItem value="SUBMITTED">Submitted</MenuItem>
+                <MenuItem value="MANAGER_APPROVAL">Manager Approval</MenuItem>
+                <MenuItem value="IT_MANAGER_REVIEW">IT Manager Review</MenuItem>
+                <MenuItem value="DEPT_HEAD_APPROVAL">Dept Head Approval</MenuItem>
+                <MenuItem value="IT_PROCESSING">IT Processing</MenuItem>
+                <MenuItem value="COMPLETED">Completed</MenuItem>
                 <MenuItem value="REJECTED">Rejected</MenuItem>
               </Select>
             </FormControl>
@@ -540,13 +621,13 @@ export default function RequirementsPage() {
 
           <Grid item xs={12} sm={4} md={2.5}>
             <FormControl fullWidth size="small">
-              <InputLabel>Priority</InputLabel>
+              <InputLabel>{isIT ? 'Urgency / Priority' : 'Priority'}</InputLabel>
               <Select value={priorityFilter} label="Priority" onChange={(e) => setPriorityFilter(e.target.value)}>
                 <MenuItem value="ALL">All Priorities</MenuItem>
-                <MenuItem value="CRITICAL">Critical</MenuItem>
-                <MenuItem value="HIGH">High</MenuItem>
-                <MenuItem value="MEDIUM">Medium</MenuItem>
-                <MenuItem value="LOW">Low</MenuItem>
+                <MenuItem value="CRITICAL">ASAP / Critical</MenuItem>
+                <MenuItem value="HIGH">High / Within 2 Weeks</MenuItem>
+                <MenuItem value="MEDIUM">Medium / Within 1 Month</MenuItem>
+                <MenuItem value="LOW">Low / Can Wait</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -573,14 +654,14 @@ export default function RequirementsPage() {
         <Table size="small">
           <TableHead sx={{ bgcolor: 'background.default' }}>
             <TableRow>
-              <ErpSortHeaderCell variant="mui" field="id" label="Requisition ID" sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
+              <ErpSortHeaderCell variant="mui" field="id" label={isIT ? 'Request ID' : 'Requisition ID'} sortState={sortState} onSort={handleSort} sx={{ py: 1.5 }} />
               <ErpSortHeaderCell variant="mui" field="title" label="Requirement Title" sortState={sortState} onSort={handleSort} />
-              <ErpSortHeaderCell variant="mui" field="category" label="Category" sortState={sortState} onSort={handleSort} />
-              <ErpSortHeaderCell variant="mui" field="quantity" label="Qty & Unit" sortState={sortState} onSort={handleSort} />
-              <ErpSortHeaderCell variant="mui" field="total_cost" label="Est. Cost (₹)" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="category" label={isIT ? 'Requirement Type' : 'Category'} sortState={sortState} onSort={handleSort} />
+              {!isIT && <ErpSortHeaderCell variant="mui" field="quantity" label="Qty & Unit" sortState={sortState} onSort={handleSort} />}
+              {!isIT && <ErpSortHeaderCell variant="mui" field="total_cost" label="Est. Cost (₹)" sortState={sortState} onSort={handleSort} />}
               <ErpSortHeaderCell variant="mui" field="department" label="Department" sortState={sortState} onSort={handleSort} />
-              <ErpSortHeaderCell variant="mui" field="required_by_date" label="Required By" sortState={sortState} onSort={handleSort} />
-              <ErpSortHeaderCell variant="mui" field="priority" label="Priority" sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="required_by_date" label={isIT ? 'Preferred Go-Live' : 'Required By'} sortState={sortState} onSort={handleSort} />
+              <ErpSortHeaderCell variant="mui" field="priority" label={isIT ? 'Urgency' : 'Priority'} sortState={sortState} onSort={handleSort} />
               <ErpSortHeaderCell variant="mui" field="status" label="Status" sortState={sortState} onSort={handleSort} />
               <ErpSortHeaderCell variant="mui" label="Actions" align="right" sortable={false} />
             </TableRow>
@@ -593,17 +674,21 @@ export default function RequirementsPage() {
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>{item.title}</TableCell>
                 <TableCell>
-                  <Chip label={item.category} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                  <Chip label={item.requirement_type || item.category} size="small" variant="outlined" sx={{ height: 22, fontSize: '0.7rem' }} />
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {item.quantity} {item.unit}
-                </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>
-                  ₹{(item.total_cost || 0).toLocaleString()}
-                </TableCell>
+                {!isIT && (
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {item.quantity} {item.unit}
+                  </TableCell>
+                )}
+                {!isIT && (
+                  <TableCell sx={{ fontWeight: 700 }}>
+                    ₹{(item.total_cost || 0).toLocaleString()}
+                  </TableCell>
+                )}
                 <TableCell>{item.department}</TableCell>
-                <TableCell sx={{ fontSize: '0.8rem' }}>{item.required_by_date}</TableCell>
-                <TableCell>{getPriorityChip(item.priority)}</TableCell>
+                <TableCell sx={{ fontSize: '0.8rem' }}>{item.preferred_go_live_date || item.required_by_date}</TableCell>
+                <TableCell>{item.urgency ? <Chip label={item.urgency} size="small" variant="outlined" /> : getPriorityChip(item.priority)}</TableCell>
                 <TableCell>{getStatusChip(item.status)}</TableCell>
                 <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="View Details">
@@ -637,7 +722,7 @@ export default function RequirementsPage() {
                       No {reqType === 'IT' ? 'IT' : 'Material'} Requisitions Found
                     </Typography>
                     <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 420 }}>
-                      There are no {reqType.toLowerCase()} requirements raised matching your filters. Click below to add your first requisition.
+                      There are no {reqType.toLowerCase()} requirements raised matching your filters. Click below to add your first request.
                     </Typography>
                     <Button
                       variant="contained"
@@ -645,7 +730,7 @@ export default function RequirementsPage() {
                       onClick={handleOpenCreate}
                       sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, mt: 1, textTransform: 'none', fontWeight: 600 }}
                     >
-                      Create Requisition
+                      {reqType === 'IT' ? 'Create IT Request' : 'Create Requisition'}
                     </Button>
                   </Box>
                 </TableCell>
@@ -655,340 +740,285 @@ export default function RequirementsPage() {
         </Table>
       </TableContainer>
 
-      {/* ── Create / Edit Requisition Modal ─────────────────────────────────── */}
-      <Dialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} maxWidth="md" fullWidth>
-        <form onSubmit={handleSaveRequirement}>
-          <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-            {reqType === 'IT' ? <Laptop size={20} color="#04552B" /> : <Package size={20} color="#04552B" />}
-            {editingItem ? `Edit Requisition (${editingItem.id})` : `New ${reqType === 'IT' ? 'IT' : 'Material'} Requirement Requisition`}
-          </DialogTitle>
-          <DialogContent dividers>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={8}>
-                <TextField
-                  fullWidth
-                  required
-                  size="small"
-                  label="Requirement Title / Item Name"
-                  placeholder={reqType === 'IT' ? 'e.g. Developer Laptops i7 16GB' : 'e.g. Safety Helmets & Industrial Gloves'}
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                />
-              </Grid>
+      {/* ── IT Requirement Request Modal (When active tab is IT) ───────────── */}
+      {isIT && (
+        <ITRequirementFormModal
+          open={isCreateOpen}
+          onClose={() => {
+            setIsCreateOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSaveITRequirement}
+          editingItem={editingItem}
+          currentUser={{
+            name: loggedUser?.full_name || 'Admin User',
+            designation: loggedUser?.role || 'Manager',
+            department: 'Operations',
+          }}
+        />
+      )}
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Category</InputLabel>
-                  <Select value={formCategory} label="Category" onChange={(e) => setFormCategory(e.target.value)}>
-                    {categoryOptions.map((cat) => (
-                      <MenuItem key={cat} value={cat}>
-                        {cat}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+      {/* ── IT Requirement Detail Drawer (When active tab is IT) ──────────── */}
+      {isIT && (
+        <ITRequirementDetailDrawer
+          item={selectedDetailItem}
+          open={Boolean(selectedDetailItem)}
+          onClose={() => setSelectedDetailItem(null)}
+          onEdit={handleOpenEdit}
+          onDelete={handleDeleteItem}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      )}
 
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  required
-                  type="number"
-                  size="small"
-                  label="Quantity"
-                  inputProps={{ min: 1 }}
-                  value={formQuantity}
-                  onChange={(e) => setFormQuantity(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                />
-              </Grid>
+      {/* ── Legacy Material Requirement Modal (When active tab is Material) ── */}
+      {!isIT && (
+        <Dialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} maxWidth="md" fullWidth>
+          <form onSubmit={handleSaveMaterialRequirement}>
+            <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Package size={20} color="#04552B" />
+              {editingItem ? `Edit Material Requisition (${editingItem.id})` : 'New Material Requirement Requisition'}
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={8}>
+                  <TextField
+                    fullWidth
+                    required
+                    size="small"
+                    label="Requirement Title / Item Name"
+                    placeholder="e.g. Safety Helmets & Industrial Gloves"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Unit of Measure"
-                  placeholder="e.g. Pcs, Licenses, Kg, Sets"
-                  value={formUnit}
-                  onChange={(e) => setFormUnit(e.target.value)}
-                />
-              </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Category</InputLabel>
+                    <Select value={formCategory} label="Category" onChange={(e) => setFormCategory(e.target.value)}>
+                      {categoryOptions.map((cat) => (
+                        <MenuItem key={cat} value={cat}>
+                          {cat}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  size="small"
-                  label="Est. Unit Cost (₹)"
-                  inputProps={{ min: 0 }}
-                  value={formUnitCost}
-                  onChange={(e) => setFormUnitCost(Math.max(0, parseFloat(e.target.value || '0')))}
-                />
-              </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    required
+                    type="number"
+                    size="small"
+                    label="Quantity"
+                    inputProps={{ min: 1 }}
+                    value={formQuantity}
+                    onChange={(e) => setFormQuantity(Math.max(1, parseInt(e.target.value || '1', 10)))}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Total Est. Cost (₹)"
-                  value={`₹${(formQuantity * formUnitCost).toLocaleString()}`}
-                  InputProps={{ readOnly: true }}
-                  sx={{ bgcolor: 'action.hover' }}
-                />
-              </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Unit of Measure"
+                    placeholder="e.g. Pcs, Kg, Sets"
+                    value={formUnit}
+                    onChange={(e) => setFormUnit(e.target.value)}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Priority</InputLabel>
-                  <Select value={formPriority} label="Priority" onChange={(e) => setFormPriority(e.target.value as any)}>
-                    <MenuItem value="LOW">Low</MenuItem>
-                    <MenuItem value="MEDIUM">Medium</MenuItem>
-                    <MenuItem value="HIGH">High</MenuItem>
-                    <MenuItem value="CRITICAL">Critical</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    size="small"
+                    label="Est. Unit Cost (₹)"
+                    inputProps={{ min: 0 }}
+                    value={formUnitCost}
+                    onChange={(e) => setFormUnitCost(Math.max(0, parseFloat(e.target.value || '0')))}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Status</InputLabel>
-                  <Select value={formStatus} label="Status" onChange={(e) => setFormStatus(e.target.value as any)}>
-                    <MenuItem value="DRAFT">Draft</MenuItem>
-                    <MenuItem value="PENDING">Pending Approval</MenuItem>
-                    <MenuItem value="APPROVED">Approved</MenuItem>
-                    <MenuItem value="IN_PROCUREMENT">In Procurement</MenuItem>
-                    <MenuItem value="FULFILLED">Fulfilled</MenuItem>
-                    <MenuItem value="REJECTED">Rejected</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Total Est. Cost (₹)"
+                    value={`₹${(formQuantity * formUnitCost).toLocaleString()}`}
+                    InputProps={{ readOnly: true }}
+                    sx={{ bgcolor: 'action.hover' }}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  size="small"
-                  label="Required By Date"
-                  InputLabelProps={{ shrink: true }}
-                  value={formRequiredByDate}
-                  onChange={(e) => setFormRequiredByDate(e.target.value)}
-                />
-              </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Priority</InputLabel>
+                    <Select value={formPriority} label="Priority" onChange={(e) => setFormPriority(e.target.value as any)}>
+                      <MenuItem value="LOW">Low</MenuItem>
+                      <MenuItem value="MEDIUM">Medium</MenuItem>
+                      <MenuItem value="HIGH">High</MenuItem>
+                      <MenuItem value="CRITICAL">Critical</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Department</InputLabel>
-                  <Select value={formDepartment} label="Department" onChange={(e) => setFormDepartment(e.target.value)}>
-                    <MenuItem value="Operations">Operations</MenuItem>
-                    <MenuItem value="IT">IT & Infrastructure</MenuItem>
-                    <MenuItem value="Engineering">Engineering</MenuItem>
-                    <MenuItem value="Finance">Finance</MenuItem>
-                    <MenuItem value="HR">HR & Admin</MenuItem>
-                    <MenuItem value="Sales">Sales & Marketing</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Status</InputLabel>
+                    <Select value={formStatus} label="Status" onChange={(e) => setFormStatus(e.target.value as any)}>
+                      <MenuItem value="DRAFT">Draft</MenuItem>
+                      <MenuItem value="PENDING">Pending Approval</MenuItem>
+                      <MenuItem value="APPROVED">Approved</MenuItem>
+                      <MenuItem value="IN_PROCUREMENT">In Procurement</MenuItem>
+                      <MenuItem value="FULFILLED">Fulfilled</MenuItem>
+                      <MenuItem value="REJECTED">Rejected</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Requested By"
-                  value={formRequestedBy}
-                  onChange={(e) => setFormRequestedBy(e.target.value)}
-                />
-              </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    size="small"
+                    label="Required By Date"
+                    InputLabelProps={{ shrink: true }}
+                    value={formRequiredByDate}
+                    onChange={(e) => setFormRequiredByDate(e.target.value)}
+                  />
+                </Grid>
 
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  size="small"
-                  label="Business Justification / Reason"
-                  placeholder="Explain why this requirement is needed..."
-                  value={formJustification}
-                  onChange={(e) => setFormJustification(e.target.value)}
-                />
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Department</InputLabel>
+                    <Select value={formDepartment} label="Department" onChange={(e) => setFormDepartment(e.target.value)}>
+                      <MenuItem value="Operations">Operations</MenuItem>
+                      <MenuItem value="IT">IT & Infrastructure</MenuItem>
+                      <MenuItem value="Engineering">Engineering</MenuItem>
+                      <MenuItem value="Finance">Finance</MenuItem>
+                      <MenuItem value="HR">HR & Admin</MenuItem>
+                      <MenuItem value="Sales">Sales & Marketing</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  size="small"
-                  label="Technical Specifications / Part Numbers"
-                  placeholder="e.g. Model, specs, dimensions, brand preferences..."
-                  value={formSpecifications}
-                  onChange={(e) => setFormSpecifications(e.target.value)}
-                />
-              </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Requested By"
+                    value={formRequestedBy}
+                    onChange={(e) => setFormRequestedBy(e.target.value)}
+                  />
+                </Grid>
 
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  size="small"
-                  label="Vendor / Supplier Suggestion (Optional)"
-                  placeholder="e.g. Preferred supplier or vendor contact..."
-                  value={formVendorSuggestion}
-                  onChange={(e) => setFormVendorSuggestion(e.target.value)}
-                />
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    size="small"
+                    label="Business Justification / Reason"
+                    placeholder="Explain why this material requirement is needed..."
+                    value={formJustification}
+                    onChange={(e) => setFormJustification(e.target.value)}
+                  />
+                </Grid>
               </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, py: 2 }}>
-            <Button onClick={() => setIsCreateOpen(false)} sx={{ color: 'text.secondary' }}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained" sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, px: 3 }}>
-              {editingItem ? 'Save Changes' : 'Submit Requisition'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2 }}>
+              <Button onClick={() => setIsCreateOpen(false)} sx={{ color: 'text.secondary' }}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, px: 3 }}>
+                {editingItem ? 'Save Changes' : 'Submit Requisition'}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+      )}
 
-      {/* ── Requisition Detail Drawer ────────────────────────────────────────── */}
-      <Drawer anchor="right" open={Boolean(selectedDetailItem)} onClose={() => setSelectedDetailItem(null)} PaperProps={{ sx: { width: { xs: '100%', sm: 520 }, p: 3 } }}>
-        {selectedDetailItem && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-              <Box>
-                <Typography variant="overline" sx={{ fontWeight: 800, color: '#04552B', letterSpacing: 1 }}>
-                  {selectedDetailItem.id} • {selectedDetailItem.type} REQUISITION
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>
-                  {selectedDetailItem.title}
-                </Typography>
-              </Box>
-              <IconButton onClick={() => setSelectedDetailItem(null)} size="small">
-                <XCircle size={20} />
-              </IconButton>
-            </Box>
-
-            <Divider sx={{ mb: 2.5 }} />
-
-            <Box sx={{ display: 'flex', gap: 1, mb: 2.5 }}>
-              {getStatusChip(selectedDetailItem.status)}
-              {getPriorityChip(selectedDetailItem.priority)}
-              <Chip label={selectedDetailItem.category} size="small" variant="outlined" />
-            </Box>
-
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Quantity
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {selectedDetailItem.quantity} {selectedDetailItem.unit}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Est. Total Cost
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#15803D' }}>
-                  ₹{(selectedDetailItem.total_cost || 0).toLocaleString()}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Department
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {selectedDetailItem.department}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Requested By
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {selectedDetailItem.requested_by}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Required By Date
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {selectedDetailItem.required_by_date}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="textSecondary">
-                  Created At
-                </Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {new Date(selectedDetailItem.created_at).toLocaleDateString()}
-                </Typography>
-              </Grid>
-            </Grid>
-
-            {selectedDetailItem.justification && (
-              <Box sx={{ mb: 2.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Justification
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: '8px' }}>
-                  <Typography variant="body2">{selectedDetailItem.justification}</Typography>
-                </Paper>
-              </Box>
-            )}
-
-            {selectedDetailItem.specifications && (
-              <Box sx={{ mb: 2.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Technical Specifications
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: '8px' }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                    {selectedDetailItem.specifications}
+      {/* ── Legacy Material Detail Drawer (When active tab is Material) ────── */}
+      {!isIT && (
+        <Drawer anchor="right" open={Boolean(selectedDetailItem)} onClose={() => setSelectedDetailItem(null)} PaperProps={{ sx: { width: { xs: '100%', sm: 520 }, p: 3 } }}>
+          {selectedDetailItem && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box>
+                  <Typography variant="overline" sx={{ fontWeight: 800, color: '#04552B', letterSpacing: 1 }}>
+                    {selectedDetailItem.id} • MATERIAL REQUISITION
                   </Typography>
-                </Paper>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>
+                    {selectedDetailItem.title}
+                  </Typography>
+                </Box>
+                <IconButton onClick={() => setSelectedDetailItem(null)} size="small">
+                  <XCircle size={20} />
+                </IconButton>
               </Box>
-            )}
 
-            {selectedDetailItem.vendor_suggestion && (
-              <Box sx={{ mb: 2.5 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Vendor Suggestion
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: '8px' }}>
-                  <Typography variant="body2">{selectedDetailItem.vendor_suggestion}</Typography>
-                </Paper>
+              <Divider sx={{ mb: 2.5 }} />
+
+              <Box sx={{ display: 'flex', gap: 1, mb: 2.5 }}>
+                {getStatusChip(selectedDetailItem.status)}
+                {getPriorityChip(selectedDetailItem.priority)}
+                <Chip label={selectedDetailItem.category} size="small" variant="outlined" />
               </Box>
-            )}
 
-            <Box sx={{ mt: 'auto', pt: 2, display: 'flex', gap: 1.5 }}>
-              <Button
-                variant="outlined"
-                fullWidth
-                startIcon={<Edit3 size={16} />}
-                onClick={() => {
-                  const item = selectedDetailItem;
-                  setSelectedDetailItem(null);
-                  handleOpenEdit(item);
-                }}
-                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-              >
-                Edit Requisition
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                fullWidth
-                startIcon={<Trash2 size={16} />}
-                onClick={() => handleDeleteItem(selectedDetailItem.id)}
-                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
-              >
-                Delete
-              </Button>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Quantity</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {selectedDetailItem.quantity} {selectedDetailItem.unit}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Est. Total Cost</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#15803D' }}>
+                    ₹{(selectedDetailItem.total_cost || 0).toLocaleString()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Department</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{selectedDetailItem.department}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Requested By</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{selectedDetailItem.requested_by}</Typography>
+                </Grid>
+              </Grid>
+
+              <Box sx={{ mt: 'auto', pt: 2, display: 'flex', gap: 1.5 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<Edit3 size={16} />}
+                  onClick={() => {
+                    const item = selectedDetailItem;
+                    setSelectedDetailItem(null);
+                    handleOpenEdit(item);
+                  }}
+                  sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                >
+                  Edit Requisition
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  fullWidth
+                  startIcon={<Trash2 size={16} />}
+                  onClick={() => handleDeleteItem(selectedDetailItem.id)}
+                  sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                >
+                  Delete
+                </Button>
+              </Box>
             </Box>
-          </Box>
-        )}
-      </Drawer>
+          )}
+        </Drawer>
+      )}
     </Box>
   );
 }
