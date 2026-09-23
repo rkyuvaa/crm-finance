@@ -85,6 +85,7 @@ import {
 } from '@/api/hrApi';
 import { useGetUsersQuery } from '@/api/rbacApi';
 import EmployeeMaster from '@/components/hr/EmployeeMaster';
+import RecruitmentManagement from '@/components/hr/RecruitmentManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -108,6 +109,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const HR_NAV_ITEMS = [
+  { key: 'recruitment', label: 'Recruitment', path: '/hr/recruitment', icon: UserPlus },
   { key: 'onboarding', label: 'Employee On/off boarding', path: '/hr/onboarding', icon: UserPlus },
   { key: 'master', label: 'Employee Master', path: '/hr/master', icon: Users },
   { key: 'attendance', label: 'Attendance', path: '/hr/attendance', icon: Clock },
@@ -361,7 +363,7 @@ export default function HRPage() {
       {/* Top Action Buttons */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 2 }}>
         <Stack direction="row" spacing={1.5}>
-          {tabValue === 0 && (
+          {HR_NAV_ITEMS[tabValue]?.key === 'onboarding' && (
             <>
               <Button
                 variant="outlined"
@@ -381,7 +383,7 @@ export default function HRPage() {
               </Button>
             </>
           )}
-          {tabValue === 2 && (
+          {HR_NAV_ITEMS[tabValue]?.key === 'attendance' && (
             <>
               <Button
                 variant="outlined"
@@ -401,7 +403,7 @@ export default function HRPage() {
               </Button>
             </>
           )}
-          {tabValue === 3 && (
+          {HR_NAV_ITEMS[tabValue]?.key === 'leave' && (
             <>
               <Button
                 variant="outlined"
@@ -421,7 +423,7 @@ export default function HRPage() {
               </Button>
             </>
           )}
-          {tabValue === 4 && (
+          {HR_NAV_ITEMS[tabValue]?.key === 'payroll' && (
             <>
               <Button
                 variant="outlined"
@@ -447,8 +449,13 @@ export default function HRPage() {
       {/* Content Region */}
       <Box sx={{ width: '100%' }}>
 
-        {/* 1. Employee On/off boarding Tab */}
+        {/* 0. Recruitment Tab */}
         <TabPanel value={tabValue} index={0}>
+          <RecruitmentManagement />
+        </TabPanel>
+
+        {/* 1. Employee On/off boarding Tab */}
+        <TabPanel value={tabValue} index={1}>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
@@ -583,12 +590,12 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 2. Employee Master Tab */}
-        <TabPanel value={tabValue} index={1}>
+        <TabPanel value={tabValue} index={2}>
           <EmployeeMaster />
         </TabPanel>
 
         {/* 3. Attendance Tab */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
@@ -681,7 +688,7 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 4. Leave Management Tab */}
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6} md={3}>
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
@@ -783,7 +790,7 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 5. Payroll Tab */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           {payrollLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : payrollError ? (
@@ -846,7 +853,7 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 6. Self Service Tab */}
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={6}>
           <Grid container spacing={3}>
             {/* User Profile Card */}
             <Grid item xs={12} md={4}>
@@ -958,7 +965,7 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 7. Reports Tab */}
-        <TabPanel value={tabValue} index={6}>
+        <TabPanel value={tabValue} index={7}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>HR Analytics & Reports</Typography>
             <Stack direction="row" spacing={1.5}>
@@ -1013,7 +1020,7 @@ export default function HRPage() {
         </TabPanel>
 
         {/* 8. HR Configuration Tab */}
-        <TabPanel value={tabValue} index={7}>
+        <TabPanel value={tabValue} index={8}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>HR Configuration & Policies</Typography>
 
           <Grid container spacing={3}>

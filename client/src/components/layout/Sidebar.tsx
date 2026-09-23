@@ -109,6 +109,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: Users,
         badge: null,
         children: [
+          { key: 'hr_recruitment', label: 'Recruitment', path: '/hr/recruitment', icon: UserPlus, badge: null },
           { key: 'hr_onboarding', label: 'Employee On/off boarding', path: '/hr/onboarding', icon: UserPlus, badge: null },
           { key: 'hr_master', label: 'Employee Master', path: '/hr/master', icon: Users, badge: null },
           { key: 'hr_attendance', label: 'Attendance', path: '/hr/attendance', icon: Clock, badge: null },

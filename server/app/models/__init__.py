@@ -64,6 +64,15 @@ from app.models.hr import (
     PerformanceReview,
     PerformanceStatus,
 )
+from app.models.recruitment import (
+    RecruitmentStage,
+    RequisitionStatus,
+    OfferStatus,
+    JobRequisition,
+    Candidate,
+    CandidateStageHistory,
+    CandidateDocument,
+)
 from app.models.projects import (
     ProjectWorkspace,
     ProjectSpace,

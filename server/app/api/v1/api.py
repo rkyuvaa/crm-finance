@@ -7,6 +7,7 @@ from app.api.v1 import (
     dashboard,
     final_submission,
     hr,
+    recruitment,
     masters,
     notifications,
     planned_activities,
@@ -30,6 +31,7 @@ api_router.include_router(planned_activities.router)
 api_router.include_router(notifications.router)
 api_router.include_router(masters.router)
 api_router.include_router(hr.router)
+api_router.include_router(recruitment.router)
 api_router.include_router(projects.router)
 api_router.include_router(tasks.router)
 api_router.include_router(calendar.router)

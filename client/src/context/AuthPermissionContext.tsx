@@ -80,6 +80,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (path.startsWith('/tasks')) return can('view', 'tasks');
 
     if (path.startsWith('/hr')) {
+      if (path === '/hr/recruitment') return can('view', 'hr_recruitment');
       if (path === '/hr/onboarding') return can('view', 'hr_onboarding');
       if (path === '/hr/master') return can('view', 'hr_master');
       if (path === '/hr/attendance') return can('view', 'hr_attendance');
@@ -88,7 +89,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
       if (path === '/hr/self-service') return can('view', 'hr_self_service');
       if (path === '/hr/reports') return can('view', 'hr_reports');
       if (path === '/hr/configuration') return can('view', 'hr_configuration');
-      return can('view', 'hr_master') || can('view', 'hr_onboarding');
+      return can('view', 'hr_master') || can('view', 'hr_recruitment') || can('view', 'hr_onboarding');
     }
 
     if (path.startsWith('/renewal')) {

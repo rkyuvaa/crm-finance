@@ -74,14 +74,15 @@ def seed_rbac_data(db: Session) -> None:
         {"module_code": "project_task", "name": "Project Configuration", "code": "project_configuration", "display_order": 4},
 
         # HR & Employee
-        {"module_code": "hr_employee", "name": "Employee On/off boarding", "code": "hr_onboarding", "display_order": 1},
-        {"module_code": "hr_employee", "name": "Employee Master", "code": "hr_master", "display_order": 2},
-        {"module_code": "hr_employee", "name": "Attendance", "code": "hr_attendance", "display_order": 3},
-        {"module_code": "hr_employee", "name": "Leave Management", "code": "hr_leave", "display_order": 4},
-        {"module_code": "hr_employee", "name": "Payroll", "code": "hr_payroll", "display_order": 5},
-        {"module_code": "hr_employee", "name": "Self Service", "code": "hr_self_service", "display_order": 6},
-        {"module_code": "hr_employee", "name": "HR Reports", "code": "hr_reports", "display_order": 7},
-        {"module_code": "hr_employee", "name": "HR Configuration", "code": "hr_configuration", "display_order": 8},
+        {"module_code": "hr_employee", "name": "Recruitment", "code": "hr_recruitment", "display_order": 1},
+        {"module_code": "hr_employee", "name": "Employee On/off boarding", "code": "hr_onboarding", "display_order": 2},
+        {"module_code": "hr_employee", "name": "Employee Master", "code": "hr_master", "display_order": 3},
+        {"module_code": "hr_employee", "name": "Attendance", "code": "hr_attendance", "display_order": 4},
+        {"module_code": "hr_employee", "name": "Leave Management", "code": "hr_leave", "display_order": 5},
+        {"module_code": "hr_employee", "name": "Payroll", "code": "hr_payroll", "display_order": 6},
+        {"module_code": "hr_employee", "name": "Self Service", "code": "hr_self_service", "display_order": 7},
+        {"module_code": "hr_employee", "name": "HR Reports", "code": "hr_reports", "display_order": 8},
+        {"module_code": "hr_employee", "name": "HR Configuration", "code": "hr_configuration", "display_order": 9},
 
         # Renewal Tracker
         {"module_code": "renewal_tracker_module", "name": "Renewal Tracker", "code": "renewal_tracker", "display_order": 1},
@@ -263,7 +264,7 @@ def seed_rbac_data(db: Session) -> None:
         "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks", "summary_reports"],
         "finance_officer": ["crm_dashboard", "leads", "opportunities", "crm_reports", "summary_reports"],
         "delivery_team": ["crm_dashboard", "leads", "opportunities"],
-        "hr_manager": ["hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration"],
+        "hr_manager": ["hr_recruitment", "hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration"],
         "employee": ["hr_self_service", "hr_attendance", "hr_leave", "my_tasks", "tasks"],
     }
 
