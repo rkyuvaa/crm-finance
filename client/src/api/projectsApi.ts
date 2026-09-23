@@ -212,6 +212,7 @@ export interface TaskItem {
   tags: TaskTagInfo[];
   checklists: TaskChecklistInfo[];
   dependencies: TaskDependencyInfo[];
+  dependents?: TaskDependencyInfo[];
   relationships: TaskRelationshipInfo[];
   time_entries: TaskTimeEntryInfo[];
   activities: TaskActivityInfo[];

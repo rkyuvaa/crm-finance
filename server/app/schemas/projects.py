@@ -420,6 +420,7 @@ class TaskOut(TaskBase):
     checklists: List[TaskChecklistOut] = []
     time_entries: List[TaskTimeEntryOut] = []
     dependencies: List[TaskDependencyOut] = []
+    dependents: List[TaskDependencyOut] = []
     relationships: List[TaskRelationshipOut] = []
     tags_list: List[TaskTagOut] = []
     subtask_count: int = 0

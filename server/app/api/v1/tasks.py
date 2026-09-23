@@ -380,6 +380,7 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
         .all()
     )
     deps_by_task: dict[int, list[TaskDependencyOut]] = {tid: [] for tid in task_ids}
+    dependents_by_task: dict[int, list[TaskDependencyOut]] = {tid: [] for tid in task_ids}
     is_blocked_by_task: dict[int, bool] = {tid: False for tid in task_ids}
 
     for dep in deps:
@@ -411,10 +412,10 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
                     lag_days=getattr(dep, 'lag_days', 0) or 0,
                     created_at=dep.created_at,
                 ))
-        if dep.depends_on_task_id in deps_by_task:
+        if dep.depends_on_task_id in dependents_by_task:
             blocked_task = dep.task
             if blocked_task and not blocked_task.is_deleted:
-                deps_by_task[dep.depends_on_task_id].append(TaskDependencyOut(
+                dependents_by_task[dep.depends_on_task_id].append(TaskDependencyOut(
                     id=dep.id,
                     task_id=dep.task_id,
                     depends_on_task_id=dep.depends_on_task_id,
@@ -534,13 +535,14 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
                 seen_subtask_ids_by_parent[pid].add(sst.id)
                 subtasks_by_parent[pid].append(sst)
 
-    return deps_by_task, is_blocked_by_task, rels_by_task, subtask_counts, subtasks_by_parent
+    return deps_by_task, dependents_by_task, is_blocked_by_task, rels_by_task, subtask_counts, subtasks_by_parent
 
 
 def _format_task_out(
     t: Task,
     db: Session,
     batch_deps: Optional[list] = None,
+    batch_dependents: Optional[list] = None,
     batch_is_blocked: Optional[bool] = None,
     batch_rels: Optional[list] = None,
     batch_subtask_counts: Optional[dict] = None,
@@ -583,43 +585,31 @@ def _format_task_out(
 
     out.tags_list = [
         TaskTagOut(
-            id=m.tag.id,
-            name=m.tag.name,
-            color=m.tag.color,
-            created_at=m.tag.created_at
-        ) for m in t.tag_mappings if m.tag
+            id=tm.tag.id,
+            name=tm.tag.name,
+            color=tm.tag.color,
+        ) for tm in t.tag_mappings if tm.tag
     ]
 
-    out.checklists = []
-    for c in t.checklists:
-        c_items = []
-        comp_cnt = 0
-        for item in c.items:
-            if item.is_completed:
-                comp_cnt += 1
-            c_items.append(TaskChecklistItemOut(
-                id=item.id,
-                checklist_id=item.checklist_id,
-                title=item.title,
-                is_completed=item.is_completed,
-                assignee_id=item.assignee_id,
-                due_date=item.due_date,
-                display_order=item.display_order,
-                completed_at=item.completed_at,
-                completed_by=item.completed_by,
-                assignee=UserBriefOut.model_validate(item.assignee) if item.assignee else None,
-                created_at=item.created_at,
-            ))
-        out.checklists.append(TaskChecklistOut(
+    out.checklists = [
+        TaskChecklistOut(
             id=c.id,
             task_id=c.task_id,
             title=c.title,
-            display_order=c.display_order,
-            items=c_items,
-            completed_count=comp_cnt,
-            total_count=len(c_items),
-            created_at=c.created_at,
-        ))
+            items=[
+                TaskChecklistItemOut(
+                    id=ci.id,
+                    checklist_id=ci.checklist_id,
+                    title=ci.title,
+                    is_completed=ci.is_completed,
+                    assignee_id=ci.assignee_id,
+                    assignee_name=ci.assignee.full_name if ci.assignee else None,
+                    due_date=ci.due_date,
+                    display_order=ci.display_order,
+                ) for ci in c.items
+            ]
+        ) for c in t.checklists
+    ]
 
     out.time_entries = [
         TaskTimeEntryOut(
@@ -637,9 +627,11 @@ def _format_task_out(
 
     if batch_deps is not None:
         dependencies_out = batch_deps
+        dependents_out = batch_dependents if batch_dependents is not None else []
         is_blocked = batch_is_blocked if batch_is_blocked is not None else False
     else:
         dependencies_out = []
+        dependents_out = []
         # 1. BLOCKED_BY dependencies (task t is blocked by depends_on_task_id)
         blocked_by_deps = db.query(TaskDependency).filter(TaskDependency.task_id == t.id).all()
         is_blocked = False
@@ -677,7 +669,7 @@ def _format_task_out(
         for dep in blocking_deps:
             blocked_task = dep.task
             if blocked_task and not blocked_task.is_deleted:
-                dependencies_out.append(TaskDependencyOut(
+                dependents_out.append(TaskDependencyOut(
                     id=dep.id,
                     task_id=dep.task_id,
                     depends_on_task_id=dep.depends_on_task_id,
@@ -702,6 +694,7 @@ def _format_task_out(
                 ))
 
     out.dependencies = dependencies_out
+    out.dependents = dependents_out
     out.is_blocked = is_blocked
     out.start_date_locked = False
     out.controlled_by_task_number = None
@@ -879,13 +872,14 @@ def list_tasks(
 
     tasks = query.all()
     task_ids = [t.id for t in tasks]
-    deps_map, blocked_map, rels_map, subtask_counts_map, subtasks_by_parent_map = _batch_load_task_metadata(db, task_ids)
+    deps_map, dependents_map, blocked_map, rels_map, subtask_counts_map, subtasks_by_parent_map = _batch_load_task_metadata(db, task_ids)
 
     return [
         _format_task_out(
             t,
             db,
             batch_deps=deps_map.get(t.id, []),
+            batch_dependents=dependents_map.get(t.id, []),
             batch_is_blocked=blocked_map.get(t.id, False),
             batch_rels=rels_map.get(t.id, []),
             batch_subtask_counts=subtask_counts_map.get(t.id),

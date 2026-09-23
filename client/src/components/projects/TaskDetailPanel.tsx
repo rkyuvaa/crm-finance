@@ -1090,9 +1090,9 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1, letterSpacing: 0.5 }}>
                 BLOCKING (Tasks blocked by this task)
               </Typography>
-              {currentTask?.dependencies && currentTask.dependencies.filter((d) => d.direction === 'BLOCKING').length > 0 ? (
+              {((currentTask?.dependents && currentTask.dependents.length > 0) ? currentTask.dependents : (currentTask?.dependencies || []).filter((d) => d.direction === 'BLOCKING')).length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {currentTask.dependencies.filter((d) => d.direction === 'BLOCKING').map((dep) => (
+                  {((currentTask?.dependents && currentTask.dependents.length > 0) ? currentTask.dependents : (currentTask?.dependencies || []).filter((d) => d.direction === 'BLOCKING')).map((dep) => (
                     <Paper
                       key={dep.id}
                       variant="outlined"
@@ -1140,7 +1140,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                             <Trash2 size={14} color="#DC2626" />
                           </IconButton>
                         </Tooltip>
-                      </Box>
+                        </Box>
                     </Paper>
                   ))}
                 </Box>
