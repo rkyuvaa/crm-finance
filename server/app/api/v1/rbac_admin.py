@@ -428,6 +428,28 @@ def update_user_direct_permission(
 # 2. ROLE MANAGEMENT ENDPOINTS
 # ---------------------------------------------------------------------------
 
+def _build_role_out(db: Session, r: Role) -> RoleOut:
+    user_cnt = db.query(func.count(RbacUserRole.id)).filter(RbacUserRole.role_id == r.id).scalar() or 0
+    perm_cnt = db.query(func.count(RolePermission.id)).filter(RolePermission.role_id == r.id, RolePermission.granted == True).scalar() or 0
+    perm_ids = [rp.permission_id for rp in r.permissions if rp.granted]
+
+    return RoleOut(
+        id=r.id,
+        name=r.name,
+        code=r.code,
+        description=r.description,
+        status=r.status,
+        is_system=r.is_system,
+        created_at=r.created_at,
+        updated_at=r.updated_at,
+        created_by=r.created_by,
+        creator_name=r.creator.full_name if r.creator else None,
+        user_count=user_cnt,
+        permission_count=perm_cnt,
+        permission_ids=perm_ids,
+    )
+
+
 @router.get("/roles", response_model=list[RoleOut])
 def list_roles(
     db: Session = Depends(get_db),
@@ -438,32 +460,7 @@ def list_roles(
         raise HTTPException(status_code=403, detail="Permission denied to view roles")
 
     roles = db.query(Role).order_by(Role.id.asc()).all()
-    result = []
-
-    for r in roles:
-        user_cnt = db.query(func.count(RbacUserRole.id)).filter(RbacUserRole.role_id == r.id).scalar() or 0
-        perm_cnt = db.query(func.count(RolePermission.id)).filter(RolePermission.role_id == r.id, RolePermission.granted == True).scalar() or 0
-        perm_ids = [rp.permission_id for rp in r.permissions if rp.granted]
-
-        result.append(
-            RoleOut(
-                id=r.id,
-                name=r.name,
-                code=r.code,
-                description=r.description,
-                status=r.status,
-                is_system=r.is_system,
-                created_at=r.created_at,
-                updated_at=r.updated_at,
-                created_by=r.created_by,
-                creator_name=r.creator.full_name if r.creator else None,
-                user_count=user_cnt,
-                permission_count=perm_cnt,
-                permission_ids=perm_ids,
-            )
-        )
-
-    return result
+    return [_build_role_out(db, r) for r in roles]
 
 
 @router.post("/roles", response_model=RoleOut, status_code=201)
@@ -509,7 +506,7 @@ def create_role(
         req=req,
     )
 
-    return list_roles(db, current_user)[-1]
+    return _build_role_out(db, role)
 
 
 @router.patch("/roles/{role_id}", response_model=RoleOut)
@@ -554,7 +551,7 @@ def update_role(
         req=req,
     )
 
-    return next((r for r in list_roles(db, current_user) if r.id == role.id), None)
+    return _build_role_out(db, role)
 
 
 @router.post("/roles/{role_id}/duplicate", response_model=RoleOut, status_code=201)
@@ -604,7 +601,7 @@ def duplicate_role(
         req=req,
     )
 
-    return next((r for r in list_roles(db, current_user) if r.id == new_role.id), None)
+    return _build_role_out(db, new_role)
 
 
 @router.delete("/roles/{role_id}", status_code=204)
