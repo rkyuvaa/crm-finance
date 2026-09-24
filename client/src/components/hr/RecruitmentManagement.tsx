@@ -58,20 +58,25 @@ import {
   Download,
   Eye,
   Edit2,
+  Trash2,
   ExternalLink,
 } from 'lucide-react';
 import {
   useGetRecruitmentKPIsQuery,
   useListJobRequisitionsQuery,
   useCreateJobRequisitionMutation,
+  useUpdateJobRequisitionMutation,
+  useDeleteJobRequisitionMutation,
   useApproveOrRejectJobRequisitionMutation,
   useListCandidatesQuery,
   useCreateCandidateMutation,
+  useUpdateCandidateMutation,
   useTransitionCandidateStageMutation,
   useResumeCandidateRecruitmentMutation,
   useScheduleInterviewMutation,
   useUpdateCandidateOfferMutation,
   useCreateEmployeeFromCandidateMutation,
+  useDeleteCandidateMutation,
   type Candidate,
   type JobRequisition,
 } from '@/api/recruitmentApi';
@@ -118,6 +123,20 @@ export default function RecruitmentManagement() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Selected requisition for Detail Drawer
+  const [selectedRequisition, setSelectedRequisition] = useState<JobRequisition | null>(null);
+  const [reqDrawerOpen, setReqDrawerOpen] = useState(false);
+
+  // Edit and Delete States
+  const [editingReq, setEditingReq] = useState<JobRequisition | null>(null);
+  const [editingCand, setEditingCand] = useState<Candidate | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: 'requisition' | 'candidate'; id: number | null; title: string }>({
+    open: false,
+    type: 'requisition',
+    id: null,
+    title: '',
+  });
+
   // Dialog States
   const [createReqDialog, setCreateReqDialog] = useState(false);
   const [createCandidateDialog, setCreateCandidateDialog] = useState(false);
@@ -150,8 +169,12 @@ export default function RecruitmentManagement() {
 
   // Mutations
   const [createRequisition] = useCreateJobRequisitionMutation();
+  const [updateJobRequisition] = useUpdateJobRequisitionMutation();
+  const [deleteJobRequisition] = useDeleteJobRequisitionMutation();
   const [approveRejectRequisition] = useApproveOrRejectJobRequisitionMutation();
   const [createCandidate] = useCreateCandidateMutation();
+  const [updateCandidate] = useUpdateCandidateMutation();
+  const [deleteCandidate] = useDeleteCandidateMutation();
   const [transitionStage] = useTransitionCandidateStageMutation();
   const [resumeCandidate] = useResumeCandidateRecruitmentMutation();
   const [scheduleInterview] = useScheduleInterviewMutation();
@@ -226,18 +249,93 @@ export default function RecruitmentManagement() {
   }, [requisitions]);
 
   // Handlers
+  const handleOpenEditRequisition = (req: JobRequisition, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingReq(req);
+    setReqForm({
+      job_title: req.job_title || '',
+      department: req.department || '',
+      vacancies: req.vacancies || 1,
+      employment_type: req.employment_type || 'Full Time',
+      required_qualification: req.required_qualification || '',
+      required_experience: req.required_experience || '',
+      skills: req.skills || '',
+      salary_range: req.salary_range || '',
+      preferred_joining_date: req.preferred_joining_date || '',
+      job_description: req.job_description || '',
+      requesting_department: req.requesting_department || '',
+    });
+    setCreateReqDialog(true);
+  };
+
+  const handleOpenEditCandidate = (cand: Candidate, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingCand(cand);
+    setCandForm({
+      job_requisition_id: cand.job_requisition_id || undefined,
+      name: cand.name || '',
+      mobile: cand.mobile || '',
+      email: cand.email || '',
+      resume_url: cand.resume_url || '',
+      experience: cand.experience || '',
+      qualification: cand.qualification || '',
+      current_company: cand.current_company || '',
+      current_salary: cand.current_salary || '',
+      expected_salary: cand.expected_salary || '',
+      notice_period: cand.notice_period || '',
+      candidate_source: cand.candidate_source || 'Direct',
+      stage: cand.stage || 'Sourcing',
+    });
+    setCreateCandidateDialog(true);
+  };
+
+  const handleOpenDeleteConfirm = (type: 'requisition' | 'candidate', id: number, title: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeleteConfirm({ open: true, type, id, title });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm.id) return;
+    try {
+      if (deleteConfirm.type === 'requisition') {
+        await deleteJobRequisition(deleteConfirm.id).unwrap();
+        showToast('Job Requisition deleted successfully', 'success');
+        if (selectedRequisition?.id === deleteConfirm.id) {
+          setReqDrawerOpen(false);
+          setSelectedRequisition(null);
+        }
+      } else {
+        await deleteCandidate(deleteConfirm.id).unwrap();
+        showToast('Candidate record deleted successfully', 'success');
+        if (selectedCandidate?.id === deleteConfirm.id) {
+          setDrawerOpen(false);
+          setSelectedCandidate(null);
+        }
+      }
+      setDeleteConfirm({ open: false, type: 'requisition', id: null, title: '' });
+    } catch (err: any) {
+      showToast(err?.data?.detail || 'Failed to delete record', 'error');
+    }
+  };
+
   const handleSaveRequisition = async () => {
     if (!reqForm.job_title || !reqForm.department) {
       showToast('Please fill required job title and department', 'error');
       return;
     }
     try {
-      await createRequisition(reqForm).unwrap();
-      showToast('Job Requisition created and submitted for approval', 'success');
+      if (editingReq) {
+        await updateJobRequisition({ id: editingReq.id, body: reqForm }).unwrap();
+        showToast('Job Requisition updated successfully', 'success');
+      } else {
+        await createRequisition(reqForm).unwrap();
+        showToast('Job Requisition created and submitted for approval', 'success');
+      }
       setCreateReqDialog(false);
+      setEditingReq(null);
       setReqForm(EMPTY_REQ_FORM);
     } catch (err: any) {
-      showToast(err?.data?.detail || 'Failed to create job requisition', 'error');
+      showToast(err?.data?.detail || 'Failed to save job requisition', 'error');
     }
   };
 
@@ -270,12 +368,18 @@ export default function RecruitmentManagement() {
       return;
     }
     try {
-      await createCandidate(candForm).unwrap();
-      showToast('Candidate added to recruitment pipeline', 'success');
+      if (editingCand) {
+        await updateCandidate({ id: editingCand.id, body: candForm }).unwrap();
+        showToast('Candidate profile updated successfully', 'success');
+      } else {
+        await createCandidate(candForm).unwrap();
+        showToast('Candidate added to recruitment pipeline', 'success');
+      }
       setCreateCandidateDialog(false);
+      setEditingCand(null);
       setCandForm(EMPTY_CAND_FORM);
     } catch (err: any) {
-      showToast(err?.data?.detail || 'Failed to add candidate', 'error');
+      showToast(err?.data?.detail || 'Failed to save candidate', 'error');
     }
   };
 
@@ -582,7 +686,11 @@ export default function RecruitmentManagement() {
           <Button
             variant="outlined"
             startIcon={<Plus size={18} />}
-            onClick={() => setCreateReqDialog(true)}
+            onClick={() => {
+              setEditingReq(null);
+              setReqForm(EMPTY_REQ_FORM);
+              setCreateReqDialog(true);
+            }}
             sx={{ borderColor: '#cbd5e1', color: '#334155', textTransform: 'none', borderRadius: 2 }}
           >
             New Job Requisition
@@ -590,7 +698,11 @@ export default function RecruitmentManagement() {
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
-            onClick={() => setCreateCandidateDialog(true)}
+            onClick={() => {
+              setEditingCand(null);
+              setCandForm(EMPTY_CAND_FORM);
+              setCreateCandidateDialog(true);
+            }}
             sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
           >
             Add Candidate
@@ -924,7 +1036,15 @@ export default function RecruitmentManagement() {
                 candidates.map((cand) => {
                   const style = STAGE_COLORS[cand.stage] || { bg: '#f1f5f9', color: '#475569' };
                   return (
-                    <TableRow key={cand.id} hover>
+                    <TableRow
+                      key={cand.id}
+                      hover
+                      onClick={() => {
+                        setSelectedCandidate(cand);
+                        setDrawerOpen(true);
+                      }}
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <TableCell>
                         <Box sx={{ fontWeight: 700, color: '#0f172a' }}>{cand.name}</Box>
                         <Typography variant="caption" sx={{ color: '#64748b' }}>{cand.candidate_code}</Typography>
@@ -962,17 +1082,39 @@ export default function RecruitmentManagement() {
                         <Chip label={cand.candidate_source} size="small" variant="outlined" />
                       </TableCell>
                       <TableCell align="right">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            setSelectedCandidate(cand);
-                            setDrawerOpen(true);
-                          }}
-                          sx={{ textTransform: 'none', borderRadius: 1.5 }}
-                        >
-                          Manage Profile
-                        </Button>
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
+                          <Tooltip title="View Candidate Profile">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCandidate(cand);
+                                setDrawerOpen(true);
+                              }}
+                              sx={{ color: '#087A3D' }}
+                            >
+                              <Eye size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit Candidate">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleOpenEditCandidate(cand, e)}
+                              sx={{ color: '#2563EB' }}
+                            >
+                              <Edit2 size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Candidate">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleOpenDeleteConfirm('candidate', cand.id, cand.name, e)}
+                              sx={{ color: '#DC2626' }}
+                            >
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   );
@@ -1007,7 +1149,15 @@ export default function RecruitmentManagement() {
                 </TableRow>
               ) : (
                 requisitions.map((req) => (
-                  <TableRow key={req.id} hover>
+                  <TableRow
+                    key={req.id}
+                    hover
+                    onClick={() => {
+                      setSelectedRequisition(req);
+                      setReqDrawerOpen(true);
+                    }}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
                         {req.job_title}
@@ -1037,32 +1187,67 @@ export default function RecruitmentManagement() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      {req.status === 'Approval' && (
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          <Button
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
+                        {req.status === 'Approval' && (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApproveRejectReqDialog({ open: true, req, action: 'Approve' });
+                              }}
+                              sx={{ textTransform: 'none', borderRadius: 1.5, mr: 0.5 }}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApproveRejectReqDialog({ open: true, req, action: 'Reject' });
+                              }}
+                              sx={{ textTransform: 'none', borderRadius: 1.5, mr: 0.5 }}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        <Tooltip title="View Details">
+                          <IconButton
                             size="small"
-                            variant="contained"
-                            color="success"
-                            onClick={() =>
-                              setApproveRejectReqDialog({ open: true, req, action: 'Approve' })
-                            }
-                            sx={{ textTransform: 'none', borderRadius: 1.5 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedRequisition(req);
+                              setReqDrawerOpen(true);
+                            }}
+                            sx={{ color: '#087A3D' }}
                           >
-                            Approve
-                          </Button>
-                          <Button
+                            <Eye size={16} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit Requisition">
+                          <IconButton
                             size="small"
-                            variant="outlined"
-                            color="error"
-                            onClick={() =>
-                              setApproveRejectReqDialog({ open: true, req, action: 'Reject' })
-                            }
-                            sx={{ textTransform: 'none', borderRadius: 1.5 }}
+                            onClick={(e) => handleOpenEditRequisition(req, e)}
+                            sx={{ color: '#2563EB' }}
                           >
-                            Reject
-                          </Button>
-                        </Stack>
-                      )}
+                            <Edit2 size={16} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Requisition">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleOpenDeleteConfirm('requisition', req.id, req.job_title, e)}
+                            sx={{ color: '#DC2626' }}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))
@@ -1090,14 +1275,26 @@ export default function RecruitmentManagement() {
                   {selectedCandidate.candidate_code} • {selectedCandidate.candidate_source}
                 </Typography>
               </Box>
-              <Chip
-                label={selectedCandidate.stage}
-                sx={{
-                  bgcolor: STAGE_COLORS[selectedCandidate.stage]?.bg || '#eee',
-                  color: STAGE_COLORS[selectedCandidate.stage]?.color || '#333',
-                  fontWeight: 800,
-                }}
-              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip
+                  label={selectedCandidate.stage}
+                  sx={{
+                    bgcolor: STAGE_COLORS[selectedCandidate.stage]?.bg || '#eee',
+                    color: STAGE_COLORS[selectedCandidate.stage]?.color || '#333',
+                    fontWeight: 800,
+                  }}
+                />
+                <Tooltip title="Edit Profile">
+                  <IconButton size="small" onClick={() => handleOpenEditCandidate(selectedCandidate)} sx={{ color: '#2563EB' }}>
+                    <Edit2 size={18} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Candidate">
+                  <IconButton size="small" onClick={() => handleOpenDeleteConfirm('candidate', selectedCandidate.id, selectedCandidate.name)} sx={{ color: '#DC2626' }}>
+                    <Trash2 size={18} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
             </Box>
 
             <Divider sx={{ mb: 2 }} />
@@ -1255,12 +1452,144 @@ export default function RecruitmentManagement() {
       </Drawer>
 
       {/* ============================================================================ */}
+      {/* 6. Job Requisition Detail Drawer                                             */}
+      {/* ============================================================================ */}
+      <Drawer
+        anchor="right"
+        open={reqDrawerOpen}
+        onClose={() => setReqDrawerOpen(false)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 540 } } }}
+      >
+        {selectedRequisition && (
+          <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedRequisition.job_title}</Typography>
+                <Typography variant="caption" sx={{ color: '#64748b' }}>
+                  Req Code: {selectedRequisition.req_code} • Department: {selectedRequisition.department}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip
+                  label={selectedRequisition.status}
+                  color={
+                    selectedRequisition.status === 'Approved'
+                      ? 'success'
+                      : selectedRequisition.status === 'Approval'
+                      ? 'warning'
+                      : selectedRequisition.status === 'Rejected'
+                      ? 'error'
+                      : 'default'
+                  }
+                  sx={{ fontWeight: 800 }}
+                />
+                <Tooltip title="Edit Requisition">
+                  <IconButton size="small" onClick={() => handleOpenEditRequisition(selectedRequisition)} sx={{ color: '#2563EB' }}>
+                    <Edit2 size={18} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Requisition">
+                  <IconButton size="small" onClick={() => handleOpenDeleteConfirm('requisition', selectedRequisition.id, selectedRequisition.job_title)} sx={{ color: '#DC2626' }}>
+                    <Trash2 size={18} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Box>
+
+            <Divider sx={{ mb: 2 }} />
+
+            <Box sx={{ flex: 1, overflowY: 'auto', pr: 1 }}>
+              <Grid container spacing={1.5} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Vacancies:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{selectedRequisition.vacancies}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Employment Type:</Typography>
+                  <Typography variant="body2">{selectedRequisition.employment_type}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Experience Required:</Typography>
+                  <Typography variant="body2">{selectedRequisition.required_experience}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Qualification Required:</Typography>
+                  <Typography variant="body2">{selectedRequisition.required_qualification}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Salary Range:</Typography>
+                  <Typography variant="body2">{selectedRequisition.salary_range}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Requesting Department:</Typography>
+                  <Typography variant="body2">{selectedRequisition.requesting_department || selectedRequisition.department}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>Required Skills:</Typography>
+                  <Typography variant="body2">{selectedRequisition.skills}</Typography>
+                </Grid>
+                {selectedRequisition.job_description && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>Job Description:</Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: '#334155' }}>
+                      {selectedRequisition.job_description}
+                    </Typography>
+                  </Grid>
+                )}
+                {selectedRequisition.status === 'Rejected' && selectedRequisition.rejection_reason && (
+                  <Grid item xs={12}>
+                    <Alert severity="error">
+                      <strong>Rejection Reason:</strong> {selectedRequisition.rejection_reason}
+                    </Alert>
+                  </Grid>
+                )}
+              </Grid>
+
+              {/* Linked Candidates Section */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+                Linked Candidates ({candidates.filter((c) => c.job_requisition_id === selectedRequisition.id).length})
+              </Typography>
+              <Stack spacing={1}>
+                {candidates.filter((c) => c.job_requisition_id === selectedRequisition.id).length === 0 ? (
+                  <Typography variant="caption" sx={{ color: '#94a3b8' }}>No candidates linked to this requisition yet.</Typography>
+                ) : (
+                  candidates
+                    .filter((c) => c.job_requisition_id === selectedRequisition.id)
+                    .map((c) => (
+                      <Paper
+                        key={c.id}
+                        variant="outlined"
+                        onClick={() => {
+                          setSelectedCandidate(c);
+                          setDrawerOpen(true);
+                        }}
+                        sx={{ p: 1.5, borderRadius: 2, cursor: 'pointer', '&:hover': { borderColor: '#087A3D' } }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>{c.name}</Typography>
+                            <Typography variant="caption" sx={{ color: '#64748b' }}>{c.email} • {c.mobile}</Typography>
+                          </Box>
+                          <Chip label={c.stage} size="small" sx={{ fontWeight: 700 }} />
+                        </Box>
+                      </Paper>
+                    ))
+                )}
+              </Stack>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
+
+      {/* ============================================================================ */}
       {/* DIALOGS                                                                       */}
       {/* ============================================================================ */}
 
-      {/* Dialog: New Job Requisition */}
+      {/* Dialog: New/Edit Job Requisition */}
       <Dialog open={createReqDialog} onClose={() => setCreateReqDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Raise New Job Requisition</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          {editingReq ? 'Edit Job Requisition' : 'Raise New Job Requisition'}
+        </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <TextField
             fullWidth
@@ -1353,14 +1682,16 @@ export default function RecruitmentManagement() {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateReqDialog(false)}>Cancel</Button>
           <Button onClick={handleSaveRequisition} variant="contained" sx={{ bgcolor: '#087A3D' }}>
-            Submit Requisition
+            {editingReq ? 'Save Changes' : 'Submit Requisition'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog: Add Candidate */}
+      {/* Dialog: Add/Edit Candidate */}
       <Dialog open={createCandidateDialog} onClose={() => setCreateCandidateDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Add New Candidate</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          {editingCand ? 'Edit Candidate Profile' : 'Add New Candidate'}
+        </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <FormControl fullWidth margin="normal" size="small">
             <InputLabel>Job Requisition</InputLabel>
@@ -1472,7 +1803,7 @@ export default function RecruitmentManagement() {
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateCandidateDialog(false)}>Cancel</Button>
           <Button onClick={handleSaveCandidate} variant="contained" sx={{ bgcolor: '#087A3D' }}>
-            Add Candidate
+            {editingCand ? 'Save Changes' : 'Add Candidate'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1691,6 +2022,29 @@ export default function RecruitmentManagement() {
           </Button>
           <Button onClick={handleApproveRejectRequisition} variant="contained" color={approveRejectReqDialog.action === 'Approve' ? 'success' : 'error'}>
             Confirm {approveRejectReqDialog.action}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, type: 'requisition', id: null, title: '' })} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: '#dc2626' }}>
+          Confirm Delete {deleteConfirm.type === 'requisition' ? 'Requisition' : 'Candidate'}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body2" sx={{ color: '#334155' }}>
+            Are you sure you want to delete <strong>"{deleteConfirm.title}"</strong>?
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeleteConfirm({ open: false, type: 'requisition', id: null, title: '' })}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} variant="contained" color="error">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

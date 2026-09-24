@@ -230,6 +230,42 @@ def approve_or_reject_job_requisition(
     return out
 
 
+@router.delete("/requisitions/{req_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_job_requisition(
+    req_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a job requisition"""
+    req = db.query(JobRequisition).filter(JobRequisition.id == req_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Job Requisition not found")
+
+    # Set candidates' job_requisition_id to None
+    db.query(Candidate).filter(Candidate.job_requisition_id == req.id).update(
+        {Candidate.job_requisition_id: None}, synchronize_session=False
+    )
+    db.delete(req)
+    db.commit()
+    return None
+
+
+@router.delete("/candidates/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_candidate(
+    candidate_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a candidate record"""
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    db.delete(candidate)
+    db.commit()
+    return None
+
+
 # ============================================================================
 # Candidate Endpoints
 # ============================================================================

@@ -311,6 +311,39 @@ export const recruitmentApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Candidates', 'RecruitmentKPIs'],
     }),
+    updateJobRequisition: build.mutation<JobRequisition, { id: number; body: Partial<JobRequisitionCreate> }>({
+      query: ({ id, body }) => ({
+        url: `/hr/recruitment/requisitions/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['JobRequisitions', 'RecruitmentKPIs'],
+    }),
+
+    deleteJobRequisition: build.mutation<void, number>({
+      query: (id) => ({
+        url: `/hr/recruitment/requisitions/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['JobRequisitions', 'Candidates', 'RecruitmentKPIs'],
+    }),
+
+    deleteCandidate: build.mutation<void, number>({
+      query: (id) => ({
+        url: `/hr/recruitment/candidates/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Candidates', 'RecruitmentKPIs'],
+    }),
+
+    updateCandidate: build.mutation<Candidate, { id: number; body: Partial<CandidateCreate> }>({
+      query: ({ id, body }) => ({
+        url: `/hr/recruitment/candidates/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Candidates', 'RecruitmentKPIs'],
+    }),
   }),
 });
 
@@ -318,13 +351,17 @@ export const {
   useGetRecruitmentKPIsQuery,
   useListJobRequisitionsQuery,
   useCreateJobRequisitionMutation,
+  useUpdateJobRequisitionMutation,
+  useDeleteJobRequisitionMutation,
   useApproveOrRejectJobRequisitionMutation,
   useListCandidatesQuery,
   useGetCandidateQuery,
   useCreateCandidateMutation,
+  useUpdateCandidateMutation,
   useTransitionCandidateStageMutation,
   useResumeCandidateRecruitmentMutation,
   useScheduleInterviewMutation,
   useUpdateCandidateOfferMutation,
   useCreateEmployeeFromCandidateMutation,
+  useDeleteCandidateMutation,
 } = recruitmentApi;
