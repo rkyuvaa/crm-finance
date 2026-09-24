@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -11,6 +10,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Stack,
   TextField,
   Typography,
   CircularProgress,
@@ -22,11 +22,8 @@ import {
   Search,
   LayoutGrid,
   List,
-  Calendar as CalendarIcon,
-  GanttChartSquare,
   UserCheck,
-  Users,
-  Filter,
+  Briefcase,
   Upload,
 } from 'lucide-react';
 import UniversalImportModal from '@/components/ui/UniversalImportModal';
@@ -39,37 +36,40 @@ import {
   TaskItem,
   TaskDependencyInfo,
 } from '@/api/projectsApi';
-import { useCostCentersQuery, useUsersQuery } from '@/api/mastersApi';
+import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 import { useAppSelector } from '@/app/hooks';
 import TaskListView from '@/components/projects/TaskListView';
 import TaskBoardView from '@/components/projects/TaskBoardView';
-import TaskCalendarView from '@/components/projects/TaskCalendarView';
-import TaskGanttView from '@/components/projects/TaskGanttView';
-import MyTasksView from '@/components/projects/MyTasksView';
-import TeamWorkloadView from '@/components/projects/TeamWorkloadView';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 import TaskBulkActionBar from '@/components/projects/TaskBulkActionBar';
 
-type ActiveView = 'list' | 'board' | 'calendar' | 'gantt' | 'mytasks' | 'workload';
+type ActiveView = 'list' | 'board';
+type TaskScope = 'my' | 'all';
 
 interface TasksPageProps {
   defaultView?: ActiveView;
+  defaultScope?: TaskScope;
 }
 
-export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
+export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }: TasksPageProps) {
   const [activeView, setActiveView] = useState<ActiveView>(defaultView);
+  const [taskScope, setTaskScope] = useState<TaskScope>(defaultScope);
   const currentUser = useAppSelector((state) => state.auth.user);
 
   React.useEffect(() => {
     setActiveView(defaultView);
   }, [defaultView]);
+
+  React.useEffect(() => {
+    setTaskScope(defaultScope);
+  }, [defaultScope]);
+
   const [searchQ, setSearchQ] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<number | ''>('');
   const [selectedStatusId, setSelectedStatusId] = useState<number | ''>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedCostCenterId, setSelectedCostCenterId] = useState<number | ''>('');
 
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -88,7 +88,6 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
   });
 
   const { data: projects = [] } = useGetProjectsQuery();
-  const { data: costCenters = [] } = useCostCentersQuery();
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
   const { data: users = [] } = useUsersQuery();
 
@@ -99,7 +98,6 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState<number | ''>('');
-  const [costCenterId, setCostCenterId] = useState<number | ''>('');
   const [priority, setPriority] = useState<'URGENT' | 'HIGH' | 'NORMAL' | 'LOW'>('NORMAL');
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>('');
@@ -115,18 +113,16 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
         title: title.trim(),
         description: description.trim() || undefined,
         project_id: projectId ? Number(projectId) : undefined,
-        cost_center_id: costCenterId ? Number(costCenterId) : undefined,
         priority,
         due_date: dueDate || undefined,
         estimated_minutes: estimatedHours ? Number(estimatedHours) * 60 : 0,
-        assignees: assigneeId ? [{ user_id: Number(assigneeId) } as any] : [],
+        assignees: assigneeId ? [{ user_id: Number(assigneeId) } as any] : (currentUser ? [{ user_id: currentUser.id }] : []),
       } as any).unwrap();
       showToast('Task created successfully', 'success');
       setCreateOpen(false);
       setTitle('');
       setDescription('');
       setProjectId('');
-      setCostCenterId('');
       setDueDate('');
       setEstimatedHours('');
       setAssigneeId('');
@@ -170,15 +166,11 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
 
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const safeProjects = Array.isArray(projects) ? projects : [];
-  const safeCostCenters = Array.isArray(costCenters) ? costCenters : [];
 
-  // Filter tasks locally by Cost Center and activeView (e.g. My Tasks)
-  const filteredTasks = (selectedCostCenterId
-    ? safeTasks.filter((t) => t && t.cost_center_id === Number(selectedCostCenterId))
-    : safeTasks
-  ).filter((t) => {
+  // Filter tasks by Scope (My Tasks vs Projects Tasks)
+  const filteredTasks = safeTasks.filter((t) => {
     if (!t) return false;
-    if (activeView === 'mytasks' && currentUser) {
+    if (taskScope === 'my' && currentUser) {
       const isAssignee = Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === currentUser.id);
       const isDirectAssignee = (t as any).assignee_id === currentUser.id;
       const isCreator = (t as any).created_by_id === currentUser.id || t.created_by === currentUser.id;
@@ -189,45 +181,93 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
 
   return (
     <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>
-      {/* Top Header Action Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-        <Button
-          variant="outlined"
-          startIcon={<Upload size={18} />}
-          onClick={() => setImportDialogOpen(true)}
-          sx={{
-            borderColor: '#cbd5e1',
-            color: '#334155',
-            borderRadius: '8px',
-            textTransform: 'none',
-            fontWeight: 700,
-            px: 2,
-            py: 1,
-          }}
-        >
-          Import
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<Plus size={18} />}
-          onClick={() => setCreateOpen(true)}
-          sx={{
-            bgcolor: '#04552B',
-            '&:hover': { bgcolor: '#034120' },
-            borderRadius: '8px',
-            textTransform: 'none',
-            fontWeight: 700,
-            px: 2.5,
-            py: 1,
-          }}
-        >
-          New Task
-        </Button>
+      {/* Top Header & Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A' }}>
+          {taskScope === 'my' ? 'My Tasks' : 'Tasks'}
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<Upload size={18} />}
+            onClick={() => setImportDialogOpen(true)}
+            sx={{
+              borderColor: '#cbd5e1',
+              color: '#334155',
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 2,
+              py: 1,
+            }}
+          >
+            Import
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={18} />}
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              bgcolor: '#04552B',
+              '&:hover': { bgcolor: '#034120' },
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 2.5,
+              py: 1,
+            }}
+          >
+            New Task
+          </Button>
+        </Box>
       </Box>
 
-      {/* Navigation View Switcher Tabs & Filters */}
+      {/* Scope Toggle, View Switcher & Filters */}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', mb: 3, bgcolor: 'background.paper', overflow: 'hidden' }}>
-        <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2, pt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          {/* Scope Toggle: My Tasks vs Projects Tasks */}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, mr: 0.5 }}>
+              Scope:
+            </Typography>
+            <Button
+              variant={taskScope === 'my' ? 'contained' : 'outlined'}
+              onClick={() => setTaskScope('my')}
+              startIcon={<UserCheck size={16} />}
+              sx={{
+                bgcolor: taskScope === 'my' ? '#04552B' : 'transparent',
+                borderColor: '#04552B',
+                color: taskScope === 'my' ? '#fff' : '#04552B',
+                textTransform: 'none',
+                fontWeight: 700,
+                borderRadius: 2,
+                height: 36,
+                '&:hover': { bgcolor: taskScope === 'my' ? '#034120' : 'rgba(4,85,43,0.08)' },
+              }}
+            >
+              My Tasks
+            </Button>
+            <Button
+              variant={taskScope === 'all' ? 'contained' : 'outlined'}
+              onClick={() => setTaskScope('all')}
+              startIcon={<Briefcase size={16} />}
+              sx={{
+                bgcolor: taskScope === 'all' ? '#04552B' : 'transparent',
+                borderColor: '#04552B',
+                color: taskScope === 'all' ? '#fff' : '#04552B',
+                textTransform: 'none',
+                fontWeight: 700,
+                borderRadius: 2,
+                height: 36,
+                '&:hover': { bgcolor: taskScope === 'all' ? '#034120' : 'rgba(4,85,43,0.08)' },
+              }}
+            >
+              Projects Tasks
+            </Button>
+          </Stack>
+
+          {/* View Switcher: List View (default) & Kanban View only */}
           <Tabs
             value={activeView}
             onChange={(_, val) => setActiveView(val)}
@@ -236,21 +276,18 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
                 textTransform: 'none',
                 fontWeight: 700,
                 fontSize: 14,
-                minHeight: 48,
+                minHeight: 40,
               },
               '& .Mui-selected': { color: '#04552B' },
               '& .MuiTabs-indicator': { bgcolor: '#04552B', height: 3 },
             }}
           >
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
-            <Tab value="board" label="Board View" icon={<LayoutGrid size={16} />} iconPosition="start" />
-            <Tab value="calendar" label="Calendar" icon={<CalendarIcon size={16} />} iconPosition="start" />
-            <Tab value="gantt" label="Gantt Chart" icon={<GanttChartSquare size={16} />} iconPosition="start" />
-            <Tab value="workload" label="Team Workload" icon={<Users size={16} />} iconPosition="start" />
+            <Tab value="board" label="Kanban View" icon={<LayoutGrid size={16} />} iconPosition="start" />
           </Tabs>
         </Box>
 
-        {/* Global Filter Bar */}
+        {/* Global Filter Bar (No Cost Center) */}
         <Box sx={{ p: 2, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', bgcolor: 'background.default' }}>
           <TextField
             size="small"
@@ -260,7 +297,7 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
             InputProps={{
               startAdornment: <Search size={16} style={{ marginRight: 8, opacity: 0.6 }} />,
             }}
-            sx={{ width: 260, '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', height: 36 } }}
+            sx={{ width: 280, '& .MuiOutlinedInput-root': { bgcolor: 'background.paper', height: 36 } }}
           />
 
           <Select
@@ -271,21 +308,8 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
             sx={{ width: 220, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
           >
             <MenuItem value="">All Projects</MenuItem>
-            {projects.map((p) => (
+            {safeProjects.map((p) => (
               <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-            ))}
-          </Select>
-
-          <Select
-            size="small"
-            displayEmpty
-            value={selectedCostCenterId}
-            onChange={(e) => setSelectedCostCenterId(e.target.value as number)}
-            sx={{ width: 220, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
-          >
-            <MenuItem value="">All Cost Centers</MenuItem>
-            {costCenters.map((cc) => (
-              <MenuItem key={cc.id} value={cc.id}>{cc.code} - {cc.name}</MenuItem>
             ))}
           </Select>
 
@@ -294,7 +318,7 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
             displayEmpty
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value as string)}
-            sx={{ width: 150, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
+            sx={{ width: 160, height: 36, bgcolor: 'background.paper', fontSize: 13 }}
           >
             <MenuItem value="">All Priorities</MenuItem>
             <MenuItem value="URGENT">Urgent</MenuItem>
@@ -317,15 +341,6 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
         </Box>
       ) : (
         <>
-          {activeView === 'board' && (
-            <TaskBoardView
-              tasks={filteredTasks}
-              onOpenTaskDetail={handleOpenDetail}
-              onDeleteTask={handleDeleteTask}
-              onQuickCreateTask={() => setCreateOpen(true)}
-            />
-          )}
-
           {activeView === 'list' && (
             <TaskListView
               tasks={filteredTasks}
@@ -338,16 +353,13 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
             />
           )}
 
-          {activeView === 'calendar' && (
-            <TaskCalendarView tasks={filteredTasks} onOpenTaskDetail={handleOpenDetail} />
-          )}
-
-          {activeView === 'gantt' && (
-            <TaskGanttView tasks={filteredTasks} onOpenTaskDetail={handleOpenDetail} />
-          )}
-
-          {activeView === 'workload' && (
-            <TeamWorkloadView tasks={filteredTasks} />
+          {activeView === 'board' && (
+            <TaskBoardView
+              tasks={filteredTasks}
+              onOpenTaskDetail={handleOpenDetail}
+              onDeleteTask={handleDeleteTask}
+              onQuickCreateTask={() => setCreateOpen(true)}
+            />
           )}
         </>
       )}
@@ -395,23 +407,23 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
                   onChange={(e) => setProjectId(e.target.value === '' ? '' : Number(e.target.value))}
                 >
                   <MenuItem value="">Standalone Task</MenuItem>
-                  {projects.map((p) => (
+                  {safeProjects.map((p) => (
                     <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                   ))}
                 </TextField>
               </Grid>
               <Grid item xs={6}>
                 <TextField
-                  label="Cost Center (Master Data)"
+                  label="Assignee"
                   fullWidth
                   size="small"
                   select
-                  value={costCenterId}
-                  onChange={(e) => setCostCenterId(e.target.value === '' ? '' : Number(e.target.value))}
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value === '' ? '' : Number(e.target.value))}
                 >
-                  <MenuItem value="">None</MenuItem>
-                  {costCenters.map((cc) => (
-                    <MenuItem key={cc.id} value={cc.id}>{cc.code} ({cc.name})</MenuItem>
+                  <MenuItem value="">Unassigned</MenuItem>
+                  {users.map((u) => (
+                    <MenuItem key={u.id} value={u.id}>{u.full_name}</MenuItem>
                   ))}
                 </TextField>
               </Grid>
@@ -435,34 +447,6 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
               </Grid>
               <Grid item xs={6}>
                 <TextField
-                  label="Assignee"
-                  fullWidth
-                  size="small"
-                  select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value === '' ? '' : Number(e.target.value))}
-                >
-                  <MenuItem value="">Unassigned</MenuItem>
-                  {users.map((u) => (
-                    <MenuItem key={u.id} value={u.id}>{u.full_name}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  label="Estimated Hours"
-                  type="number"
-                  fullWidth
-                  size="small"
-                  value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(e.target.value ? Number(e.target.value) : '')}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
                   label="Due Date"
                   type="date"
                   fullWidth
@@ -473,6 +457,15 @@ export default function TasksPage({ defaultView = 'list' }: TasksPageProps) {
                 />
               </Grid>
             </Grid>
+
+            <TextField
+              label="Estimated Hours"
+              type="number"
+              fullWidth
+              size="small"
+              value={estimatedHours}
+              onChange={(e) => setEstimatedHours(e.target.value ? Number(e.target.value) : '')}
+            />
 
             <TextField
               label="Description"
