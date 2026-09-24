@@ -1,8 +1,10 @@
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { usePermission } from '../context/AuthPermissionContext';
 
 export default function AccessDeniedPage() {
   const navigate = useNavigate();
+  const { getFirstAccessibleRoute } = usePermission();
 
   return (
     <div
@@ -57,7 +59,7 @@ export default function AccessDeniedPage() {
       </p>
 
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate(getFirstAccessibleRoute())}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

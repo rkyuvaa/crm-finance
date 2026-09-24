@@ -84,7 +84,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
   const canAccessRoute = (path: string): boolean => {
     if (!user) return false;
     if (isSuperAdmin) return true;
-    if (path === '/') return can('view', 'crm_dashboard');
+    if (path === '/') return getFirstAccessibleRoute() !== '/login';
 
     if (path === '/plm') return can('view', 'plm');
     if (path.startsWith('/leads')) return can('view', 'leads');
