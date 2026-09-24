@@ -377,71 +377,92 @@ export default function RecruitmentManagement() {
     }
   };
 
+  const getStageCount = (stage: string) => {
+    switch (stage) {
+      case 'Job Requisition':
+        return kpis?.job_requisition ?? candidates.filter((c) => c.stage === 'Job Requisition').length;
+      case 'Approval':
+        return kpis?.approval ?? candidates.filter((c) => c.stage === 'Approval').length;
+      case 'Sourcing':
+        return kpis?.sourcing ?? candidates.filter((c) => c.stage === 'Sourcing').length;
+      case 'Screening':
+        return kpis?.screening ?? candidates.filter((c) => c.stage === 'Screening').length;
+      case 'Interview':
+        return kpis?.interviews ?? candidates.filter((c) => c.stage === 'Interview').length;
+      case 'Selected':
+        return kpis?.selected ?? candidates.filter((c) => c.stage === 'Selected').length;
+      case 'Offer & Joining':
+        return kpis?.offers ?? candidates.filter((c) => c.stage === 'Offer & Joining').length;
+      case 'Joined':
+        return kpis?.joined ?? candidates.filter((c) => c.stage === 'Joined').length;
+      case 'On Hold':
+        return kpis?.on_hold ?? candidates.filter((c) => c.stage === 'On Hold').length;
+      case 'Rejected':
+        return kpis?.rejected ?? candidates.filter((c) => c.stage === 'Rejected').length;
+      default:
+        return 0;
+    }
+  };
+
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 1. Dashboard KPI Header Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                Open Requisitions
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b', mt: 0.5 }}>
-                {kpis?.open_requisitions ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total Candidates
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#2563eb', mt: 0.5 }}>
-                {kpis?.total_candidates ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                In Interview
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#d97706', mt: 0.5 }}>
-                {kpis?.interviews ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                Offers / Pending Join
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#0284c7', mt: 0.5 }}>
-                {kpis?.offers ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
-                Joined
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#087A3D', mt: 0.5 }}>
-                {kpis?.joined ?? 0}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* 1. Stage Pills Summary Header */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#ffffff', borderColor: '#e2e8f0' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+            Recruitment Stages Summary
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
+            Open Requisitions: <span style={{ color: '#087A3D', fontWeight: 700 }}>{kpis?.open_requisitions ?? requisitions.length}</span> • Total Candidates: <span style={{ color: '#2563eb', fontWeight: 700 }}>{kpis?.total_candidates ?? candidates.length}</span>
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Chip
+            label={`All Stages (${candidates.length})`}
+            onClick={() => setStageFilter('All')}
+            variant={stageFilter === 'All' ? 'filled' : 'outlined'}
+            sx={{
+              fontWeight: 700,
+              fontSize: 12,
+              px: 0.5,
+              cursor: 'pointer',
+              bgcolor: stageFilter === 'All' ? '#087A3D' : 'transparent',
+              color: stageFilter === 'All' ? '#ffffff' : '#334155',
+              borderColor: '#cbd5e1',
+              '&:hover': { bgcolor: stageFilter === 'All' ? '#066231' : '#f1f5f9' },
+            }}
+          />
+          {RECRUITMENT_STAGES.map((stage) => {
+            const count = getStageCount(stage);
+            const style = STAGE_COLORS[stage] || { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+            const isSelected = stageFilter === stage;
+
+            return (
+              <Chip
+                key={stage}
+                label={`${stage} (${count})`}
+                onClick={() => setStageFilter(isSelected ? 'All' : stage)}
+                variant={isSelected ? 'filled' : 'outlined'}
+                sx={{
+                  fontWeight: 700,
+                  fontSize: 12,
+                  px: 0.5,
+                  cursor: 'pointer',
+                  bgcolor: isSelected ? style.color : style.bg,
+                  color: isSelected ? '#ffffff' : style.color,
+                  borderColor: style.border,
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: isSelected ? style.color : style.bg,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                  },
+                }}
+              />
+            );
+          })}
+        </Box>
+      </Paper>
 
       {/* 2. Top Action Controls & View Switcher */}
       <Box
