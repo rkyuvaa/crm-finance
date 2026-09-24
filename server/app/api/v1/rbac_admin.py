@@ -363,7 +363,7 @@ def get_user_effective_permissions_view(
     current_user: User = Depends(get_current_user),
 ):
     """Get visual effective permission tree calculation for any user."""
-    if not can_user(db, current_user, "view", "users"):
+    if current_user.id != user_id and not can_user(db, current_user, "view", "users"):
         raise HTTPException(status_code=403, detail="Permission denied")
 
     u = db.get(User, user_id)
