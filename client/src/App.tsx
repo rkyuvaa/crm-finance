@@ -46,6 +46,20 @@ function RouteFallback() {
   );
 }
 
+function DefaultLandingRoute() {
+  const { can, getFirstAccessibleRoute } = usePermission();
+
+  if (can('view', 'crm_dashboard')) {
+    return <DashboardPage />;
+  }
+
+  const target = getFirstAccessibleRoute();
+  if (target === '/') {
+    return <DashboardPage />;
+  }
+  return <Navigate to={target} replace />;
+}
+
 function RequirePermission({ children }: { children: React.ReactNode }) {
   const { canAccessRoute } = usePermission();
   const location = useLocation();
@@ -75,7 +89,7 @@ export default function App() {
                   </RequireAuth>
                 }
               >
-                <Route path="/" element={<DashboardPage />} />
+                <Route path="/" element={<DefaultLandingRoute />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/opportunities" element={<LeadsPage />} />

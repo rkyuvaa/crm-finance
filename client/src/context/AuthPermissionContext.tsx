@@ -5,6 +5,7 @@ import { useGetUserEffectivePermissionsQuery } from '../api/rbacApi';
 interface AuthPermissionContextType {
   can: (action: string, resource: string) => boolean;
   canAccessRoute: (path: string) => boolean;
+  getFirstAccessibleRoute: () => string;
   isSuperAdmin: boolean;
   effectivePermissionsMap: Record<string, boolean>;
   isLoading: boolean;
@@ -13,6 +14,7 @@ interface AuthPermissionContextType {
 const AuthPermissionContext = createContext<AuthPermissionContextType>({
   can: () => true,
   canAccessRoute: () => true,
+  getFirstAccessibleRoute: () => '/',
   isSuperAdmin: true,
   effectivePermissionsMap: {},
   isLoading: false,
@@ -82,7 +84,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
   const canAccessRoute = (path: string): boolean => {
     if (!user) return false;
     if (isSuperAdmin) return true;
-    if (path === '/') return true;
+    if (path === '/') return can('view', 'crm_dashboard');
 
     if (path === '/plm') return can('view', 'plm');
     if (path.startsWith('/leads')) return can('view', 'leads');
@@ -151,11 +153,30 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     return false;
   };
 
+  const getFirstAccessibleRoute = (): string => {
+    if (!user) return '/login';
+    if (isSuperAdmin || can('view', 'crm_dashboard')) return '/';
+    if (can('view', 'my_tasks')) return '/my-tasks';
+    if (can('view', 'projects')) return '/projects';
+    if (can('view', 'tasks')) return '/tasks';
+    if (can('view', 'leads')) return '/leads';
+    if (can('view', 'customers')) return '/customers';
+    if (can('view', 'opportunities')) return '/opportunities';
+    if (can('view', 'activities')) return '/activities';
+    if (can('view', 'hr_master') || can('view', 'hr_recruitment') || can('view', 'hr_leave') || can('view', 'hr_attendance')) return '/hr';
+    if (can('view', 'renewal_tracker')) return '/renewal/tracker';
+    if (can('view', 'req_material') || can('view', 'req_it')) return '/requirements/material';
+    if (can('view', 'compliance_policies')) return '/compliance/policies';
+    if (can('view', 'users') || can('view', 'roles')) return '/admin/users';
+    return '/notifications';
+  };
+
   return (
     <AuthPermissionContext.Provider
       value={{
         can,
         canAccessRoute,
+        getFirstAccessibleRoute,
         isSuperAdmin,
         effectivePermissionsMap,
         isLoading,

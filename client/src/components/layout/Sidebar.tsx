@@ -242,7 +242,7 @@ export default function Sidebar({
         .map((item) => {
           if (item.children) {
             const validChildren = item.children.filter((child) =>
-              child.key === 'crm_dashboard' ? true : can('view', child.key),
+              can('view', child.key),
             );
 
             if (validChildren.length === 0) return null;
