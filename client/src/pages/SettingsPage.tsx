@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
+import { usePermission } from '@/context/AuthPermissionContext';
 import MailServerConfigCard from '@/components/settings/MailServerConfigCard';
 import SystemBackupCard from '@/components/settings/SystemBackupCard';
 import UserManagementPage from '@/pages/admin/UserManagementPage';
@@ -44,10 +45,47 @@ function CustomTabPanel(props: TabPanelProps) {
 
 export default function SettingsPage() {
   const user = useAppSelector((state) => state.auth.user);
+  const { can, isSuperAdmin } = usePermission();
   const [activeTab, setActiveTab] = useState(0);
   const [userRoleSubTab, setUserRoleSubTab] = useState(0);
 
-  const isAdmin = user?.role === 'ADMIN';
+  const canUsers = isSuperAdmin || can('view', 'users') || can('view', 'roles');
+  const canDepts = isSuperAdmin || can('view', 'departments');
+  const canBranches = isSuperAdmin || can('view', 'departments');
+  const canBackup = isSuperAdmin;
+
+  const tabs: { key: string; label: string; icon: React.ReactNode }[] = [];
+
+  if (canUsers) {
+    tabs.push({ key: 'users', label: 'Users & Roles', icon: <UsersIcon size={16} /> });
+  }
+  if (canDepts) {
+    tabs.push({ key: 'depts', label: 'Departments', icon: <Building2 size={16} /> });
+  }
+  if (canBranches) {
+    tabs.push({ key: 'branches', label: 'Branches', icon: <MapPin size={16} /> });
+  }
+  tabs.push({ key: 'mail', label: 'Mail Server (SMTP)', icon: <Mail size={16} /> });
+  if (canBackup) {
+    tabs.push({ key: 'backup', label: 'System Data Backup', icon: <Database size={16} /> });
+  }
+
+  const subtabs: { key: string; label: string; icon: React.ReactNode }[] = [];
+  if (isSuperAdmin || can('view', 'users')) {
+    subtabs.push({ key: 'users', label: 'Users Management', icon: <UsersIcon size={15} /> });
+  }
+  if (isSuperAdmin || can('view', 'roles')) {
+    subtabs.push({ key: 'roles', label: 'Roles & Access', icon: <Shield size={15} /> });
+  }
+  if (isSuperAdmin || can('view', 'permissions')) {
+    subtabs.push({ key: 'permissions', label: 'Permission Matrix', icon: <KeyRound size={15} /> });
+  }
+  if (isSuperAdmin || can('view', 'audit_logs')) {
+    subtabs.push({ key: 'audit_logs', label: 'Access Audit Logs', icon: <ShieldAlert size={15} /> });
+  }
+
+  const currentTabKey = tabs[activeTab]?.key || 'mail';
+  const currentSubTabKey = subtabs[userRoleSubTab]?.key || subtabs[0]?.key || 'users';
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -64,7 +102,7 @@ export default function SettingsPage() {
         }}
       >
         <Tabs
-          value={activeTab}
+          value={activeTab < tabs.length ? activeTab : 0}
           onChange={(_, newValue) => setActiveTab(newValue)}
           variant="scrollable"
           scrollButtons="auto"
@@ -90,71 +128,57 @@ export default function SettingsPage() {
             },
           }}
         >
-          {isAdmin && <Tab icon={<UsersIcon size={16} />} iconPosition="start" label="Users & Roles" />}
-          {isAdmin && <Tab icon={<Building2 size={16} />} iconPosition="start" label="Departments" />}
-          {isAdmin && <Tab icon={<MapPin size={16} />} iconPosition="start" label="Branches" />}
-          <Tab icon={<Mail size={16} />} iconPosition="start" label="Mail Server (SMTP)" />
-          {isAdmin && <Tab icon={<Database size={16} />} iconPosition="start" label="System Data Backup" />}
+          {tabs.map((t, idx) => (
+            <Tab key={t.key} icon={t.icon as any} iconPosition="start" label={t.label} id={`settings-tab-${idx}`} />
+          ))}
         </Tabs>
       </Paper>
 
-      {isAdmin ? (
-        <>
-          {/* Tab 0: Users & Roles */}
-          <CustomTabPanel value={activeTab} index={0}>
+      {/* Tab Panels */}
+      {tabs.map((t, idx) => (
+        <CustomTabPanel key={t.key} value={activeTab} index={idx}>
+          {t.key === 'users' && (
             <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
-              <Tabs
-                value={userRoleSubTab}
-                onChange={(_, val) => setUserRoleSubTab(val)}
-                sx={{
-                  borderBottom: 1,
-                  borderColor: '#E4EBE1',
-                  mb: 2,
-                  '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 13 },
-                }}
-              >
-                <Tab icon={<UsersIcon size={15} />} iconPosition="start" label="Users Management" />
-                <Tab icon={<Shield size={15} />} iconPosition="start" label="Roles & Access" />
-                <Tab icon={<KeyRound size={15} />} iconPosition="start" label="Permission Matrix" />
-                <Tab icon={<ShieldAlert size={15} />} iconPosition="start" label="Access Audit Logs" />
-              </Tabs>
-              {userRoleSubTab === 0 && <UserManagementPage />}
-              {userRoleSubTab === 1 && <RoleManagementPage />}
-              {userRoleSubTab === 2 && <PermissionRegistryPage />}
-              {userRoleSubTab === 3 && <AccessAuditLogPage />}
+              {subtabs.length > 1 && (
+                <Tabs
+                  value={userRoleSubTab < subtabs.length ? userRoleSubTab : 0}
+                  onChange={(_, val) => setUserRoleSubTab(val)}
+                  sx={{
+                    borderBottom: 1,
+                    borderColor: '#E4EBE1',
+                    mb: 2,
+                    '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 13 },
+                  }}
+                >
+                  {subtabs.map((st) => (
+                    <Tab key={st.key} icon={st.icon as any} iconPosition="start" label={st.label} />
+                  ))}
+                </Tabs>
+              )}
+              {currentSubTabKey === 'users' && <UserManagementPage />}
+              {currentSubTabKey === 'roles' && <RoleManagementPage />}
+              {currentSubTabKey === 'permissions' && <PermissionRegistryPage />}
+              {currentSubTabKey === 'audit_logs' && <AccessAuditLogPage />}
             </Paper>
-          </CustomTabPanel>
+          )}
 
-          {/* Tab 1: Departments */}
-          <CustomTabPanel value={activeTab} index={1}>
+          {t.key === 'depts' && (
             <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
               <DepartmentManagementPage />
             </Paper>
-          </CustomTabPanel>
+          )}
 
-          {/* Tab 2: Branches */}
-          <CustomTabPanel value={activeTab} index={2}>
+          {t.key === 'branches' && (
             <Paper elevation={0} sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 2, background: '#FFFFFF' }}>
               <BranchManagementPage />
             </Paper>
-          </CustomTabPanel>
+          )}
 
-          {/* Tab 3: Mail Server (SMTP) */}
-          <CustomTabPanel value={activeTab} index={3}>
-            <MailServerConfigCard />
-          </CustomTabPanel>
+          {t.key === 'mail' && <MailServerConfigCard />}
 
-          {/* Tab 4: System Data Backup */}
-          <CustomTabPanel value={activeTab} index={4}>
-            <SystemBackupCard />
-          </CustomTabPanel>
-        </>
-      ) : (
-        /* Non-admin view */
-        <CustomTabPanel value={activeTab} index={0}>
-          <MailServerConfigCard />
+          {t.key === 'backup' && <SystemBackupCard />}
         </CustomTabPanel>
-      )}
+      ))}
     </Box>
   );
 }

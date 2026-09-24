@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
+import { usePermission } from '@/context/AuthPermissionContext';
 import {
   useCreateFinanceCompanyMutation,
   useDeleteFinanceCompanyMutation,
@@ -142,7 +143,8 @@ function FinancierFormDialog({
 
 export default function FinanciersPanel() {
   const user = useAppSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const { can, isSuperAdmin } = usePermission();
+  const isAdmin = isSuperAdmin || can('edit', 'crm_configuration') || can('create', 'crm_configuration');
   const { data, isFetching, isError, refetch } = useFinanceCompaniesQuery();
   const [deleteCompany] = useDeleteFinanceCompanyMutation();
   const { showToast } = useToast();

@@ -24,6 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { useAppSelector } from '@/app/hooks';
+import { usePermission } from '@/context/AuthPermissionContext';
 import {
   useAutomoveRulesQuery,
   useCreateAutomoveRuleMutation,
@@ -311,7 +312,8 @@ function AutomoveRuleDialog({
 
 export default function StageAutomovePanel() {
   const user = useAppSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const { can, isSuperAdmin } = usePermission();
+  const isAdmin = isSuperAdmin || can('edit', 'crm_configuration') || can('create', 'crm_configuration');
 
   const [activeModule, setActiveModule] = useState<RuleModule>('LEAD');
   const { data: allRules = [], isFetching, isError, refetch } = useAutomoveRulesQuery();

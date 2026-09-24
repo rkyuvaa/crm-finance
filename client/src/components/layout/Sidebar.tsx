@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   Briefcase,
+  Building2,
   ChevronDown,
   Cpu,
   FileText,
@@ -75,7 +76,9 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         children: [
           { key: 'crm_dashboard', label: 'Dashboard', path: '/', icon: LayoutDashboard, badge: null },
           { key: 'leads', label: 'Lead', path: '/leads', icon: UserPlus, badge: 'leads' },
+          { key: 'customers', label: 'Customers', path: '/customers', icon: Users, badge: null },
           { key: 'opportunities', label: 'Opportunity', path: '/opportunities', icon: Sparkles, badge: null },
+          { key: 'activities', label: 'Activities', path: '/activities', icon: Clock, badge: null },
           { key: 'crm_reports', label: 'Reports', path: '/reports', icon: BarChart3, badge: null },
           { key: 'crm_configuration', label: 'Configuration', path: '/configuration', icon: Settings2, badge: null },
         ],
@@ -151,6 +154,24 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
           { key: 'compliance_audit', label: 'Compliance Audit', path: '/compliance/audit', icon: ClipboardCheck, badge: null },
           { key: 'compliance_sops', label: 'SOPs', path: '/compliance/sops', icon: BookOpen, badge: null },
           { key: 'compliance_acknowledgements', label: 'Acknowledgements', path: '/compliance/acknowledgements', icon: CheckCircle2, badge: null },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      {
+        key: 'administration',
+        label: 'Administration',
+        icon: ShieldCheck,
+        badge: null,
+        children: [
+          { key: 'users', label: 'User Management', path: '/admin/users', icon: Users, badge: null },
+          { key: 'roles', label: 'Roles & Access Matrix', path: '/admin/roles', icon: ShieldCheck, badge: null },
+          { key: 'departments', label: 'Departments', path: '/admin/departments', icon: Building2, badge: null },
+          { key: 'permissions', label: 'Permissions Registry', path: '/admin/permissions', icon: Lock, badge: null },
+          { key: 'audit_logs', label: 'Access Audit Log', path: '/admin/audit-logs', icon: FileText, badge: null },
         ],
       },
     ],

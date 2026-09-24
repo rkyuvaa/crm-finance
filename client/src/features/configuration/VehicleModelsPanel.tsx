@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { useAppSelector } from '@/app/hooks';
+import { usePermission } from '@/context/AuthPermissionContext';
 import {
   useCreateVehicleModelMutation,
   useDeleteVehicleModelMutation,
@@ -172,7 +173,8 @@ function ModelFormDialog({
 
 export default function VehicleModelsPanel() {
   const user = useAppSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const { can, isSuperAdmin } = usePermission();
+  const isAdmin = isSuperAdmin || can('edit', 'crm_configuration') || can('create', 'crm_configuration');
   const { data, isFetching, isError, refetch } = useVehicleModelsQuery();
   const [deleteModel] = useDeleteVehicleModelMutation();
   const { showToast } = useToast();
