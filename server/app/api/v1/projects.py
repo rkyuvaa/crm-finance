@@ -143,7 +143,7 @@ def list_projects(
 def create_project(
     data: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("create", "projects")),
 ):
     """Create a new project master record"""
     # Check if prefix is unique
@@ -180,7 +180,7 @@ def update_project(
     project_id: int,
     data: ProjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("edit", "projects")),
 ):
     """Update project details"""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -201,7 +201,7 @@ def update_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("delete", "projects")),
 ):
     """Delete a project record"""
     project = db.query(Project).filter(Project.id == project_id).first()

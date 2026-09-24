@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_application_access
+from app.core.deps import get_current_user, require_application_access, require_permission
 from app.db.session import get_db
 from app.models import (
     ActivityLog,
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/applications", tags=["planned-activities"])
 def list_planned_activities(
     app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
+    user: User = Depends(require_permission("view", "activities")),
 ):
     planned = (
         db.query(PlannedActivity)
@@ -59,7 +60,7 @@ def create_planned_activity(
     payload: PlannedActivityCreate,
     app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("create", "activities")),
 ):
     act = PlannedActivity(
         application_id=app.id,

@@ -39,10 +39,15 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (!effectiveData?.permissions) return {};
     const map: Record<string, boolean> = {};
     for (const p of effectiveData.permissions) {
+      if (p.permission_code) {
+        map[p.permission_code] = p.granted;
+      }
       if (p.resource_code && p.action_code) {
         map[`${p.resource_code}:${p.action_code}`] = p.granted;
       }
-      map[p.permission_code] = p.granted;
+      if (p.module_code && p.resource_code && p.action_code) {
+        map[`${p.module_code}:${p.resource_code}:${p.action_code}`] = p.granted;
+      }
     }
     return map;
   }, [effectiveData]);
@@ -50,6 +55,16 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
   const can = (action: string, resource: string): boolean => {
     if (!user) return false;
     if (isSuperAdmin) return true;
+
+    // Handle full canonical string passed into action or resource parameter
+    if (resource.includes(':')) {
+      const parts = resource.split(':');
+      if (parts.length === 3) {
+        const canonicalKey = `${parts[0]}:${parts[1]}:${parts[2]}`;
+        if (canonicalKey in effectivePermissionsMap) return effectivePermissionsMap[canonicalKey];
+      }
+    }
+
     const key = `${resource}:${action}`;
     if (key in effectivePermissionsMap) {
       return effectivePermissionsMap[key];
@@ -61,7 +76,7 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (resource in effectivePermissionsMap) {
       return effectivePermissionsMap[resource];
     }
-    return false; // Default Deny for unallocated/unmapped resources
+    return false;
   };
 
   const canAccessRoute = (path: string): boolean => {

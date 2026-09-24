@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 from app.db.session import get_db
 from app.models import User
 from app.schemas.dashboard import DashboardResponse
@@ -13,6 +13,6 @@ router = APIRouter(tags=["dashboard"])
 @router.get("/dashboard", response_model=DashboardResponse)
 def dashboard(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("view", "crm_dashboard")),
 ):
     return DashboardResponse(**get_dashboard(db, user))

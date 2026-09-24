@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 from app.db.session import get_db
 from app.models import (
     Application,
@@ -15,7 +15,7 @@ from app.models import (
 )
 from app.services.dashboard import _build_finance_companies, _build_pipeline, _status_counts
 
-router = APIRouter(tags=["stage-stubs"])
+router = APIRouter(tags=["stage-stubs"], dependencies=[Depends(require_permission("view", "leads"))])
 
 
 def _stage_rows(db, model, app_field, fields) -> list[dict]:

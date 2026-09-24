@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_application_access
+from app.core.deps import get_current_user, require_application_access, require_permission
 from app.db.session import get_db
-from app.models import Application
+from app.models import Application, User
 from app.schemas.application import ApplicationOut
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -15,12 +15,12 @@ def list_customer_applications(
     scope: str = Query("all", pattern="^(all|recent)$"),
     tab: str = Query("all", pattern="^(all|mine|pending)$"),
     q: str | None = None,
-    status: ApplicationStatus | None = None,
+    status: str | None = None,
     finance_company_id: int | None = None,
-    date_from: datetime | None = None,
-    date_to: datetime | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("view", "customers")),
 ):
     from app.api.v1 import applications
     return applications.list_applications(

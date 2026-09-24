@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, require_roles
+from app.core.deps import get_db, require_permission, require_roles
 from app.models.enums import UserRole
 from app.models.user import User
 from app.services.backup_service import (
@@ -18,7 +18,7 @@ from app.services.backup_service import (
     restore_system_zip_backup,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("view", "settings"))])
 
 
 @router.get("/summary", response_model=Dict[str, Any])

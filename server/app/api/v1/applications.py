@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-from app.core.deps import can_access_application, get_current_user, require_application_access
+from app.core.deps import can_access_application, get_current_user, require_application_access, require_permission
 from app.db.session import get_db
 from app.models import (
     Activity,
@@ -257,7 +257,7 @@ def list_applications(
     stage_key: str | None = None,
     module: str | None = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("view", "leads")),
 ):
     query = _filtered_query(
         db, user, scope, tab, q, status, finance_company_id, date_from, date_to, stage_key, module
@@ -327,7 +327,7 @@ def get_application_activity(
 def create_application(
     payload: ApplicationCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("create", "leads")),
 ):
     try:
         app_number = next_app_no(db)
@@ -378,7 +378,7 @@ def update_application(
     payload: ApplicationUpdate,
     app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("edit", "leads")),
 ):
     data = payload.model_dump(exclude_unset=True)
 
@@ -465,7 +465,7 @@ def update_application(
 def delete_application(
     app: Application = Depends(require_application_access),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("delete", "leads")),
 ):
     db.delete(app)
     db.commit()
@@ -673,13 +673,10 @@ def toggle_document_verification(
 def bulk_assign_leads(
     payload: "BulkAssignRequest",
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("edit", "leads")),
 ):
     """Bulk assign multiple leads to a user."""
     from app.schemas.application import BulkAssignRequest
-
-    if user.role not in [UserRole.ADMIN, UserRole.SALES_EXECUTIVE]:
-        raise HTTPException(status_code=403, detail="Not authorized for bulk operations")
 
     applications = (
         db.query(Application)
@@ -715,13 +712,10 @@ def bulk_assign_leads(
 def bulk_change_status(
     payload: "BulkStatusChangeRequest",
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("edit", "leads")),
 ):
     """Bulk change status of multiple leads."""
     from app.schemas.application import BulkStatusChangeRequest
-
-    if user.role not in [UserRole.ADMIN, UserRole.SALES_EXECUTIVE]:
-        raise HTTPException(status_code=403, detail="Not authorized for bulk operations")
 
     applications = (
         db.query(Application)
@@ -757,7 +751,7 @@ def bulk_change_status(
 def bulk_delete_leads(
     payload: "BulkDeleteRequest",
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("delete", "leads")),
 ):
     """Bulk delete multiple leads."""
     from app.schemas.application import BulkDeleteRequest

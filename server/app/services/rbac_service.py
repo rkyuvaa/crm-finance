@@ -4,11 +4,14 @@ from fastapi import Request
 from sqlalchemy.orm import Session
 
 from app.models.rbac import (
+    Action,
     AuditActionType,
     AuditLog,
     DepartmentUser,
+    Module,
     Permission,
     PermissionStatus,
+    Resource,
     Role,
     RoleDataScope,
     RoleFieldPermission,
@@ -71,10 +74,18 @@ def get_user_active_roles(db: Session, user: User) -> list[Role]:
     roles_list = [ur.role for ur in rbac_user_roles if ur.role and ur.role.status == PermissionStatus.ACTIVE]
     role_ids = {r.id for r in roles_list if r}
 
-    if user.role:
+    # Only fall back to legacy User.role if no dynamic RbacUserRole assignments exist
+    if not role_ids and user.role:
         role_code = user.role.value if hasattr(user.role, "value") else str(user.role)
         role_code = role_code.lower()
         role_by_code = db.query(Role).filter(Role.status == PermissionStatus.ACTIVE, Role.code.ilike(role_code)).first()
+        if not role_by_code:
+            from app.db.seed_rbac import seed_rbac_data
+            try:
+                seed_rbac_data(db)
+                role_by_code = db.query(Role).filter(Role.status == PermissionStatus.ACTIVE, Role.code.ilike(role_code)).first()
+            except Exception:
+                pass
         if role_by_code and role_by_code.id not in role_ids:
             roles_list.append(role_by_code)
 
@@ -207,29 +218,48 @@ def can_user(
     if not user or user.status != UserStatus.ACTIVE:
         return False
 
-    # Super Admin check
-    if user.role == UserRole.ADMIN:
+    # 1. Super Admin check
+    if user.role == UserRole.ADMIN or str(getattr(user.role, "value", user.role)).upper() == "ADMIN":
         return True
 
     roles = get_user_active_roles(db, user)
     if any(r.code in ["super_admin", "admin"] for r in roles):
         return True
 
-    perm_code = f"*:{resource_code}:{action_code}"
+    # Parse inputs to resolve module, resource, and action
+    module_code = None
+    resolved_resource = resource_code
+    resolved_action = action_code
+
+    if ":" in resource_code:
+        parts = resource_code.split(":")
+        if len(parts) == 3:
+            module_code, resolved_resource, resolved_action = parts[0], parts[1], parts[2]
+        elif len(parts) == 2:
+            if parts[1] in ["view", "create", "edit", "delete", "export", "import", "approve"]:
+                resolved_resource, resolved_action = parts[0], parts[1]
+            else:
+                module_code, resolved_resource = parts[0], parts[1]
+
     # Find matching permission in DB
-    perm = (
-        db.query(Permission)
-        .join(Permission.resource)
-        .join(Permission.action)
-        .filter(Permission.resource.has(code=resource_code), Permission.action.has(code=action_code))
-        .first()
-    )
+    perm_query = db.query(Permission).join(Permission.resource).join(Permission.action)
+    if module_code:
+        perm_query = perm_query.join(Permission.module).filter(Module.code == module_code)
+
+    perm = perm_query.filter(
+        Resource.code == resolved_resource,
+        Action.code == resolved_action
+    ).first()
+
+    if not perm:
+        # Secondary fallback: search by code ending with :resource_code:action_code
+        perm = db.query(Permission).filter(Permission.code.endswith(f":{resolved_resource}:{resolved_action}")).first()
 
     if not perm:
         # Permission not registered or resource unmapped -> Default Deny
         return False
 
-    # 1. Direct User Override
+    # 2. Direct User Override
     user_perm = (
         db.query(UserPermission)
         .filter(UserPermission.user_id == user.id, UserPermission.permission_id == perm.id)
@@ -240,24 +270,27 @@ def can_user(
             return False
         return True
 
-    # 2. Combined Role Permissions
+    # 3. Combined Role Permissions
     has_role_grant = False
-    for r in roles:
+    role_ids = [r.id for r in roles]
+    if role_ids:
         rp = (
             db.query(RolePermission)
-            .filter(RolePermission.role_id == r.id, RolePermission.permission_id == perm.id, RolePermission.granted == True)
+            .filter(
+                RolePermission.role_id.in_(role_ids),
+                RolePermission.permission_id == perm.id,
+                RolePermission.granted == True,
+            )
             .first()
         )
         if rp:
             has_role_grant = True
-            break
 
     if not has_role_grant:
         return False
 
-    # 3. Record Scope Check (if record provided)
+    # 4. Record Scope Check (if record provided)
     if record is not None:
-        # Evaluate record assignment or ownership
         assigned_to = getattr(record, "assigned_to", None)
         created_by = getattr(record, "created_by", None)
         user_id = getattr(record, "user_id", None)

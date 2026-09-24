@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 from app.db.session import get_db
 from app.models.user import User, UserStatus
 from app.models.enums import UserRole
@@ -38,7 +38,7 @@ from app.schemas.recruitment import (
     RecruitmentDashboardKPIs,
 )
 
-router = APIRouter(prefix="/hr/recruitment", tags=["hr-recruitment"])
+router = APIRouter(prefix="/hr/recruitment", tags=["hr-recruitment"], dependencies=[Depends(require_permission("view", "hr_recruitment"))])
 
 
 def _format_candidate_out(cand: Candidate) -> CandidateOut:

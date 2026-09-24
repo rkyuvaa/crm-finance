@@ -895,7 +895,7 @@ def list_tasks(
 def create_task(
     data: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("create", "tasks")),
 ):
     """Create a new task / subtask entity"""
     if not data.title or not data.title.strip():
@@ -1057,7 +1057,7 @@ def update_task(
     task_id: int,
     data: TaskUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("edit", "tasks")),
 ):
     """Update task details / status transition"""
     task = db.get(Task, task_id)
@@ -1324,7 +1324,7 @@ def update_task(
 def delete_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("delete", "tasks")),
 ):
     """Soft delete a task and its nested child tasks"""
     task = db.get(Task, task_id)

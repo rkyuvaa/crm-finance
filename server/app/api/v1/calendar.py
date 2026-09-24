@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 from app.models.projects import WorkingCalendarHoliday, WeeklyOffDay
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 
-router = APIRouter(prefix="/calendar", tags=["calendar"])
+router = APIRouter(prefix="/calendar", tags=["calendar"], dependencies=[Depends(require_permission("view", "activities"))])
 
 
 class HolidayCreate(BaseModel):

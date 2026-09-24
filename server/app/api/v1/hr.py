@@ -93,7 +93,7 @@ def _format_performance(rev: PerformanceReview) -> PerformanceReviewOut:
 def create_attendance(
     payload: AttendanceCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("create", "hr_attendance")),
 ):
     """Create attendance record for an employee"""
     # Verify user exists
@@ -236,7 +236,7 @@ def delete_attendance(
 def create_leave_request(
     payload: LeaveRequestCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("create", "hr_leave")),
 ):
     """Create leave request"""
     # Verify user exists
@@ -274,7 +274,7 @@ def list_leave_requests(
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("view", "hr_leave")),
 ):
     """List leave requests with filters and eager loaded relations"""
     query = (
@@ -300,7 +300,7 @@ def approve_leave_request(
     id: int,
     payload: LeaveRequestApprove,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("approve", "hr_leave")),
 ):
     """Approve leave request (HR/Manager only)"""
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == id).first()

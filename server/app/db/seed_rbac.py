@@ -260,11 +260,11 @@ def seed_rbac_data(db: Session) -> None:
 
     # Module allocations for standard roles
     role_resource_allocations = {
-        "sales_executive": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks"],
-        "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks", "summary_reports"],
-        "finance_officer": ["crm_dashboard", "leads", "opportunities", "crm_reports", "summary_reports"],
-        "delivery_team": ["crm_dashboard", "leads", "opportunities"],
-        "hr_manager": ["hr_recruitment", "hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration"],
+        "sales_executive": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks", "masters"],
+        "sales_manager": ["crm_dashboard", "leads", "opportunities", "customers", "activities", "crm_reports", "crm_configuration", "projects", "tasks", "my_tasks", "summary_reports", "masters"],
+        "finance_officer": ["crm_dashboard", "leads", "opportunities", "crm_reports", "summary_reports", "masters"],
+        "delivery_team": ["crm_dashboard", "leads", "opportunities", "masters"],
+        "hr_manager": ["hr_recruitment", "hr_onboarding", "hr_master", "hr_attendance", "hr_leave", "hr_payroll", "hr_self_service", "hr_reports", "hr_configuration", "masters"],
         "employee": ["hr_self_service", "hr_attendance", "hr_leave", "my_tasks", "tasks"],
     }
 

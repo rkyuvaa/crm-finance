@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import get_current_user, require_permission, require_roles
 from app.db.session import get_db
 from app.models import SmtpSetting, User, UserRole
 from app.services.email_service import dispatch_email_smtp
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/smtp-settings", tags=["smtp"])
+router = APIRouter(prefix="/smtp-settings", tags=["smtp"], dependencies=[Depends(require_permission("view", "settings"))])
 
 
 # --- Schemas ---

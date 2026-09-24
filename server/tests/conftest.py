@@ -59,6 +59,8 @@ def client(db):
 
 @pytest.fixture
 def seeded_client(db, client):
+    from app.db.seed_rbac import seed_rbac_data
+    seed_rbac_data(db)
     sales = make_user("sales@kim.com", UserRole.SALES_EXECUTIVE, "Ramesh")
     finance = make_user("finance@kim.com", UserRole.FINANCE_OFFICER, "Sneha K")
     admin = make_user("admin@kim.com", UserRole.ADMIN, "Admin")
