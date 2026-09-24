@@ -69,41 +69,27 @@ export default function LoginPage() {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: 2,
-            background: '#087A3D',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <FileText size={24} />
-        </Box>
         <Box>
-          <Typography sx={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.2 }}>
-            CRM<span style={{ color: '#4ADE80' }}>FINANCE</span>
+          <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.2, color: '#FFF' }}>
+            KIM <span style={{ color: '#4ADE80' }}>ERP</span>
           </Typography>
-          <Typography sx={{ fontSize: 10, fontWeight: 600, letterSpacing: 2, color: '#9FD9B4' }}>
-            KIM
+          <Typography sx={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5, color: '#9FD9B4', mt: 0.5 }}>
+            Version 2.0
           </Typography>
         </Box>
       </Box>
 
       <Box>
         <Typography variant="h4" sx={{ maxWidth: 440, lineHeight: 1.25 }}>
-          Vehicle finance pipeline, managed end to end.
+          Enterprise Management Platform.
         </Typography>
         <Typography sx={{ mt: 2, color: '#BFE6CC', fontSize: 14, maxWidth: 400 }}>
-          Track applications from lead to disbursement — documents, verification, sanctions and
-          deliveries in one dashboard.
+          Manage CRM, projects, tasks, HR & compliance end-to-end in one unified platform.
         </Typography>
       </Box>
 
       <Typography sx={{ fontSize: 12, color: '#8FC5A5' }}>
-        © 2025 CRMFinance. All rights reserved.
+        © 2026 KIM ERP. All rights reserved.
       </Typography>
     </Box>
   );

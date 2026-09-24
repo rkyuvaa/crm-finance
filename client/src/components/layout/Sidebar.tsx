@@ -436,39 +436,21 @@ export default function Sidebar({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', minWidth: 0 }}>
-          <div
-            onClick={collapsed && onToggleSidebar ? onToggleSidebar : undefined}
-            title={collapsed ? "Expand sidebar" : undefined}
-            style={{
-              width: 34,
-              height: 34,
-              background: '#087A3D',
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              flexShrink: 0,
-              cursor: collapsed ? 'pointer' : 'default',
-            }}
-          >
-            <FileText size={19} />
-          </div>
           {!collapsed && (
-            <div style={{ lineHeight: 1.15, overflow: 'hidden' }}>
-              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
-                CRM<span style={{ color: '#5fcf87' }}>FINANCE</span>
+            <div style={{ lineHeight: 1.2, overflow: 'hidden' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
+                KIM <span style={{ color: '#5fcf87' }}>ERP</span>
               </div>
               <div
                 style={{
-                  fontSize: 9,
-                  fontWeight: 600,
-                  letterSpacing: 1.4,
-                  color: 'rgba(255, 255, 255, 0.50)',
-                  textTransform: 'uppercase',
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: 0.5,
+                  color: 'rgba(255, 255, 255, 0.60)',
+                  marginTop: 2,
                 }}
               >
-                KIM
+                Version 2.0
               </div>
             </div>
           )}

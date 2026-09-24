@@ -45,8 +45,8 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   const isTablet = useMediaQuery('(max-width:900px)');
 
   const crumb = BREADCRUMBS[location.pathname] ?? BREADCRUMBS[`/${location.pathname.split('/')[1]}`] ?? [
-    'CRMFinance',
-    'KIM',
+    'KIM ERP',
+    'Version 2.0',
   ];
   const unread = dashboard?.nav_counts.notifications ?? 0;
 
