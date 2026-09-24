@@ -828,7 +828,49 @@ def get_permissions_registry(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     modules = db.query(Module).order_by(Module.display_order.asc()).all()
-    return [ModuleOut.model_validate(m) for m in modules]
+    perms = db.query(Permission).all()
+    perm_map = {(p.resource_id, p.action_id): p.id for p in perms}
+
+    result = []
+    for m in modules:
+        mod_dict = {
+            "id": m.id,
+            "name": m.name,
+            "code": m.code,
+            "description": m.description,
+            "display_order": m.display_order,
+            "icon": m.icon,
+            "status": m.status,
+            "resources": [],
+        }
+        for res in m.resources:
+            res_dict = {
+                "id": res.id,
+                "module_id": res.module_id,
+                "name": res.name,
+                "code": res.code,
+                "description": res.description,
+                "display_order": res.display_order,
+                "status": res.status,
+                "actions": [],
+            }
+            for act in res.actions:
+                act_perm_id = perm_map.get((res.id, act.id))
+                res_dict["actions"].append(
+                    {
+                        "id": act.id,
+                        "permission_id": act_perm_id,
+                        "name": act.name,
+                        "code": act.code,
+                        "description": act.description,
+                        "display_order": act.display_order,
+                        "status": act.status,
+                    }
+                )
+            mod_dict["resources"].append(res_dict)
+        result.append(mod_dict)
+
+    return result
 
 
 @router.post("/permissions/custom-action", response_model=ActionOut, status_code=201)

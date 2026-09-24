@@ -299,14 +299,14 @@ export default function RoleManagementPage() {
                             <div style={{ fontSize: 12.5, fontWeight: 700, color: '#023020', marginBottom: 6 }}>{res.name}</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               {res.actions.map((act) => {
-                                const permId = (act as any).id; // Or mapped permission ID
-                                const isChecked = selectedPermIds.includes(permId);
+                                const permId = act.permission_id || act.id;
+                                const isChecked = Boolean(permId && selectedPermIds.includes(permId));
                                 return (
                                   <label key={act.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '4px 10px', background: isChecked ? '#EAF6E8' : '#F9FAFB', border: `1px solid ${isChecked ? '#A3E635' : '#E5E7EB'}`, borderRadius: 6, cursor: 'pointer' }}>
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
-                                      onChange={() => togglePermission(permId)}
+                                      onChange={() => permId && togglePermission(permId)}
                                     />
                                     <span style={{ fontWeight: isChecked ? 700 : 500, color: isChecked ? '#087A3D' : '#4B5563' }}>{act.name}</span>
                                   </label>

@@ -64,6 +64,7 @@ export interface DepartmentTreeNode extends Department {
 
 export interface Action {
   id: number;
+  permission_id?: number;
   name: string;
   code: string;
   description: string | null;

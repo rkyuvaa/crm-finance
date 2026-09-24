@@ -48,6 +48,7 @@ class DepartmentTreeNode(DepartmentOut):
 # Module, Resource, Action, Permission Schemas
 class ActionOut(BaseModel):
     id: int
+    permission_id: int | None = None
     name: str
     code: str
     description: str | None = None
