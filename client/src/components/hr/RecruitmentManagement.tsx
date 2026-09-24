@@ -91,16 +91,16 @@ const RECRUITMENT_STAGES = [
 ] as const;
 
 const STAGE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  'Job Requisition': { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  Approval: { bg: '#fef3c7', color: '#d97706', border: '#fde68a' },
-  Sourcing: { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff' },
-  Screening: { bg: '#e0e7ff', color: '#4338ca', border: '#c7d2fe' },
-  Interview: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  Selected: { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' },
-  'Offer & Joining': { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
-  Joined: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-  'On Hold': { bg: '#fff7ed', color: '#c2410c', border: '#ffedd5' },
-  Rejected: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+  'Job Requisition': { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
+  Approval: { bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
+  Sourcing: { bg: '#F3E8FF', color: '#7C3AED', border: '#DDD6FE' },
+  Screening: { bg: '#CFFAFE', color: '#0891B2', border: '#A5F3FC' },
+  Interview: { bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
+  Selected: { bg: '#D1FAE5', color: '#047857', border: '#6EE7B7' },
+  'Offer & Joining': { bg: '#E0F2FE', color: '#0284C7', border: '#BAE6FD' },
+  Joined: { bg: '#DCFCE7', color: '#166534', border: '#86EFAC' },
+  'On Hold': { bg: '#FFEDD5', color: '#EA580C', border: '#FED7AA' },
+  Rejected: { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' },
 };
 
 export default function RecruitmentManagement() {
@@ -406,63 +406,121 @@ export default function RecruitmentManagement() {
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 1. Stage Pills Summary Header */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#ffffff', borderColor: '#e2e8f0' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }}>
-            Recruitment Stages Summary
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-            Open Requisitions: <span style={{ color: '#087A3D', fontWeight: 700 }}>{kpis?.open_requisitions ?? requisitions.length}</span> • Total Candidates: <span style={{ color: '#2563eb', fontWeight: 700 }}>{kpis?.total_candidates ?? candidates.length}</span>
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          <Chip
-            label={`All Stages (${candidates.length})`}
-            onClick={() => setStageFilter('All')}
-            variant={stageFilter === 'All' ? 'filled' : 'outlined'}
-            sx={{
-              fontWeight: 700,
-              fontSize: 12,
-              px: 0.5,
-              cursor: 'pointer',
-              bgcolor: stageFilter === 'All' ? '#087A3D' : 'transparent',
-              color: stageFilter === 'All' ? '#ffffff' : '#334155',
-              borderColor: '#cbd5e1',
-              '&:hover': { bgcolor: stageFilter === 'All' ? '#066231' : '#f1f5f9' },
-            }}
-          />
-          {RECRUITMENT_STAGES.map((stage) => {
+      {/* 1. CRM-Style Stage Pipeline Bar */}
+      <Box
+        sx={{
+          mb: 2,
+          p: 1.25,
+          bgcolor: '#ffffff',
+          borderRadius: 3,
+          border: '1px solid #e2e8f0',
+          overflowX: 'auto',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 1100, gap: 0.5 }}>
+          {RECRUITMENT_STAGES.map((stage, i) => {
             const count = getStageCount(stage);
-            const style = STAGE_COLORS[stage] || { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+            const theme = STAGE_COLORS[stage] || { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
             const isSelected = stageFilter === stage;
 
             return (
-              <Chip
-                key={stage}
-                label={`${stage} (${count})`}
-                onClick={() => setStageFilter(isSelected ? 'All' : stage)}
-                variant={isSelected ? 'filled' : 'outlined'}
-                sx={{
-                  fontWeight: 700,
-                  fontSize: 12,
-                  px: 0.5,
-                  cursor: 'pointer',
-                  bgcolor: isSelected ? style.color : style.bg,
-                  color: isSelected ? '#ffffff' : style.color,
-                  borderColor: style.border,
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    bgcolor: isSelected ? style.color : style.bg,
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                  },
-                }}
-              />
+              <Box key={stage} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Tooltip title={isSelected ? 'Clear filter' : `Filter by ${stage}`} placement="top" arrow>
+                  <button
+                    type="button"
+                    onClick={() => setStageFilter(isSelected ? 'All' : stage)}
+                    style={{
+                      width: 106,
+                      height: 68,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      border: '1.5px solid',
+                      borderColor: isSelected ? theme.color : theme.border,
+                      borderRadius: 12,
+                      padding: '6px 4px',
+                      cursor: 'pointer',
+                      backgroundColor: isSelected ? `${theme.color}22` : theme.bg,
+                      boxShadow: isSelected ? `0 4px 12px ${theme.color}33` : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                      transition: 'all 0.15s ease',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {/* White Badge for Count */}
+                    <div
+                      style={{
+                        minWidth: 32,
+                        height: 22,
+                        padding: '0 8px',
+                        borderRadius: 11,
+                        backgroundColor: '#FFFFFF',
+                        boxShadow: '0 1.5px 4px rgba(0, 0, 0, 0.08)',
+                        border: `1px solid ${theme.color}25`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: theme.color,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {count}
+                      </span>
+                    </div>
+
+                    {/* Stage Label */}
+                    <div
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: theme.color,
+                        textAlign: 'center',
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.2,
+                        lineHeight: 1.1,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        height: 22,
+                        wordBreak: 'break-word',
+                        padding: '0 2px',
+                      }}
+                    >
+                      {stage}
+                    </div>
+                  </button>
+                </Tooltip>
+
+                {i < RECRUITMENT_STAGES.length - 1 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#cbd5e1',
+                      width: 14,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ChevronRight size={13} />
+                  </div>
+                )}
+              </Box>
             );
           })}
         </Box>
-      </Paper>
+      </Box>
 
       {/* 2. Top Action Controls & View Switcher */}
       <Box
