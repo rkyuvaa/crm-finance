@@ -195,9 +195,9 @@ export default function HRPage() {
   const [onboardingForm, setOnboardingForm] = useState({
     candidate_name: '',
     email: '',
-    department: 'Engineering',
-    role: 'Software Engineer',
-    join_date: new Date().toISOString().split('T')[0],
+    department: '',
+    role: '',
+    join_date: '',
     type: 'ONBOARDING' as 'ONBOARDING' | 'OFFBOARDING',
   });
 

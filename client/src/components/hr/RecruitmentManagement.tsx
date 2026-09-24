@@ -159,58 +159,64 @@ export default function RecruitmentManagement() {
   const [createEmployee] = useCreateEmployeeFromCandidateMutation();
 
   // Forms
-  const [reqForm, setReqForm] = useState({
+  const EMPTY_REQ_FORM = {
     job_title: '',
-    department: 'Engineering',
+    department: '',
     vacancies: 1,
     employment_type: 'Full Time',
-    required_qualification: 'Bachelor\'s Degree',
-    required_experience: '3-5 years',
-    skills: 'React, Node.js, Python, SQL',
-    salary_range: '₹8,00,000 - ₹12,00,000 PA',
-    preferred_joining_date: new Date().toISOString().split('T')[0],
-    job_description: 'We are seeking an experienced professional to join our dynamic team.',
-    requesting_department: 'Engineering',
-  });
+    required_qualification: '',
+    required_experience: '',
+    skills: '',
+    salary_range: '',
+    preferred_joining_date: '',
+    job_description: '',
+    requesting_department: '',
+  };
 
-  const [candForm, setCandForm] = useState({
+  const EMPTY_CAND_FORM = {
     job_requisition_id: undefined as number | undefined,
     name: '',
     mobile: '',
     email: '',
     resume_url: '',
-    experience: '3 years',
-    qualification: 'B.Tech / B.E.',
+    experience: '',
+    qualification: '',
     current_company: '',
     current_salary: '',
     expected_salary: '',
-    notice_period: '30 Days',
-    candidate_source: 'LinkedIn',
+    notice_period: '',
+    candidate_source: 'Direct',
     stage: 'Sourcing',
-  });
+  };
 
-  const [interviewForm, setInterviewForm] = useState({
-    interview_type: 'Technical Round 1',
-    interview_date: `${new Date().toISOString().split('T')[0]}T10:00`,
-    interviewer_panel: 'Lead Tech Architect',
-    interview_round: 'Round 1',
+  const EMPTY_INTERVIEW_FORM = {
+    interview_type: '',
+    interview_date: '',
+    interviewer_panel: '',
+    interview_round: '',
     interview_feedback: '',
-    interview_rating: 4,
+    interview_rating: 5,
     interview_remarks: '',
-  });
+  };
 
-  const [offerForm, setOfferForm] = useState({
-    offer_status: 'Offer Released' as 'Offer Draft' | 'Offer Released' | 'Offer Accepted' | 'Offer Declined',
-    confirmed_joining_date: new Date().toISOString().split('T')[0],
+  const EMPTY_OFFER_FORM = {
+    offer_status: 'Offer Draft' as 'Offer Draft' | 'Offer Released' | 'Offer Accepted' | 'Offer Declined',
+    confirmed_joining_date: '',
     rejection_reason: '',
-  });
+  };
 
-  const [empForm, setEmpForm] = useState({
+  const EMPTY_EMP_FORM = {
     emp_id: '',
     designation: '',
     department: '',
-    branch: 'Coimbatore Office',
-  });
+    branch: '',
+  };
+
+  const [reqForm, setReqForm] = useState(EMPTY_REQ_FORM);
+  const [candForm, setCandForm] = useState(EMPTY_CAND_FORM);
+  const [interviewForm, setInterviewForm] = useState(EMPTY_INTERVIEW_FORM);
+  const [offerForm, setOfferForm] = useState(EMPTY_OFFER_FORM);
+  const [empForm, setEmpForm] = useState(EMPTY_EMP_FORM);
 
   // Unique departments from requisitions
   const departments = useMemo(() => {
@@ -229,6 +235,7 @@ export default function RecruitmentManagement() {
       await createRequisition(reqForm).unwrap();
       showToast('Job Requisition created and submitted for approval', 'success');
       setCreateReqDialog(false);
+      setReqForm(EMPTY_REQ_FORM);
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to create job requisition', 'error');
     }
@@ -266,6 +273,7 @@ export default function RecruitmentManagement() {
       await createCandidate(candForm).unwrap();
       showToast('Candidate added to recruitment pipeline', 'success');
       setCreateCandidateDialog(false);
+      setCandForm(EMPTY_CAND_FORM);
     } catch (err: any) {
       showToast(err?.data?.detail || 'Failed to add candidate', 'error');
     }
