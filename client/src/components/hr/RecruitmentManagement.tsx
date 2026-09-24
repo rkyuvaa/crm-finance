@@ -80,6 +80,7 @@ import {
   type Candidate,
   type JobRequisition,
 } from '@/api/recruitmentApi';
+import { useGetDepartmentsQuery } from '@/api/rbacApi';
 import { useToast } from '@/components/ui/ToastHost';
 
 const RECRUITMENT_STAGES = [
@@ -241,12 +242,20 @@ export default function RecruitmentManagement() {
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER_FORM);
   const [empForm, setEmpForm] = useState(EMPTY_EMP_FORM);
 
-  // Unique departments from requisitions
+  // Fetch Departments from Settings
+  const { data: systemDepartments = [] } = useGetDepartmentsQuery();
+
+  // Unique departments from Settings + Requisitions
   const departments = useMemo(() => {
     const set = new Set<string>();
-    requisitions.forEach((r) => set.add(r.department));
+    systemDepartments.forEach((d) => {
+      if (d.name && d.status !== 'INACTIVE') set.add(d.name);
+    });
+    requisitions.forEach((r) => {
+      if (r.department) set.add(r.department);
+    });
     return Array.from(set);
-  }, [requisitions]);
+  }, [systemDepartments, requisitions]);
 
   // Handlers
   const handleOpenEditRequisition = (req: JobRequisition, e?: React.MouseEvent) => {
@@ -1601,14 +1610,32 @@ export default function RecruitmentManagement() {
           />
           <Grid container spacing={2}>
             <Grid item xs={6}>
-              <TextField
-                fullWidth
-                label="Department"
-                value={reqForm.department}
-                onChange={(e) => setReqForm({ ...reqForm, department: e.target.value })}
-                margin="normal"
-                size="small"
-              />
+              <FormControl fullWidth margin="normal" size="small">
+                <InputLabel>Department *</InputLabel>
+                <Select
+                  value={reqForm.department}
+                  label="Department *"
+                  onChange={(e) =>
+                    setReqForm({
+                      ...reqForm,
+                      department: e.target.value,
+                      requesting_department: reqForm.requesting_department || e.target.value,
+                    })
+                  }
+                >
+                  {departments.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      No departments configured in Settings
+                    </MenuItem>
+                  ) : (
+                    departments.map((d) => (
+                      <MenuItem key={d} value={d}>
+                        {d}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={6}>
               <TextField
@@ -1975,14 +2002,20 @@ export default function RecruitmentManagement() {
             margin="normal"
             size="small"
           />
-          <TextField
-            fullWidth
-            label="Department"
-            value={empForm.department}
-            onChange={(e) => setEmpForm({ ...empForm, department: e.target.value })}
-            margin="normal"
-            size="small"
-          />
+          <FormControl fullWidth margin="normal" size="small">
+            <InputLabel>Department</InputLabel>
+            <Select
+              value={empForm.department}
+              label="Department"
+              onChange={(e) => setEmpForm({ ...empForm, department: e.target.value })}
+            >
+              {departments.map((d) => (
+                <MenuItem key={d} value={d}>
+                  {d}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateEmployeeDialog(false)}>Cancel</Button>
