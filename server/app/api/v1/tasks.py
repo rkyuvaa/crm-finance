@@ -20,6 +20,7 @@ from app.models.cost_center import CostCenter
 from app.models.branch import Branch
 from app.models.rbac import Department
 from app.models.user import User
+from app.models.enums import UserRole
 from app.models.notification import Notification
 from app.schemas.projects import (
     TaskCreate,
@@ -824,12 +825,20 @@ def list_tasks(
             Task.id.in_(db.query(TaskFollower.task_id).filter(TaskFollower.user_id == follower_id))
         )
 
-    if my_tasks_only:
+    # Mandatory security: Normal users can only see tasks assigned to them
+    if current_user.role != UserRole.ADMIN:
         query = query.filter(
             or_(
                 Task.assignee_id == current_user.id,
-                Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id)),
-                Task.id.in_(db.query(TaskFollower.task_id).filter(TaskFollower.user_id == current_user.id))
+                Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id))
+            )
+        )
+    elif my_tasks_only:
+        # If Admin explicitly requests My Tasks
+        query = query.filter(
+            or_(
+                Task.assignee_id == current_user.id,
+                Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id))
             )
         )
 
@@ -918,6 +927,16 @@ def _validate_task_dates(data: TaskCreate | TaskUpdate):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Start date year is invalid. Please enter a valid date."
         )
+
+def _get_task_or_404_with_auth(db: Session, task_id: int, current_user: User) -> Task:
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
+        
+    if current_user.role != UserRole.ADMIN:
+        is_assigned = task.assignee_id == current_user.id or any(a.user_id == current_user.id for a in task.assignees)
+        if not is_assigned:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this task")
+            
+    return task
 
 def spawn_next_recurring_task(db: Session, task: Task, current_user_id: int):
     """Spawn the next occurrence of a recurring task if within end date"""
@@ -1372,9 +1391,7 @@ def get_task(
     current_user: User = Depends(get_current_user),
 ):
     """Get task details by ID"""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
     return _format_task_out(task, db)
 
 
@@ -1387,9 +1404,7 @@ def update_task(
     current_user: User = Depends(require_permission("edit", "tasks")),
 ):
     """Update task details / status transition"""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     update_dict = data.model_dump(exclude_unset=True)
     old_due_date = task.due_date
@@ -1686,9 +1701,7 @@ def delete_task(
     current_user: User = Depends(require_permission("delete", "tasks")),
 ):
     """Soft delete a task and its nested child tasks"""
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
     
     parent_id = task.parent_task_id
     task.is_deleted = True
@@ -1831,9 +1844,7 @@ def log_time_legacy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     log = TaskTimeLog(task_id=task.id, user_id=current_user.id, hours=data.hours, log_date=data.log_date, description=data.description)
     task.actual_hours += log.hours
@@ -1854,9 +1865,7 @@ def get_task_timelogs_legacy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     logs = db.query(TaskTimeLog).filter(TaskTimeLog.task_id == task_id).order_by(TaskTimeLog.created_at.desc()).all()
     results = []
@@ -1877,9 +1886,7 @@ def create_checklist(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     checklist = TaskChecklist(task_id=task.id, title=data.title.strip(), display_order=data.display_order)
     db.add(checklist)
@@ -2040,9 +2047,7 @@ def start_timer(
     current_user: User = Depends(get_current_user),
 ):
     """Start stopwatch timer for current user on task"""
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     # Check active timer
     active = db.query(TaskTimeEntry).filter(
@@ -2118,9 +2123,7 @@ def add_manual_time_entry(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     ended = data.ended_at or datetime.now(timezone.utc)
     duration = data.duration_minutes
@@ -2157,9 +2160,7 @@ def add_task_comment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     if not data.content or not data.content.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Comment content cannot be empty")
@@ -2187,9 +2188,7 @@ def get_task_comments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     comments = db.query(TaskComment).filter(
         TaskComment.task_id == task_id,
@@ -2215,9 +2214,7 @@ async def upload_task_attachment(
     current_user: User = Depends(get_current_user),
 ):
     """Upload physical task file attachment or JSON attachment record"""
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
@@ -2276,9 +2273,7 @@ def add_task_attachment_meta(
     current_user: User = Depends(get_current_user),
 ):
     """Add attachment record via JSON payload"""
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     attachment = TaskAttachment(
         task_id=task.id,
@@ -2306,9 +2301,7 @@ def get_task_attachments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     atts = db.query(TaskAttachment).filter(TaskAttachment.task_id == task_id).order_by(TaskAttachment.created_at.desc()).all()
     res = []
@@ -2350,7 +2343,7 @@ def create_task_dependency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     # Support both old field (depends_on_task_id) and new field (predecessor_task_id)
     target_task_id = getattr(data, 'depends_on_task_id', None) or getattr(data, 'predecessor_task_id', None)
@@ -2358,8 +2351,11 @@ def create_task_dependency(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="predecessor_task_id is required")
 
     target_task = db.get(Task, target_task_id)
-    if not task or not target_task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task or target task not found")
+    if not target_task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target task not found")
+    
+    # Optional: check if user can access target task
+    _get_task_or_404_with_auth(db, target_task_id, current_user)
 
     # Cross-project dependency block
     if task.project_id != target_task.project_id:
@@ -2504,6 +2500,7 @@ def auto_adjust_task_date_endpoint(
     current_user: User = Depends(get_current_user),
 ):
     """Auto Adjust Date endpoint to resolve dependency conflicts on task_id"""
+    _get_task_or_404_with_auth(db, task_id, current_user)
     from app.services.scheduling_engine import auto_adjust_task_dates
     task = auto_adjust_task_dates(db, task_id, current_user.id)
     db.commit()
@@ -2519,7 +2516,10 @@ def bulk_task_action(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    tasks = db.query(Task).filter(Task.id.in_(req.task_ids)).all()
+    tasks = []
+    for tid in req.task_ids:
+        tasks.append(_get_task_or_404_with_auth(db, tid, current_user))
+        
     if not tasks:
         return BulkTaskActionResponse(success=False, affected_count=0, message="No matching tasks found")
 
@@ -2591,9 +2591,7 @@ def get_task_custom_fields(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     values = db.query(TaskCustomFieldValue).filter(TaskCustomFieldValue.task_id == task_id).all()
     results = []
@@ -2615,9 +2613,7 @@ def save_task_custom_field(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    task = db.get(Task, task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     field_def = db.get(TaskCustomFieldDefinition, data.field_id)
     if not field_def:
@@ -2653,9 +2649,7 @@ def convert_subtask_to_task(
     current_user: User = Depends(get_current_user),
 ):
     """Convert a subtask to a top-level task (parent_task_id = None)"""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     old_parent_id = task.parent_task_id
     task.parent_task_id = None
@@ -2679,9 +2673,7 @@ def convert_task_to_subtask(
     current_user: User = Depends(get_current_user),
 ):
     """Convert a task to a subtask under target_parent_id"""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     if not data.target_parent_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_parent_id is required")
@@ -2755,9 +2747,7 @@ def cascade_preview(
     current_user: User = Depends(get_current_user),
 ):
     """Dry-run cascade reschedule — returns which tasks would move without committing."""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     if days_shift == 0:
         return CascadePreviewOut(total_affected=0, items=[])
@@ -2803,9 +2793,7 @@ def reschedule_dependencies(
     current_user: User = Depends(get_current_user),
 ):
     """Cascade-reschedule downstream dependent tasks (working-day-aware)."""
-    task = db.get(Task, task_id)
-    if not task or task.is_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     holiday_dates, weekly_off_days = _get_working_calendar(db)
     if data and data.days_shift:

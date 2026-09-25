@@ -85,6 +85,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
     status: selectedStatusId ? String(selectedStatusId) : undefined,
     priority: selectedPriority || undefined,
     q: searchQ || undefined,
+    my_tasks_only: taskScope === 'my',
   });
 
   const { data: projects = [] } = useGetProjectsQuery();
@@ -167,17 +168,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const safeProjects = Array.isArray(projects) ? projects : [];
 
-  // Filter tasks by Scope (My Tasks vs Projects Tasks)
-  const filteredTasks = safeTasks.filter((t) => {
-    if (!t) return false;
-    if (taskScope === 'my' && currentUser) {
-      const isAssignee = Array.isArray(t.assignees) && t.assignees.some((a) => a && a.user_id === currentUser.id);
-      const isDirectAssignee = (t as any).assignee_id === currentUser.id;
-      const isCreator = (t as any).created_by_id === currentUser.id || t.created_by === currentUser.id;
-      return isAssignee || isDirectAssignee || isCreator;
-    }
-    return true;
-  });
+  const filteredTasks = safeTasks; // Use directly since backend is filtering
 
   return (
     <Box sx={{ width: '100%', maxWidth: 'none', minWidth: 0, px: 0, py: 0.5, boxSizing: 'border-box' }}>
