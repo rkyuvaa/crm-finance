@@ -1,9 +1,9 @@
 import asyncio
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
+from app.db.session import SessionLocal
 from app.models.projects import Task
-from app.models.core import Notification
+from app.models.notification import Notification
 
 async def _reminder_loop():
     while True:

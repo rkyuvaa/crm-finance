@@ -290,8 +290,8 @@ class Task(Base):
     department: Mapped["Department | None"] = relationship("Department", lazy="joined")
     cost_center: Mapped["CostCenter | None"] = relationship("CostCenter", lazy="joined")
 
-    parent_task: Mapped["Task | None"] = relationship("Task", remote_side=[id], back_populates="subtask_items", lazy="joined")
-    subtask_items: Mapped[List["Task"]] = relationship("Task", back_populates="parent_task", cascade="all, delete-orphan")
+    parent_task: Mapped["Task | None"] = relationship("Task", foreign_keys=[parent_task_id], remote_side="[Task.id]", back_populates="subtask_items", lazy="joined")
+    subtask_items: Mapped[List["Task"]] = relationship("Task", foreign_keys=[parent_task_id], back_populates="parent_task", cascade="all, delete-orphan")
     milestone: Mapped["ProjectMilestone | None"] = relationship("ProjectMilestone", back_populates="tasks", foreign_keys=[milestone_id])
 
     assignees: Mapped[List["TaskAssignee"]] = relationship("TaskAssignee", back_populates="task", cascade="all, delete-orphan")
