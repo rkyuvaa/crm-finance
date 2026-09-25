@@ -56,7 +56,7 @@ from app.schemas.master import (
     VehicleModelUpdate,
 )
 
-router = APIRouter(prefix="/masters", tags=["masters"], dependencies=[Depends(require_permission("view", "masters"))])
+router = APIRouter(prefix="/masters", tags=["masters"])
 
 
 def _to_out(model: VehicleModel) -> VehicleModelOut:
