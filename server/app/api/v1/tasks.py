@@ -368,7 +368,7 @@ def _sync_parent_due_date(db: Session, parent_id: Optional[int]) -> None:
 
 def _batch_load_task_metadata(db: Session, task_ids: list[int]):
     if not task_ids:
-        return {}, {}, {}, {}, {}
+        return {}, {}, {}, {}, {}, {}
 
     # 1. Dependencies
     deps = (
