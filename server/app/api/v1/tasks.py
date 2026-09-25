@@ -825,22 +825,21 @@ def list_tasks(
             Task.id.in_(db.query(TaskFollower.task_id).filter(TaskFollower.user_id == follower_id))
         )
 
-    # Mandatory security: Normal users can only see tasks assigned to them
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(
-            or_(
-                Task.assignee_id == current_user.id,
-                Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id))
+    if my_tasks_only:
+        # My Tasks scope: Show ONLY personal tasks created by this user
+        query = query.filter(Task.is_personal == True, Task.created_by == current_user.id)
+    else:
+        # Projects Tasks scope: Show ONLY project tasks
+        query = query.filter(Task.is_personal == False)
+        
+        # Mandatory security: Normal users can only see project tasks assigned to them
+        if current_user.role != UserRole.ADMIN:
+            query = query.filter(
+                or_(
+                    Task.assignee_id == current_user.id,
+                    Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id))
+                )
             )
-        )
-    elif my_tasks_only:
-        # If Admin explicitly requests My Tasks
-        query = query.filter(
-            or_(
-                Task.assignee_id == current_user.id,
-                Task.id.in_(db.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == current_user.id))
-            )
-        )
 
     if cost_center_id:
         query = query.filter(Task.cost_center_id == cost_center_id)
@@ -929,12 +928,18 @@ def _validate_task_dates(data: TaskCreate | TaskUpdate):
         )
 
 def _get_task_or_404_with_auth(db: Session, task_id: int, current_user: User) -> Task:
-    task = _get_task_or_404_with_auth(db, task_id, current_user)
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task or task.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
         
     if current_user.role != UserRole.ADMIN:
-        is_assigned = task.assignee_id == current_user.id or any(a.user_id == current_user.id for a in task.assignees)
-        if not is_assigned:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this task")
+        if task.is_personal:
+            if task.created_by != current_user.id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this personal task")
+        else:
+            is_assigned = task.assignee_id == current_user.id or any(a.user_id == current_user.id for a in task.assignees)
+            if not is_assigned:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this project task")
             
     return task
 
