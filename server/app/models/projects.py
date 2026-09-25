@@ -261,6 +261,12 @@ class Task(Base):
     cost_center_id: Mapped[int | None] = mapped_column(ForeignKey("cost_centers.id", ondelete="SET NULL"), nullable=True, index=True)
 
     recurrence_rule: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recurrence_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    recurring_task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
+    
+    reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminder_status: Mapped[str | None] = mapped_column(String(20), default="PENDING", nullable=True)
+
     tags: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), index=True)

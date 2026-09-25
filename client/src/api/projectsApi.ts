@@ -204,9 +204,21 @@ export interface TaskItem {
   is_deleted: boolean;
   is_blocked?: boolean;
   created_by?: number;
+  created_by_name?: string;
   updated_by?: number;
   completed_by?: number;
   completed_at?: string;
+  completion_date?: string;
+  completion_time?: string;
+  reminder_at?: string;
+  reminder_status?: string;
+  recurrence_rule?: Record<string, any>;
+  recurrence_end_date?: string;
+  recurring_task_id?: number;
+  tag_ids?: number[];
+  tag_names?: string[];
+  tags_list?: TaskTagInfo[];
+  edit_series?: boolean;
   assignees: TaskAssigneeInfo[];
   followers: TaskFollowerInfo[];
   tags: TaskTagInfo[];
@@ -595,6 +607,11 @@ export const projectsApi = createApi({
     }),
 
     // Milestones
+    getTaskTags: builder.query<TaskTagInfo[], void>({
+      query: () => '/tasks/tags/list',
+      providesTags: ['Tasks'],
+    }),
+
     getProjectMilestones: builder.query<ProjectMilestoneItem[], number>({
       query: (projectId) => `/projects/${projectId}/milestones`,
       providesTags: (_res, _err, projectId) => [{ type: 'Milestones', id: projectId }, 'Milestones'],
@@ -865,6 +882,7 @@ export const {
   useCreateCustomFieldDefinitionMutation,
   useUpdateCustomFieldDefinitionMutation,
   useDeleteCustomFieldDefinitionMutation,
+  useGetTaskTagsQuery,
   useGetProjectMilestonesQuery,
   useCreateProjectMilestoneMutation,
   useUpdateProjectMilestoneMutation,

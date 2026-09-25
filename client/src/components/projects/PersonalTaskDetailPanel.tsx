@@ -3,8 +3,9 @@ import {
   Drawer, Box, Typography, IconButton, TextField, Select, MenuItem, Button, Divider, CircularProgress
 } from '@mui/material';
 import { X, CheckCircle2, Clock } from 'lucide-react';
-import { TaskItem, useUpdatePersonalTaskMutation, useGetStatusDefinitionsQuery } from '@/api/projectsApi';
+import { TaskItem, useUpdatePersonalTaskMutation, useGetStatusDefinitionsQuery, useGetTaskTagsQuery } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import Autocomplete from '@mui/material/Autocomplete';
 
 interface PersonalTaskDetailPanelProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface PersonalTaskDetailPanelProps {
 export default function PersonalTaskDetailPanel({ open, onClose, task }: PersonalTaskDetailPanelProps) {
   const [updateTask, { isLoading }] = useUpdatePersonalTaskMutation();
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
+  const { data: taskTags = [] } = useGetTaskTagsQuery();
   const { showToast } = useToast();
 
   const [title, setTitle] = useState(task.title || '');
@@ -24,6 +26,12 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
   const [dueDate, setDueDate] = useState(task.due_date || '');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(task.estimated_hours || '');
   const [isCompleted, setIsCompleted] = useState(task.is_completed || false);
+  const [tags, setTags] = useState<string[]>(task.tags_list?.map(t => t.name) || []);
+  
+  const [reminderAt, setReminderAt] = useState(task.reminder_at ? task.reminder_at.substring(0,16) : '');
+  const [recurrenceType, setRecurrenceType] = useState(task.recurrence_rule?.type || 'None');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(task.recurrence_end_date || '');
+  const [editSeries, setEditSeries] = useState(false);
 
   useEffect(() => {
     if (open && task) {
@@ -34,6 +42,11 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
       setDueDate(task.due_date || '');
       setEstimatedHours(task.estimated_hours || '');
       setIsCompleted(task.is_completed || false);
+      setTags(task.tags_list?.map(t => t.name) || []);
+      setReminderAt(task.reminder_at ? task.reminder_at.substring(0,16) : '');
+      setRecurrenceType(task.recurrence_rule?.type || 'None');
+      setRecurrenceEndDate(task.recurrence_end_date || '');
+      setEditSeries(false);
     }
   }, [open, task]);
 
@@ -49,6 +62,11 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
           due_date: dueDate || undefined,
           estimated_hours: estimatedHours ? Number(estimatedHours) : 0,
           is_completed: isCompleted,
+          tag_names: tags,
+          reminder_at: reminderAt ? new Date(reminderAt).toISOString() : undefined,
+          recurrence_rule: recurrenceType !== 'None' ? { type: recurrenceType } : null,
+          recurrence_end_date: recurrenceEndDate || undefined,
+          edit_series: editSeries,
         }
       }).unwrap();
       showToast('Task updated successfully', 'success');
@@ -150,6 +168,70 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
             />
           </Box>
 
+          <Autocomplete
+            multiple
+            freeSolo
+            options={taskTags.map(t => t.name)}
+            value={tags}
+            onChange={(_, newValue) => setTags(newValue)}
+            renderInput={(params) => <TextField {...params} label="Tags" size="small" />}
+            size="small"
+          />
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <TextField
+              label="Reminder Date & Time"
+              type="datetime-local"
+              size="small"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={reminderAt}
+              onChange={e => setReminderAt(e.target.value)}
+            />
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>Recurrence</Typography>
+              <Select
+                size="small"
+                fullWidth
+                value={recurrenceType}
+                onChange={e => setRecurrenceType(e.target.value)}
+              >
+                <MenuItem value="None">None</MenuItem>
+                <MenuItem value="Daily">Daily</MenuItem>
+                <MenuItem value="Weekly">Weekly</MenuItem>
+                <MenuItem value="Monthly">Monthly</MenuItem>
+                <MenuItem value="Yearly">Yearly</MenuItem>
+              </Select>
+            </Box>
+          </Box>
+          
+          {recurrenceType !== 'None' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <TextField
+                label="Recurrence End Date"
+                type="date"
+                size="small"
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                value={recurrenceEndDate}
+                onChange={e => setRecurrenceEndDate(e.target.value)}
+              />
+              {(task.recurring_task_id || task.recurrence_rule) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <input 
+                    type="checkbox" 
+                    id="editSeries" 
+                    checked={editSeries} 
+                    onChange={e => setEditSeries(e.target.checked)} 
+                  />
+                  <Typography variant="body2" component="label" htmlFor="editSeries">
+                    Apply updates to entire future series
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
           <Divider />
 
           <TextField
@@ -162,6 +244,17 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
             size="small"
             placeholder="Add personal notes, checklists, or details here..."
           />
+
+          {task.created_by_name && (
+            <Typography variant="caption" color="text.secondary">
+              Created by {task.created_by_name} on {new Date(task.created_at).toLocaleString()}
+            </Typography>
+          )}
+          {task.completion_date && (
+            <Typography variant="caption" color="text.secondary">
+              Completed on {task.completion_date} {task.completion_time || ''}
+            </Typography>
+          )}
 
         </Box>
 

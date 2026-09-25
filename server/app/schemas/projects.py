@@ -311,6 +311,10 @@ class TaskBase(BaseModel):
     cost_center_id: Optional[int] = None
     phase_id: Optional[int] = None
     recurrence_rule: Optional[dict] = None
+    recurrence_end_date: Optional[date] = None
+    recurring_task_id: Optional[int] = None
+    reminder_at: Optional[datetime] = None
+    reminder_status: Optional[str] = "PENDING"
 
 
 class TaskCreate(TaskBase):
@@ -327,6 +331,7 @@ class TaskCreate(TaskBase):
     assignee_ids: Optional[List[int]] = None
     follower_ids: Optional[List[int]] = None
     tag_ids: Optional[List[int]] = None
+    tag_names: Optional[List[str]] = None
     sort_order: Optional[int] = 0
 
 
@@ -349,6 +354,7 @@ class TaskUpdate(BaseModel):
     actual_hours: Optional[float] = None
     tags: Optional[str] = None
     tag_ids: Optional[List[int]] = None
+    tag_names: Optional[List[str]] = None
     company_id: Optional[int] = None
     branch_id: Optional[int] = None
     department_id: Optional[int] = None
@@ -368,6 +374,11 @@ class TaskUpdate(BaseModel):
     is_personal: Optional[bool] = None
     sort_order: Optional[int] = None
     recurrence_rule: Optional[dict] = None
+    recurrence_end_date: Optional[date] = None
+    recurring_task_id: Optional[int] = None
+    reminder_at: Optional[datetime] = None
+    reminder_status: Optional[str] = None
+    edit_series: Optional[bool] = False
     override_dependencies: Optional[bool] = False
 
 
@@ -430,6 +441,8 @@ class TaskOut(TaskBase):
     completed_subtask_count: int = 0
     nested_subtasks: List["TaskOut"] = []
 
+    created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

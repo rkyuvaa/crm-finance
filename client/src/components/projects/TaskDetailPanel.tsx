@@ -24,6 +24,7 @@ import {
   DialogContentText,
   Menu,
   InputAdornment,
+  Autocomplete,
 } from '@mui/material';
 import {
   X,
@@ -86,6 +87,7 @@ import {
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
   useAutoAdjustTaskDateMutation,
+  useGetTaskTagsQuery,
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -115,6 +117,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const [completionDate, setCompletionDate] = useState('');
   const [completionTime, setCompletionTime] = useState('');
   const [duration, setDuration] = useState<number | ''>(1);
+  const [reminderAt, setReminderAt] = useState('');
+  const [recurrenceType, setRecurrenceType] = useState('None');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [editSeries, setEditSeries] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
 
   // Checklist State
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
@@ -199,6 +206,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     { skip: !isAddDepDialogOpen }
   );
   const { data: statuses = [] } = useGetStatusDefinitionsQuery();
+  const { data: taskTags = [] } = useGetTaskTagsQuery();
   const { data: projectMilestones = [] } = useGetProjectMilestonesQuery(currentTask?.project_id || 0, {
     skip: !currentTask?.project_id,
   });
@@ -252,6 +260,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
       setCompletionDate(sanitizeDate(currentTask.completion_date));
       setCompletionTime(currentTask.completion_time || '');
       setDuration(currentTask.duration_working_days ?? 1);
+      
+      setTags(currentTask.tags_list?.map(t => t.name) || []);
+      setReminderAt(currentTask.reminder_at ? currentTask.reminder_at.substring(0,16) : '');
+      setRecurrenceType(currentTask.recurrence_rule?.type || 'None');
+      setRecurrenceEndDate(sanitizeDate(currentTask.recurrence_end_date));
+      setEditSeries(false);
     }
   }, [
     currentTask?.id,
@@ -264,6 +278,10 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     currentTask?.completion_date,
     currentTask?.completion_time,
     currentTask?.duration_working_days,
+    currentTask?.tags_list,
+    currentTask?.reminder_at,
+    currentTask?.recurrence_rule,
+    currentTask?.recurrence_end_date,
   ]);
 
 
@@ -441,6 +459,42 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     } catch (err: any) {
       setDuration(currentTask?.duration_working_days ?? 1);
       showToast(err?.data?.detail || 'Failed to update duration', 'error');
+    }
+  };
+
+  const handleTagsChange = async (newTags: string[]) => {
+    setTags(newTags);
+    try {
+      await updateTask({ id: currentTaskId, body: { tag_names: newTags } }).unwrap();
+    } catch {
+      showToast('Failed to update tags', 'error');
+    }
+  };
+
+  const handleReminderChange = async (d: string) => {
+    setReminderAt(d);
+    try {
+      await updateTask({ id: currentTaskId, body: { reminder_at: d ? new Date(d).toISOString() : (null as any) } }).unwrap();
+    } catch {
+      showToast('Failed to update reminder', 'error');
+    }
+  };
+
+  const handleRecurrenceTypeChange = async (val: string) => {
+    setRecurrenceType(val);
+    try {
+      await updateTask({ id: currentTaskId, body: { recurrence_rule: val !== 'None' ? { type: val } : null, edit_series: editSeries } }).unwrap();
+    } catch {
+      showToast('Failed to update recurrence', 'error');
+    }
+  };
+
+  const handleRecurrenceEndDateChange = async (d: string) => {
+    setRecurrenceEndDate(d);
+    try {
+      await updateTask({ id: currentTaskId, body: { recurrence_end_date: d || (null as any), edit_series: editSeries } }).unwrap();
+    } catch {
+      showToast('Failed to update recurrence end date', 'error');
     }
   };
 
@@ -1532,6 +1586,84 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 />
               )}
             </Box>
+
+            <Autocomplete
+              multiple
+              freeSolo
+              options={taskTags.map(t => t.name)}
+              value={tags}
+              onChange={(_, newValue) => handleTagsChange(newValue)}
+              renderInput={(params) => <TextField {...params} label="Tags" size="small" />}
+              size="small"
+              sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' } }}
+            />
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Reminder
+                </Typography>
+                <TextField
+                  type="datetime-local"
+                  size="small"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={reminderAt}
+                  onChange={e => handleReminderChange(e.target.value)}
+                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                />
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Recurrence
+                </Typography>
+                <Select
+                  size="small"
+                  fullWidth
+                  value={recurrenceType}
+                  onChange={e => handleRecurrenceTypeChange(e.target.value)}
+                  sx={{ height: 36, fontSize: 12, bgcolor: 'background.paper' }}
+                >
+                  <MenuItem value="None">None</MenuItem>
+                  <MenuItem value="Daily">Daily</MenuItem>
+                  <MenuItem value="Weekly">Weekly</MenuItem>
+                  <MenuItem value="Monthly">Monthly</MenuItem>
+                  <MenuItem value="Yearly">Yearly</MenuItem>
+                </Select>
+              </Box>
+            </Box>
+            
+            {recurrenceType !== 'None' && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                    Recurrence End Date
+                  </Typography>
+                  <TextField
+                    type="date"
+                    size="small"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    value={recurrenceEndDate}
+                    onChange={e => handleRecurrenceEndDateChange(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                  />
+                </Box>
+                {(currentTask.recurring_task_id || currentTask.recurrence_rule) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <input 
+                      type="checkbox" 
+                      id="editSeriesMain" 
+                      checked={editSeries} 
+                      onChange={e => setEditSeries(e.target.checked)} 
+                    />
+                    <Typography variant="caption" component="label" htmlFor="editSeriesMain">
+                      Apply updates to entire future series
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
 
             {/* Financials */}
             <Grid container spacing={1}>

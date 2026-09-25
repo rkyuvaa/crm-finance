@@ -555,6 +555,7 @@ def _format_task_out(
         out.task_number = _unpad_task_number(out.task_number)
     out.project_name = t.project.name if t.project else None
     out.assignee_name = t.assignee.full_name if t.assignee else None
+    out.created_by_name = t.creator.full_name if t.creator else None
     out.status_name = t.status_def.name if t.status_def else None
     out.status_color = t.status_def.color if t.status_def else "#E2E8F0"
     out.status_category = t.status_def.category.value if t.status_def and t.status_def.category else "ACTIVE"
@@ -891,6 +892,112 @@ def list_tasks(
     ]
 
 
+def _validate_task_dates(data: TaskCreate | TaskUpdate):
+    if data.start_date and data.due_date and data.due_date < data.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Due date cannot be earlier than start date"
+        )
+        
+    if data.recurrence_end_date and data.start_date and data.recurrence_end_date < data.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Recurrence end date cannot be earlier than start date"
+        )
+        
+    if data.reminder_at and data.due_date:
+        if data.reminder_at.date() > data.due_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Reminder date cannot be later than due date"
+            )
+
+    # Reject dates with unreasonable year (e.g. year 0002 caused by rollup/scheduling bugs)
+    if data.start_date and data.start_date.year < 1900:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start date year is invalid. Please enter a valid date."
+        )
+
+def spawn_next_recurring_task(db: Session, task: Task, current_user_id: int):
+    """Spawn the next occurrence of a recurring task if within end date"""
+    if not task.recurrence_rule or task.recurrence_rule.get("type") == "None":
+        return
+    
+    # Simple logic to determine next start/due date based on recurrence_rule
+    # e.g., {'type': 'Daily'}, {'type': 'Weekly', 'days': [...]}, {'type': 'Monthly'}, {'type': 'Yearly'}
+    from datetime import timedelta
+    from dateutil.relativedelta import relativedelta
+    
+    rtype = task.recurrence_rule.get("type")
+    
+    next_start = task.start_date
+    next_due = task.due_date
+    
+    if rtype == "Daily":
+        if next_start: next_start += timedelta(days=1)
+        if next_due: next_due += timedelta(days=1)
+    elif rtype == "Weekly":
+        if next_start: next_start += timedelta(weeks=1)
+        if next_due: next_due += timedelta(weeks=1)
+    elif rtype == "Monthly":
+        if next_start: next_start += relativedelta(months=1)
+        if next_due: next_due += relativedelta(months=1)
+    elif rtype == "Yearly":
+        if next_start: next_start += relativedelta(years=1)
+        if next_due: next_due += relativedelta(years=1)
+    elif rtype == "Custom":
+        # Simplified handling for Custom
+        pass
+        
+    if task.recurrence_end_date:
+        if (next_start and next_start > task.recurrence_end_date) or (next_due and next_due > task.recurrence_end_date):
+            return # Reached end of recurrence
+            
+    # Create the duplicate
+    task_num = _generate_task_number(db, task.project_id)
+    new_task = Task(
+        task_number=task_num,
+        project_id=task.project_id,
+        phase_id=task.phase_id,
+        parent_task_id=task.parent_task_id,
+        milestone_id=task.milestone_id,
+        is_personal=task.is_personal,
+        title=task.title,
+        description=task.description,
+        type_id=task.type_id,
+        status_id=None, # Will get default
+        priority=task.priority,
+        assignee_id=task.assignee_id,
+        created_by=task.created_by,
+        updated_by=current_user_id,
+        start_date=next_start,
+        start_time=task.start_time,
+        due_date=next_due,
+        due_time=task.due_time,
+        estimated_minutes=task.estimated_minutes,
+        estimated_hours=task.estimated_hours,
+        recurrence_rule=task.recurrence_rule,
+        recurrence_end_date=task.recurrence_end_date,
+        recurring_task_id=task.recurring_task_id or task.id, # Link to original series
+        reminder_at=None, # Reset reminder for new occurrence
+        company_id=task.company_id,
+        branch_id=task.branch_id,
+        department_id=task.department_id,
+        cost_center_id=task.cost_center_id,
+    )
+    
+    first_status = db.query(TaskStatusDef).filter(TaskStatusDef.is_active.is_(True)).order_by(TaskStatusDef.display_order).first()
+    if first_status:
+        new_task.status_id = first_status.id
+        
+    db.add(new_task)
+    db.flush()
+    
+    # Copy tags
+    for tm in task.tag_mappings:
+        db.add(TaskTagMap(task_id=new_task.id, tag_id=tm.tag_id))
+
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 def create_task(
     data: TaskCreate,
@@ -901,18 +1008,7 @@ def create_task(
     if not data.title or not data.title.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task title is mandatory")
 
-    if data.start_date and data.due_date and data.due_date < data.start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Due date cannot be earlier than start date"
-        )
-
-    # Reject dates with unreasonable year (e.g. year 0002 caused by rollup/scheduling bugs)
-    if data.start_date and data.start_date.year < 1900:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Start date year is invalid. Please enter a valid date."
-        )
+    _validate_task_dates(data)
     if data.due_date and data.due_date.year < 1900:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -982,6 +1078,10 @@ def create_task(
         department_id=data.department_id,
         cost_center_id=data.cost_center_id,
         recurrence_rule=data.recurrence_rule,
+        recurrence_end_date=data.recurrence_end_date,
+        recurring_task_id=data.recurring_task_id,
+        reminder_at=data.reminder_at,
+        reminder_status=data.reminder_status or "PENDING",
         completion_date=data.completion_date,
         completion_time=data.completion_time,
     )
@@ -1013,9 +1113,21 @@ def create_task(
                 db.add(TaskFollower(task_id=task.id, user_id=fid))
 
     # Tags handling
-    if data.tag_ids:
-        for tid in data.tag_ids:
-            db.add(TaskTagMap(task_id=task.id, tag_id=tid))
+    tids_to_add = set(data.tag_ids or [])
+    if data.tag_names:
+        for tname in data.tag_names:
+            tname = tname.strip()
+            if not tname: continue
+            tag = db.query(TaskTag).filter(TaskTag.name == tname).first()
+            if not tag:
+                tag = TaskTag(name=tname)
+                db.add(tag)
+                db.commit()
+                db.refresh(tag)
+            tids_to_add.add(tag.id)
+            
+    for tid in tids_to_add:
+        db.add(TaskTagMap(task_id=task.id, tag_id=tid))
 
     # Log activity
     _log_activity(db, task.id, current_user.id, "CREATED", new_val=task.title)
@@ -1058,6 +1170,11 @@ def create_personal_task(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new personal task strictly isolated from projects"""
+    if not data.title or not data.title.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task title is mandatory")
+        
+    _validate_task_dates(data)
+    
     task_num = _generate_task_number(db, None)
 
     task = Task(
@@ -1081,6 +1198,13 @@ def create_personal_task(
         due_time=data.due_time,
         estimated_minutes=data.estimated_minutes or int(data.estimated_hours * 60),
         estimated_hours=data.estimated_hours or ((data.estimated_minutes or 0) / 60.0),
+        recurrence_rule=data.recurrence_rule,
+        recurrence_end_date=data.recurrence_end_date,
+        recurring_task_id=data.recurring_task_id,
+        reminder_at=data.reminder_at,
+        reminder_status=data.reminder_status or "PENDING",
+        completion_date=data.completion_date,
+        completion_time=data.completion_time,
     )
 
     if not task.status_id:
@@ -1093,6 +1217,24 @@ def create_personal_task(
     db.refresh(task)
 
     db.add(TaskAssignee(task_id=task.id, user_id=current_user.id, assigned_by=current_user.id))
+    
+    # Tags handling
+    tids_to_add = set(data.tag_ids or [])
+    if data.tag_names:
+        for tname in data.tag_names:
+            tname = tname.strip()
+            if not tname: continue
+            tag = db.query(TaskTag).filter(TaskTag.name == tname).first()
+            if not tag:
+                tag = TaskTag(name=tname)
+                db.add(tag)
+                db.commit()
+                db.refresh(tag)
+            tids_to_add.add(tag.id)
+            
+    for tid in tids_to_add:
+        db.add(TaskTagMap(task_id=task.id, tag_id=tid))
+
     _log_activity(db, task.id, current_user.id, "CREATED", new_val=task.title)
     
     db.commit()
@@ -1117,11 +1259,13 @@ def update_personal_task(
     
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal task not found")
+        
+    _validate_task_dates(data)
 
     update_dict = data.model_dump(exclude_unset=True)
     
     # Exclude any project/parent link attempts
-    blocked_fields = ['project_id', 'parent_task_id', 'milestone_id', 'phase_id', 'is_personal']
+    blocked_fields = ['project_id', 'parent_task_id', 'milestone_id', 'phase_id', 'is_personal', 'tag_ids', 'tag_names', 'edit_series']
     for bf in blocked_fields:
         if bf in update_dict:
             del update_dict[bf]
@@ -1131,18 +1275,63 @@ def update_personal_task(
             setattr(task, key, val)
             _log_activity(db, task.id, current_user.id, "UPDATED", field_name=key, new_val=str(val))
 
+    # Apply series update logic if edit_series is True
+    if data.edit_series and (task.recurring_task_id or task.recurrence_rule):
+        series_id = task.recurring_task_id or task.id
+        future_occurrences = db.query(Task).filter(
+            (Task.recurring_task_id == series_id) | (Task.id == series_id),
+            Task.is_completed == False,
+            Task.is_deleted == False,
+            Task.id != task.id,
+            Task.is_personal == True
+        ).all()
+        for ft in future_occurrences:
+            for field, val in update_dict.items():
+                if field not in ["assignee_ids", "follower_ids", "tag_ids", "tag_names", "override_dependencies", "edit_series", "is_completed", "completion_date", "completion_time", "status_id", "start_date", "due_date"]:
+                    setattr(ft, field, val)
+
     if data.is_completed is not None:
         if data.is_completed and not task.is_completed:
             task.is_completed = True
             task.completed_at = datetime.now(timezone.utc)
             task.completed_by = current_user.id
             task.progress_percentage = 100.0
+            if not task.completion_date and not data.completion_date:
+                task.completion_date = datetime.now(timezone.utc).date()
+            if not task.completion_time and not data.completion_time:
+                task.completion_time = datetime.now(timezone.utc).strftime("%I:%M %p")
+            spawn_next_recurring_task(db, task, current_user.id)
         elif not data.is_completed and task.is_completed:
             task.is_completed = False
             task.completed_at = None
             task.completed_by = None
+            if "completion_date" not in data.model_dump(exclude_unset=True):
+                task.completion_date = None
+            if "completion_time" not in data.model_dump(exclude_unset=True):
+                task.completion_time = None
 
     task.updated_by = current_user.id
+    
+    # Tags handling
+    if data.tag_ids is not None or data.tag_names is not None:
+        db.query(TaskTagMap).filter(TaskTagMap.task_id == task.id).delete()
+        tids_to_add = set(data.tag_ids or [])
+        tnames = data.tag_names
+        if tnames:
+            for tname in tnames:
+                tname = tname.strip()
+                if not tname: continue
+                tag = db.query(TaskTag).filter(TaskTag.name == tname).first()
+                if not tag:
+                    tag = TaskTag(name=tname)
+                    db.add(tag)
+                    db.commit()
+                    db.refresh(tag)
+                tids_to_add.add(tag.id)
+                
+        for tid in tids_to_add:
+            db.add(TaskTagMap(task_id=task.id, tag_id=tid))
+
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -1370,6 +1559,10 @@ def update_task(
             task.completion_date = datetime.now(timezone.utc).date()
         if not task.completion_time and "completion_time" not in update_dict:
             task.completion_time = datetime.now(timezone.utc).strftime("%I:%M %p")
+            
+        task.progress_percentage = 100.0
+            
+        spawn_next_recurring_task(db, task, current_user.id)
 
         # Notify downstream dependent tasks that they are unblocked
         dependents = db.query(TaskDependency).filter(TaskDependency.depends_on_task_id == task.id).all()
@@ -1418,8 +1611,22 @@ def update_task(
     # Update task fields
     task.updated_by = current_user.id
     for field, val in update_dict.items():
-        if field not in ["assignee_ids", "follower_ids", "tag_ids", "override_dependencies"]:
+        if field not in ["assignee_ids", "follower_ids", "tag_ids", "tag_names", "override_dependencies", "edit_series"]:
             setattr(task, field, val)
+            
+    # Apply series update logic if edit_series is True
+    if update_dict.get("edit_series") and (task.recurring_task_id or task.recurrence_rule):
+        series_id = task.recurring_task_id or task.id
+        future_occurrences = db.query(Task).filter(
+            (Task.recurring_task_id == series_id) | (Task.id == series_id),
+            Task.is_completed == False,
+            Task.is_deleted == False,
+            Task.id != task.id
+        ).all()
+        for ft in future_occurrences:
+            for field, val in update_dict.items():
+                if field not in ["assignee_ids", "follower_ids", "tag_ids", "tag_names", "override_dependencies", "edit_series", "is_completed", "completion_date", "completion_time", "status_id", "start_date", "due_date"]:
+                    setattr(ft, field, val)
 
     # Multi assignees update
     if "assignee_ids" in update_dict and update_dict["assignee_ids"] is not None:
@@ -1436,9 +1643,23 @@ def update_task(
             db.add(TaskFollower(task_id=task.id, user_id=fid))
 
     # Tags update
-    if "tag_ids" in update_dict and update_dict["tag_ids"] is not None:
+    if "tag_ids" in update_dict or "tag_names" in update_dict:
         db.query(TaskTagMap).filter(TaskTagMap.task_id == task.id).delete()
-        for tid in update_dict["tag_ids"]:
+        tids_to_add = set(update_dict.get("tag_ids") or [])
+        tnames = update_dict.get("tag_names")
+        if tnames:
+            for tname in tnames:
+                tname = tname.strip()
+                if not tname: continue
+                tag = db.query(TaskTag).filter(TaskTag.name == tname).first()
+                if not tag:
+                    tag = TaskTag(name=tname)
+                    db.add(tag)
+                    db.commit()
+                    db.refresh(tag)
+                tids_to_add.add(tag.id)
+                
+        for tid in tids_to_add:
             db.add(TaskTagMap(task_id=task.id, tag_id=tid))
 
     db.commit()
@@ -2684,4 +2905,14 @@ def update_project_pm_settings(
     db.commit()
     db.refresh(settings)
     return ProjectPmSettingsOut.model_validate(settings)
+
+
+@router.get("/tags/list", response_model=List[TaskTagOut])
+def get_task_tags(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all available task tags for autocomplete"""
+    tags = db.query(TaskTag).order_by(TaskTag.name).all()
+    return tags
 

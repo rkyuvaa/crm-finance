@@ -219,6 +219,11 @@ async def request_logging(request: Request, call_next):
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
+@app.on_event("startup")
+async def startup_event():
+    from app.services.scheduler import start_scheduler
+    start_scheduler()
+
 
 @app.get("/health")
 def health():
