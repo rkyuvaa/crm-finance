@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     with op.batch_alter_table('tasks', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('is_personal', sa.Boolean(), server_default=sa.text('0'), nullable=False))
+        batch_op.add_column(sa.Column('is_personal', sa.Boolean(), server_default=sa.text('false'), nullable=False))
         batch_op.create_index(batch_op.f('ix_tasks_is_personal'), ['is_personal'], unique=False)
 
 
