@@ -317,6 +317,7 @@ class TaskCreate(TaskBase):
     project_id: Optional[int] = None
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
+    is_personal: Optional[bool] = False
     duration_working_days: Optional[int] = None
     auto_schedule: Optional[bool] = True
     estimated_cost: Optional[float] = None
@@ -364,6 +365,7 @@ class TaskUpdate(BaseModel):
     is_completed: Optional[bool] = None
     is_archived: Optional[bool] = None
     is_deleted: Optional[bool] = None
+    is_personal: Optional[bool] = None
     sort_order: Optional[int] = None
     recurrence_rule: Optional[dict] = None
     override_dependencies: Optional[bool] = False
@@ -384,6 +386,7 @@ class TaskOut(TaskBase):
     is_archived: bool = False
     is_deleted: bool = False
     is_blocked: bool = False
+    is_personal: bool = False
     completed_at: Optional[datetime] = None
     completed_by: Optional[int] = None
 

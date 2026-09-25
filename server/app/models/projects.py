@@ -253,6 +253,7 @@ class Task(Base):
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    is_personal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false", index=True)
 
     company_id: Mapped[int | None] = mapped_column(ForeignKey("finance_companies.id", ondelete="SET NULL"), nullable=True, index=True)
     branch_id: Mapped[int | None] = mapped_column(ForeignKey("branches.id", ondelete="SET NULL"), nullable=True, index=True)

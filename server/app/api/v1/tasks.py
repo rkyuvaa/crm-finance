@@ -1037,6 +1037,144 @@ def create_task(
     return _format_task_out(task, db)
 
 
+@router.get("/personal/list", response_model=List[TaskOut])
+def get_personal_tasks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all personal tasks for the current user"""
+    tasks = db.query(Task).filter(
+        Task.is_personal == True,
+        Task.created_by == current_user.id,
+        Task.is_deleted == False
+    ).order_by(Task.due_date.asc(), Task.priority.desc()).all()
+    return [_format_task_out(t, db) for t in tasks]
+
+
+@router.post("/personal/create", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
+def create_personal_task(
+    data: TaskCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new personal task strictly isolated from projects"""
+    task_num = _generate_task_number(db, None)
+
+    task = Task(
+        task_number=task_num,
+        is_personal=True,
+        project_id=None,
+        phase_id=None,
+        parent_task_id=None,
+        milestone_id=None,
+        title=data.title.strip(),
+        description=data.description,
+        type_id=data.type_id,
+        status_id=data.status_id,
+        priority=data.priority,
+        assignee_id=current_user.id,
+        created_by=current_user.id,
+        updated_by=current_user.id,
+        start_date=data.start_date,
+        start_time=data.start_time,
+        due_date=data.due_date,
+        due_time=data.due_time,
+        estimated_minutes=data.estimated_minutes or int(data.estimated_hours * 60),
+        estimated_hours=data.estimated_hours or ((data.estimated_minutes or 0) / 60.0),
+    )
+
+    if not task.status_id:
+        first_status = db.query(TaskStatusDef).filter(TaskStatusDef.is_active.is_(True)).order_by(TaskStatusDef.display_order).first()
+        if first_status:
+            task.status_id = first_status.id
+
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    db.add(TaskAssignee(task_id=task.id, user_id=current_user.id, assigned_by=current_user.id))
+    _log_activity(db, task.id, current_user.id, "CREATED", new_val=task.title)
+    
+    db.commit()
+    db.refresh(task)
+    return _format_task_out(task, db)
+
+
+@router.put("/personal/{task_id}", response_model=TaskOut)
+def update_personal_task(
+    task_id: int,
+    data: TaskUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a personal task ensuring it remains isolated"""
+    task = db.query(Task).filter(
+        Task.id == task_id,
+        Task.is_personal == True,
+        Task.created_by == current_user.id,
+        Task.is_deleted == False
+    ).first()
+    
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal task not found")
+
+    update_dict = data.model_dump(exclude_unset=True)
+    
+    # Exclude any project/parent link attempts
+    blocked_fields = ['project_id', 'parent_task_id', 'milestone_id', 'phase_id', 'is_personal']
+    for bf in blocked_fields:
+        if bf in update_dict:
+            del update_dict[bf]
+
+    for key, val in update_dict.items():
+        if hasattr(task, key):
+            setattr(task, key, val)
+            _log_activity(db, task.id, current_user.id, "UPDATED", field_name=key, new_val=str(val))
+
+    if data.is_completed is not None:
+        if data.is_completed and not task.is_completed:
+            task.is_completed = True
+            task.completed_at = datetime.now(timezone.utc)
+            task.completed_by = current_user.id
+            task.progress_percentage = 100.0
+        elif not data.is_completed and task.is_completed:
+            task.is_completed = False
+            task.completed_at = None
+            task.completed_by = None
+
+    task.updated_by = current_user.id
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    return _format_task_out(task, db)
+
+
+@router.delete("/personal/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_personal_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Soft delete a personal task"""
+    task = db.query(Task).filter(
+        Task.id == task_id,
+        Task.is_personal == True,
+        Task.created_by == current_user.id,
+        Task.is_deleted == False
+    ).first()
+    
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal task not found")
+
+    task.is_deleted = True
+    task.updated_by = current_user.id
+    _log_activity(db, task.id, current_user.id, "DELETED")
+    
+    db.add(task)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 @router.get("/{task_id}", response_model=TaskOut)
 def get_task(

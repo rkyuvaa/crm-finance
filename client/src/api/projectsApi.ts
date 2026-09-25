@@ -414,6 +414,41 @@ export const projectsApi = createApi({
       invalidatesTags: ['Tasks', 'Projects'],
     }),
 
+    // Personal Tasks
+    getPersonalTasks: builder.query<TaskItem[], void>({
+      query: () => '/tasks/personal/list',
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Tasks' as const, id })),
+              { type: 'Tasks', id: 'PERSONAL_LIST' },
+            ]
+          : [{ type: 'Tasks', id: 'PERSONAL_LIST' }],
+    }),
+    createPersonalTask: builder.mutation<TaskItem, Partial<TaskItem>>({
+      query: (body) => ({
+        url: '/tasks/personal/create',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Tasks', id: 'PERSONAL_LIST' }],
+    }),
+    updatePersonalTask: builder.mutation<TaskItem, { id: number; body: Partial<TaskItem> }>({
+      query: ({ id, body }) => ({
+        url: `/tasks/personal/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_res, _err, { id }) => [{ type: 'Tasks', id }, { type: 'Tasks', id: 'PERSONAL_LIST' }],
+    }),
+    deletePersonalTask: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/tasks/personal/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Tasks', id: 'PERSONAL_LIST' }],
+    }),
+
     // Subtasks
     addSubtask: builder.mutation<TaskSubtaskItem, { taskId: number; title?: string; body?: { title: string } }>({
       query: ({ taskId, title, body }) => ({
@@ -811,6 +846,10 @@ export const {
   useCreateTaskMutation,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
+  useGetPersonalTasksQuery,
+  useCreatePersonalTaskMutation,
+  useUpdatePersonalTaskMutation,
+  useDeletePersonalTaskMutation,
   useAddSubtaskMutation,
   useToggleSubtaskMutation,
   useDeleteSubtaskMutation,
