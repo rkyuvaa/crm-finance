@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
+  Paper,
   Button,
   Card,
   CardContent,
@@ -89,39 +90,45 @@ export default function EmployeeOnboardingPage() {
   ];
 
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 3, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate('/hr?tab=onboarding')} sx={{ mr: 1 }}>
-          <ArrowLeft />
-        </IconButton>
-        <Typography variant="h5" sx={{ fontWeight: 600, mr: 3 }}>
-          Initiate Onboarding
-        </Typography>
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IconButton onClick={() => navigate('/hr?tab=onboarding')} size="small" sx={{ color: '#44584C', bgcolor: '#F1F5EF', '&:hover': { bgcolor: '#E4EBE1' } }}>
+            <ArrowLeft size={18} />
+          </IconButton>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#023020' }}>
+            Initiate Onboarding
+          </Typography>
+        </div>
 
-        <Stack direction="row" spacing={1} sx={{ mr: 'auto', alignItems: 'center' }}>
-          <Tooltip title="Previous Record">
-            <IconButton size="small" sx={{ border: '1px solid #e2e8f0', borderRadius: 1 }}>
-              <ChevronLeft size={18} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Next Record">
-            <IconButton size="small" sx={{ border: '1px solid #e2e8f0', borderRadius: 1 }}>
-              <ChevronRight size={18} />
-            </IconButton>
-          </Tooltip>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={0.5} sx={{ mr: 2 }}>
+            <Tooltip title="Previous Record">
+              <IconButton size="small" sx={{ border: '1px solid #E4EBE1', borderRadius: 2 }}>
+                <ChevronLeft size={18} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Next Record">
+              <IconButton size="small" sx={{ border: '1px solid #E4EBE1', borderRadius: 2 }}>
+                <ChevronRight size={18} />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+
+          <Button variant="outlined" onClick={() => navigate('/hr?tab=onboarding')} sx={{ borderColor: '#E4EBE1', color: '#44584C', borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
+            Cancel
+          </Button>
+          <Button variant="contained" sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
+            Save & Submit
+          </Button>
         </Stack>
+      </div>
 
-        <Button variant="outlined" sx={{ mr: 2 }} onClick={() => navigate('/hr?tab=onboarding')}>
-          Cancel
-        </Button>
-        <Button variant="contained" sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' } }}>
-          Save & Submit
-        </Button>
-      </Box>
-
-      <Grid container spacing={3} sx={{ flexGrow: 1, overflow: 'hidden' }}>
-        <Grid item xs={12} md={8} lg={9} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Card sx={{ borderRadius: 2, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Main Layout */}
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 360px)', gap: 20, alignItems: 'start', maxWidth: '100%' }}>
+        {/* Left Side: Forms */}
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3, minWidth: 0, boxShadow: 'none' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#f8fafc', px: 2, pt: 1 }}>
               <Tabs
                 value={tabValue}
@@ -353,12 +360,10 @@ export default function EmployeeOnboardingPage() {
                 </Grid>
               </TabPanel>
             </CardContent>
-          </Card>
-        </Grid>
+        </Paper>
         
         {/* Right Side: Activity Log */}
-        <Grid item xs={12} md={4} lg={3} sx={{ height: '100%' }}>
-          <Card sx={{ height: '100%', borderRadius: 2, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column' }}>
+        <Paper sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', p: 3, minWidth: 0, boxShadow: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', bgcolor: '#f8fafc' }}>
               <History size={18} style={{ marginRight: 8, color: '#64748b' }} />
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Activity & Log History</Typography>
@@ -376,9 +381,8 @@ export default function EmployeeOnboardingPage() {
                 </Box>
               </Stack>
             </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
+        </Paper>
+      </div>
+    </div>
   );
 }
