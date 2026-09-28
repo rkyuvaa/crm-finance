@@ -14,6 +14,7 @@ import LoginPage from '@/pages/LoginPage';
 import LeadsPage from '@/pages/LeadsPage';
 import LeadDetailPage from '@/pages/LeadDetailPage';
 import HRPage from '@/pages/HRPage';
+import EmployeeOnboardingPage from '@/pages/EmployeeOnboardingPage';
 import PlmPage from '@/pages/PlmPage';
 import ProjectsPage from '@/pages/ProjectsPage';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
@@ -97,6 +98,7 @@ export default function App() {
                 <Route path="/customers" element={<LeadsPage />} />
                 <Route path="/customers/:id" element={<LeadDetailPage />} />
                 <Route path="/activities" element={<LeadsPage />} />
+                <Route path="/hr/onboarding/new" element={<EmployeeOnboardingPage />} />
                 <Route path="/hr" element={<HRPage />} />
                 <Route path="/hr/*" element={<HRPage />} />
                 <Route path="/plm" element={<PlmPage />} />

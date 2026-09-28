@@ -376,7 +376,7 @@ export default function HRPage() {
               <Button
                 variant="contained"
                 startIcon={<Plus size={18} />}
-                onClick={() => setOnboardingDialog(true)}
+                onClick={() => navigate('/hr/onboarding/new')}
                 sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
               >
                 New On/Offboarding
