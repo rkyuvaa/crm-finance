@@ -1,12 +1,12 @@
 """
 Automatic Task Scheduling Engine & Dependency Propagation Service
 ===================================================================
-Professional, calendar-aware task scheduling engine for ORBX Project & Task Management.
+Professional, calendar-aware exact date-time task scheduling engine for ORBX Project & Task Management.
 
 Handles:
-- Working calendar date arithmetic (working days, weekly off days, holidays).
-- Bi-directional Duration ↔ Start/Due Date calculation.
-- Dependency scheduling (FS, SS, FF, SF + lag).
+- Working calendar date & exact date-time arithmetic (working days, weekly off days, holidays, daily working hours).
+- Bi-directional Duration ↔ Start/Due Date calculation with Days + Hours.
+- Exact date-time dependency scheduling (FS, SS, FF, SF + lag in Days + Hours).
 - Recursive downstream dependency chain propagation.
 - Parent task rollup & parent due date manual shift propagation.
 - Auto Schedule lock (auto_schedule ON/OFF).
@@ -15,19 +15,27 @@ Handles:
 - Task activity audit logging for all auto-scheduled date shifts.
 """
 
-from datetime import date, timedelta
-from typing import Dict, List, Optional, Set, Tuple
+from datetime import date, datetime, time, timedelta
+from typing import Any, Dict, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status as http_status
 
 from app.models.projects import Task, TaskDependency, TaskActivity, PMDepType, DependencyType
 from app.services.calendar_service import (
+    WorkingCalendar,
     get_working_calendar,
     is_working_day,
     next_working_day,
+    previous_working_day,
     add_working_days,
     subtract_working_days,
     count_working_days,
+    walk_working_hours_forward,
+    walk_working_hours_backward,
+    count_working_hours,
+    parse_hhmm_time,
+    normalize_working_datetime_forward,
+    normalize_working_datetime_backward,
 )
 from app.services.rollup_service import trigger_full_rollup, rollup_work_item
 
@@ -91,60 +99,116 @@ def validate_parent_child_dependency(db: Session, task_id: int, predecessor_id: 
         curr = db.query(Task).filter(Task.id == curr.parent_task_id, Task.is_deleted.is_(False)).first()
 
 
-def compute_successor_dates(
-    pred_start: Optional[date],
-    pred_due: Optional[date],
+def compute_successor_datetimes(
+    pred_start: Optional[datetime],
+    pred_due: Optional[datetime],
     dep_type: str,
     lag_days: int,
+    lag_hours: int,
     dur_working_days: int,
-    calendar: Tuple[Set[date], Set[int]],
-) -> Tuple[Optional[date], Optional[date]]:
+    dur_working_hours: int,
+    calendar: WorkingCalendar,
+) -> Tuple[Optional[datetime], Optional[datetime]]:
     """
-    Compute required successor start_date and due_date based on predecessor dates,
-    dependency type (FS/SS/FF/SF), lag days, and successor duration.
+    Compute required successor start_dt and due_dt based on predecessor exact datetimes,
+    dependency type (FS/SS/FF/SF), lag (days + hours), and successor duration (days + hours).
+    Walks working hours forward/backward skipping non-working hours and non-working days entirely.
     """
     if not pred_due and not pred_start:
         return None, None
 
     p_start = pred_start or pred_due
     p_due = pred_due or pred_start
-    dur = max(1, dur_working_days or 1)
+
+    daily_h = calendar.daily_working_hours
+    total_dur_hours = (dur_working_days or 0) * daily_h + (dur_working_hours or 0)
+    if total_dur_hours <= 0:
+        total_dur_hours = daily_h  # default 1 day
+
+    total_lag_hours = (lag_days or 0) * daily_h + (lag_hours or 0)
 
     if dep_type == "FS":
-        # Finish-to-Start: successor starts 1 + lag_days working days after predecessor finish date (next working day)
-        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
-        succ_due = add_working_days(succ_start, dur - 1, calendar)
+        # Finish-to-Start: controlling datetime is predecessor finish
+        succ_start = walk_working_hours_forward(p_due, total_lag_hours, calendar)
+        # If total_lag_hours == 0 and succ_start is at or after work_end_time, roll to next working day
+        if total_lag_hours == 0 and succ_start.time() >= calendar.work_end_time:
+            succ_start = normalize_working_datetime_forward(
+                succ_start, calendar.holidays, calendar.off_weekdays, calendar.work_start_time, calendar.work_end_time
+            )
+        succ_due = walk_working_hours_forward(succ_start, total_dur_hours, calendar)
         return succ_start, succ_due
 
     elif dep_type == "SS":
-        # Start-to-Start: successor starts lag days after predecessor start date
-        succ_start = add_working_days(p_start, lag_days, calendar)
-        succ_due = add_working_days(succ_start, dur - 1, calendar)
+        # Start-to-Start: controlling datetime is predecessor start
+        succ_start = walk_working_hours_forward(p_start, total_lag_hours, calendar)
+        succ_due = walk_working_hours_forward(succ_start, total_dur_hours, calendar)
         return succ_start, succ_due
 
     elif dep_type == "FF":
-        # Finish-to-Finish: successor finishes lag days after predecessor finish date
-        succ_due = add_working_days(p_due, lag_days, calendar)
-        succ_start = subtract_working_days(succ_due, dur - 1, calendar)
+        # Finish-to-Finish: controlling datetime is predecessor finish
+        succ_due = walk_working_hours_forward(p_due, total_lag_hours, calendar)
+        succ_start = walk_working_hours_backward(succ_due, total_dur_hours, calendar)
         return succ_start, succ_due
 
     elif dep_type == "SF":
-        # Start-to-Finish: successor finishes lag days after predecessor start date
-        succ_due = add_working_days(p_start, lag_days, calendar)
-        succ_start = subtract_working_days(succ_due, dur - 1, calendar)
+        # Start-to-Finish: controlling datetime is predecessor start
+        succ_due = walk_working_hours_forward(p_start, total_lag_hours, calendar)
+        succ_start = walk_working_hours_backward(succ_due, total_dur_hours, calendar)
         return succ_start, succ_due
 
     else:
         # Default FS
-        succ_start = add_working_days(p_due, 1 + lag_days, calendar)
-        succ_due = add_working_days(succ_start, dur - 1, calendar)
+        succ_start = walk_working_hours_forward(p_due, total_lag_hours, calendar)
+        if total_lag_hours == 0 and succ_start.time() >= calendar.work_end_time:
+            succ_start = normalize_working_datetime_forward(
+                succ_start, calendar.holidays, calendar.off_weekdays, calendar.work_start_time, calendar.work_end_time
+            )
+        succ_due = walk_working_hours_forward(succ_start, total_dur_hours, calendar)
         return succ_start, succ_due
+
+
+def compute_successor_dates(
+    pred_start: Optional[date],
+    pred_due: Optional[date],
+    dep_type: str,
+    lag_days: int,
+    dur_working_days: int,
+    calendar: Any,
+) -> Tuple[Optional[date], Optional[date]]:
+    """
+    Backwards-compatible wrapper returning (start_date, due_date).
+    """
+    if not isinstance(calendar, WorkingCalendar):
+        cal_obj = WorkingCalendar(
+            holidays=calendar[0],
+            off_weekdays=calendar[1],
+            work_start_time=time(9, 0),
+            work_end_time=time(18, 0),
+            daily_working_hours=9,
+        )
+    else:
+        cal_obj = calendar
+
+    p_start_dt = datetime.combine(pred_start, cal_obj.work_start_time) if pred_start else None
+    p_due_dt = datetime.combine(pred_due, cal_obj.work_end_time) if pred_due else None
+
+    s_start_dt, s_due_dt = compute_successor_datetimes(
+        pred_start=p_start_dt,
+        pred_due=p_due_dt,
+        dep_type=dep_type,
+        lag_days=lag_days,
+        lag_hours=0,
+        dur_working_days=dur_working_days,
+        dur_working_hours=0,
+        calendar=cal_obj,
+    )
+    return (s_start_dt.date() if s_start_dt else None, s_due_dt.date() if s_due_dt else None)
 
 
 def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
     """
-    Checks if a task's start_date conflicts with any predecessor dependencies.
-    Returns None if no conflict, or a dictionary describing the conflict and recommended start date.
+    Checks if a task's start date/time conflicts with any predecessor dependencies.
+    Returns None if no conflict, or a dictionary describing the conflict and recommended start date/time.
     """
     if not task.start_date:
         return None
@@ -165,10 +229,21 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
         return None
 
     calendar = get_working_calendar(db)
-    max_recommended_start: Optional[date] = None
+    max_recommended_start: Optional[datetime] = None
     triggering_pred: Optional[Task] = None
     triggering_desc: Optional[str] = None
-    dur = max(1, task.duration_working_days or 1)
+
+    dur_days = task.duration_working_days or 0
+    dur_hours = task.duration_working_hours or 0
+    if dur_days == 0 and dur_hours == 0:
+        dur_days = 1
+
+    task_start_t = parse_hhmm_time(task.start_time, calendar.work_start_time)
+    task_start_dt = datetime.combine(task.start_date, task_start_t)
+
+    task_due_d = task.due_date or task.start_date
+    task_due_t = parse_hhmm_time(task.due_time, calendar.work_end_time)
+    task_due_dt = datetime.combine(task_due_d, task_due_t)
 
     for dep in deps:
         pred = db.query(Task).filter(
@@ -179,55 +254,59 @@ def check_dependency_conflict(db: Session, task: Task) -> Optional[dict]:
         if not pred or (not pred.start_date and not pred.due_date):
             continue
 
-        p_start = pred.start_date or pred.due_date
-        p_due = pred.due_date or pred.start_date
+        p_start_d = pred.start_date or pred.due_date
+        p_start_t = parse_hhmm_time(pred.start_time, calendar.work_start_time)
+        p_start_dt = datetime.combine(p_start_d, p_start_t)
+
+        p_due_d = pred.due_date or pred.start_date
+        p_due_t = parse_hhmm_time(pred.due_time, calendar.work_end_time)
+        p_due_dt = datetime.combine(p_due_d, p_due_t)
+
         dep_type_str = dep.pm_dep_type.value if hasattr(dep.pm_dep_type, 'value') else str(dep.pm_dep_type or 'FS')
-        lag = dep.lag_days or 0
+        l_days = dep.lag_days or 0
+        l_hours = dep.lag_hours or 0
+
+        cand_start_dt, cand_due_dt = compute_successor_datetimes(
+            p_start_dt, p_due_dt, dep_type_str, l_days, l_hours, dur_days, dur_hours, calendar
+        )
+        if not cand_start_dt:
+            continue
 
         is_conflict = False
         desc = ""
-        rec_start: Optional[date] = None
 
         if dep_type_str == "FS":
-            min_start = add_working_days(p_due, 1 + lag, calendar)
-            if task.start_date < min_start:
+            if task_start_dt < cand_start_dt:
                 is_conflict = True
                 desc = "starts before predecessor finishes"
-                rec_start = min_start
-
         elif dep_type_str == "SS":
-            min_start = add_working_days(p_start, lag, calendar)
-            if task.start_date < min_start:
+            if task_start_dt < cand_start_dt:
                 is_conflict = True
                 desc = "starts before predecessor starts"
-                rec_start = min_start
-
         elif dep_type_str == "FF":
-            min_due = add_working_days(p_due, lag, calendar)
-            if task.due_date and task.due_date < min_due:
+            if task_due_dt < cand_due_dt:
                 is_conflict = True
                 desc = "finishes before predecessor finishes"
-                rec_start = subtract_working_days(min_due, dur - 1, calendar)
-
         elif dep_type_str == "SF":
-            min_due = add_working_days(p_start, lag, calendar)
-            if task.due_date and task.due_date < min_due:
+            if task_due_dt < cand_due_dt:
                 is_conflict = True
                 desc = "finishes before predecessor starts"
-                rec_start = subtract_working_days(min_due, dur - 1, calendar)
 
-        if is_conflict and rec_start:
-            if max_recommended_start is None or rec_start > max_recommended_start:
-                max_recommended_start = rec_start
+        if is_conflict:
+            if max_recommended_start is None or cand_start_dt > max_recommended_start:
+                max_recommended_start = cand_start_dt
                 triggering_pred = pred
                 triggering_desc = desc
 
     if max_recommended_start and triggering_pred:
         pred_label = triggering_pred.title or triggering_pred.task_number
+        rec_date_str = max_recommended_start.date().isoformat()
+        rec_time_str = max_recommended_start.strftime("%H:%M")
         return {
             "has_conflict": True,
-            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} {triggering_desc or 'conflicts with'} predecessor '{pred_label}'. Recommended start date is {max_recommended_start.isoformat()}.",
-            "recommended_start_date": max_recommended_start.isoformat(),
+            "conflict_message": f"⚠️ Scheduling Conflict: Task {task.task_number} {triggering_desc or 'conflicts with'} predecessor '{pred_label}'. Recommended start date is {rec_date_str} {rec_time_str}.",
+            "recommended_start_date": rec_date_str,
+            "recommended_start_time": rec_time_str,
             "predecessor_task_number": triggering_pred.task_number,
             "predecessor_title": triggering_pred.title,
         }
@@ -243,6 +322,7 @@ def propagate_task_schedule_changes(
     """
     Propagate schedule changes recursively downstream through dependent tasks (auto_schedule == True)
     and roll up dates bottom-up to parent tasks, milestones, and projects.
+    Resolves to exact date and time.
     Does NOT commit — caller commits transaction.
     """
     calendar = get_working_calendar(db)
@@ -281,15 +361,18 @@ def propagate_task_schedule_changes(
             if not succ.auto_schedule:
                 continue
 
-            succ_dur = max(1, succ.duration_working_days or 1)
+            succ_dur_days = succ.duration_working_days or 0
+            succ_dur_hours = succ.duration_working_hours or 0
+            if succ_dur_days == 0 and succ_dur_hours == 0:
+                succ_dur_days = 1
 
             # Evaluate ALL predecessor dependencies attached to succ to satisfy all constraints
             all_succ_deps = db.query(TaskDependency).filter(
                 TaskDependency.task_id == succ.id
             ).all()
 
-            max_req_start: Optional[date] = None
-            max_req_due: Optional[date] = None
+            max_req_start_dt: Optional[datetime] = None
+            max_req_due_dt: Optional[datetime] = None
 
             for s_dep in all_succ_deps:
                 p_task = db.query(Task).filter(
@@ -300,42 +383,61 @@ def propagate_task_schedule_changes(
                     continue
 
                 if p_task.is_completed:
-                    p_finish = p_task.completion_date or (p_task.completed_at.date() if p_task.completed_at else None) or p_task.due_date or p_task.start_date
+                    p_finish_d = p_task.completion_date or (p_task.completed_at.date() if p_task.completed_at else None) or p_task.due_date or p_task.start_date
+                    p_finish_t = parse_hhmm_time(p_task.completion_time or p_task.due_time, calendar.work_end_time)
                 else:
-                    p_finish = p_task.due_date or p_task.start_date
+                    p_finish_d = p_task.due_date or p_task.start_date
+                    p_finish_t = parse_hhmm_time(p_task.due_time, calendar.work_end_time)
 
-                p_start = p_task.start_date or p_finish
-                if not p_start and not p_finish:
+                p_start_d = p_task.start_date or p_finish_d
+                p_start_t = parse_hhmm_time(p_task.start_time, calendar.work_start_time)
+
+                if not p_start_d and not p_finish_d:
                     continue
+
+                p_finish_dt = datetime.combine(p_finish_d, p_finish_t)
+                p_start_dt = datetime.combine(p_start_d, p_start_t)
 
                 d_type = s_dep.pm_dep_type.value if hasattr(s_dep.pm_dep_type, 'value') else str(s_dep.pm_dep_type or 'FS')
                 l_days = s_dep.lag_days or 0
+                l_hours = s_dep.lag_hours or 0
 
-                cand_start, cand_due = compute_successor_dates(
-                    p_start, p_finish, d_type, l_days, succ_dur, calendar
+                cand_start_dt, cand_due_dt = compute_successor_datetimes(
+                    p_start_dt, p_finish_dt, d_type, l_days, l_hours, succ_dur_days, succ_dur_hours, calendar
                 )
-                if cand_start:
-                    if max_req_start is None or cand_start > max_req_start:
-                        max_req_start = cand_start
-                        max_req_due = cand_due
+                if cand_start_dt:
+                    if max_req_start_dt is None or cand_start_dt > max_req_start_dt:
+                        max_req_start_dt = cand_start_dt
+                        max_req_due_dt = cand_due_dt
 
-            if not max_req_start or not max_req_due:
+            if not max_req_start_dt or not max_req_due_dt:
                 continue
 
-            if succ.start_date != max_req_start or succ.due_date != max_req_due:
-                old_start = succ.start_date
-                old_due = succ.due_date
+            new_start_d = max_req_start_dt.date()
+            new_start_t = max_req_start_dt.strftime("%H:%M")
+            new_due_d = max_req_due_dt.date()
+            new_due_t = max_req_due_dt.strftime("%H:%M")
 
-                succ.start_date = max_req_start
-                succ.due_date = max_req_due
-                succ.duration_working_days = succ_dur
+            if (succ.start_date != new_start_d or succ.start_time != new_start_t or
+                succ.due_date != new_due_d or succ.due_time != new_due_t):
+                old_start = f"{succ.start_date} {succ.start_time or ''}".strip()
+                old_due = f"{succ.due_date} {succ.due_time or ''}".strip()
+                new_start_str = f"{new_start_d} {new_start_t}"
+                new_due_str = f"{new_due_d} {new_due_t}"
+
+                succ.start_date = new_start_d
+                succ.start_time = new_start_t
+                succ.due_date = new_due_d
+                succ.due_time = new_due_t
+                succ.duration_working_days = succ_dur_days
+                succ.duration_working_hours = succ_dur_hours
                 db.add(succ)
                 queue.append(succ.id)
 
                 # Log activity audit trail
                 reason = (
                     f"Schedule automatically shifted from ({old_start} - {old_due}) to "
-                    f"({max_req_start} - {max_req_due}) to satisfy dependency constraints."
+                    f"({new_start_str} - {new_due_str}) to satisfy dependency constraints."
                 )
                 act = TaskActivity(
                     task_id=succ.id,
@@ -343,11 +445,9 @@ def propagate_task_schedule_changes(
                     action="AUTO_SCHEDULED",
                     field_name="start_date / due_date",
                     old_value=f"Start: {old_start}, Due: {old_due}",
-                    new_value=f"Start: {max_req_start}, Due: {max_req_due} | {reason}",
+                    new_value=f"Start: {new_start_str}, Due: {new_due_str} | {reason}",
                 )
                 db.add(act)
-
-                queue.append(succ.id)
 
                 # Trigger parent task rollup if subtask
                 if succ.parent_task_id:
@@ -360,7 +460,7 @@ def propagate_task_schedule_changes(
 def auto_adjust_task_dates(db: Session, task_id: int, actor_id: Optional[int] = None) -> Task:
     """
     Auto Adjust Date action: Resolves dependency conflict on task_id by setting
-    start_date to recommended_start_date, recalculating due_date, enabling auto_schedule,
+    start_date and start_time to recommended values, recalculating due_date, enabling auto_schedule,
     and propagating downstream.
     """
     task = db.query(Task).filter(Task.id == task_id, Task.is_deleted.is_(False)).first()
@@ -375,16 +475,26 @@ def auto_adjust_task_dates(db: Session, task_id: int, actor_id: Optional[int] = 
         )
 
     rec_start_str = conflict["recommended_start_date"]
-    new_start = date.fromisoformat(rec_start_str)
+    rec_time_str = conflict.get("recommended_start_time", "09:00")
+    new_start_d = date.fromisoformat(rec_start_str)
 
     calendar = get_working_calendar(db)
-    dur = task.duration_working_days or 1
+    dur_days = task.duration_working_days or 0
+    dur_hours = task.duration_working_hours or 0
+    if dur_days == 0 and dur_hours == 0:
+        dur_days = 1
 
-    old_start = task.start_date
-    old_due = task.due_date
+    total_dur_hours = dur_days * calendar.daily_working_hours + dur_hours
+    start_dt = datetime.combine(new_start_d, parse_hhmm_time(rec_time_str, calendar.work_start_time))
+    due_dt = walk_working_hours_forward(start_dt, total_dur_hours, calendar)
 
-    task.start_date = new_start
-    task.due_date = add_working_days(new_start, dur - 1, calendar)
+    old_start = f"{task.start_date} {task.start_time or ''}".strip()
+    old_due = f"{task.due_date} {task.due_time or ''}".strip()
+
+    task.start_date = start_dt.date()
+    task.start_time = start_dt.strftime("%H:%M")
+    task.due_date = due_dt.date()
+    task.due_time = due_dt.strftime("%H:%M")
     task.auto_schedule = True
     db.add(task)
 
@@ -396,7 +506,7 @@ def auto_adjust_task_dates(db: Session, task_id: int, actor_id: Optional[int] = 
         action="AUTO_ADJUSTED",
         field_name="start_date / due_date",
         old_value=f"Start: {old_start}, Due: {old_due}",
-        new_value=f"Start: {new_start}, Due: {task.due_date} | {reason}",
+        new_value=f"Start: {task.start_date} {task.start_time}, Due: {task.due_date} {task.due_time} | {reason}",
     )
     db.add(act)
 

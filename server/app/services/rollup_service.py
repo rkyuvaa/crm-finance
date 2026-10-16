@@ -64,6 +64,7 @@ def rollup_work_item(db: Session, task_id: int) -> None:
 
         # Parent duration is a read-only calendar-day span for display only.
         task.duration_working_days = None
+        task.duration_working_hours = None
 
         db.add(task)
 

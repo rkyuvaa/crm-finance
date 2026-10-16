@@ -328,7 +328,7 @@ export default function TaskListView({
                   return (
                     <Tooltip
                       key={dep.id}
-                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} · ${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}`}
+                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} · ${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}${dep.lag_hours ? ` +${dep.lag_hours}h` : ''}`}
                     >
                       <Chip
                         icon={<Link2 size={9} color={colors.color} />}
@@ -561,6 +561,13 @@ export default function TaskListView({
               <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
                 {task.is_parent ? 'CD' : 'WD'}
               </Typography>
+              {!task.is_parent && Boolean(task.duration_working_hours) && (
+                <Chip
+                  label={`+${task.duration_working_hours}h`}
+                  size="small"
+                  sx={{ height: 16, fontSize: '0.65rem', fontWeight: 600, bgcolor: '#FEF3C7', color: '#92400E' }}
+                />
+              )}
             </Box>
           </TableCell>
 

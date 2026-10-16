@@ -154,6 +154,7 @@ export default function HierarchicalGanttView({
   const [depPopover, setDepPopover] = useState<DepPopoverState | null>(null);
   const [depPopoverType, setDepPopoverType] = useState<DepType>('FS');
   const [depPopoverLag, setDepPopoverLag] = useState<number>(0);
+  const [depPopoverLagHours, setDepPopoverLagHours] = useState<number>(0);
   const [depPopoverLoading, setDepPopoverLoading] = useState(false);
   const [depPopoverError, setDepPopoverError] = useState<string | null>(null);
 
@@ -635,8 +636,9 @@ export default function HierarchicalGanttView({
         predecessor_task_id: depPopover.fromTaskId,
         dep_type: depPopoverType,
         lag_days: depPopoverLag,
+        lag_hours: depPopoverLagHours,
       }).unwrap();
-      showToast(`Dependency created: ${depPopoverType}${depPopoverLag ? ` +${depPopoverLag}d` : ''}`, 'success');
+      showToast(`Dependency created: ${depPopoverType}${depPopoverLag ? ` +${depPopoverLag}d` : ''}${depPopoverLagHours ? ` +${depPopoverLagHours}h` : ''}`, 'success');
       setDepPopover(null);
     } catch (err: any) {
       const detail = err?.data?.detail;
@@ -658,7 +660,12 @@ export default function HierarchicalGanttView({
     setDepPopoverLoading(true);
     setDepPopoverError(null);
     try {
-      await updateDependency({ dependencyId: depPopover.existingDep.id, dep_type: depPopoverType, lag_days: depPopoverLag }).unwrap();
+      await updateDependency({
+        dependencyId: depPopover.existingDep.id,
+        dep_type: depPopoverType,
+        lag_days: depPopoverLag,
+        lag_hours: depPopoverLagHours,
+      }).unwrap();
       showToast('Dependency updated', 'success');
       setDepPopover(null);
     } catch {
@@ -1024,6 +1031,7 @@ export default function HierarchicalGanttView({
                   <g key={line.id} style={{ pointerEvents: 'all', cursor: 'pointer' }} onClick={() => {
                     setDepPopoverType((line.dep.dep_type || 'FS') as DepType);
                     setDepPopoverLag(line.dep.lag_days || 0);
+                    setDepPopoverLagHours(line.dep.lag_hours || 0);
                     setDepPopoverError(null);
                     setDepPopover({ anchorEl: document.getElementById(`gantt-arrow-hit-${line.id}`) || document.body, existingDep: { ...line.dep, fromTaskId: line.dep.fromTaskId, toTaskId: line.dep.toTaskId }, detectedType: (line.dep.dep_type || 'FS') as DepType });
                   }}>
@@ -1032,7 +1040,7 @@ export default function HierarchicalGanttView({
                     {/* Visible arrow */}
                     <path d={pathD} fill="none" stroke={color} strokeWidth={1.8} markerEnd={`url(#arrow-${line.depType})`} opacity={0.85} />
                     {/* Type label */}
-                    <text x={line.midX} y={line.midY - 5} textAnchor="middle" fontSize={9} fontWeight="700" fill={color} fontFamily="monospace">{line.depType}{line.dep.lag_days ? `+${line.dep.lag_days}d` : ''}</text>
+                    <text x={line.midX} y={line.midY - 5} textAnchor="middle" fontSize={9} fontWeight="700" fill={color} fontFamily="monospace">{line.depType}{line.dep.lag_days ? `+${line.dep.lag_days}d` : ''}{line.dep.lag_hours ? `+${line.dep.lag_hours}h` : ''}</text>
                   </g>
                 );
               })}
@@ -1254,17 +1262,30 @@ export default function HierarchicalGanttView({
               ))}
             </Select>
 
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block', fontSize: 11 }}>LAG (WORKING DAYS)</Typography>
-            <TextField
-              fullWidth
-              size="small"
-              type="number"
-              value={depPopoverLag}
-              onChange={(e) => setDepPopoverLag(parseInt(e.target.value) || 0)}
-              helperText="Positive = delay, negative = lead"
-              sx={{ mb: 2 }}
-              inputProps={{ min: -30, max: 60 }}
-            />
+            <Grid container spacing={1.5} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block', fontSize: 11 }}>LAG DAYS</Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  value={depPopoverLag}
+                  onChange={(e) => setDepPopoverLag(parseInt(e.target.value) || 0)}
+                  inputProps={{ min: -30, max: 60 }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block', fontSize: 11 }}>LAG HOURS</Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  value={depPopoverLagHours}
+                  onChange={(e) => setDepPopoverLagHours(parseInt(e.target.value) || 0)}
+                  inputProps={{ min: 0, max: 23 }}
+                />
+              </Grid>
+            </Grid>
 
             {depPopoverError && (
               <Alert severity="error" icon={<AlertTriangle size={14} />} sx={{ mb: 2, py: 0.5, fontSize: 12 }}>{depPopoverError}</Alert>

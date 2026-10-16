@@ -59,6 +59,7 @@ import {
   useAddHolidayMutation,
   useDeleteHolidayMutation,
   useSetWeeklyOffMutation,
+  useUpdateCalendarWorkingHoursMutation,
   useGetProjectPmSettingsQuery,
   useUpdateProjectPmSettingsMutation,
   StatusDefinitionItem,
@@ -159,10 +160,23 @@ export default function ProjectConfigurationPage() {
   const [addHoliday] = useAddHolidayMutation();
   const [deleteHoliday] = useDeleteHolidayMutation();
   const [setWeeklyOff] = useSetWeeklyOffMutation();
+  const [updateWorkingHours, { isLoading: isSavingHours }] = useUpdateCalendarWorkingHoursMutation();
 
   const [holidayDate, setHolidayDate] = useState('');
   const [holidayDesc, setHolidayDesc] = useState('');
   const [holidayRecurs, setHolidayRecurs] = useState(false);
+
+  const [workStartTime, setWorkStartTime] = useState('09:00');
+  const [workEndTime, setWorkEndTime] = useState('18:00');
+
+  useEffect(() => {
+    if (calendarConfig?.work_start_time) {
+      setWorkStartTime(calendarConfig.work_start_time);
+    }
+    if (calendarConfig?.work_end_time) {
+      setWorkEndTime(calendarConfig.work_end_time);
+    }
+  }, [calendarConfig]);
 
   // --- Task Settings State ---
   const DEFAULT_TASK_SETTINGS = {
@@ -1135,9 +1149,64 @@ export default function ProjectConfigurationPage() {
                 Working Calendar
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ fontSize: '13px' }}>
-                Configure weekly off days and company holidays.
+                Configure daily working hours, weekly off days, and company holidays.
               </Typography>
             </Box>
+
+            {/* Daily Working Hours */}
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, mb: 3, bgcolor: 'background.default' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Daily Working Hours</Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Working window used by the exact date-time dependency scheduling engine.
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`${calendarConfig?.daily_working_hours ?? 9} working hrs / day`}
+                  color="success"
+                  variant="outlined"
+                  size="small"
+                  sx={{ fontWeight: 700 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <TextField
+                  size="small"
+                  type="time"
+                  label="Start Time"
+                  value={workStartTime}
+                  onChange={(e) => setWorkStartTime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: 140 }}
+                />
+                <Typography sx={{ color: 'text.secondary', fontWeight: 600 }}>to</Typography>
+                <TextField
+                  size="small"
+                  type="time"
+                  label="End Time"
+                  value={workEndTime}
+                  onChange={(e) => setWorkEndTime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: 140 }}
+                />
+                <Button
+                  variant="contained"
+                  disabled={isSavingHours}
+                  onClick={async () => {
+                    try {
+                      await updateWorkingHours({ work_start_time: workStartTime, work_end_time: workEndTime }).unwrap();
+                      toast.showSuccess('Daily working hours updated successfully');
+                    } catch (err: any) {
+                      toast.showError(err?.data?.detail || 'Failed to update daily working hours');
+                    }
+                  }}
+                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontWeight: 600, fontSize: 13 }}
+                >
+                  {isSavingHours ? 'Saving...' : 'Save Hours'}
+                </Button>
+              </Box>
+            </Paper>
 
             <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '6px', p: 3, mb: 3, bgcolor: 'background.default' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Weekly Off Days</Typography>

@@ -758,9 +758,30 @@ def _format_task_out(
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
     out.is_parent = out.subtask_count > 0
-    if (out.is_parent or not out.duration_working_days) and t.start_date and t.due_date:
-        holiday_dates, weekly_off_days = _get_working_calendar(db)
-        out.duration_working_days = _count_working_days(t.start_date, t.due_date, holiday_dates, weekly_off_days)
+    if out.is_parent and t.start_date and t.due_date:
+        from app.services.calendar_service import get_working_calendar as get_cal, count_working_hours, parse_hhmm_time
+        from datetime import datetime
+        cal = get_cal(db)
+        s_time = parse_hhmm_time(t.start_time, cal.work_start_time)
+        d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
+        s_dt = datetime.combine(t.start_date, s_time)
+        d_dt = datetime.combine(t.due_date, d_time)
+        c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+        out.duration_working_days = c_days
+        out.duration_working_hours = c_hours
+    elif not out.is_parent and t.duration_working_days is None and getattr(t, 'duration_working_hours', None) is None and t.start_date and t.due_date:
+        from app.services.calendar_service import get_working_calendar as get_cal, count_working_hours, parse_hhmm_time
+        from datetime import datetime
+        cal = get_cal(db)
+        s_time = parse_hhmm_time(t.start_time, cal.work_start_time)
+        d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
+        s_dt = datetime.combine(t.start_date, s_time)
+        d_dt = datetime.combine(t.due_date, d_time)
+        c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+        out.duration_working_days = c_days
+        out.duration_working_hours = c_hours
+    else:
+        out.duration_working_hours = getattr(t, 'duration_working_hours', 0) or 0
 
     return out
 
@@ -1062,17 +1083,47 @@ def create_task(
 
     task_num = _generate_task_number(db, data.project_id)
 
-    holiday_dates, weekly_off_days = _get_working_calendar(db)
-    if data.start_date and data.duration_working_days:
-        from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
-        due_dt = add_working_days(data.start_date, max(1, data.duration_working_days) - 1, get_cal(db))
-        dur_days = data.duration_working_days
+    from app.services.calendar_service import (
+        get_working_calendar as get_cal,
+        walk_working_hours_forward,
+        count_working_hours,
+        parse_hhmm_time,
+    )
+    from datetime import datetime
+    cal = get_cal(db)
+    daily_h = cal.daily_working_hours
+
+    dur_days = data.duration_working_days or 0
+    dur_hours = data.duration_working_hours or 0
+
+    if dur_hours >= daily_h:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Duration hours ({dur_hours}h) must be less than daily working hours ({daily_h}h)."
+        )
+
+    due_dt_date = data.due_date
+    due_dt_time = data.due_time
+    start_dt_time = data.start_time
+
+    if data.start_date and (dur_days > 0 or dur_hours > 0):
+        s_time = parse_hhmm_time(start_dt_time, cal.work_start_time)
+        s_dt = datetime.combine(data.start_date, s_time)
+        total_dur = dur_days * daily_h + dur_hours
+        calc_due_dt = walk_working_hours_forward(s_dt, total_dur, cal)
+        due_dt_date = calc_due_dt.date()
+        due_dt_time = calc_due_dt.strftime("%H:%M")
+        start_dt_time = s_time.strftime("%H:%M")
     elif data.start_date and data.due_date:
-        dur_days = _count_working_days(data.start_date, data.due_date, holiday_dates, weekly_off_days)
-        due_dt = data.due_date
-    else:
-        dur_days = data.duration_working_days or 1
-        due_dt = data.due_date
+        s_time = parse_hhmm_time(start_dt_time, cal.work_start_time)
+        d_time = parse_hhmm_time(due_dt_time, cal.work_end_time)
+        s_dt = datetime.combine(data.start_date, s_time)
+        d_dt = datetime.combine(data.due_date, d_time)
+        counted_days, counted_hours = count_working_hours(s_dt, d_dt, cal)
+        dur_days = counted_days
+        dur_hours = counted_hours
+    elif dur_days == 0 and dur_hours == 0:
+        dur_days = 1
 
     task = Task(
         task_number=task_num,
@@ -1089,10 +1140,11 @@ def create_task(
         created_by=current_user.id,
         updated_by=current_user.id,
         start_date=data.start_date,
-        start_time=data.start_time,
-        due_date=due_dt,
-        due_time=data.due_time,
+        start_time=start_dt_time,
+        due_date=due_dt_date,
+        due_time=due_dt_time,
         duration_working_days=dur_days,
+        duration_working_hours=dur_hours,
         auto_schedule=data.auto_schedule if data.auto_schedule is not None else True,
         estimated_minutes=data.estimated_minutes or int(data.estimated_hours * 60),
         estimated_hours=data.estimated_hours or ((data.estimated_minutes or 0) / 60.0),
@@ -1428,52 +1480,101 @@ def update_task(
         )
 
     # Bidirectional Date / Duration logic
-    if "duration_working_days" in update_dict and update_dict["duration_working_days"] is not None:
-        dur = max(1, update_dict["duration_working_days"])
-        task.duration_working_days = dur
+    from app.services.calendar_service import (
+        get_working_calendar as get_cal,
+        walk_working_hours_forward,
+        walk_working_hours_backward,
+        count_working_hours,
+        parse_hhmm_time,
+    )
+    from datetime import datetime
+    cal = get_cal(db)
+    daily_h = cal.daily_working_hours
+
+    if "duration_working_hours" in update_dict and update_dict["duration_working_hours"] is not None:
+        if update_dict["duration_working_hours"] >= daily_h:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Duration hours ({update_dict['duration_working_hours']}h) must be less than daily working hours ({daily_h}h)."
+            )
+
+    dur_changed = "duration_working_days" in update_dict or "duration_working_hours" in update_dict
+    if dur_changed:
+        dur_days = update_dict.get("duration_working_days", task.duration_working_days) or 0
+        dur_hours = update_dict.get("duration_working_hours", task.duration_working_hours) or 0
+        if dur_days == 0 and dur_hours == 0:
+            dur_days = 1
+        task.duration_working_days = dur_days
+        task.duration_working_hours = dur_hours
+        total_dur = dur_days * daily_h + dur_hours
+
         if task.start_date:
-            from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
-            task.due_date = add_working_days(task.start_date, dur - 1, get_cal(db))
+            s_time = parse_hhmm_time(task.start_time, cal.work_start_time)
+            s_dt = datetime.combine(task.start_date, s_time)
+            calc_due = walk_working_hours_forward(s_dt, total_dur, cal)
+            task.due_date = calc_due.date()
+            task.due_time = calc_due.strftime("%H:%M")
         elif task.due_date:
-            from app.services.calendar_service import subtract_working_days, get_working_calendar as get_cal
-            task.start_date = subtract_working_days(task.due_date, dur - 1, get_cal(db))
+            d_time = parse_hhmm_time(task.due_time, cal.work_end_time)
+            d_dt = datetime.combine(task.due_date, d_time)
+            calc_start = walk_working_hours_backward(d_dt, total_dur, cal)
+            task.start_date = calc_start.date()
+            task.start_time = calc_start.strftime("%H:%M")
     elif "start_date" in update_dict and "due_date" not in update_dict:
         # Start date manually changed
         new_start = update_dict["start_date"]
         task.start_date = new_start
         if new_start:
-            holiday_dates, weekly_off_days = _get_working_calendar(db)
-            if task.due_date and task.due_date >= new_start:
-                task.duration_working_days = _count_working_days(new_start, task.due_date, holiday_dates, weekly_off_days)
-            else:
-                dur = max(1, task.duration_working_days or 1)
-                from app.services.calendar_service import add_working_days, get_working_calendar as get_cal
-                task.due_date = add_working_days(new_start, dur - 1, get_cal(db))
-                task.duration_working_days = dur
+            s_time = parse_hhmm_time(update_dict.get("start_time", task.start_time), cal.work_start_time)
+            task.start_time = s_time.strftime("%H:%M")
+            dur_days = task.duration_working_days or 0
+            dur_hours = task.duration_working_hours or 0
+            if dur_days == 0 and dur_hours == 0:
+                dur_days = 1
+            total_dur = dur_days * daily_h + dur_hours
+            s_dt = datetime.combine(new_start, s_time)
+            calc_due = walk_working_hours_forward(s_dt, total_dur, cal)
+            task.due_date = calc_due.date()
+            task.due_time = calc_due.strftime("%H:%M")
         else:
             task.start_date = None
             task.due_date = None
             task.duration_working_days = 0
+            task.duration_working_hours = 0
     elif "due_date" in update_dict and "start_date" not in update_dict:
         # Due date manually changed
         new_due = update_dict["due_date"]
         task.due_date = new_due
         if new_due:
-            holiday_dates, weekly_off_days = _get_working_calendar(db)
+            d_time = parse_hhmm_time(update_dict.get("due_time", task.due_time), cal.work_end_time)
+            task.due_time = d_time.strftime("%H:%M")
             if task.start_date:
-                if new_due < task.start_date:
+                s_time = parse_hhmm_time(task.start_time, cal.work_start_time)
+                s_dt = datetime.combine(task.start_date, s_time)
+                d_dt = datetime.combine(new_due, d_time)
+                if d_dt < s_dt:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Due date cannot be earlier than start date"
                     )
-                task.duration_working_days = _count_working_days(task.start_date, new_due, holiday_dates, weekly_off_days)
-            elif task.duration_working_days:
-                from app.services.calendar_service import subtract_working_days, get_working_calendar as get_cal
-                task.start_date = subtract_working_days(new_due, max(1, task.duration_working_days) - 1, get_cal(db))
+                c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+                task.duration_working_days = c_days
+                task.duration_working_hours = c_hours
+            else:
+                dur_days = task.duration_working_days or 0
+                dur_hours = task.duration_working_hours or 0
+                if dur_days == 0 and dur_hours == 0:
+                    dur_days = 1
+                total_dur = dur_days * daily_h + dur_hours
+                d_dt = datetime.combine(new_due, d_time)
+                calc_start = walk_working_hours_backward(d_dt, total_dur, cal)
+                task.start_date = calc_start.date()
+                task.start_time = calc_start.strftime("%H:%M")
         else:
             task.start_date = None
             task.due_date = None
             task.duration_working_days = 0
+            task.duration_working_hours = 0
     elif "start_date" in update_dict and "due_date" in update_dict:
         # Both start and due date explicitly provided
         new_start = update_dict["start_date"]
@@ -1486,15 +1587,23 @@ def update_task(
         task.start_date = new_start
         task.due_date = new_due
         if new_start and new_due:
-            holiday_dates, weekly_off_days = _get_working_calendar(db)
-            task.duration_working_days = _count_working_days(new_start, new_due, holiday_dates, weekly_off_days)
+            s_time = parse_hhmm_time(update_dict.get("start_time", task.start_time), cal.work_start_time)
+            d_time = parse_hhmm_time(update_dict.get("due_time", task.due_time), cal.work_end_time)
+            task.start_time = s_time.strftime("%H:%M")
+            task.due_time = d_time.strftime("%H:%M")
+            s_dt = datetime.combine(new_start, s_time)
+            d_dt = datetime.combine(new_due, d_time)
+            c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+            task.duration_working_days = c_days
+            task.duration_working_hours = c_hours
         elif not new_start and not new_due:
             task.start_date = None
             task.due_date = None
             task.duration_working_days = 0
+            task.duration_working_hours = 0
 
     # Reject dates that conflict with predecessor dependencies unless override_dependencies is requested
-    if ("start_date" in update_dict or "due_date" in update_dict or "duration_working_days" in update_dict) and not data.override_dependencies:
+    if ("start_date" in update_dict or "due_date" in update_dict or "duration_working_days" in update_dict or "duration_working_hours" in update_dict) and not data.override_dependencies:
         from app.services.scheduling_engine import check_dependency_conflict
         conflict = check_dependency_conflict(db, task)
         if conflict and conflict.get("has_conflict"):
@@ -2395,6 +2504,15 @@ def create_task_dependency(
     # Resolve dep_type (FS/SS/FF/SF)
     dep_type_val = getattr(data, 'dep_type', 'FS') or 'FS'
     lag = getattr(data, 'lag_days', 0) or 0
+    lag_h = getattr(data, 'lag_hours', 0) or 0
+
+    from app.services.calendar_service import get_working_calendar
+    calendar = get_working_calendar(db)
+    if lag_h >= calendar.daily_working_hours:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Lag hours ({lag_h}h) must be less than daily working hours ({calendar.daily_working_hours}h)."
+        )
 
     dep = TaskDependency(
         task_id=blocked_id,
@@ -2402,9 +2520,10 @@ def create_task_dependency(
         dependency_type=getattr(data, 'dependency_type', DependencyType.BLOCKS) or DependencyType.BLOCKS,
         pm_dep_type=dep_type_val,
         lag_days=lag,
+        lag_hours=lag_h,
     )
     db.add(dep)
-    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=f"{target_display.task_number} ({dep_type_val}+{lag}d)")
+    _log_activity(db, task.id, current_user.id, "DEPENDENCY_ADDED", new_val=f"{target_display.task_number} ({dep_type_val}+{lag}d {lag_h}h)")
     db.commit()
     db.refresh(dep)
 
@@ -2430,6 +2549,7 @@ def create_task_dependency(
         predecessor_task_title=blocker.title if blocker else None,
         dep_type=dep_type_val,
         lag_days=lag,
+        lag_hours=lag_h,
         created_at=dep.created_at,
     )
 
@@ -2441,7 +2561,7 @@ def update_task_dependency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update an existing dependency's type and/or lag days"""
+    """Update an existing dependency's type and/or lag days + hours"""
     dep = db.get(TaskDependency, dependency_id)
     if not dep:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dependency not found")
@@ -2450,9 +2570,18 @@ def update_task_dependency(
         dep.pm_dep_type = data.dep_type
     if data.lag_days is not None:
         dep.lag_days = data.lag_days
+    if data.lag_hours is not None:
+        from app.services.calendar_service import get_working_calendar
+        calendar = get_working_calendar(db)
+        if data.lag_hours >= calendar.daily_working_hours:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Lag hours ({data.lag_hours}h) must be less than daily working hours ({calendar.daily_working_hours}h)."
+            )
+        dep.lag_hours = data.lag_hours
 
     _log_activity(db, dep.task_id, current_user.id, "DEPENDENCY_UPDATED",
-                  new_val=f"{dep.pm_dep_type}+{dep.lag_days}d")
+                  new_val=f"{dep.pm_dep_type}+{dep.lag_days}d {dep.lag_hours}h")
     db.commit()
     db.refresh(dep)
 
@@ -2461,7 +2590,6 @@ def update_task_dependency(
     db.commit()
 
     blocker = db.get(Task, dep.depends_on_task_id)
-    blocked = db.get(Task, dep.task_id)
     return TaskDependencyOut(
         id=dep.id,
         task_id=dep.task_id,
@@ -2476,6 +2604,7 @@ def update_task_dependency(
         predecessor_task_title=blocker.title if blocker else None,
         dep_type=getattr(dep.pm_dep_type, 'value', str(dep.pm_dep_type)) if dep.pm_dep_type else "FS",
         lag_days=dep.lag_days or 0,
+        lag_hours=dep.lag_hours or 0,
         created_at=dep.created_at,
     )
 

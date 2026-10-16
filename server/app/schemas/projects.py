@@ -228,6 +228,7 @@ class TaskDependencyCreate(BaseModel):
     depends_on_task_id: Optional[int] = None
     dep_type: str = "FS"  # FS, SS, FF, SF
     lag_days: int = 0
+    lag_hours: int = 0
     dependency_type: Optional[str] = None
     direction: Optional[str] = None
 
@@ -253,6 +254,7 @@ class TaskDependencyOut(BaseModel):
     predecessor_is_completed: Optional[bool] = None
     dep_type: Optional[str] = "FS"
     lag_days: int = 0
+    lag_hours: int = 0
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -323,6 +325,7 @@ class TaskCreate(TaskBase):
     milestone_id: Optional[int] = None
     is_personal: Optional[bool] = False
     duration_working_days: Optional[int] = None
+    duration_working_hours: Optional[int] = 0
     auto_schedule: Optional[bool] = True
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
@@ -363,6 +366,7 @@ class TaskUpdate(BaseModel):
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
     duration_working_days: Optional[int] = None
+    duration_working_hours: Optional[int] = None
     auto_schedule: Optional[bool] = None
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
@@ -402,6 +406,7 @@ class TaskOut(TaskBase):
     completed_by: Optional[int] = None
 
     duration_working_days: Optional[int] = 0
+    duration_working_hours: Optional[int] = 0
     auto_schedule: Optional[bool] = True
     estimated_cost: Optional[float] = 0.0
     actual_cost: Optional[float] = 0.0
@@ -696,6 +701,7 @@ class StatusDefinitionOut(StatusDefinitionBase):
 class TaskDependencyUpdate(BaseModel):
     dep_type: Optional[str] = None  # FS, SS, FF, SF
     lag_days: Optional[int] = None
+    lag_hours: Optional[int] = None
 
 
 # --- Cascade Preview ---

@@ -83,6 +83,7 @@ import {
   useGetTaskQuery,
   useGetTasksQuery,
   useGetStatusDefinitionsQuery,
+  useGetCalendarConfigQuery,
   useGetProjectMilestonesQuery,
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
@@ -117,6 +118,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const [completionDate, setCompletionDate] = useState('');
   const [completionTime, setCompletionTime] = useState('');
   const [duration, setDuration] = useState<number | ''>(1);
+  const [durationHours, setDurationHours] = useState<number | ''>(0);
   const [reminderAt, setReminderAt] = useState('');
   const [recurrenceType, setRecurrenceType] = useState('None');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
@@ -132,10 +134,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const [editingDep, setEditingDep] = useState<TaskDependencyInfo | null>(null);
   const [editDepType, setEditDepType] = useState<'FS' | 'SS' | 'FF' | 'SF'>('FS');
   const [editDepLagDays, setEditDepLagDays] = useState<number>(0);
+  const [editDepLagHours, setEditDepLagHours] = useState<number>(0);
   const [depDirection, setDepDirection] = useState<'BLOCKING' | 'BLOCKED_BY'>('BLOCKED_BY');
   const [depSearchQuery, setDepSearchQuery] = useState('');
   const [depRelType, setDepRelType] = useState<'FS' | 'SS' | 'FF' | 'SF'>('FS');
   const [depLagDays, setDepLagDays] = useState<number>(0);
+  const [depLagHours, setDepLagHours] = useState<number>(0);
   const [blockedWarning, setBlockedWarning] = useState<{
     open: boolean;
     targetStatusId?: number;
@@ -210,6 +214,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const { data: projectMilestones = [] } = useGetProjectMilestonesQuery(currentTask?.project_id || 0, {
     skip: !currentTask?.project_id,
   });
+  const { data: calendarConfig } = useGetCalendarConfigQuery();
+  const dailyWorkingHours = calendarConfig?.daily_working_hours ?? 9;
 
   const handleConfirmOverrideCompletion = async () => {
     try {
@@ -260,6 +266,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
       setCompletionDate(sanitizeDate(currentTask.completion_date));
       setCompletionTime(currentTask.completion_time || '');
       setDuration(currentTask.duration_working_days ?? 1);
+      setDurationHours(currentTask.duration_working_hours ?? 0);
       
       setTags(currentTask.tags_list?.map(t => t.name) || []);
       setReminderAt(currentTask.reminder_at ? currentTask.reminder_at.substring(0,16) : '');
@@ -278,6 +285,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     currentTask?.completion_date,
     currentTask?.completion_time,
     currentTask?.duration_working_days,
+    currentTask?.duration_working_hours,
     currentTask?.tags_list,
     currentTask?.reminder_at,
     currentTask?.recurrence_rule,
@@ -450,14 +458,21 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     }
   };
 
-  const handleDurationChange = async (days: number) => {
-    if (!currentTaskId || days < 1) return;
+  const handleDurationChange = async (days: number, hours: number) => {
+    if (!currentTaskId) return;
+    if (days === 0 && hours === 0) days = 1;
+    if (hours >= dailyWorkingHours) {
+      showToast(`Duration hours (${hours}h) must be less than daily working hours (${dailyWorkingHours}h)`, 'error');
+      return;
+    }
     setDuration(days);
+    setDurationHours(hours);
     try {
-      await updateTask({ id: currentTaskId, body: { duration_working_days: days } as any }).unwrap();
+      await updateTask({ id: currentTaskId, body: { duration_working_days: days, duration_working_hours: hours } as any }).unwrap();
       showToast('Duration updated', 'success');
     } catch (err: any) {
       setDuration(currentTask?.duration_working_days ?? 1);
+      setDurationHours(currentTask?.duration_working_hours ?? 0);
       showToast(err?.data?.detail || 'Failed to update duration', 'error');
     }
   };
@@ -662,15 +677,21 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     const resolvedType = (dep.dep_type || 'FS').toUpperCase();
     setEditDepType((['FS', 'SS', 'FF', 'SF'].includes(resolvedType) ? resolvedType : 'FS') as 'FS' | 'SS' | 'FF' | 'SF');
     setEditDepLagDays(dep.lag_days ?? 0);
+    setEditDepLagHours(dep.lag_hours ?? 0);
   };
 
   const handleUpdateDependency = async () => {
     if (!editingDep) return;
+    if (editDepLagHours >= dailyWorkingHours) {
+      showToast(`Lag hours (${editDepLagHours}h) must be less than daily working hours (${dailyWorkingHours}h)`, 'error');
+      return;
+    }
     try {
       await updateDependencyApi({
         dependencyId: editingDep.id,
         dep_type: editDepType,
         lag_days: Number(editDepLagDays) || 0,
+        lag_hours: Number(editDepLagHours) || 0,
       }).unwrap();
       showToast('Dependency updated successfully', 'success');
       setEditingDep(null);
@@ -680,6 +701,14 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     } catch (err: any) {
       showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to update dependency', 'error');
     }
+  };
+
+  const formatDepChipLabel = (dep: TaskDependencyInfo) => {
+    const type = dep.dep_type || 'FS';
+    const d = dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : '';
+    const h = dep.lag_hours ? (dep.lag_hours > 0 ? `+${dep.lag_hours}h` : `${dep.lag_hours}h`) : '';
+    const lagStr = [d, h].filter(Boolean).join(' ');
+    return lagStr ? `${type} ${lagStr}` : type;
   };
 
   const handlePostComment = async () => {
@@ -1162,9 +1191,9 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         >
                           {dep.depends_on_task_title}
                         </Typography>
-                        <Tooltip title="Click to edit dependency type & lag days">
+                        <Tooltip title="Click to edit dependency type & lag">
                           <Chip
-                            label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`}
+                            label={formatDepChipLabel(dep)}
                             size="small"
                             onClick={() => handleOpenEditDep(dep)}
                             sx={{
@@ -1247,9 +1276,9 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         >
                           {dep.depends_on_task_title}
                         </Typography>
-                        <Tooltip title="Click to edit dependency type & lag days">
+                        <Tooltip title="Click to edit dependency type & lag">
                           <Chip
-                            label={`${dep.dep_type || 'FS'} ${dep.lag_days ? (dep.lag_days > 0 ? `+${dep.lag_days}d` : `${dep.lag_days}d`) : ''}`}
+                            label={formatDepChipLabel(dep)}
                             size="small"
                             onClick={() => handleOpenEditDep(dep)}
                             sx={{
@@ -1554,36 +1583,79 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             {/* Duration Display & Edit */}
             <Box>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                Duration ({currentTask.is_parent ? 'Calendar Days' : 'Working Days'})
+                Duration ({currentTask.is_parent ? 'Calendar Days' : 'Working Days + Hours'})
               </Typography>
               {currentTask.is_parent ? (
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, py: 0.75 }}>
                   {currentTask.duration_working_days || 0} CD (Parent Rollup)
                 </Typography>
               ) : (
-                <TextField
-                  type="number"
-                  size="small"
-                  fullWidth
-                  value={duration}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : Number(e.target.value);
-                    setDuration(val);
-                    if (typeof val === 'number' && val >= 1) {
-                      handleDurationChange(val);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (!duration || duration < 1) {
-                      setDuration(1);
-                      handleDurationChange(1);
-                    }
-                  }}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">Days</InputAdornment>,
-                  }}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
-                />
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>
+                    <TextField
+                      type="number"
+                      size="small"
+                      fullWidth
+                      value={duration}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                        setDuration(val);
+                        if (typeof val === 'number' && val >= 0) {
+                          handleDurationChange(val, typeof durationHours === 'number' ? durationHours : 0);
+                        }
+                      }}
+                      onBlur={() => {
+                        const d = typeof duration === 'number' ? duration : 0;
+                        const h = typeof durationHours === 'number' ? durationHours : 0;
+                        if (d === 0 && h === 0) {
+                          setDuration(1);
+                          handleDurationChange(1, h);
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">Days</InputAdornment>,
+                      }}
+                      inputProps={{ min: 0 }}
+                      sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      type="number"
+                      size="small"
+                      fullWidth
+                      value={durationHours}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                        setDurationHours(val);
+                        if (typeof val === 'number' && val >= 0 && val < dailyWorkingHours) {
+                          handleDurationChange(typeof duration === 'number' ? duration : 0, val);
+                        }
+                      }}
+                      onBlur={() => {
+                        const d = typeof duration === 'number' ? duration : 0;
+                        let h = typeof durationHours === 'number' ? durationHours : 0;
+                        if (h >= dailyWorkingHours) {
+                          h = Math.max(0, dailyWorkingHours - 1);
+                          setDurationHours(h);
+                        }
+                        if (d === 0 && h === 0) {
+                          setDuration(1);
+                          handleDurationChange(1, 0);
+                        } else {
+                          handleDurationChange(d, h);
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">Hours</InputAdornment>,
+                      }}
+                      inputProps={{ min: 0, max: Math.max(0, dailyWorkingHours - 0.01) }}
+                      helperText={typeof durationHours === 'number' && durationHours >= dailyWorkingHours ? `< ${dailyWorkingHours}h` : undefined}
+                      error={typeof durationHours === 'number' && durationHours >= dailyWorkingHours}
+                      sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                    />
+                  </Grid>
+                </Grid>
               )}
             </Box>
 
@@ -1887,7 +1959,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={6}>
+            <Grid item xs={12} sm={6}>
               <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
                 DEPENDENCY TYPE
               </Typography>
@@ -1903,7 +1975,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 <MenuItem value="SF">Start to Finish (SF)</MenuItem>
               </Select>
             </Grid>
-            <Grid item xs={6}>
+            <Grid item xs={6} sm={3}>
               <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
                 LAG DAYS
               </Typography>
@@ -1914,6 +1986,22 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 value={depLagDays}
                 onChange={(e) => setDepLagDays(Number(e.target.value))}
                 placeholder="0"
+                helperText="Days"
+              />
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                LAG HOURS
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                value={depLagHours}
+                onChange={(e) => setDepLagHours(Number(e.target.value))}
+                placeholder="0"
+                inputProps={{ min: 0, max: Math.max(0, dailyWorkingHours - 0.01) }}
+                helperText={`0 to <${dailyWorkingHours}h`}
               />
             </Grid>
           </Grid>
@@ -1954,13 +2042,18 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 key={t.id}
                 variant="outlined"
                 onClick={async () => {
+                  if (depLagHours >= dailyWorkingHours) {
+                    showToast(`Lag hours (${depLagHours}h) must be less than daily working hours (${dailyWorkingHours}h)`, 'error');
+                    return;
+                  }
                   try {
                     await addDependencyApi({
                       taskId: currentTask.id,
                       depends_on_task_id: t.id,
                       direction: 'BLOCKED_BY',
                       dep_type: depRelType,
-                      lag_days: depLagDays,
+                      lag_days: Number(depLagDays) || 0,
+                      lag_hours: Number(depLagHours) || 0,
                     }).unwrap();
                     showToast('Dependency created successfully', 'success');
                     setIsAddDepDialogOpen(false);
@@ -2081,7 +2174,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               </Paper>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={7}>
+                <Grid item xs={12} sm={6}>
                   <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
                     DEPENDENCY TYPE
                   </Typography>
@@ -2117,7 +2210,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     </MenuItem>
                   </Select>
                 </Grid>
-                <Grid item xs={12} sm={5}>
+                <Grid item xs={6} sm={3}>
                   <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
                     LAG DAYS
                   </Typography>
@@ -2128,7 +2221,22 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     value={editDepLagDays}
                     onChange={(e) => setEditDepLagDays(parseInt(e.target.value, 10) || 0)}
                     placeholder="0"
-                    helperText="Positive = delay, negative = lead"
+                    helperText="Days"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
+                    LAG HOURS
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    value={editDepLagHours}
+                    onChange={(e) => setEditDepLagHours(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    inputProps={{ min: 0, max: Math.max(0, dailyWorkingHours - 0.01) }}
+                    helperText={`0 to <${dailyWorkingHours}h`}
                   />
                 </Grid>
               </Grid>

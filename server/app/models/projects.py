@@ -244,6 +244,7 @@ class Task(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     # KIM PM v1.1 — scheduling & cost fields
     duration_working_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # leaf: user-entered working days
+    duration_working_hours: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True, server_default="0")
     auto_schedule: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True, server_default="true")
     estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # monetary
     actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)     # monetary
@@ -492,6 +493,7 @@ class TaskDependency(Base):
         Enum(PMDepType, name="pm_dep_type"), nullable=True
     )
     lag_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # working days; can be negative
+    lag_hours: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
 
     task: Mapped["Task"] = relationship("Task", foreign_keys=[task_id])
@@ -620,6 +622,14 @@ class WeeklyOffDay(Base):
     __tablename__ = "weekly_off_days"
     id: Mapped[int] = mapped_column(primary_key=True)
     day_of_week: Mapped[int] = mapped_column(Integer, nullable=False, unique=True) # 0=Sunday, 1=Monday...
+
+
+class WorkingCalendarSetting(Base):
+    """Working calendar daily working hours (start and end times, e.g. 09:00 - 18:00)"""
+    __tablename__ = "working_calendar_settings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    work_start_time: Mapped[str] = mapped_column(String(5), default="09:00", nullable=False, server_default="09:00")
+    work_end_time: Mapped[str] = mapped_column(String(5), default="18:00", nullable=False, server_default="18:00")
 
 
 class ProjectPmSettings(Base):

@@ -120,6 +120,7 @@ export interface TaskDependencyInfo {
   predecessor_task_title?: string;
   dep_type: 'FS' | 'SS' | 'FF' | 'SF';
   lag_days: number;
+  lag_hours?: number;
 }
 
 export interface CascadePreviewItem {
@@ -234,6 +235,7 @@ export interface TaskItem {
   completed_subtask_count?: number;
   milestone_id?: number;
   duration_working_days?: number;
+  duration_working_hours?: number;
   auto_schedule?: boolean;
   dependency_conflict?: {
     has_conflict: boolean;
@@ -340,6 +342,9 @@ export interface WeeklyOffConfig {
 export interface CalendarConfig {
   holidays: WorkingCalendarHoliday[];
   weekly_off_days: number[];
+  work_start_time?: string;
+  work_end_time?: string;
+  daily_working_hours?: number;
 }
 
 export const projectsApi = createApi({
@@ -706,7 +711,7 @@ export const projectsApi = createApi({
     }),
 
     // Dependencies
-    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; predecessor_task_id?: number; dep_type?: string; lag_days?: number; depends_on_task_id?: number; dependency_type?: string; direction?: string }>(
+    addDependency: builder.mutation<TaskDependencyInfo, { taskId: number; predecessor_task_id?: number; dep_type?: string; lag_days?: number; lag_hours?: number; depends_on_task_id?: number; dependency_type?: string; direction?: string }>(
       {
         query: ({ taskId, ...body }) => ({
           url: `/tasks/${taskId}/dependencies`,
@@ -716,7 +721,7 @@ export const projectsApi = createApi({
         invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
       }
     ),
-    updateDependency: builder.mutation<TaskDependencyInfo, { dependencyId: number; dep_type?: string; lag_days?: number }>(
+    updateDependency: builder.mutation<TaskDependencyInfo, { dependencyId: number; dep_type?: string; lag_days?: number; lag_hours?: number }>(
       {
         query: ({ dependencyId, ...body }) => ({
           url: `/tasks/dependencies/${dependencyId}`,
@@ -835,6 +840,14 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['Calendar'],
     }),
+    updateCalendarWorkingHours: builder.mutation<{ work_start_time: string; work_end_time: string; daily_working_hours: number }, { work_start_time: string; work_end_time: string }>({
+      query: (body) => ({
+        url: '/calendar/working-hours',
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Calendar'],
+    }),
 
     // PM Settings
     getProjectPmSettings: builder.query<ProjectPmSettings, number>({
@@ -917,6 +930,7 @@ export const {
   useAddHolidayMutation,
   useDeleteHolidayMutation,
   useSetWeeklyOffMutation,
+  useUpdateCalendarWorkingHoursMutation,
   useGetProjectPmSettingsQuery,
   useUpdateProjectPmSettingsMutation,
 } = projectsApi;
