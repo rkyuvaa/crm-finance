@@ -1121,20 +1121,21 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     return (parts[0]?.charAt(0) || '?').toUpperCase();
   };
 
-  // Deterministic, high-contrast, visually distinguishable color palette for assignees
+  // Deterministic, softer, coordinated solid-color palette for assignees
+  // (Muted blue, forest green, deep lavender, muted teal, restrained burgundy, terracotta, etc.)
   const ASSIGNEE_COLORS = [
-    '#1D4ED8', // Deep Blue
-    '#047857', // Deep Emerald
-    '#6D28D9', // Deep Purple / Violet
-    '#B45309', // Deep Amber
-    '#0E7490', // Deep Cyan / Teal
-    '#B91C1C', // Deep Red
-    '#4338CA', // Deep Indigo
-    '#9D174D', // Deep Rose / Pink
-    '#0F766E', // Deep Teal
-    '#C2410C', // Deep Orange
-    '#334155', // Deep Slate
-    '#0369A1', // Deep Sky
+    '#3E6487', // Muted Slate Blue
+    '#2D664E', // Forest Green
+    '#635380', // Deep Lavender
+    '#2B6E72', // Muted Teal
+    '#763B48', // Restrained Burgundy
+    '#84523B', // Muted Terracotta
+    '#4A607A', // Dusty Slate
+    '#4E654C', // Muted Pine
+    '#6B4764', // Dusty Plum
+    '#4A6B69', // Soft Eucalyptus
+    '#4F566B', // Cool Graphite
+    '#7A4B3A', // Deep Cedar
   ];
 
   const getAssigneeColor = (userId: number): { bg: string; color: string } => {
@@ -1338,9 +1339,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   flex: 1,
                   minWidth: 180,
                   '& .MuiInputBase-input': {
-                    fontWeight: depth === 0 ? 600 : 500,
+                    fontWeight: depth === 0 ? 650 : 500,
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: depth === 0 ? (isDark ? '#C4B5FD' : '#6D28D9') : 'text.primary',
                     px: 0.5,
                     py: 0.25,
                     borderRadius: '4px',

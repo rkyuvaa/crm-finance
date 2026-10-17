@@ -313,7 +313,13 @@ export default function TaskListView({
                   '& .MuiInputBase-input': {
                     fontWeight: depth === 0 ? 700 : 500,
                     fontSize: '0.875rem',
-                    color: task.is_completed ? 'text.secondary' : 'text.primary',
+                    color: task.is_completed
+                      ? 'text.secondary'
+                      : depth === 0
+                      ? isDark
+                        ? '#C4B5FD'
+                        : '#6D28D9'
+                      : 'text.primary',
                     textDecoration: task.is_completed ? 'line-through' : 'none',
                     px: 0.5,
                     py: 0.25,
