@@ -496,7 +496,7 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
             selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
         )
         .filter(Task.parent_task_id.in_(task_ids), Task.is_deleted.is_(False))
-        .order_by(Task.id.asc())
+        .order_by(Task.sort_order.asc(), Task.id.asc())
         .all()
     )
     subtasks_by_parent: dict[int, list[Task]] = {tid: [] for tid in task_ids}
@@ -524,7 +524,7 @@ def _batch_load_task_metadata(db: Session, task_ids: list[int]):
                 selectinload(Task.tag_mappings).joinedload(TaskTagMap.tag),
             )
             .filter(Task.parent_task_id.in_(child_ids), Task.is_deleted.is_(False))
-            .order_by(Task.id.asc())
+            .order_by(Task.sort_order.asc(), Task.id.asc())
             .all()
         )
         for sst in sub_subtasks:
@@ -894,7 +894,7 @@ def list_tasks(
             selectinload(Task.checklists).selectinload(TaskChecklist.items),
             selectinload(Task.time_entries).joinedload(TaskTimeEntry.user),
         )
-        .order_by(Task.created_at.asc(), Task.id.asc())
+        .order_by(Task.sort_order.asc(), Task.created_at.asc(), Task.id.asc())
     )
 
     safe_limit = limit if isinstance(limit, int) else 300
@@ -1135,6 +1135,20 @@ def create_task(
             if not data.project_id:
                 data.project_id = tl.project_id
 
+    if data.sort_order is not None and data.sort_order > 0:
+        task_sort = data.sort_order
+    elif data.parent_task_id:
+        max_s = db.query(func.max(Task.sort_order)).filter(Task.parent_task_id == data.parent_task_id, Task.is_deleted.is_(False)).scalar()
+        task_sort = (max_s + 1) if max_s is not None else 0
+    elif data.task_list_id:
+        max_s = db.query(func.max(Task.sort_order)).filter(Task.task_list_id == data.task_list_id, Task.is_deleted.is_(False)).scalar()
+        task_sort = (max_s + 1) if max_s is not None else 0
+    elif data.milestone_id:
+        max_s = db.query(func.max(Task.sort_order)).filter(Task.milestone_id == data.milestone_id, Task.task_list_id.is_(None), Task.parent_task_id.is_(None), Task.is_deleted.is_(False)).scalar()
+        task_sort = (max_s + 1) if max_s is not None else 0
+    else:
+        task_sort = 0
+
     task = Task(
         task_number=task_num,
         project_id=data.project_id,
@@ -1142,6 +1156,7 @@ def create_task(
         parent_task_id=data.parent_task_id,
         milestone_id=data.milestone_id,
         task_list_id=data.task_list_id,
+        sort_order=task_sort,
         title=data.title.strip(),
         description=data.description,
         type_id=data.type_id,
@@ -2889,6 +2904,22 @@ def convert_task_to_subtask(
     _update_parent_progress(db, data.target_parent_id)
 
     return _format_task_out(task, db)
+
+
+@router.post("/reorder", status_code=status.HTTP_200_OK)
+def reorder_tasks(
+    data: TaskReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Batch reorder tasks among siblings (controls display sort_order only)"""
+    for idx, tid in enumerate(data.sibling_ids):
+        t = db.get(Task, tid)
+        if t and not t.is_deleted:
+            t.sort_order = idx
+            db.add(t)
+    db.commit()
+    return {"message": "Tasks reordered successfully"}
 
 
 @router.post("/{task_id}/reorder-subtasks", status_code=status.HTTP_200_OK)

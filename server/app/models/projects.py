@@ -229,6 +229,7 @@ class ProjectTaskList(Base):
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     duration_working_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_working_hours: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
     updated_at: Mapped[datetime] = mapped_column(

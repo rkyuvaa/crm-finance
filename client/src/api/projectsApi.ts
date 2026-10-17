@@ -326,6 +326,7 @@ export interface ProjectTaskListItem {
   end_time?: string;
   duration_working_days?: number;
   duration_working_hours?: number;
+  sort_order?: number;
   created_at: string;
   updated_at?: string;
 }
@@ -693,6 +694,22 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: ['TaskLists', 'Tasks', 'Milestones', 'Projects'],
     }),
+    reorderTaskLists: builder.mutation<void, { milestoneId: number; siblingIds: number[] }>({
+      query: ({ milestoneId, siblingIds }) => ({
+        url: `/projects/milestones/${milestoneId}/reorder-task-lists`,
+        method: 'POST',
+        body: { sibling_ids: siblingIds },
+      }),
+      invalidatesTags: ['TaskLists'],
+    }),
+    reorderTasks: builder.mutation<void, { siblingIds: number[] }>({
+      query: ({ siblingIds }) => ({
+        url: `/tasks/reorder`,
+        method: 'POST',
+        body: { sibling_ids: siblingIds },
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
     // Stopwatch Time Tracking
     startTimer: builder.mutation<TaskItem, number>({
       query: (taskId) => ({
@@ -954,6 +971,8 @@ export const {
   useCreateTaskListMutation,
   useUpdateTaskListMutation,
   useDeleteTaskListMutation,
+  useReorderTaskListsMutation,
+  useReorderTasksMutation,
   useGetTaskAttachmentsQuery,
   useAddTaskAttachmentMutation,
   useDeleteTaskAttachmentMutation,

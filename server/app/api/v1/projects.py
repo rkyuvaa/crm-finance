@@ -19,6 +19,7 @@ from app.schemas.projects import (
     ProjectTaskListCreate,
     ProjectTaskListUpdate,
     ProjectTaskListOut,
+    TaskReorderRequest,
     CustomFieldDefinitionCreate,
     CustomFieldDefinitionUpdate,
     CustomFieldDefinitionOut,
@@ -444,7 +445,7 @@ def get_milestone_task_lists(
     milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
-    return db.query(ProjectTaskList).filter(ProjectTaskList.milestone_id == milestone_id).order_by(ProjectTaskList.id).all()
+    return db.query(ProjectTaskList).filter(ProjectTaskList.milestone_id == milestone_id).order_by(ProjectTaskList.sort_order.asc(), ProjectTaskList.id.asc()).all()
 
 
 @router.get("/{project_id}/task-lists", response_model=List[ProjectTaskListOut])
@@ -457,7 +458,7 @@ def get_project_task_lists(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return db.query(ProjectTaskList).filter(ProjectTaskList.project_id == project_id).order_by(ProjectTaskList.id).all()
+    return db.query(ProjectTaskList).filter(ProjectTaskList.project_id == project_id).order_by(ProjectTaskList.sort_order.asc(), ProjectTaskList.id.asc()).all()
 
 
 @router.post("/milestones/{milestone_id}/task-lists", response_model=ProjectTaskListOut, status_code=status.HTTP_201_CREATED)
@@ -478,15 +479,38 @@ def create_milestone_task_list(
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task List name cannot be empty")
 
+    max_sort = db.query(func.max(ProjectTaskList.sort_order)).filter(
+        ProjectTaskList.milestone_id == milestone_id
+    ).scalar()
+    next_sort = (max_sort + 1) if max_sort is not None else 0
+
     task_list = ProjectTaskList(
         project_id=milestone.project_id,
         milestone_id=milestone.id,
         name=data.name.strip(),
+        sort_order=data.sort_order if data.sort_order else next_sort,
     )
     db.add(task_list)
     db.commit()
     db.refresh(task_list)
     return task_list
+
+
+@router.post("/milestones/{milestone_id}/reorder-task-lists", status_code=status.HTTP_200_OK)
+def reorder_milestone_task_lists(
+    milestone_id: int,
+    data: TaskReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reorder Task Lists within a Milestone (updates sort_order only)"""
+    for idx, tl_id in enumerate(data.sibling_ids):
+        tl = db.get(ProjectTaskList, tl_id)
+        if tl and tl.milestone_id == milestone_id:
+            tl.sort_order = idx
+            db.add(tl)
+    db.commit()
+    return {"message": "Task lists reordered successfully"}
 
 
 @router.patch("/task-lists/{task_list_id}", response_model=ProjectTaskListOut)
@@ -509,6 +533,9 @@ def update_project_task_list(
         if not data.name.strip():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task List name cannot be empty")
         task_list.name = data.name.strip()
+
+    if data.sort_order is not None:
+        task_list.sort_order = data.sort_order
 
     db.commit()
     db.refresh(task_list)

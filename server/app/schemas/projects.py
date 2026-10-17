@@ -562,6 +562,7 @@ class ProjectMilestoneOut(ProjectMilestoneBase):
 # Restrictions: No Status, Cost, Dependencies, or Assigned To.
 class ProjectTaskListBase(BaseModel):
     name: str
+    sort_order: Optional[int] = 0
 
 
 class ProjectTaskListCreate(ProjectTaskListBase):
@@ -570,12 +571,14 @@ class ProjectTaskListCreate(ProjectTaskListBase):
 
 class ProjectTaskListUpdate(BaseModel):
     name: Optional[str] = None
+    sort_order: Optional[int] = None
 
 
 class ProjectTaskListOut(ProjectTaskListBase):
     id: int
     project_id: int
     milestone_id: int
+    sort_order: int = 0
     start_date: Optional[date] = None
     start_time: Optional[str] = None
     end_date: Optional[date] = None

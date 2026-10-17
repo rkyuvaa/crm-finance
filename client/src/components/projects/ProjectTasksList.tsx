@@ -53,6 +53,7 @@ import {
   Edit2,
   Folder,
   FolderPlus,
+  GripVertical,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -66,6 +67,8 @@ import {
   useCreateTaskListMutation,
   useUpdateTaskListMutation,
   useDeleteTaskListMutation,
+  useReorderTaskListsMutation,
+  useReorderTasksMutation,
   TaskItem,
   TaskDependencyInfo,
   ProjectTaskListItem,
@@ -74,6 +77,7 @@ import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { time24To12, time12To24, formatDateTime12h, getTaskIdBadgeStyle } from '@/utils/format';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
+import DependencyModal from '@/components/projects/DependencyModal';
 
 interface ProjectTasksListProps {
   projectId: string;
@@ -183,6 +187,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [createTaskList] = useCreateTaskListMutation();
   const [updateTaskList] = useUpdateTaskListMutation();
   const [deleteTaskList] = useDeleteTaskListMutation();
+  const [reorderTaskLists] = useReorderTaskListsMutation();
+  const [reorderTasks] = useReorderTasksMutation();
+
+  // Dependency Modal State
+  const [depModalOpen, setDepModalOpen] = useState(false);
+  const [depModalTask, setDepModalTask] = useState<TaskItem | null>(null);
+  const [depModalDependency, setDepModalDependency] = useState<TaskDependencyInfo | null>(null);
+
+  const handleOpenDependencyModal = (task: TaskItem, dep: TaskDependencyInfo | null = null) => {
+    setDepModalTask(task);
+    setDepModalDependency(dep);
+    setDepModalOpen(true);
+  };
+
+  // Drag and drop state for reordering
+  type DragItemType =
+    | { type: 'TASK_LIST'; id: number; milestoneId: number }
+    | { type: 'TASK'; id: number; taskListId?: number | null; milestoneId?: number | null; parentTaskId?: number | null };
+
+  const [dragItem, setDragItem] = useState<DragItemType | null>(null);
+  const [dragOverTargetId, setDragOverTargetId] = useState<number | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | null>(null);
 
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({
     1: true,
@@ -209,6 +235,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
   const [milestoneId, setMilestoneId] = useState<number | ''>('');
   const [taskListId, setTaskListId] = useState<number | ''>('');
+  const [isTaskListLocked, setIsTaskListLocked] = useState(false);
 
   // Task List Creation / Renaming Dialog States
   const [createTaskListOpen, setCreateTaskListOpen] = useState(false);
@@ -354,6 +381,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setStatusId(defaultStatusId);
     setMilestoneId(defaultMilestoneId || '');
     setTaskListId(defaultTaskListId || '');
+    setIsTaskListLocked(Boolean(defaultTaskListId));
     setPriority('NORMAL');
     setAssigneeIds([]);
     setStartDate('');
@@ -362,6 +390,136 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setDueTime('05:00 PM');
     setEstimatedHours(0);
     setCreateOpen(true);
+  };
+
+  const handleTaskListDragOver = (e: React.DragEvent, targetTl: ProjectTaskListItem) => {
+    if (!dragItem || dragItem.type !== 'TASK_LIST') return;
+    if (dragItem.milestoneId !== targetTl.milestone_id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const pos = relY < rect.height / 2 ? 'top' : 'bottom';
+    setDragOverTargetId(targetTl.id);
+    setDragOverPosition(pos);
+  };
+
+  const handleTaskListDrop = async (e: React.DragEvent, targetTl: ProjectTaskListItem) => {
+    e.preventDefault();
+    if (!dragItem || dragItem.type !== 'TASK_LIST') return;
+    if (dragItem.milestoneId !== targetTl.milestone_id || dragItem.id === targetTl.id) {
+      setDragItem(null);
+      setDragOverTargetId(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    const siblings = [...taskLists.filter((tl) => tl.milestone_id === targetTl.milestone_id)].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+    );
+
+    const dragIdx = siblings.findIndex((x) => x.id === dragItem.id);
+    const targetIdx = siblings.findIndex((x) => x.id === targetTl.id);
+    if (dragIdx === -1 || targetIdx === -1) {
+      setDragItem(null);
+      setDragOverTargetId(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    const updated = [...siblings];
+    const [removed] = updated.splice(dragIdx, 1);
+    const insertIdx = updated.findIndex((x) => x.id === targetTl.id);
+    const finalIdx = dragOverPosition === 'bottom' ? insertIdx + 1 : insertIdx;
+    updated.splice(finalIdx, 0, removed);
+
+    const siblingIds = updated.map((x) => x.id);
+    setDragItem(null);
+    setDragOverTargetId(null);
+    setDragOverPosition(null);
+
+    try {
+      await reorderTaskLists({ milestoneId: targetTl.milestone_id, siblingIds }).unwrap();
+      toast.showSuccess('Task list order updated');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to reorder task lists');
+    }
+  };
+
+  const handleTaskDragOver = (e: React.DragEvent, targetTask: TaskItem) => {
+    if (!dragItem || dragItem.type !== 'TASK') return;
+
+    if (targetTask.parent_task_id) {
+      if (dragItem.parentTaskId !== targetTask.parent_task_id) return;
+    } else if (targetTask.task_list_id) {
+      if (dragItem.parentTaskId || dragItem.taskListId !== targetTask.task_list_id) return;
+    } else {
+      if (dragItem.parentTaskId || dragItem.taskListId || (dragItem.milestoneId || null) !== (targetTask.milestone_id || null)) return;
+    }
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const pos = relY < rect.height / 2 ? 'top' : 'bottom';
+    setDragOverTargetId(targetTask.id);
+    setDragOverPosition(pos);
+  };
+
+  const handleTaskDrop = async (e: React.DragEvent, targetTask: TaskItem) => {
+    e.preventDefault();
+    if (!dragItem || dragItem.type !== 'TASK') return;
+    if (dragItem.id === targetTask.id) {
+      setDragItem(null);
+      setDragOverTargetId(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    let siblings: TaskItem[] = [];
+    if (targetTask.parent_task_id) {
+      if (dragItem.parentTaskId !== targetTask.parent_task_id) return;
+      siblings = [...(subtasksByParentId[targetTask.parent_task_id] || [])].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+      );
+    } else if (targetTask.task_list_id) {
+      if (dragItem.parentTaskId || dragItem.taskListId !== targetTask.task_list_id) return;
+      siblings = [...safeTasks.filter((t) => !t.parent_task_id && t.task_list_id === targetTask.task_list_id)].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+      );
+    } else {
+      if (dragItem.parentTaskId || dragItem.taskListId || (dragItem.milestoneId || null) !== (targetTask.milestone_id || null)) return;
+      siblings = [...safeTasks.filter((t) => !t.parent_task_id && !t.task_list_id && (t.milestone_id || null) === (targetTask.milestone_id || null))].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+      );
+    }
+
+    const dragIdx = siblings.findIndex((x) => x.id === dragItem.id);
+    const targetIdx = siblings.findIndex((x) => x.id === targetTask.id);
+    if (dragIdx === -1 || targetIdx === -1) {
+      setDragItem(null);
+      setDragOverTargetId(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    const updated = [...siblings];
+    const [removed] = updated.splice(dragIdx, 1);
+    const insertIdx = updated.findIndex((x) => x.id === targetTask.id);
+    const finalIdx = dragOverPosition === 'bottom' ? insertIdx + 1 : insertIdx;
+    updated.splice(finalIdx, 0, removed);
+
+    const siblingIds = updated.map((x) => x.id);
+    setDragItem(null);
+    setDragOverTargetId(null);
+    setDragOverPosition(null);
+
+    try {
+      await reorderTasks({ siblingIds }).unwrap();
+      toast.showSuccess('Task order updated');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to reorder tasks');
+    }
   };
 
   const [isAllExpanded, setIsAllExpanded] = useState(false);
@@ -509,6 +667,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       setEstimatedHours(0);
       setMilestoneId('');
       setTaskListId('');
+      setIsTaskListLocked(false);
     } catch (err: any) {
       toast.showError(err?.data?.detail || 'Failed to create task');
     }
@@ -711,19 +870,23 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       <React.Fragment key={task.id}>
         <TableRow
           hover
+          onDragOver={(e) => handleTaskDragOver(e, task)}
+          onDrop={(e) => handleTaskDrop(e, task)}
           sx={{
             cursor: 'pointer',
             bgcolor: depth > 0 ? tTokens.stickyNestedBg : 'inherit',
             borderLeft: depth > 0 ? `${Math.min(depth, 3) * 3}px solid ${isDark ? '#5FCF87' : '#203020'}` : 'none',
+            borderTop: dragOverTargetId === task.id && dragOverPosition === 'top' ? `2px solid ${isDark ? '#5FCF87' : '#203020'}` : undefined,
+            borderBottom: dragOverTargetId === task.id && dragOverPosition === 'bottom' ? `2px solid ${isDark ? '#5FCF87' : '#203020'}` : undefined,
             '&:hover .sticky-cell': { bgcolor: depth > 0 ? tTokens.stickyHoverNested : tTokens.stickyHoverMain },
           }}
           onClick={() => openTask(task)}
         >
-          {/* Expander Cell (Sticky) */}
+          {/* Expander & Drag Handle Cell (Sticky) */}
           <TableCell
             className="sticky-cell"
             align="center"
-            width={40}
+            width={44}
             sx={{
               position: 'sticky',
               left: 0,
@@ -734,13 +897,48 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               p: 0,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 0.25 }}>
+              <Box
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', `TASK:${task.id}`);
+                  setDragItem({
+                    type: 'TASK',
+                    id: task.id,
+                    taskListId: task.task_list_id,
+                    milestoneId: task.milestone_id,
+                    parentTaskId: task.parent_task_id,
+                  });
+                }}
+                onDragEnd={() => {
+                  setDragItem(null);
+                  setDragOverTargetId(null);
+                  setDragOverPosition(null);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'grab',
+                  color: 'text.secondary',
+                  opacity: 0.45,
+                  p: 0.25,
+                  borderRadius: '3px',
+                  '&:hover': { opacity: 1, color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                }}
+                title="Drag to reorder"
+              >
+                <GripVertical size={14} />
+              </Box>
               {hasChildren ? (
                 <IconButton
                   size="small"
                   onClick={(e) => toggleSubtasksExpand(task.id, e)}
                   sx={{
-                    p: 0.4,
+                    p: 0.25,
                     color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
                     '&:hover': { color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.08)' },
                   }}
@@ -751,7 +949,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   </Typography>
                 </IconButton>
               ) : (
-                <Box sx={{ width: 24 }} />
+                <Box sx={{ width: 18 }} />
               )}
             </Box>
           </TableCell>
@@ -761,7 +959,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             className="sticky-cell"
             sx={{
               position: 'sticky',
-              left: 40,
+              left: 44,
               zIndex: 1,
               bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
@@ -876,22 +1074,31 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 2. Dependencies (Click to edit/add) */}
-          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+          {/* 2. Dependencies (Click to open Dependency Creation / Edit Window directly) */}
+          <TableCell
+            sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenDependencyModal(task, null);
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {task.dependencies && task.dependencies.length > 0 ? (
-                task.dependencies.slice(0, 2).map((dep) => {
+                task.dependencies.slice(0, 3).map((dep) => {
                   const dt = dep.dep_type || 'FS';
                   const num = dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`;
                   return (
-                    <Tooltip key={dep.id} title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}${dep.lag_hours ? ` +${dep.lag_hours}h` : ''})`}>
+                    <Tooltip
+                      key={dep.id}
+                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}${dep.lag_hours ? ` +${dep.lag_hours}h` : ''}) - Click to edit`}
+                    >
                       <Chip
                         icon={<Link2 size={10} color={isDark ? '#5FCF87' : '#203020'} />}
                         label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openTaskWithDep(task, dep);
+                          handleOpenDependencyModal(task, dep);
                         }}
                         sx={{
                           height: 20,
@@ -903,19 +1110,29 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           borderColor: isDark ? 'rgba(95, 207, 135, 0.3)' : '#C8E6C9',
                           fontFamily: 'monospace',
                           cursor: 'pointer',
+                          '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.25)' : '#C8E6C9' },
                         }}
                       />
                     </Tooltip>
                   );
                 })
               ) : (
-                <Typography
-                  variant="body2"
-                  onClick={() => openTask(task)}
-                  sx={{ color: 'text.disabled', cursor: 'pointer', fontSize: '0.75rem', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
-                >
-                  —
-                </Typography>
+                <Tooltip title="Click to add dependency">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.disabled',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: '4px',
+                      '&:hover': { color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.05)' },
+                    }}
+                  >
+                    —
+                  </Typography>
+                </Tooltip>
               )}
             </Box>
           </TableCell>
@@ -1787,7 +2004,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             <TableHead sx={{ bgcolor: tTokens.headerBg }}>
               <TableRow>
                 <TableCell
-                  width={40}
+                  width={44}
                   sx={{
                     position: 'sticky',
                     left: 0,
@@ -1799,7 +2016,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <TableCell
                   sx={{
                     position: 'sticky',
-                    left: 40,
+                    left: 44,
                     zIndex: 3,
                     bgcolor: tTokens.headerBg,
                     fontWeight: 600,
@@ -1869,7 +2086,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           colSpan={10}
                           sx={{
                             position: 'sticky',
-                            left: 40,
+                            left: 44,
                             zIndex: 2,
                             bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
@@ -1893,11 +2110,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   { id: null, name: 'Unassigned Milestone' }
                 ].map((milestone) => {
                   const mTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.milestone_id || null) === milestone.id);
-                  const mTaskLists = milestone.id ? taskLists.filter((tl) => tl.milestone_id === milestone.id) : [];
+                  const mTaskLists = milestone.id
+                    ? [...taskLists.filter((tl) => tl.milestone_id === milestone.id)].sort(
+                        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+                      )
+                    : [];
                   if (mTasks.length === 0 && mTaskLists.length === 0) return null;
                   const groupId = milestone.id || -1;
                   const isExpanded = expandedGroups[groupId] !== false; // default true
-                  const directUngroupedTasks = mTasks.filter((t) => !t.task_list_id);
+                  const directUngroupedTasks = [...mTasks.filter((t) => !t.task_list_id)].sort(
+                    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+                  );
 
                   return (
                     <React.Fragment key={`milestone-${groupId}`}>
@@ -1920,7 +2143,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           colSpan={10}
                           sx={{
                             position: 'sticky',
-                            left: 40,
+                            left: 44,
                             zIndex: 2,
                             bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
@@ -1954,6 +2177,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   sx={{
                                     height: 24,
                                     fontSize: '0.72rem',
+                                    fontWeight: 600,
                                     textTransform: 'none',
                                     py: 0,
                                     px: 1,
@@ -1962,7 +2186,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                     '&:hover': { borderColor: '#8B5CF6', bgcolor: '#F5F3FF' },
                                   }}
                                 >
-                                  + Task List
+                                  Add Task List +
                                 </Button>
                                 <Button
                                   size="small"
@@ -1999,15 +2223,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                               <React.Fragment key={`tasklist-${tl.id}`}>
                                 {/* Task List Header Row */}
                                 <TableRow
+                                  onDragOver={(e) => handleTaskListDragOver(e, tl)}
+                                  onDrop={(e) => handleTaskListDrop(e, tl)}
                                   sx={{
                                     bgcolor: tTokens.taskListBg,
                                     '&:hover': { bgcolor: tTokens.taskListHover },
-                                    borderTop: '1px solid',
-                                    borderBottom: '1px solid',
-                                    borderColor: tTokens.borderColor,
+                                    borderTop: dragOverTargetId === tl.id && dragOverPosition === 'top' ? '2px solid #6D28D9' : '1px solid',
+                                    borderBottom: dragOverTargetId === tl.id && dragOverPosition === 'bottom' ? '2px solid #6D28D9' : '1px solid',
+                                    borderColor: dragOverTargetId === tl.id ? '#6D28D9' : tTokens.borderColor,
                                   }}
                                 >
-                                  {/* Expand / Collapse Chevron */}
+                                  {/* Expand / Collapse Chevron & Drag Handle */}
                                   <TableCell
                                     sx={{
                                       position: 'sticky',
@@ -2015,19 +2241,54 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                       zIndex: 2,
                                       bgcolor: 'inherit',
                                       whiteSpace: 'nowrap',
-                                      pl: 1,
+                                      p: 0,
                                     }}
                                   >
-                                    <IconButton size="small" onClick={(e) => toggleTaskList(tl.id, e)}>
-                                      {isTlExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                                    </IconButton>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25 }}>
+                                      <Box
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          e.dataTransfer.setData('text/plain', `TASK_LIST:${tl.id}`);
+                                          setDragItem({
+                                            type: 'TASK_LIST',
+                                            id: tl.id,
+                                            milestoneId: tl.milestone_id,
+                                          });
+                                        }}
+                                        onDragEnd={() => {
+                                          setDragItem(null);
+                                          setDragOverTargetId(null);
+                                          setDragOverPosition(null);
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        sx={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          cursor: 'grab',
+                                          color: 'text.secondary',
+                                          opacity: 0.45,
+                                          p: 0.25,
+                                          borderRadius: '3px',
+                                          '&:hover': { opacity: 1, color: '#6D28D9', bgcolor: 'rgba(109, 40, 217, 0.08)' },
+                                        }}
+                                        title="Drag to reorder task list"
+                                      >
+                                        <GripVertical size={14} />
+                                      </Box>
+                                      <IconButton size="small" onClick={(e) => toggleTaskList(tl.id, e)} sx={{ p: 0.25 }}>
+                                        {isTlExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                                      </IconButton>
+                                    </Box>
                                   </TableCell>
 
                                   {/* Task List Name (Only editable field) */}
                                   <TableCell
                                     sx={{
                                       position: 'sticky',
-                                      left: 40,
+                                      left: 44,
                                       zIndex: 2,
                                       bgcolor: 'inherit',
                                       whiteSpace: 'nowrap',
@@ -2171,25 +2432,57 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
                                 {/* Child Tasks inside this Task List */}
                                 {isTlExpanded && (
-                                  tlTasks.length === 0 ? (
-                                    <TableRow sx={{ bgcolor: tTokens.subtleBg }}>
-                                      <TableCell sx={{ bgcolor: tTokens.subtleBg }} />
-                                      <TableCell colSpan={10} sx={{ py: 1.25, pl: 4, bgcolor: tTokens.subtleBg, borderRight: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                                          No tasks in this task list.{' '}
-                                          <Button
-                                            size="small"
-                                            onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}
-                                            sx={{ textTransform: 'none', fontSize: '0.75rem', p: 0, minWidth: 'auto', color: isDark ? '#5FCF87' : '#203020', fontWeight: 600 }}
-                                          >
-                                            + Add Task
-                                          </Button>
-                                        </Typography>
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (
-                                    tlTasks.map((task) => renderListTableRow(task, 0))
-                                  )
+                                  <>
+                                    {tlTasks.length === 0 ? (
+                                      <TableRow sx={{ bgcolor: tTokens.subtleBg }}>
+                                        <TableCell sx={{ bgcolor: tTokens.subtleBg }} />
+                                        <TableCell colSpan={10} sx={{ py: 1.25, pl: 4, bgcolor: tTokens.subtleBg, borderRight: '1px solid', borderColor: 'divider' }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                              No tasks in this task list.
+                                            </Typography>
+                                            <Button
+                                              size="small"
+                                              startIcon={<Plus size={14} />}
+                                              onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}
+                                              sx={{
+                                                textTransform: 'none',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: isDark ? '#5FCF87' : '#203020',
+                                                '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.05)' },
+                                              }}
+                                            >
+                                              ＋ Add Task
+                                            </Button>
+                                          </Box>
+                                        </TableCell>
+                                      </TableRow>
+                                    ) : (
+                                      <>
+                                        {tlTasks.map((task) => renderListTableRow(task, 0))}
+                                        <TableRow sx={{ bgcolor: tTokens.subtleBg }}>
+                                          <TableCell sx={{ bgcolor: tTokens.subtleBg }} />
+                                          <TableCell colSpan={10} sx={{ py: 0.75, pl: 4, bgcolor: tTokens.subtleBg, borderRight: '1px solid', borderColor: 'divider' }}>
+                                            <Button
+                                              size="small"
+                                              startIcon={<Plus size={14} />}
+                                              onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}
+                                              sx={{
+                                                textTransform: 'none',
+                                                fontSize: '0.78rem',
+                                                fontWeight: 600,
+                                                color: isDark ? '#5FCF87' : '#203020',
+                                                '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.05)' },
+                                              }}
+                                            >
+                                              ＋ Add Task
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      </>
+                                    )}
+                                  </>
                                 )}
                               </React.Fragment>
                             );
@@ -2252,41 +2545,75 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               ))}
             </Select>
           </FormControl>
-          <FormControl size="small" fullWidth>
-            <InputLabel id="create-task-milestone-label">Milestone (Optional)</InputLabel>
-            <Select
-              labelId="create-task-milestone-label"
-              value={milestoneId}
-              onChange={(e) => {
-                const val = e.target.value ? Number(e.target.value) : '';
-                setMilestoneId(val);
-                setTaskListId('');
+          {isTaskListLocked ? (
+            <Box
+              sx={{
+                p: 1.25,
+                borderRadius: '6px',
+                bgcolor: isDark ? 'rgba(109, 40, 217, 0.12)' : '#F5F3FF',
+                border: '1px solid',
+                borderColor: isDark ? 'rgba(109, 40, 217, 0.3)' : '#DDD6FE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
-              input={<OutlinedInput label="Milestone (Optional)" />}
             >
-              <MenuItem value=""><em>No Milestone (Unassigned)</em></MenuItem>
-              {milestones.map((m) => (
-                <MenuItem key={m.id} value={m.id}>🚩 {m.title}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {Boolean(milestoneId) && (
-            <FormControl size="small" fullWidth>
-              <InputLabel id="create-task-tasklist-label">Task List (Optional)</InputLabel>
-              <Select
-                labelId="create-task-tasklist-label"
-                value={taskListId}
-                onChange={(e) => setTaskListId(e.target.value ? Number(e.target.value) : '')}
-                input={<OutlinedInput label="Task List (Optional)" />}
-              >
-                <MenuItem value=""><em>No Task List (Directly under Milestone)</em></MenuItem>
-                {taskLists
-                  .filter((tl) => tl.milestone_id === Number(milestoneId))
-                  .map((tl) => (
-                    <MenuItem key={tl.id} value={tl.id}>📁 {tl.name}</MenuItem>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Folder size={16} color="#6D28D9" />
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>
+                    CREATING UNDER TASK LIST
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? '#DDD6FE' : '#5B21B6', fontSize: '0.85rem' }}>
+                    {taskLists.find((tl) => tl.id === Number(taskListId))?.name || `Task List #${taskListId}`}
+                  </Typography>
+                </Box>
+              </Box>
+              <Chip
+                label={milestones.find((m) => m.id === Number(milestoneId))?.title || 'Milestone'}
+                size="small"
+                sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600, bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#E8F5E9', color: isDark ? '#5FCF87' : '#203020' }}
+              />
+            </Box>
+          ) : (
+            <>
+              <FormControl size="small" fullWidth>
+                <InputLabel id="create-task-milestone-label">Milestone (Optional)</InputLabel>
+                <Select
+                  labelId="create-task-milestone-label"
+                  value={milestoneId}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : '';
+                    setMilestoneId(val);
+                    setTaskListId('');
+                  }}
+                  input={<OutlinedInput label="Milestone (Optional)" />}
+                >
+                  <MenuItem value=""><em>No Milestone (Unassigned)</em></MenuItem>
+                  {milestones.map((m) => (
+                    <MenuItem key={m.id} value={m.id}>🚩 {m.title}</MenuItem>
                   ))}
-              </Select>
-            </FormControl>
+                </Select>
+              </FormControl>
+              {Boolean(milestoneId) && (
+                <FormControl size="small" fullWidth>
+                  <InputLabel id="create-task-tasklist-label">Task List (Optional)</InputLabel>
+                  <Select
+                    labelId="create-task-tasklist-label"
+                    value={taskListId}
+                    onChange={(e) => setTaskListId(e.target.value ? Number(e.target.value) : '')}
+                    input={<OutlinedInput label="Task List (Optional)" />}
+                  >
+                    <MenuItem value=""><em>No Task List (Directly under Milestone)</em></MenuItem>
+                    {taskLists
+                      .filter((tl) => tl.milestone_id === Number(milestoneId))
+                      .map((tl) => (
+                        <MenuItem key={tl.id} value={tl.id}>📁 {tl.name}</MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              )}
+            </>
           )}
           <FormControl size="small" fullWidth>
             <Select
@@ -2487,6 +2814,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         }}
         task={selectedTask}
         initialEditingDep={selectedDep}
+      />
+
+      {/* Dependency Creation / Edit Dedicated Window */}
+      <DependencyModal
+        open={depModalOpen}
+        onClose={() => {
+          setDepModalOpen(false);
+          setDepModalTask(null);
+          setDepModalDependency(null);
+        }}
+        task={depModalTask}
+        dependency={depModalDependency}
+        projectTasks={safeTasks}
       />
     </Box>
   );
