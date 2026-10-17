@@ -300,6 +300,48 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     }
   };
 
+  // Quick Task Creation Dialog State ("Task List" Toolbar Button Shortcut)
+  const [quickTaskModalOpen, setQuickTaskModalOpen] = useState(false);
+  const [quickTaskTitle, setQuickTaskTitle] = useState('');
+  const [quickTaskDescription, setQuickTaskDescription] = useState('');
+  const [quickTaskMilestoneId, setQuickTaskMilestoneId] = useState<number | undefined>(undefined);
+  const [quickTaskTaskListId, setQuickTaskTaskListId] = useState<number | undefined>(undefined);
+
+  const handleOpenQuickTaskListModal = (mId?: number, tlId?: number) => {
+    setQuickTaskTitle('');
+    setQuickTaskDescription('');
+    setQuickTaskMilestoneId(mId);
+    setQuickTaskTaskListId(tlId);
+    setQuickTaskModalOpen(true);
+  };
+
+  const handleQuickTaskListSubmit = async () => {
+    const trimmedTitle = quickTaskTitle.trim();
+    if (!trimmedTitle) {
+      toast.showError('Task title is required');
+      return;
+    }
+    try {
+      await createTask({
+        title: trimmedTitle,
+        description: quickTaskDescription.trim() || undefined,
+        project_id: numericProjectId,
+        milestone_id: quickTaskMilestoneId,
+        task_list_id: quickTaskTaskListId,
+        status_id: 1,
+        priority: 'NORMAL',
+      } as any).unwrap();
+      toast.showSuccess(`Task "${trimmedTitle}" created successfully!`);
+      setQuickTaskModalOpen(false);
+      setQuickTaskTitle('');
+      setQuickTaskDescription('');
+      setQuickTaskMilestoneId(undefined);
+      setQuickTaskTaskListId(undefined);
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to create task');
+    }
+  };
+
   // Row Actions Context Menu State (Requirement 9)
   const [rowMenuAnchor, setRowMenuAnchor] = useState<{
     mouseX?: number;
@@ -2164,6 +2206,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             variant="contained"
             size="small"
             startIcon={<Plus size={15} />}
+            onClick={() => handleOpenQuickTaskListModal()}
+            sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+          >
+            Task List
+          </Button>
+
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Plus size={15} />}
             onClick={() => handleOpenCreateModal(1)}
             sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
           >
@@ -3287,6 +3339,75 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover } }}
           >
             Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quick Task Creation Popup ("Task List" Button Shortcut) */}
+      <Dialog
+        open={quickTaskModalOpen}
+        onClose={() => setQuickTaskModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '10px',
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1 }}>
+          Create Task List
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
+          <TextField
+            label="Task Title"
+            size="small"
+            fullWidth
+            required
+            autoFocus
+            value={quickTaskTitle}
+            onChange={(e) => setQuickTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleQuickTaskListSubmit();
+              }
+            }}
+          />
+          <TextField
+            label="Description"
+            size="small"
+            fullWidth
+            multiline
+            rows={3}
+            value={quickTaskDescription}
+            onChange={(e) => setQuickTaskDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            size="small"
+            onClick={() => setQuickTaskModalOpen(false)}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleQuickTaskListSubmit}
+            disabled={!quickTaskTitle.trim()}
+            sx={{
+              bgcolor: tTokens.primaryBtn,
+              '&:hover': { bgcolor: tTokens.primaryBtnHover },
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Create Task List
           </Button>
         </DialogActions>
       </Dialog>
