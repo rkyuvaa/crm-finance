@@ -1060,6 +1060,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     );
   };
 
+  // Helper to extract clean employee initials for compact avatar (max 2 letters)
+  const getAssigneeInitials = (name?: string | null): string => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return (parts[0]?.charAt(0) || '?').toUpperCase();
+  };
+
   // Render Table Row for List View
   const renderListTableRow = (task: TaskItem, depth = 0) => {
     const subtaskList = getSubtasksForTask(task);
@@ -1403,13 +1413,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 3. Assigned To (Fixed Width, Scrollable, Multi-chip Select) */}
+          {/* 3. Assigned To (Compact Avatar with Name & Dropdown Chevron) */}
           <TableCell
             sx={{
               width: 170,
               minWidth: 170,
               maxWidth: 170,
-              p: '6px 8px',
+              p: '4px 8px',
               verticalAlign: 'middle',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -1423,9 +1433,52 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   const val = e.target.value as number[];
                   handleCellUpdate(task.id, 'assignee_ids', val);
                 }}
+                disableUnderline
+                IconComponent={(props) => (
+                  <ChevronDown
+                    size={14}
+                    {...props}
+                    style={{
+                      ...props.style,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
                 renderValue={(selected) => {
                   const selectedIds = selected as number[];
-                  if (selectedIds.length === 0) return <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.78rem' }}>Unassigned</Typography>;
+                  if (selectedIds.length === 0) {
+                    return (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, width: '100%', py: 0.25 }}>
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            fontSize: '0.72rem',
+                            bgcolor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                            color: 'text.disabled',
+                            border: '1px dashed',
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.15)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          —
+                        </Avatar>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: '0.8rem',
+                            color: 'text.secondary',
+                            fontWeight: 400,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          Unassigned
+                        </Typography>
+                      </Box>
+                    );
+                  }
                   const matched = users.filter((u) => selectedIds.includes(u.id));
                   return (
                     <Box
@@ -1434,50 +1487,160 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         overflowY: 'auto',
                         overflowX: 'hidden',
                         display: 'flex',
-                        flexWrap: 'wrap',
+                        flexDirection: 'column',
                         gap: 0.5,
-                        alignItems: 'center',
                         width: '100%',
-                        '&::-webkit-scrollbar': { width: '4px' },
-                        '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.15)', borderRadius: '2px' },
+                        pr: 0.5,
+                        '&::-webkit-scrollbar': { width: '3px' },
+                        '&::-webkit-scrollbar-thumb': {
+                          bgcolor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                          borderRadius: '2px',
+                        },
                       }}
                     >
-                      {matched.map((u) => (
-                        <Chip
-                          key={u.id}
-                          avatar={
-                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: tTokens.primaryBtn, color: '#fff' }}>
-                              {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
-                            </Avatar>
-                          }
-                          label={u.full_name || u.email}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            maxWidth: '100%',
-                            '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-                          }}
-                        />
-                      ))}
+                      {matched.map((u) => {
+                        const displayName = u.full_name || u.email || 'Unknown';
+                        return (
+                          <Tooltip key={u.id} title={displayName} arrow placement="top">
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                minWidth: 0,
+                                width: '100%',
+                              }}
+                            >
+                              <Avatar
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  bgcolor: isDark ? '#2B3D2B' : '#203020',
+                                  color: isDark ? '#E2FBE8' : '#FFFFFF',
+                                  border: isDark ? '1px solid rgba(95, 207, 135, 0.25)' : 'none',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {getAssigneeInitials(displayName)}
+                              </Avatar>
+                              <Typography
+                                variant="body2"
+                                noWrap
+                                sx={{
+                                  fontSize: '0.8rem',
+                                  fontWeight: 500,
+                                  color: 'text.primary',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 0,
+                                  flex: 1,
+                                }}
+                              >
+                                {displayName}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        );
+                      })}
                     </Box>
                   );
                 }}
-                disableUnderline
                 sx={{
                   fontSize: '0.8rem',
                   width: '100%',
-                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: tTokens.inputBgHover } },
+                  '& .MuiSelect-select': {
+                    py: 0.25,
+                    px: 0.5,
+                    pr: '22px !important',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    minHeight: 28,
+                    transition: 'background-color 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus },
+                  },
+                  '& .MuiSelect-icon': {
+                    right: 2,
+                    top: 'calc(50% - 7px)',
+                    color: 'text.secondary',
+                    transition: 'color 0.15s ease, transform 0.15s ease',
+                  },
+                  '&:hover .MuiSelect-icon': {
+                    color: isDark ? '#5FCF87' : '#203020',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 280,
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    },
+                  },
                 }}
               >
-                {users.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    <Checkbox size="small" checked={(task.assignees || []).some((a) => a.user_id === u.id)} />
-                    <ListItemText primary={u.full_name || u.email} primaryTypographyProps={{ fontSize: 13 }} />
-                  </MenuItem>
-                ))}
+                {users.map((u) => {
+                  const isSelected = (task.assignees || []).some((a) => a.user_id === u.id);
+                  const name = u.full_name || u.email || 'Unknown';
+                  return (
+                    <MenuItem
+                      key={u.id}
+                      value={u.id}
+                      sx={{
+                        gap: 1.25,
+                        py: 0.75,
+                        px: 1.5,
+                        '&.Mui-selected': {
+                          bgcolor: isDark ? 'rgba(95, 207, 135, 0.12)' : 'rgba(32, 48, 32, 0.06)',
+                          '&:hover': {
+                            bgcolor: isDark ? 'rgba(95, 207, 135, 0.18)' : 'rgba(32, 48, 32, 0.1)',
+                          },
+                        },
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={isSelected}
+                        sx={{
+                          p: 0,
+                          color: 'text.secondary',
+                          '&.Mui-checked': {
+                            color: isDark ? '#5FCF87' : '#203020',
+                          },
+                        }}
+                      />
+                      <Avatar
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          bgcolor: isDark ? '#2B3D2B' : '#203020',
+                          color: isDark ? '#E2FBE8' : '#FFFFFF',
+                          border: isDark ? '1px solid rgba(95, 207, 135, 0.25)' : 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {getAssigneeInitials(name)}
+                      </Avatar>
+                      <ListItemText
+                        primary={name}
+                        primaryTypographyProps={{
+                          fontSize: '0.82rem',
+                          fontWeight: isSelected ? 600 : 500,
+                          color: 'text.primary',
+                        }}
+                      />
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
           </TableCell>
