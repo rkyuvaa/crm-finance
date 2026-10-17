@@ -85,6 +85,7 @@ import {
   useGetStatusDefinitionsQuery,
   useGetCalendarConfigQuery,
   useGetProjectMilestonesQuery,
+  useGetProjectTaskListsQuery,
   useConvertSubtaskToTaskMutation,
   useConvertTaskToSubtaskMutation,
   useAutoAdjustTaskDateMutation,
@@ -214,6 +215,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const { data: projectMilestones = [] } = useGetProjectMilestonesQuery(currentTask?.project_id || 0, {
     skip: !currentTask?.project_id,
   });
+  const { data: projectTaskLists = [] } = useGetProjectTaskListsQuery(currentTask?.project_id || 0, {
+    skip: !currentTask?.project_id,
+  });
+  const availableTaskLists = projectTaskLists.filter(
+    (tl) => !currentTask?.milestone_id || tl.milestone_id === currentTask.milestone_id
+  );
   const { data: calendarConfig } = useGetCalendarConfigQuery();
   const dailyWorkingHours = calendarConfig?.daily_working_hours ?? 9;
 
@@ -373,10 +380,19 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
 
   const handleMilestoneChange = async (milestoneId: number | '') => {
     try {
-      await updateTask({ id: currentTaskId, body: { milestone_id: milestoneId ? Number(milestoneId) : (null as any) } }).unwrap();
+      await updateTask({ id: currentTaskId, body: { milestone_id: milestoneId ? Number(milestoneId) : (null as any), task_list_id: (null as any) } }).unwrap();
       showToast('Milestone updated', 'success');
     } catch {
       showToast('Failed to update milestone', 'error');
+    }
+  };
+
+  const handleTaskListChange = async (taskListId: number | '') => {
+    try {
+      await updateTask({ id: currentTaskId, body: { task_list_id: taskListId ? Number(taskListId) : (null as any) } }).unwrap();
+      showToast('Task list updated', 'success');
+    } catch {
+      showToast('Failed to update task list', 'error');
     }
   };
 
@@ -1455,6 +1471,28 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 {projectMilestones.map((m) => (
                   <MenuItem key={m.id} value={m.id}>
                     🚩 {m.title}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+
+            {/* Task List Selector */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                Task List
+              </Typography>
+              <Select
+                size="small"
+                fullWidth
+                value={currentTask.task_list_id || ''}
+                onChange={(e) => handleTaskListChange(e.target.value as any)}
+                displayEmpty
+                sx={{ height: 36, fontSize: 13, bgcolor: 'background.paper' }}
+              >
+                <MenuItem value=""><em>None (Directly under Milestone)</em></MenuItem>
+                {availableTaskLists.map((tl) => (
+                  <MenuItem key={tl.id} value={tl.id}>
+                    📁 {tl.name}
                   </MenuItem>
                 ))}
               </Select>

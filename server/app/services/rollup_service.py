@@ -2,18 +2,27 @@
 Rollup Service
 ==============
 Recursively computes rolled-up dates and costs bottom-up through the
-Sub-task → Task → Milestone → Project hierarchy.
+Sub-task → Task → Task List → Milestone → Project hierarchy.
 
 Rules:
-- Start = MIN(children.start_date)
-- End   = MAX(children.due_date)   [due_date IS the end_date in the DB]
-- estimated_cost = SUM(children.estimated_cost)
-- actual_cost    = SUM(children.actual_cost)
-- duration at parent = calendar days (end - start + 1), NOT sum of children durations
+- Task List:
+  - Start    = MIN(direct_child_tasks.start_datetime)
+  - End      = MAX(direct_child_tasks.due_datetime)
+  - Duration = End - Start (working hours / days using calendar_service)
+- Milestone:
+  - Start    = MIN(tasks.start_date)
+  - End      = MAX(tasks.due_date)
+  - estimated_cost = SUM(tasks.estimated_cost)
+  - actual_cost    = SUM(tasks.actual_cost)
+  - duration at milestone = calendar days (end - start + 1)
+- Project:
+  - Aggregates from all milestones
 """
+from datetime import datetime
 from typing import Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from app.models.projects import Task, ProjectMilestone, Project
+from app.models.projects import Task, ProjectMilestone, ProjectTaskList, Project
 
 
 def get_all_descendants(db: Session, parent_id: int) -> list[Task]:
@@ -25,10 +34,87 @@ def get_all_descendants(db: Session, parent_id: int) -> list[Task]:
     return res
 
 
+def rollup_task_list(db: Session, task_list_id: int) -> None:
+    """
+    Automatically calculates read-only fields for a Task List from its direct child tasks:
+    - Start: Earliest start datetime among direct child tasks (MIN).
+    - End: Latest end datetime among direct child tasks (MAX).
+    - Duration: End - Start, calculated using existing duration units and date-time calculation logic
+      (calendar_service count_working_hours).
+    Does NOT commit — caller is responsible for commit.
+    """
+    task_list = db.query(ProjectTaskList).filter(ProjectTaskList.id == task_list_id).first()
+    if not task_list:
+        return
+
+    # Direct child tasks inside that Task List
+    tasks = db.query(Task).filter(
+        Task.task_list_id == task_list_id,
+        Task.is_deleted.is_(False)
+    ).all()
+
+    if not tasks:
+        task_list.start_date = None
+        task_list.start_time = None
+        task_list.end_date = None
+        task_list.end_time = None
+        task_list.duration_working_days = None
+        task_list.duration_working_hours = None
+    else:
+        from app.services.calendar_service import get_working_calendar, count_working_hours, parse_hhmm_time
+        cal = get_working_calendar(db)
+
+        start_dts = []
+        end_dts = []
+
+        for t in tasks:
+            if t.start_date:
+                s_time = parse_hhmm_time(t.start_time, cal.work_start_time)
+                start_dts.append(datetime.combine(t.start_date, s_time))
+            if t.due_date:
+                d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
+                end_dts.append(datetime.combine(t.due_date, d_time))
+
+        earliest_start = min(start_dts) if start_dts else None
+        latest_end = max(end_dts) if end_dts else None
+
+        if earliest_start:
+            task_list.start_date = earliest_start.date()
+            task_list.start_time = earliest_start.strftime("%H:%M")
+        else:
+            task_list.start_date = None
+            task_list.start_time = None
+
+        if latest_end:
+            task_list.end_date = latest_end.date()
+            task_list.end_time = latest_end.strftime("%H:%M")
+        else:
+            task_list.end_date = None
+            task_list.end_time = None
+
+        if earliest_start and latest_end:
+            if earliest_start <= latest_end:
+                w_days, w_hours = count_working_hours(earliest_start, latest_end, cal)
+                task_list.duration_working_days = w_days
+                task_list.duration_working_hours = w_hours
+            else:
+                task_list.duration_working_days = 0
+                task_list.duration_working_hours = 0
+        else:
+            task_list.duration_working_days = None
+            task_list.duration_working_hours = None
+
+    db.add(task_list)
+
+    # Recurse up to milestone
+    if task_list.milestone_id:
+        rollup_milestone(db, task_list.milestone_id)
+
+
 def rollup_work_item(db: Session, task_id: int) -> None:
     """
     If task has children: recompute its start_date, due_date, estimated_cost, actual_cost.
-    Then recurse up to its parent (if any), then to milestone, then to project.
+    Then recurse up to its parent (if any), then to task list / milestone / project.
     Does NOT commit — caller is responsible for commit.
     """
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -68,19 +154,22 @@ def rollup_work_item(db: Session, task_id: int) -> None:
 
         db.add(task)
 
-
     # Recurse up the chain
     if task.parent_task_id:
         rollup_work_item(db, task.parent_task_id)
-    elif task.milestone_id:
-        rollup_milestone(db, task.milestone_id)
-    elif task.project_id:
-        rollup_project(db, task.project_id)
+    else:
+        if task.task_list_id:
+            rollup_task_list(db, task.task_list_id)
+        elif task.milestone_id:
+            rollup_milestone(db, task.milestone_id)
+        elif task.project_id:
+            rollup_project(db, task.project_id)
 
 
 def rollup_milestone(db: Session, milestone_id: int) -> None:
     """
-    Aggregate from all direct tasks (top-level, parent_task_id IS NULL) under this milestone.
+    Aggregate from all direct tasks (top-level, parent_task_id IS NULL) under this milestone,
+    including tasks grouped inside Task Lists belonging to this milestone.
     Updates rollup_start_date, rollup_end_date, rollup_estimated_cost, rollup_actual_cost,
     rollup_duration_days. Does NOT commit.
     """
@@ -90,7 +179,12 @@ def rollup_milestone(db: Session, milestone_id: int) -> None:
 
     # Top-level tasks under this milestone (not sub-tasks)
     tasks = db.query(Task).filter(
-        Task.milestone_id == milestone_id,
+        or_(
+            Task.milestone_id == milestone_id,
+            Task.task_list_id.in_(
+                db.query(ProjectTaskList.id).filter(ProjectTaskList.milestone_id == milestone_id)
+            )
+        ),
         Task.parent_task_id.is_(None),
         Task.is_deleted.is_(False)
     ).all()
@@ -177,3 +271,8 @@ def trigger_full_rollup(db: Session, task_id: int) -> None:
         curr_id = parent.parent_task_id
 
     rollup_work_item(db, root_id)
+
+    # In case task has task_list_id and wasn't reached by parent chain
+    if task.task_list_id:
+        rollup_task_list(db, task.task_list_id)
+

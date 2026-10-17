@@ -234,6 +234,8 @@ export interface TaskItem {
   subtask_count?: number;
   completed_subtask_count?: number;
   milestone_id?: number;
+  task_list_id?: number;
+  task_list_name?: string;
   duration_working_days?: number;
   duration_working_hours?: number;
   auto_schedule?: boolean;
@@ -313,6 +315,21 @@ export interface ProjectMilestoneItem {
   created_at: string;
 }
 
+export interface ProjectTaskListItem {
+  id: number;
+  project_id: number;
+  milestone_id: number;
+  name: string;
+  start_date?: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  duration_working_days?: number;
+  duration_working_hours?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface TaskAttachmentItem {
   id: number;
   task_id: number;
@@ -350,7 +367,7 @@ export interface CalendarConfig {
 export const projectsApi = createApi({
   reducerPath: 'projectsApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'Attachments', 'TaskCustomFields', 'Calendar', 'PmSettings'],
+  tagTypes: ['Projects', 'Tasks', 'TimeLogs', 'Comments', 'StatusDefs', 'CustomFieldDefs', 'Milestones', 'TaskLists', 'Attachments', 'TaskCustomFields', 'Calendar', 'PmSettings'],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<ProjectItem[], { status?: string; lead_id?: number; q?: string } | void>({
@@ -413,7 +430,7 @@ export const projectsApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Tasks', 'Projects'],
+      invalidatesTags: ['Tasks', 'Projects', 'TaskLists'],
     }),
     updateTask: builder.mutation<TaskItem, { id: number; body: Partial<TaskItem> }>({
       query: ({ id, body }) => ({
@@ -421,14 +438,14 @@ export const projectsApi = createApi({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: (_res, _err, { id }) => ['Tasks', { type: 'Tasks', id }, 'Projects'],
+      invalidatesTags: (_res, _err, { id }) => ['Tasks', { type: 'Tasks', id }, 'Projects', 'TaskLists'],
     }),
     deleteTask: builder.mutation<void, number>({
       query: (id) => ({
         url: `/tasks/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Tasks', 'Projects'],
+      invalidatesTags: ['Tasks', 'Projects', 'TaskLists'],
     }),
 
     // Personal Tasks
@@ -643,6 +660,38 @@ export const projectsApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: ['Milestones'],
+    }),
+    // Task Lists (Milestone → Task List → Task)
+    getProjectTaskLists: builder.query<ProjectTaskListItem[], number>({
+      query: (projectId) => `/projects/${projectId}/task-lists`,
+      providesTags: (_res, _err, projectId) => [{ type: 'TaskLists', id: projectId }, 'TaskLists'],
+    }),
+    getMilestoneTaskLists: builder.query<ProjectTaskListItem[], number>({
+      query: (milestoneId) => `/projects/milestones/${milestoneId}/task-lists`,
+      providesTags: (_res, _err, milestoneId) => [{ type: 'TaskLists', id: milestoneId }, 'TaskLists'],
+    }),
+    createTaskList: builder.mutation<ProjectTaskListItem, { milestoneId: number; name: string }>({
+      query: ({ milestoneId, name }) => ({
+        url: `/projects/milestones/${milestoneId}/task-lists`,
+        method: 'POST',
+        body: { name },
+      }),
+      invalidatesTags: ['TaskLists', 'Milestones', 'Projects'],
+    }),
+    updateTaskList: builder.mutation<ProjectTaskListItem, { id: number; name: string }>({
+      query: ({ id, name }) => ({
+        url: `/projects/task-lists/${id}`,
+        method: 'PATCH',
+        body: { name },
+      }),
+      invalidatesTags: ['TaskLists'],
+    }),
+    deleteTaskList: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/projects/task-lists/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['TaskLists', 'Tasks', 'Milestones', 'Projects'],
     }),
     // Stopwatch Time Tracking
     startTimer: builder.mutation<TaskItem, number>({
@@ -900,6 +949,11 @@ export const {
   useCreateProjectMilestoneMutation,
   useUpdateProjectMilestoneMutation,
   useDeleteProjectMilestoneMutation,
+  useGetProjectTaskListsQuery,
+  useGetMilestoneTaskListsQuery,
+  useCreateTaskListMutation,
+  useUpdateTaskListMutation,
+  useDeleteTaskListMutation,
   useGetTaskAttachmentsQuery,
   useAddTaskAttachmentMutation,
   useDeleteTaskAttachmentMutation,

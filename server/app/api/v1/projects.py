@@ -4,7 +4,7 @@ from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, joinedload
 from app.db.session import get_db
 from app.models.projects import (
-    Project, Task, ProjectMilestone, TaskStatusDef,
+    Project, Task, ProjectMilestone, ProjectTaskList, TaskStatusDef,
     ProjectCustomFieldDefinition, ProjectCustomFieldValue,
     TaskCustomFieldDefinition, TaskCustomFieldValue,
 )
@@ -16,6 +16,9 @@ from app.schemas.projects import (
     ProjectMilestoneCreate,
     ProjectMilestoneUpdate,
     ProjectMilestoneOut,
+    ProjectTaskListCreate,
+    ProjectTaskListUpdate,
+    ProjectTaskListOut,
     CustomFieldDefinitionCreate,
     CustomFieldDefinitionUpdate,
     CustomFieldDefinitionOut,
@@ -423,6 +426,124 @@ def delete_project_milestone(
     db.delete(milestone)
     db.commit()
     return None
+
+
+# --- Project Task Lists API ---
+# Hierarchy: Milestone → Task List → Task
+# Editable fields: Name only.
+# Automatically calculated read-only fields: Start, End, Duration.
+# Restrictions: No Status, Cost, Dependencies, or Assigned To.
+
+@router.get("/milestones/{milestone_id}/task-lists", response_model=List[ProjectTaskListOut])
+def get_milestone_task_lists(
+    milestone_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List task lists for a specific milestone"""
+    milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    return db.query(ProjectTaskList).filter(ProjectTaskList.milestone_id == milestone_id).order_by(ProjectTaskList.id).all()
+
+
+@router.get("/{project_id}/task-lists", response_model=List[ProjectTaskListOut])
+def get_project_task_lists(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all task lists for a project"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return db.query(ProjectTaskList).filter(ProjectTaskList.project_id == project_id).order_by(ProjectTaskList.id).all()
+
+
+@router.post("/milestones/{milestone_id}/task-lists", response_model=ProjectTaskListOut, status_code=status.HTTP_201_CREATED)
+def create_milestone_task_list(
+    milestone_id: int,
+    data: ProjectTaskListCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Create a new Task List under a milestone.
+    A Task List has only one editable field: Name.
+    """
+    milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+
+    if not data.name or not data.name.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task List name cannot be empty")
+
+    task_list = ProjectTaskList(
+        project_id=milestone.project_id,
+        milestone_id=milestone.id,
+        name=data.name.strip(),
+    )
+    db.add(task_list)
+    db.commit()
+    db.refresh(task_list)
+    return task_list
+
+
+@router.patch("/task-lists/{task_list_id}", response_model=ProjectTaskListOut)
+def update_project_task_list(
+    task_list_id: int,
+    data: ProjectTaskListUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update a Task List.
+    Only Name is editable.
+    Calculated fields (start, end, duration) cannot be manually edited.
+    """
+    task_list = db.query(ProjectTaskList).filter(ProjectTaskList.id == task_list_id).first()
+    if not task_list:
+        raise HTTPException(status_code=404, detail="Task List not found")
+
+    if data.name is not None:
+        if not data.name.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task List name cannot be empty")
+        task_list.name = data.name.strip()
+
+    db.commit()
+    db.refresh(task_list)
+    return task_list
+
+
+@router.delete("/task-lists/{task_list_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_task_list(
+    task_list_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Delete a Task List.
+    Tasks inside this task list have their task_list_id cleared, preserving them under the milestone.
+    """
+    task_list = db.query(ProjectTaskList).filter(ProjectTaskList.id == task_list_id).first()
+    if not task_list:
+        raise HTTPException(status_code=404, detail="Task List not found")
+
+    milestone_id = task_list.milestone_id
+
+    # Dissociate child tasks without deleting them
+    db.query(Task).filter(Task.task_list_id == task_list_id).update({Task.task_list_id: None})
+
+    db.delete(task_list)
+    db.commit()
+
+    # Recalculate milestone rollup
+    from app.services.rollup_service import rollup_milestone
+    rollup_milestone(db, milestone_id)
+    db.commit()
+
+    return None
+
 
 
 

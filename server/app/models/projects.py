@@ -203,6 +203,41 @@ class ProjectMilestone(Base):
 
     project: Mapped["Project"] = relationship("Project", back_populates="milestones")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="milestone", foreign_keys="Task.milestone_id")
+    task_lists: Mapped[List["ProjectTaskList"]] = relationship("ProjectTaskList", back_populates="milestone", cascade="all, delete-orphan")
+
+
+class ProjectTaskList(Base):
+    """
+    Project Task List grouping level between Milestone and Task:
+    Milestone → Task List → Task
+    A Task List exists purely to group related Tasks under a Milestone.
+    Editable fields: Name only.
+    Read-only automatically calculated fields: Start (MIN), End (MAX), Duration (End - Start).
+    Restrictions: No Status, Cost, Dependencies, or Assigned To.
+    """
+    __tablename__ = "project_task_lists"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    milestone_id: Mapped[int] = mapped_column(ForeignKey("project_milestones.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    # Server-computed read-only fields
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    start_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    duration_working_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_working_hours: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.current_timestamp(), onupdate=func.current_timestamp()
+    )
+
+    project: Mapped["Project"] = relationship("Project")
+    milestone: Mapped["ProjectMilestone"] = relationship("ProjectMilestone", back_populates="task_lists")
+    tasks: Mapped[List["Task"]] = relationship("Task", back_populates="task_list", foreign_keys="Task.task_list_id")
 
 
 class Task(Base):
@@ -216,6 +251,8 @@ class Task(Base):
     parent_task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True, index=True)
     # KIM PM v1.1 — milestone FK (groups task under Project → Milestone → Task hierarchy)
     milestone_id: Mapped[int | None] = mapped_column(ForeignKey("project_milestones.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Project Task List FK (groups task under Milestone → Task List → Task hierarchy)
+    task_list_id: Mapped[int | None] = mapped_column(ForeignKey("project_task_lists.id", ondelete="SET NULL"), nullable=True, index=True)
     
     title: Mapped[str] = mapped_column(String(250), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -294,6 +331,7 @@ class Task(Base):
     parent_task: Mapped["Task | None"] = relationship("Task", foreign_keys=[parent_task_id], remote_side="[Task.id]", back_populates="subtask_items", lazy="joined")
     subtask_items: Mapped[List["Task"]] = relationship("Task", foreign_keys=[parent_task_id], back_populates="parent_task", cascade="all, delete-orphan")
     milestone: Mapped["ProjectMilestone | None"] = relationship("ProjectMilestone", back_populates="tasks", foreign_keys=[milestone_id])
+    task_list: Mapped["ProjectTaskList | None"] = relationship("ProjectTaskList", back_populates="tasks", foreign_keys=[task_list_id])
 
     assignees: Mapped[List["TaskAssignee"]] = relationship("TaskAssignee", back_populates="task", cascade="all, delete-orphan")
     followers: Mapped[List["TaskFollower"]] = relationship("TaskFollower", back_populates="task", cascade="all, delete-orphan")

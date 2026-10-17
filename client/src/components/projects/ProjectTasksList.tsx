@@ -49,6 +49,9 @@ import {
   Lock,
   RefreshCw,
   Link2,
+  Edit2,
+  Folder,
+  FolderPlus,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -58,8 +61,13 @@ import {
   useDeleteTaskMutation,
   useGetStatusDefinitionsQuery,
   useGetProjectMilestonesQuery,
+  useGetProjectTaskListsQuery,
+  useCreateTaskListMutation,
+  useUpdateTaskListMutation,
+  useDeleteTaskListMutation,
   TaskItem,
   TaskDependencyInfo,
+  ProjectTaskListItem,
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
@@ -145,6 +153,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [addSubtask] = useAddSubtaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
 
+  const { data: taskLists = [] } = useGetProjectTaskListsQuery(numericProjectId);
+  const [createTaskList] = useCreateTaskListMutation();
+  const [updateTaskList] = useUpdateTaskListMutation();
+  const [deleteTaskList] = useDeleteTaskListMutation();
+
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({
     1: true,
     2: true,
@@ -169,6 +182,78 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [dueTime, setDueTime] = useState('05:00 PM');
   const [estimatedHours, setEstimatedHours] = useState<number | ''>(0);
   const [milestoneId, setMilestoneId] = useState<number | ''>('');
+  const [taskListId, setTaskListId] = useState<number | ''>('');
+
+  // Task List Creation / Renaming Dialog States
+  const [createTaskListOpen, setCreateTaskListOpen] = useState(false);
+  const [targetMilestoneIdForTaskList, setTargetMilestoneIdForTaskList] = useState<number | null>(null);
+  const [newTaskListName, setNewTaskListName] = useState('');
+
+  const [editTaskListOpen, setEditTaskListOpen] = useState(false);
+  const [editingTaskListId, setEditingTaskListId] = useState<number | null>(null);
+  const [editingTaskListName, setEditingTaskListName] = useState('');
+
+  const [expandedTaskLists, setExpandedTaskLists] = useState<Record<number, boolean>>({});
+
+  const handleOpenCreateTaskList = (mId: number) => {
+    setTargetMilestoneIdForTaskList(mId);
+    setNewTaskListName('');
+    setCreateTaskListOpen(true);
+  };
+
+  const handleCreateTaskListSubmit = async () => {
+    if (!newTaskListName.trim() || !targetMilestoneIdForTaskList) return;
+    try {
+      await createTaskList({
+        milestoneId: targetMilestoneIdForTaskList,
+        name: newTaskListName.trim(),
+      }).unwrap();
+      toast.showSuccess(`Task List "${newTaskListName.trim()}" created`);
+      setCreateTaskListOpen(false);
+      setNewTaskListName('');
+      setTargetMilestoneIdForTaskList(null);
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to create task list');
+    }
+  };
+
+  const handleOpenEditTaskList = (tl: ProjectTaskListItem) => {
+    setEditingTaskListId(tl.id);
+    setEditingTaskListName(tl.name);
+    setEditTaskListOpen(true);
+  };
+
+  const handleUpdateTaskListSubmit = async () => {
+    if (!editingTaskListName.trim() || !editingTaskListId) return;
+    try {
+      await updateTaskList({
+        id: editingTaskListId,
+        name: editingTaskListName.trim(),
+      }).unwrap();
+      toast.showSuccess('Task List updated');
+      setEditTaskListOpen(false);
+      setEditingTaskListId(null);
+      setEditingTaskListName('');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to update task list');
+    }
+  };
+
+  const handleDeleteTaskList = async (id: number) => {
+    if (confirm('Are you sure you want to delete this Task List? Tasks inside this list will remain under the milestone.')) {
+      try {
+        await deleteTaskList(id).unwrap();
+        toast.showSuccess('Task List deleted');
+      } catch (err: any) {
+        toast.showError(err?.data?.detail || 'Failed to delete task list');
+      }
+    }
+  };
+
+  const toggleTaskList = (tlId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedTaskLists((prev) => ({ ...prev, [tlId]: prev[tlId] === false ? true : false }));
+  };
 
   const defaultStatuses = [
     { id: 1, name: 'To Do', color: '#64748B', is_terminal: false },
@@ -237,11 +322,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     setPanelOpen(true);
   };
 
-  const handleOpenCreateModal = (defaultStatusId: number = 1, defaultMilestoneId?: number) => {
+  const handleOpenCreateModal = (defaultStatusId: number = 1, defaultMilestoneId?: number, defaultTaskListId?: number) => {
     setTitle('');
     setDescription('');
     setStatusId(defaultStatusId);
     setMilestoneId(defaultMilestoneId || '');
+    setTaskListId(defaultTaskListId || '');
     setPriority('NORMAL');
     setAssigneeIds([]);
     setStartDate('');
@@ -375,6 +461,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         project_id: numericProjectId,
         status_id: statusId,
         milestone_id: milestoneId ? Number(milestoneId) : undefined,
+        task_list_id: taskListId ? Number(taskListId) : undefined,
         priority,
         assignee_id: assigneeIds.length > 0 ? assigneeIds[0] : undefined,
         assignee_ids: assigneeIds,
@@ -395,6 +482,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       setDueTime('05:00 PM');
       setEstimatedHours(0);
       setMilestoneId('');
+      setTaskListId('');
     } catch (err: any) {
       toast.showError(err?.data?.detail || 'Failed to create task');
     }
@@ -1755,12 +1843,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   { id: null, name: 'Unassigned Milestone' }
                 ].map((milestone) => {
                   const mTasks = filteredTasks.filter((t) => !t.parent_task_id && (t.milestone_id || null) === milestone.id);
-                  if (mTasks.length === 0) return null;
+                  const mTaskLists = milestone.id ? taskLists.filter((tl) => tl.milestone_id === milestone.id) : [];
+                  if (mTasks.length === 0 && mTaskLists.length === 0) return null;
                   const groupId = milestone.id || -1;
                   const isExpanded = expandedGroups[groupId] !== false; // default true
+                  const directUngroupedTasks = mTasks.filter((t) => !t.task_list_id);
 
                   return (
                     <React.Fragment key={`milestone-${groupId}`}>
+                      {/* Milestone Header Row */}
                       <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
                         <TableCell
                           sx={{
@@ -1785,17 +1876,286 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700 }}>
-                              {milestone.name}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                              {mTasks.length} Tasks
-                            </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                                🚩 {milestone.name}
+                              </Typography>
+                              <Chip
+                                label={`${mTasks.length} Tasks`}
+                                size="small"
+                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: '#E2E8F0' }}
+                              />
+                              {mTaskLists.length > 0 && (
+                                <Chip
+                                  label={`${mTaskLists.length} Task Lists`}
+                                  size="small"
+                                  sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: '#EDE9FE', color: '#6D28D9' }}
+                                />
+                              )}
+                            </Box>
+                            {milestone.id && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }} onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<FolderPlus size={13} />}
+                                  onClick={() => handleOpenCreateTaskList(milestone.id as number)}
+                                  sx={{
+                                    height: 24,
+                                    fontSize: '0.72rem',
+                                    textTransform: 'none',
+                                    py: 0,
+                                    px: 1,
+                                    color: '#6D28D9',
+                                    borderColor: '#DDD6FE',
+                                    '&:hover': { borderColor: '#8B5CF6', bgcolor: '#F5F3FF' },
+                                  }}
+                                >
+                                  + Task List
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<Plus size={13} />}
+                                  onClick={() => handleOpenCreateModal(1, milestone.id as number)}
+                                  sx={{
+                                    height: 24,
+                                    fontSize: '0.72rem',
+                                    textTransform: 'none',
+                                    py: 0,
+                                    px: 1,
+                                    color: '#04552B',
+                                    borderColor: '#A7F3D0',
+                                    '&:hover': { borderColor: '#10B981', bgcolor: '#ECFDF5' },
+                                  }}
+                                >
+                                  + Task
+                                </Button>
+                              </Box>
+                            )}
                           </Box>
                         </TableCell>
                       </TableRow>
-                      {isExpanded && mTasks.map((task) => renderListTableRow(task, 0))}
+
+                      {isExpanded && (
+                        <>
+                          {/* 1. Task Lists under this Milestone */}
+                          {mTaskLists.map((tl) => {
+                            const tlTasks = mTasks.filter((t) => t.task_list_id === tl.id);
+                            const isTlExpanded = expandedTaskLists[tl.id] !== false; // default true
+
+                            return (
+                              <React.Fragment key={`tasklist-${tl.id}`}>
+                                {/* Task List Header Row */}
+                                <TableRow
+                                  sx={{
+                                    bgcolor: '#F8FAFC',
+                                    '&:hover': { bgcolor: '#F1F5F9' },
+                                    borderTop: '1px solid #E2E8F0',
+                                    borderBottom: '1px solid #E2E8F0',
+                                  }}
+                                >
+                                  {/* Expand / Collapse Chevron */}
+                                  <TableCell
+                                    sx={{
+                                      position: 'sticky',
+                                      left: 0,
+                                      zIndex: 2,
+                                      bgcolor: '#F8FAFC',
+                                      whiteSpace: 'nowrap',
+                                      pl: 1,
+                                    }}
+                                  >
+                                    <IconButton size="small" onClick={(e) => toggleTaskList(tl.id, e)}>
+                                      {isTlExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                                    </IconButton>
+                                  </TableCell>
+
+                                  {/* Task List Name (Only editable field) */}
+                                  <TableCell
+                                    sx={{
+                                      position: 'sticky',
+                                      left: 40,
+                                      zIndex: 2,
+                                      bgcolor: '#F8FAFC',
+                                      whiteSpace: 'nowrap',
+                                      borderRight: '2px solid',
+                                      borderColor: 'divider',
+                                      pl: 2,
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+                                        <Folder size={15} color="#6D28D9" style={{ flexShrink: 0 }} />
+                                        <TextField
+                                          size="small"
+                                          variant="standard"
+                                          defaultValue={tl.name}
+                                          key={`${tl.id}-${tl.name}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onBlur={async (e) => {
+                                            const val = e.target.value.trim();
+                                            if (val && val !== tl.name) {
+                                              try {
+                                                await updateTaskList({ id: tl.id, name: val }).unwrap();
+                                                toast.showSuccess('Task list updated');
+                                              } catch (err: any) {
+                                                toast.showError(err?.data?.detail || 'Failed to update task list');
+                                              }
+                                            }
+                                          }}
+                                          onKeyDown={(e: any) => {
+                                            if (e.key === 'Enter') e.target.blur();
+                                          }}
+                                          InputProps={{ disableUnderline: true }}
+                                          sx={{
+                                            flex: 1,
+                                            '& .MuiInputBase-input': {
+                                              fontWeight: 700,
+                                              fontSize: '0.84rem',
+                                              color: '#1E293B',
+                                              py: 0.25,
+                                              px: 0.5,
+                                              borderRadius: '4px',
+                                              '&:hover, &:focus': { bgcolor: '#E2E8F0' },
+                                            },
+                                          }}
+                                        />
+                                        <Chip
+                                          label={`${tlTasks.length} tasks`}
+                                          size="small"
+                                          sx={{ height: 18, fontSize: '0.62rem', fontWeight: 600, bgcolor: '#E2E8F0', color: '#475569', flexShrink: 0 }}
+                                        />
+                                      </Box>
+
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }} onClick={(e) => e.stopPropagation()}>
+                                        <Tooltip title="Add Task to this Task List">
+                                          <IconButton size="small" onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}>
+                                            <Plus size={14} color="#04552B" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Rename Task List">
+                                          <IconButton size="small" onClick={() => handleOpenEditTaskList(tl)}>
+                                            <Edit2 size={13} color="#64748B" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete Task List">
+                                          <IconButton size="small" onClick={() => handleDeleteTaskList(tl.id)}>
+                                            <Trash2 size={13} color="#DC2626" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </Box>
+                                    </Box>
+                                  </TableCell>
+
+                                  {/* Dependencies: No dependencies allowed for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+
+                                  {/* Assigned To: No assigned to allowed for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+
+                                  {/* Start Date: Automatically Calculated (MIN) - Read-only */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                    <Tooltip title="Calculated: Earliest Start Date & Time among direct child tasks">
+                                      <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.start_date ? 'text.primary' : 'text.disabled' }}>
+                                        {tl.start_date ? `${tl.start_date.split('T')[0]} ${tl.start_time || ''}`.trim() : '—'}
+                                      </Typography>
+                                    </Tooltip>
+                                  </TableCell>
+
+                                  {/* Due Date (End): Automatically Calculated (MAX) - Read-only */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                    <Tooltip title="Calculated: Latest End Date & Time among direct child tasks">
+                                      <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.end_date ? 'text.primary' : 'text.disabled' }}>
+                                        {tl.end_date ? `${tl.end_date.split('T')[0]} ${tl.end_time || ''}`.trim() : '—'}
+                                      </Typography>
+                                    </Tooltip>
+                                  </TableCell>
+
+                                  {/* Duration: Automatically Calculated (End - Start) - Read-only */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                    <Tooltip title="Calculated: Working duration between earliest start and latest end">
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 600, color: 'text.primary' }}>
+                                          {tl.duration_working_days ?? 0} WD
+                                        </Typography>
+                                        {Boolean(tl.duration_working_hours) && (
+                                          <Chip
+                                            label={`+${tl.duration_working_hours}h`}
+                                            size="small"
+                                            sx={{ height: 16, fontSize: '0.62rem', fontWeight: 600, bgcolor: '#FEF3C7', color: '#92400E' }}
+                                          />
+                                        )}
+                                      </Box>
+                                    </Tooltip>
+                                  </TableCell>
+
+                                  {/* Status: No status for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+
+                                  {/* Completion Date: None for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+
+                                  {/* Estimated Cost: No separate cost for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+
+                                  {/* Actual Cost: No separate cost for Task List */}
+                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                    —
+                                  </TableCell>
+                                </TableRow>
+
+                                {/* Child Tasks inside this Task List */}
+                                {isTlExpanded && (
+                                  tlTasks.length === 0 ? (
+                                    <TableRow sx={{ bgcolor: '#FAF5FF' }}>
+                                      <TableCell sx={{ bgcolor: '#FAF5FF' }} />
+                                      <TableCell colSpan={10} sx={{ py: 1.25, pl: 4, bgcolor: '#FAF5FF', borderRight: '2px solid', borderColor: 'divider' }}>
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                          No tasks in this task list.{' '}
+                                          <Button
+                                            size="small"
+                                            onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}
+                                            sx={{ textTransform: 'none', fontSize: '0.75rem', p: 0, minWidth: 'auto', color: '#04552B', fontWeight: 600 }}
+                                          >
+                                            + Add Task
+                                          </Button>
+                                        </Typography>
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    tlTasks.map((task) => renderListTableRow(task, 0))
+                                  )
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+
+                          {/* 2. Tasks under milestone not in any Task List */}
+                          {directUngroupedTasks.length > 0 && mTaskLists.length > 0 && (
+                            <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                              <TableCell sx={{ bgcolor: '#F8FAFC' }} />
+                              <TableCell colSpan={10} sx={{ py: 0.75, pl: 2, bgcolor: '#F8FAFC', borderRight: '2px solid', borderColor: 'divider' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
+                                  Other Tasks (Ungrouped)
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {directUngroupedTasks.map((task) => renderListTableRow(task, 0))}
+                        </>
+                      )}
                     </React.Fragment>
                   );
                 })
@@ -1844,7 +2204,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             <Select
               labelId="create-task-milestone-label"
               value={milestoneId}
-              onChange={(e) => setMilestoneId(e.target.value ? Number(e.target.value) : '')}
+              onChange={(e) => {
+                const val = e.target.value ? Number(e.target.value) : '';
+                setMilestoneId(val);
+                setTaskListId('');
+              }}
               input={<OutlinedInput label="Milestone (Optional)" />}
             >
               <MenuItem value=""><em>No Milestone (Unassigned)</em></MenuItem>
@@ -1853,6 +2217,24 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               ))}
             </Select>
           </FormControl>
+          {Boolean(milestoneId) && (
+            <FormControl size="small" fullWidth>
+              <InputLabel id="create-task-tasklist-label">Task List (Optional)</InputLabel>
+              <Select
+                labelId="create-task-tasklist-label"
+                value={taskListId}
+                onChange={(e) => setTaskListId(e.target.value ? Number(e.target.value) : '')}
+                input={<OutlinedInput label="Task List (Optional)" />}
+              >
+                <MenuItem value=""><em>No Task List (Directly under Milestone)</em></MenuItem>
+                {taskLists
+                  .filter((tl) => tl.milestone_id === Number(milestoneId))
+                  .map((tl) => (
+                    <MenuItem key={tl.id} value={tl.id}>📁 {tl.name}</MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+          )}
           <FormControl size="small" fullWidth>
             <Select
               value={priority}
@@ -1970,6 +2352,75 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSaveTask} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}>
             Create Task
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create Task List Modal */}
+      <Dialog open={createTaskListOpen} onClose={() => setCreateTaskListOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Create New Task List</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Typography variant="body2" color="textSecondary">
+            Group related tasks under this milestone. Start, End, and Duration will be calculated automatically from its child tasks.
+          </Typography>
+          <TextField
+            label="Task List Name"
+            size="small"
+            fullWidth
+            required
+            autoFocus
+            value={newTaskListName}
+            onChange={(e) => setNewTaskListName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleCreateTaskListSubmit();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setCreateTaskListOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateTaskListSubmit}
+            disabled={!newTaskListName.trim()}
+            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+          >
+            Create Task List
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Task List Modal */}
+      <Dialog open={editTaskListOpen} onClose={() => setEditTaskListOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Edit Task List Name</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <TextField
+            label="Task List Name"
+            size="small"
+            fullWidth
+            required
+            autoFocus
+            value={editingTaskListName}
+            onChange={(e) => setEditingTaskListName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleUpdateTaskListSubmit();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setEditTaskListOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateTaskListSubmit}
+            disabled={!editingTaskListName.trim()}
+            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+          >
+            Save Changes
           </Button>
         </DialogActions>
       </Dialog>

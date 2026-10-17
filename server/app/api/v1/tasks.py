@@ -555,6 +555,7 @@ def _format_task_out(
     if out.task_number:
         out.task_number = _unpad_task_number(out.task_number)
     out.project_name = t.project.name if t.project else None
+    out.task_list_name = t.task_list.name if t.task_list else None
     out.assignee_name = t.assignee.full_name if t.assignee else None
     out.created_by_name = t.creator.full_name if t.creator else None
     out.status_name = t.status_def.name if t.status_def else None
@@ -1125,12 +1126,22 @@ def create_task(
     elif dur_days == 0 and dur_hours == 0:
         dur_days = 1
 
+    if data.task_list_id:
+        from app.models.projects import ProjectTaskList
+        tl = db.get(ProjectTaskList, data.task_list_id)
+        if tl:
+            if not data.milestone_id:
+                data.milestone_id = tl.milestone_id
+            if not data.project_id:
+                data.project_id = tl.project_id
+
     task = Task(
         task_number=task_num,
         project_id=data.project_id,
         phase_id=data.phase_id,
         parent_task_id=data.parent_task_id,
         milestone_id=data.milestone_id,
+        task_list_id=data.task_list_id,
         title=data.title.strip(),
         description=data.description,
         type_id=data.type_id,
@@ -1212,7 +1223,9 @@ def create_task(
         from app.services.scheduling_engine import propagate_task_schedule_changes
         propagate_task_schedule_changes(db, task.id, current_user.id)
 
-    db.commit()
+    if task.task_list_id:
+        from app.services.rollup_service import rollup_task_list
+        rollup_task_list(db, task.task_list_id)
 
     db.commit()
     db.refresh(task)
@@ -1466,6 +1479,14 @@ def update_task(
     update_dict = data.model_dump(exclude_unset=True)
     old_due_date = task.due_date
     old_start_date = task.start_date
+    old_task_list_id = task.task_list_id
+
+    if "task_list_id" in update_dict and update_dict["task_list_id"]:
+        from app.models.projects import ProjectTaskList
+        tl = db.get(ProjectTaskList, update_dict["task_list_id"])
+        if tl:
+            task.milestone_id = tl.milestone_id
+            task.project_id = tl.project_id
 
     # Reject dates with unreasonable year (e.g. year 0002 caused by scheduling bugs)
     if "start_date" in update_dict and update_dict["start_date"] and update_dict["start_date"].year < 1900:
@@ -1796,6 +1817,14 @@ def update_task(
 
     from app.services.scheduling_engine import propagate_task_schedule_changes
     propagate_task_schedule_changes(db, task.id, current_user.id)
+
+    if "task_list_id" in update_dict and old_task_list_id and old_task_list_id != task.task_list_id:
+        from app.services.rollup_service import rollup_task_list
+        rollup_task_list(db, old_task_list_id)
+    if task.task_list_id:
+        from app.services.rollup_service import rollup_task_list
+        rollup_task_list(db, task.task_list_id)
+
     db.commit()
     db.refresh(task)
 
@@ -1818,6 +1847,7 @@ def delete_task(
     task = _get_task_or_404_with_auth(db, task_id, current_user)
     
     parent_id = task.parent_task_id
+    task_list_id = task.task_list_id
     task.is_deleted = True
     _log_activity(db, task.id, current_user.id, "DELETED")
 
@@ -1832,6 +1862,11 @@ def delete_task(
     if parent_id:
         _update_parent_progress(db, parent_id)
         _sync_parent_due_date(db, parent_id)
+        db.commit()
+
+    if task_list_id:
+        from app.services.rollup_service import rollup_task_list
+        rollup_task_list(db, task_list_id)
         db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

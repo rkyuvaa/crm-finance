@@ -317,12 +317,14 @@ class TaskBase(BaseModel):
     recurring_task_id: Optional[int] = None
     reminder_at: Optional[datetime] = None
     reminder_status: Optional[str] = "PENDING"
+    task_list_id: Optional[int] = None
 
 
 class TaskCreate(TaskBase):
     project_id: Optional[int] = None
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
+    task_list_id: Optional[int] = None
     is_personal: Optional[bool] = False
     duration_working_days: Optional[int] = None
     duration_working_hours: Optional[int] = 0
@@ -365,6 +367,7 @@ class TaskUpdate(BaseModel):
     phase_id: Optional[int] = None
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
+    task_list_id: Optional[int] = None
     duration_working_days: Optional[int] = None
     duration_working_hours: Optional[int] = None
     auto_schedule: Optional[bool] = None
@@ -393,6 +396,8 @@ class TaskOut(TaskBase):
     project_name: Optional[str] = None
     parent_task_id: Optional[int] = None
     milestone_id: Optional[int] = None
+    task_list_id: Optional[int] = None
+    task_list_name: Optional[str] = None
     sort_order: int = 0
     actual_minutes: int = 0
     actual_hours: float = 0.0
@@ -546,6 +551,39 @@ class ProjectMilestoneOut(ProjectMilestoneBase):
     rollup_estimated_cost: float = 0.0
     rollup_actual_cost: float = 0.0
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Project Task List Schemas ---
+# Hierarchy: Milestone → Task List → Task
+# Editable fields: Name only.
+# Automatically calculated read-only fields: Start (MIN), End (MAX), Duration (End - Start).
+# Restrictions: No Status, Cost, Dependencies, or Assigned To.
+class ProjectTaskListBase(BaseModel):
+    name: str
+
+
+class ProjectTaskListCreate(ProjectTaskListBase):
+    pass
+
+
+class ProjectTaskListUpdate(BaseModel):
+    name: Optional[str] = None
+
+
+class ProjectTaskListOut(ProjectTaskListBase):
+    id: int
+    project_id: int
+    milestone_id: int
+    start_date: Optional[date] = None
+    start_time: Optional[str] = None
+    end_date: Optional[date] = None
+    end_time: Optional[str] = None
+    duration_working_days: Optional[int] = None
+    duration_working_hours: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
