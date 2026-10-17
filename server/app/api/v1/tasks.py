@@ -1858,30 +1858,46 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("delete", "tasks")),
 ):
-    """Soft delete a task and its nested child tasks"""
+    """Soft delete a task and all its nested descendant subtasks, updating parent rollups"""
     task = _get_task_or_404_with_auth(db, task_id, current_user)
     
     parent_id = task.parent_task_id
     task_list_id = task.task_list_id
+    milestone_id = task.milestone_id
+    project_id = task.project_id
+
     task.is_deleted = True
     _log_activity(db, task.id, current_user.id, "DELETED")
 
-    # Soft delete all child subtasks recursively
-    child_subtasks = db.query(Task).filter(Task.parent_task_id == task.id, Task.is_deleted.is_(False)).all()
-    for child in child_subtasks:
-        child.is_deleted = True
-        _log_activity(db, child.id, current_user.id, "DELETED")
+    # Soft delete all child & descendant subtasks recursively
+    def _soft_delete_descendants(p_id: int):
+        child_subtasks = db.query(Task).filter(Task.parent_task_id == p_id, Task.is_deleted.is_(False)).all()
+        for child in child_subtasks:
+            child.is_deleted = True
+            _log_activity(db, child.id, current_user.id, "DELETED")
+            _soft_delete_descendants(child.id)
 
+    _soft_delete_descendants(task.id)
     db.commit()
 
+    from app.services.rollup_service import rollup_work_item, rollup_task_list, rollup_milestone, rollup_project
+
     if parent_id:
+        rollup_work_item(db, parent_id)
         _update_parent_progress(db, parent_id)
         _sync_parent_due_date(db, parent_id)
         db.commit()
 
     if task_list_id:
-        from app.services.rollup_service import rollup_task_list
         rollup_task_list(db, task_list_id)
+        db.commit()
+
+    if milestone_id:
+        rollup_milestone(db, milestone_id)
+        db.commit()
+
+    if project_id:
+        rollup_project(db, project_id)
         db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -177,3 +177,134 @@ export function getTaskIdBadgeStyle(
   }
 }
 
+export function formatStandardDateTime(
+  dateInput?: string | Date | null,
+  timeInput?: string | null,
+  defaultTime: string = '00:00'
+): string {
+  if (!dateInput) return '—';
+
+  let dateStr = '';
+  let embeddedTime = '';
+
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return '—';
+    const dd = String(dateInput.getDate()).padStart(2, '0');
+    const mm = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateInput.getFullYear();
+    const hh = String(dateInput.getHours()).padStart(2, '0');
+    const min = String(dateInput.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  }
+
+  const rawStr = String(dateInput).trim();
+  if (!rawStr) return '—';
+
+  if (rawStr.includes('T')) {
+    const [dPart, tPart] = rawStr.split('T');
+    dateStr = dPart;
+    embeddedTime = tPart.split('.')[0].substring(0, 5);
+  } else if (rawStr.includes(' ')) {
+    const parts = rawStr.split(' ');
+    dateStr = parts[0];
+    embeddedTime = parts[1].substring(0, 5);
+  } else {
+    dateStr = rawStr;
+  }
+
+  let dd = '';
+  let mm = '';
+  let yyyy = '';
+
+  if (dateStr.includes('-')) {
+    const dParts = dateStr.split('-');
+    if (dParts.length === 3) {
+      if (dParts[0].length === 4) {
+        yyyy = dParts[0];
+        mm = dParts[1].padStart(2, '0');
+        dd = dParts[2].padStart(2, '0');
+      } else {
+        dd = dParts[0].padStart(2, '0');
+        mm = dParts[1].padStart(2, '0');
+        yyyy = dParts[2];
+      }
+    }
+  } else if (dateStr.includes('/')) {
+    const dParts = dateStr.split('/');
+    if (dParts.length === 3) {
+      if (dParts[2].length === 4) {
+        dd = dParts[0].padStart(2, '0');
+        mm = dParts[1].padStart(2, '0');
+        yyyy = dParts[2];
+      } else if (dParts[0].length === 4) {
+        yyyy = dParts[0];
+        mm = dParts[1].padStart(2, '0');
+        dd = dParts[2].padStart(2, '0');
+      }
+    }
+  }
+
+  if (!dd || !mm || !yyyy) {
+    const parsed = new Date(rawStr);
+    if (!isNaN(parsed.getTime())) {
+      dd = String(parsed.getDate()).padStart(2, '0');
+      mm = String(parsed.getMonth() + 1).padStart(2, '0');
+      yyyy = String(parsed.getFullYear());
+      embeddedTime = `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+    } else {
+      return rawStr;
+    }
+  }
+
+  let timeStr = defaultTime;
+  if (timeInput) {
+    timeStr = time12To24(timeInput) || timeInput;
+  } else if (embeddedTime) {
+    timeStr = embeddedTime;
+  }
+
+  const tParts = timeStr.split(':');
+  const hh = (tParts[0] || '00').padStart(2, '0');
+  const min = (tParts[1] || '00').padStart(2, '0');
+
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+/**
+ * Formats dependency display chip according to PM Specification:
+ * - `ARR-T1 FS +1d`
+ * - `ARR-T1 FS -2d`
+ * - `ARR-T1 FS +4h`
+ * - `ARR-T1 FS`
+ * - `ARR-T1 FS +1d 4h`
+ */
+export function formatDependencyLabel(
+  taskIdentifier: string,
+  depType?: string | null,
+  lagDays?: number | null,
+  lagHours?: number | null
+): string {
+  const dt = (depType || 'FS').toUpperCase();
+  const id = (taskIdentifier || '').replace(/0+([1-9]\d*)$/, '$1');
+  const days = Number(lagDays) || 0;
+  const hours = Number(lagHours) || 0;
+
+  if (days === 0 && hours === 0) {
+    return `${id} ${dt}`;
+  }
+
+  let lagStr = '';
+  if (days !== 0 && hours !== 0) {
+    const sign = days > 0 ? '+' : '';
+    lagStr = `${sign}${days}d ${hours}h`;
+  } else if (days !== 0) {
+    const sign = days > 0 ? '+' : '';
+    lagStr = `${sign}${days}d`;
+  } else if (hours !== 0) {
+    const sign = hours > 0 ? '+' : '';
+    lagStr = `${sign}${hours}h`;
+  }
+
+  return `${id} ${dt} ${lagStr}`.trim();
+}
+

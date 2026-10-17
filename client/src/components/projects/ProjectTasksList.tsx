@@ -34,6 +34,8 @@ import {
   ListItemText,
   OutlinedInput,
   useTheme,
+  Menu,
+  Divider,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -54,6 +56,10 @@ import {
   Folder,
   FolderPlus,
   GripVertical,
+  MoreVertical,
+  CornerDownRight,
+  ArrowUpToLine,
+  ArrowDownToLine,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -63,6 +69,7 @@ import {
   useDeleteTaskMutation,
   useGetStatusDefinitionsQuery,
   useGetProjectMilestonesQuery,
+  useDeleteProjectMilestoneMutation,
   useGetProjectTaskListsQuery,
   useCreateTaskListMutation,
   useUpdateTaskListMutation,
@@ -75,7 +82,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { time24To12, time12To24, formatDateTime12h, getTaskIdBadgeStyle } from '@/utils/format';
+import { time24To12, time12To24, formatDateTime12h, formatStandardDateTime, formatDependencyLabel, getTaskIdBadgeStyle } from '@/utils/format';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 import DependencyModal from '@/components/projects/DependencyModal';
 
@@ -187,6 +194,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [createTaskList] = useCreateTaskListMutation();
   const [updateTaskList] = useUpdateTaskListMutation();
   const [deleteTaskList] = useDeleteTaskListMutation();
+  const [deleteProjectMilestone] = useDeleteProjectMilestoneMutation();
   const [reorderTaskLists] = useReorderTaskListsMutation();
   const [reorderTasks] = useReorderTasksMutation();
 
@@ -292,14 +300,208 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     }
   };
 
-  const handleDeleteTaskList = async (id: number) => {
-    if (confirm('Are you sure you want to delete this Task List? Tasks inside this list will remain under the milestone.')) {
-      try {
+  // Row Actions Context Menu State (Requirement 9)
+  const [rowMenuAnchor, setRowMenuAnchor] = useState<{
+    mouseX?: number;
+    mouseY?: number;
+    anchorEl?: HTMLElement | null;
+    type: 'TASK' | 'TASK_LIST' | 'MILESTONE';
+    item: any;
+    depth?: number;
+  } | null>(null);
+
+  // Delete Confirmation Dialog State (Requirement 9)
+  const [deleteDialogState, setDeleteDialogState] = useState<{
+    open: boolean;
+    type: 'TASK' | 'TASK_LIST' | 'MILESTONE';
+    id: number;
+    name: string;
+    descendantCount: number;
+    descriptionText: string;
+  }>({
+    open: false,
+    type: 'TASK',
+    id: 0,
+    name: '',
+    descendantCount: 0,
+    descriptionText: '',
+  });
+
+  // Count descendants for Task
+  const countTaskDescendants = (taskId: number): number => {
+    let count = 0;
+    const directChildren = safeTasks.filter((t) => t.parent_task_id === taskId && !t.is_deleted);
+    count += directChildren.length;
+    for (const child of directChildren) {
+      count += countTaskDescendants(child.id);
+    }
+    return count;
+  };
+
+  // Count descendants for Task List
+  const countTaskListDescendants = (taskListId: number): number => {
+    const directTasks = safeTasks.filter((t) => t.task_list_id === taskListId && !t.parent_task_id && !t.is_deleted);
+    let count = directTasks.length;
+    for (const t of directTasks) {
+      count += countTaskDescendants(t.id);
+    }
+    return count;
+  };
+
+  // Count descendants for Milestone
+  const countMilestoneDescendants = (mId: number): { taskListsCount: number; tasksCount: number } => {
+    const mTaskLists = taskLists.filter((tl) => tl.milestone_id === mId);
+    const mTasks = safeTasks.filter((t) => t.milestone_id === mId && !t.is_deleted);
+    return {
+      taskListsCount: mTaskLists.length,
+      tasksCount: mTasks.length,
+    };
+  };
+
+  // Open Delete Confirmation Dialog
+  const handlePromptDelete = (item: any, type: 'TASK' | 'TASK_LIST' | 'MILESTONE') => {
+    if (type === 'TASK') {
+      const descendants = countTaskDescendants(item.id);
+      setDeleteDialogState({
+        open: true,
+        type: 'TASK',
+        id: item.id,
+        name: item.title,
+        descendantCount: descendants,
+        descriptionText:
+          descendants > 0
+            ? `This task and all its ${descendants} descendant sub-task${descendants === 1 ? '' : 's'} will be permanently deleted.`
+            : 'Are you sure you want to delete this task?',
+      });
+    } else if (type === 'TASK_LIST') {
+      const descendants = countTaskListDescendants(item.id);
+      setDeleteDialogState({
+        open: true,
+        type: 'TASK_LIST',
+        id: item.id,
+        name: item.name,
+        descendantCount: descendants,
+        descriptionText:
+          descendants > 0
+            ? `This task list and all its ${descendants} contained task${descendants === 1 ? '' : 's'} and sub-tasks will be permanently deleted.`
+            : 'Are you sure you want to delete this empty task list?',
+      });
+    } else if (type === 'MILESTONE') {
+      const { taskListsCount, tasksCount } = countMilestoneDescendants(item.id);
+      const total = taskListsCount + tasksCount;
+      setDeleteDialogState({
+        open: true,
+        type: 'MILESTONE',
+        id: item.id,
+        name: item.title || item.name,
+        descendantCount: total,
+        descriptionText: `This milestone and all its ${taskListsCount} task list${taskListsCount === 1 ? '' : 's'} and ${tasksCount} task${tasksCount === 1 ? '' : 's'} / sub-tasks will be permanently deleted.`,
+      });
+    }
+  };
+
+  // Confirm and Execute Deletion
+  const handleConfirmDelete = async () => {
+    const { type, id } = deleteDialogState;
+    try {
+      if (type === 'TASK') {
+        await deleteTask(id).unwrap();
+        toast.showSuccess('Task and descendants deleted');
+      } else if (type === 'TASK_LIST') {
         await deleteTaskList(id).unwrap();
-        toast.showSuccess('Task List deleted');
-      } catch (err: any) {
-        toast.showError(err?.data?.detail || 'Failed to delete task list');
+        toast.showSuccess('Task list and child tasks deleted');
+      } else if (type === 'MILESTONE') {
+        await deleteProjectMilestone(id).unwrap();
+        toast.showSuccess('Milestone and child items deleted');
       }
+      setDeleteDialogState((prev) => ({ ...prev, open: false }));
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to delete item');
+    }
+  };
+
+  // Row Action: Add Sub-task directly from menu
+  const handleAddSubtaskFromMenu = async (parentTask: TaskItem) => {
+    try {
+      await createTask({
+        title: 'New Sub-task',
+        project_id: numericProjectId,
+        milestone_id: parentTask.milestone_id || undefined,
+        task_list_id: parentTask.task_list_id || undefined,
+        parent_task_id: parentTask.id,
+        status_id: 1,
+        priority: 'NORMAL',
+      } as any).unwrap();
+      setExpandedTaskIds((prev) => ({ ...prev, [parentTask.id]: true }));
+      toast.showSuccess('Sub-task created');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to add sub-task');
+    }
+  };
+
+  // Row Action: Create Task Above
+  const handleCreateTaskAbove = async (referenceTask: TaskItem) => {
+    const siblings = safeTasks.filter((t) =>
+      (t.parent_task_id || null) === (referenceTask.parent_task_id || null) &&
+      (t.task_list_id || null) === (referenceTask.task_list_id || null) &&
+      (t.milestone_id || null) === (referenceTask.milestone_id || null)
+    ).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+
+    const refIndex = siblings.findIndex((t) => t.id === referenceTask.id);
+
+    try {
+      const res = await createTask({
+        title: referenceTask.parent_task_id ? 'New Sub-task' : 'New Task',
+        project_id: numericProjectId,
+        milestone_id: referenceTask.milestone_id || undefined,
+        task_list_id: referenceTask.task_list_id || undefined,
+        parent_task_id: referenceTask.parent_task_id || undefined,
+        status_id: referenceTask.status_id || 1,
+        priority: 'NORMAL',
+      } as any).unwrap();
+
+      const newTaskId = (res as any).id;
+      const updatedSiblingIds = siblings.map((t) => t.id);
+      const insertIdx = refIndex >= 0 ? refIndex : 0;
+      updatedSiblingIds.splice(insertIdx, 0, newTaskId);
+
+      await reorderTasks({ siblingIds: updatedSiblingIds }).unwrap();
+      toast.showSuccess('Task created above');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to create task above');
+    }
+  };
+
+  // Row Action: Create Task Below
+  const handleCreateTaskBelow = async (referenceTask: TaskItem) => {
+    const siblings = safeTasks.filter((t) =>
+      (t.parent_task_id || null) === (referenceTask.parent_task_id || null) &&
+      (t.task_list_id || null) === (referenceTask.task_list_id || null) &&
+      (t.milestone_id || null) === (referenceTask.milestone_id || null)
+    ).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+
+    const refIndex = siblings.findIndex((t) => t.id === referenceTask.id);
+
+    try {
+      const res = await createTask({
+        title: referenceTask.parent_task_id ? 'New Sub-task' : 'New Task',
+        project_id: numericProjectId,
+        milestone_id: referenceTask.milestone_id || undefined,
+        task_list_id: referenceTask.task_list_id || undefined,
+        parent_task_id: referenceTask.parent_task_id || undefined,
+        status_id: referenceTask.status_id || 1,
+        priority: 'NORMAL',
+      } as any).unwrap();
+
+      const newTaskId = (res as any).id;
+      const updatedSiblingIds = siblings.map((t) => t.id);
+      const insertIdx = refIndex >= 0 ? refIndex + 1 : updatedSiblingIds.length;
+      updatedSiblingIds.splice(insertIdx, 0, newTaskId);
+
+      await reorderTasks({ siblingIds: updatedSiblingIds }).unwrap();
+      toast.showSuccess('Task created below');
+    } catch (err: any) {
+      toast.showError(err?.data?.detail || 'Failed to create task below');
     }
   };
 
@@ -872,6 +1074,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           hover
           onDragOver={(e) => handleTaskDragOver(e, task)}
           onDrop={(e) => handleTaskDrop(e, task)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setRowMenuAnchor({
+              mouseX: e.clientX + 2,
+              mouseY: e.clientY - 6,
+              type: 'TASK',
+              item: task,
+              depth,
+            });
+          }}
           sx={{
             cursor: 'pointer',
             bgcolor: depth > 0 ? tTokens.stickyNestedBg : 'inherit',
@@ -879,6 +1092,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             borderTop: dragOverTargetId === task.id && dragOverPosition === 'top' ? `2px solid ${isDark ? '#5FCF87' : '#203020'}` : undefined,
             borderBottom: dragOverTargetId === task.id && dragOverPosition === 'bottom' ? `2px solid ${isDark ? '#5FCF87' : '#203020'}` : undefined,
             '&:hover .sticky-cell': { bgcolor: depth > 0 ? tTokens.stickyHoverNested : tTokens.stickyHoverMain },
+            '&:hover .row-action-btn': { opacity: 1 },
           }}
           onClick={() => openTask(task)}
         >
@@ -1071,37 +1285,87 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   }}
                 />
               )}
+
+              {/* Row Action Trigger Button (Hover reveals 3-dot button) */}
+              <IconButton
+                size="small"
+                className="row-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRowMenuAnchor({
+                    anchorEl: e.currentTarget,
+                    type: 'TASK',
+                    item: task,
+                    depth,
+                  });
+                }}
+                sx={{
+                  opacity: 0,
+                  transition: 'opacity 0.15s ease',
+                  p: 0.25,
+                  ml: 0.5,
+                  flexShrink: 0,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: isDark ? '#5FCF87' : '#203020',
+                    bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.08)',
+                  },
+                }}
+                title="Row actions"
+              >
+                <MoreVertical size={15} />
+              </IconButton>
             </Box>
           </TableCell>
 
-          {/* 2. Dependencies (Click to open Dependency Creation / Edit Window directly) */}
+          {/* 2. Dependencies (Fixed Width, Scrollable, Showing Lag Directly) */}
           <TableCell
-            sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+            sx={{
+              width: 170,
+              minWidth: 170,
+              maxWidth: 170,
+              p: '6px 8px',
+              verticalAlign: 'middle',
+              cursor: 'pointer',
+            }}
             onClick={(e) => {
               e.stopPropagation();
               handleOpenDependencyModal(task, null);
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box
+              sx={{
+                maxHeight: 52,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 0.5,
+                alignItems: 'center',
+                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.15)', borderRadius: '2px' },
+              }}
+            >
               {task.dependencies && task.dependencies.length > 0 ? (
-                task.dependencies.slice(0, 3).map((dep) => {
+                task.dependencies.map((dep) => {
                   const dt = dep.dep_type || 'FS';
                   const num = dep.predecessor_task_number || dep.depends_on_task_number || `TASK-${dep.depends_on_task_id}`;
+                  const chipLabel = formatDependencyLabel(num, dt, dep.lag_days, dep.lag_hours);
                   return (
                     <Tooltip
                       key={dep.id}
-                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}${dep.lag_hours ? ` +${dep.lag_hours}h` : ''}) - Click to edit`}
+                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${chipLabel}) - Click to edit`}
                     >
                       <Chip
                         icon={<Link2 size={10} color={isDark ? '#5FCF87' : '#203020'} />}
-                        label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
+                        label={chipLabel}
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenDependencyModal(task, dep);
                         }}
                         sx={{
-                          height: 20,
+                          height: 22,
                           fontSize: '0.65rem',
                           fontWeight: 700,
                           bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#E8F5E9',
@@ -1110,6 +1374,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           borderColor: isDark ? 'rgba(95, 207, 135, 0.3)' : '#C8E6C9',
                           fontFamily: 'monospace',
                           cursor: 'pointer',
+                          maxWidth: '100%',
+                          '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
                           '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.25)' : '#C8E6C9' },
                         }}
                       />
@@ -1137,9 +1403,18 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 3. Assigned To (Inline Select Dropdown) */}
-          <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <FormControl size="small" variant="standard">
+          {/* 3. Assigned To (Fixed Width, Scrollable, Multi-chip Select) */}
+          <TableCell
+            sx={{
+              width: 170,
+              minWidth: 170,
+              maxWidth: 170,
+              p: '6px 8px',
+              verticalAlign: 'middle',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FormControl size="small" variant="standard" fullWidth>
               <Select
                 multiple
                 displayEmpty
@@ -1150,10 +1425,23 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 }}
                 renderValue={(selected) => {
                   const selectedIds = selected as number[];
-                  if (selectedIds.length === 0) return <Typography variant="body2" color="textSecondary">Unassigned</Typography>;
+                  if (selectedIds.length === 0) return <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.78rem' }}>Unassigned</Typography>;
                   const matched = users.filter((u) => selectedIds.includes(u.id));
                   return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+                    <Box
+                      sx={{
+                        maxHeight: 52,
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 0.5,
+                        alignItems: 'center',
+                        width: '100%',
+                        '&::-webkit-scrollbar': { width: '4px' },
+                        '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.15)', borderRadius: '2px' },
+                      }}
+                    >
                       {matched.map((u) => (
                         <Chip
                           key={u.id}
@@ -1165,7 +1453,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           label={u.full_name || u.email}
                           size="small"
                           variant="outlined"
-                          sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600 }}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            maxWidth: '100%',
+                            '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                          }}
                         />
                       ))}
                     </Box>
@@ -1174,6 +1468,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 disableUnderline
                 sx={{
                   fontSize: '0.8rem',
+                  width: '100%',
                   '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: tTokens.inputBgHover } },
                 }}
               >
@@ -1187,115 +1482,120 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </FormControl>
           </TableCell>
 
+          {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'start_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-              <TextField
-                type="time"
-                size="small"
-                variant="standard"
-                value={time12To24(task.start_time || '')}
-                onChange={(e) => {
-                  const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'start_time', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.25,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-            </Box>
+            <Tooltip title={task.start_date ? `Start: ${formatStandardDateTime(task.start_date, task.start_time, '09:00')}` : 'Set start date and time'}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  variant="standard"
+                  value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleCellUpdate(task.id, 'start_date', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.8rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.5,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+                <TextField
+                  type="time"
+                  size="small"
+                  variant="standard"
+                  value={time12To24(task.start_time || '')}
+                  onChange={(e) => {
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    handleCellUpdate(task.id, 'start_time', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.25,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </TableCell>
 
           {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.due_date ? task.due_date.split('T')[0].split(' ')[0] : ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'due_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-              <TextField
-                type="time"
-                size="small"
-                variant="standard"
-                value={time12To24(task.due_time || '')}
-                onChange={(e) => {
-                  const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'due_time', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.25,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-            </Box>
+            <Tooltip title={task.due_date ? `Due: ${formatStandardDateTime(task.due_date, task.due_time, '18:00')}` : 'Set due date and time'}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  variant="standard"
+                  value={task.due_date ? task.due_date.split('T')[0].split(' ')[0] : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleCellUpdate(task.id, 'due_date', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.8rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.5,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+                <TextField
+                  type="time"
+                  size="small"
+                  variant="standard"
+                  value={time12To24(task.due_time || '')}
+                  onChange={(e) => {
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    handleCellUpdate(task.id, 'due_time', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.25,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </TableCell>
 
           {/* 6. Duration (Inline Numeric Edit) */}
@@ -1387,62 +1687,63 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </FormControl>
           </TableCell>
 
-          {/* 8. Completion Date (Inline Date Picker) */}
           {/* 8. Completion Date & Time (Inline Edit) */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.completion_date ? task.completion_date.split('T')[0].split(' ')[0] : (task.completed_at ? task.completed_at.split('T')[0] : '')}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'completion_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-              <TextField
-                type="time"
-                size="small"
-                variant="standard"
-                value={time12To24(task.completion_time || '')}
-                onChange={(e) => {
-                  const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'completion_time', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  width: 70,
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.25,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-            </Box>
+            <Tooltip title={(task.completion_date || task.completed_at) ? `Completed: ${formatStandardDateTime(task.completion_date || task.completed_at, task.completion_time)}` : 'Set completion date and time'}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  variant="standard"
+                  value={task.completion_date ? task.completion_date.split('T')[0].split(' ')[0] : (task.completed_at ? task.completed_at.split('T')[0] : '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleCellUpdate(task.id, 'completion_date', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.8rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.5,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+                <TextField
+                  type="time"
+                  size="small"
+                  variant="standard"
+                  value={time12To24(task.completion_time || '')}
+                  onChange={(e) => {
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    handleCellUpdate(task.id, 'completion_time', val || null);
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    width: 70,
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.25,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                    },
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </TableCell>
 
           {/* 9. Estimated Cost (Inline Numeric Input) */}
@@ -2030,8 +2331,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 >
                   Name
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Dependencies</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Assigned To</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap', width: 170, minWidth: 170, maxWidth: 170 }}>Dependencies</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap', width: 170, minWidth: 170, maxWidth: 170 }}>Assigned To</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Start Date</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Due Date</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>Duration</TableCell>
@@ -2125,7 +2426,22 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <React.Fragment key={`milestone-${groupId}`}>
                       {/* Milestone Header Row */}
-                      <TableRow sx={{ bgcolor: tTokens.groupHeaderBg, '&:hover': { bgcolor: tTokens.groupHeaderHover }, cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
+                      <TableRow
+                        sx={{ bgcolor: tTokens.groupHeaderBg, '&:hover': { bgcolor: tTokens.groupHeaderHover }, cursor: 'pointer' }}
+                        onClick={() => toggleGroup(groupId)}
+                        onContextMenu={(e) => {
+                          if (milestone.id) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setRowMenuAnchor({
+                              mouseX: e.clientX + 2,
+                              mouseY: e.clientY - 6,
+                              type: 'MILESTONE',
+                              item: milestone,
+                            });
+                          }
+                        }}
+                      >
                         <TableCell
                           sx={{
                             position: 'sticky',
@@ -2188,6 +2504,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 >
                                   Add Task List
                                 </Button>
+                                <Tooltip title="Delete Milestone">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handlePromptDelete(milestone, 'MILESTONE')}
+                                    sx={{ color: '#DC2626', p: 0.25, '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.08)' } }}
+                                  >
+                                    <Trash2 size={14} />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
                             )}
                           </Box>
@@ -2207,6 +2532,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 <TableRow
                                   onDragOver={(e) => handleTaskListDragOver(e, tl)}
                                   onDrop={(e) => handleTaskListDrop(e, tl)}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setRowMenuAnchor({
+                                      mouseX: e.clientX + 2,
+                                      mouseY: e.clientY - 6,
+                                      type: 'TASK_LIST',
+                                      item: tl,
+                                    });
+                                  }}
                                   sx={{
                                     bgcolor: tTokens.taskListBg,
                                     '&:hover': { bgcolor: tTokens.taskListHover },
@@ -2337,7 +2672,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete Task List">
-                                          <IconButton size="small" onClick={() => handleDeleteTaskList(tl.id)}>
+                                          <IconButton size="small" onClick={() => handlePromptDelete(tl, 'TASK_LIST')}>
                                             <Trash2 size={13} color="#DC2626" />
                                           </IconButton>
                                         </Tooltip>
@@ -2346,12 +2681,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   </TableCell>
 
                                   {/* Dependencies: No dependencies allowed for Task List */}
-                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem', width: 170, minWidth: 170, maxWidth: 170 }}>
                                     —
                                   </TableCell>
 
                                   {/* Assigned To: No assigned to allowed for Task List */}
-                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem', width: 170, minWidth: 170, maxWidth: 170 }}>
                                     —
                                   </TableCell>
 
@@ -2359,7 +2694,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
                                     <Tooltip title="Calculated: Earliest Start Date & Time among direct child tasks">
                                       <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.start_date ? 'text.primary' : 'text.disabled' }}>
-                                        {tl.start_date ? `${tl.start_date.split('T')[0]} ${tl.start_time || ''}`.trim() : '—'}
+                                        {tl.start_date ? formatStandardDateTime(tl.start_date, tl.start_time, '09:00') : '—'}
                                       </Typography>
                                     </Tooltip>
                                   </TableCell>
@@ -2368,7 +2703,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
                                     <Tooltip title="Calculated: Latest End Date & Time among direct child tasks">
                                       <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.end_date ? 'text.primary' : 'text.disabled' }}>
-                                        {tl.end_date ? `${tl.end_date.split('T')[0]} ${tl.end_time || ''}`.trim() : '—'}
+                                        {tl.end_date ? formatStandardDateTime(tl.end_date, tl.end_time, '18:00') : '—'}
                                       </Typography>
                                     </Tooltip>
                                   </TableCell>
@@ -2816,6 +3151,174 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         dependency={depModalDependency}
         projectTasks={safeTasks}
       />
+
+      {/* Row Actions Menu (Requirement 9) */}
+      <Menu
+        open={Boolean(rowMenuAnchor)}
+        onClose={() => setRowMenuAnchor(null)}
+        anchorEl={rowMenuAnchor?.anchorEl}
+        anchorReference={rowMenuAnchor?.anchorEl ? 'anchorEl' : 'anchorPosition'}
+        anchorPosition={
+          rowMenuAnchor?.mouseX != null && rowMenuAnchor?.mouseY != null
+            ? { top: rowMenuAnchor.mouseY, left: rowMenuAnchor.mouseX }
+            : undefined
+        }
+        PaperProps={{
+          sx: {
+            minWidth: 190,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            borderRadius: '8px',
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        {rowMenuAnchor?.type === 'TASK' && [
+          <MenuItem
+            key="add-subtask"
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handleAddSubtaskFromMenu(item);
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem' }}
+          >
+            <CornerDownRight size={16} color={isDark ? '#5FCF87' : '#203020'} />
+            <ListItemText primary="Add Sub-task" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
+          </MenuItem>,
+          <MenuItem
+            key="task-above"
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handleCreateTaskAbove(item);
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem' }}
+          >
+            <ArrowUpToLine size={16} />
+            <ListItemText
+              primary={rowMenuAnchor.item?.parent_task_id ? "Create Sub-task Above" : "Create Task Above"}
+              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }}
+            />
+          </MenuItem>,
+          <MenuItem
+            key="task-below"
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handleCreateTaskBelow(item);
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem' }}
+          >
+            <ArrowDownToLine size={16} />
+            <ListItemText
+              primary={rowMenuAnchor.item?.parent_task_id ? "Create Sub-task Below" : "Create Task Below"}
+              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }}
+            />
+          </MenuItem>,
+          <Divider key="div-delete" sx={{ my: 0.5 }} />,
+          <MenuItem
+            key="delete-task"
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handlePromptDelete(item, 'TASK');
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', color: 'error.main' }}
+          >
+            <Trash2 size={16} color="#ef4444" />
+            <ListItemText
+              primary="Delete"
+              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600, color: 'error.main' }}
+            />
+          </MenuItem>,
+        ]}
+
+        {rowMenuAnchor?.type === 'TASK_LIST' && (
+          <MenuItem
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handlePromptDelete(item, 'TASK_LIST');
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', color: 'error.main' }}
+          >
+            <Trash2 size={16} color="#ef4444" />
+            <ListItemText
+              primary="Delete Task List"
+              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600, color: 'error.main' }}
+            />
+          </MenuItem>
+        )}
+
+        {rowMenuAnchor?.type === 'MILESTONE' && (
+          <MenuItem
+            onClick={() => {
+              const item = rowMenuAnchor.item;
+              setRowMenuAnchor(null);
+              handlePromptDelete(item, 'MILESTONE');
+            }}
+            sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', color: 'error.main' }}
+          >
+            <Trash2 size={16} color="#ef4444" />
+            <ListItemText
+              primary="Delete Milestone"
+              primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600, color: 'error.main' }}
+            />
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Delete Confirmation Dialog (Requirement 9) */}
+      <Dialog
+        open={deleteDialogState.open}
+        onClose={() => setDeleteDialogState((prev) => ({ ...prev, open: false }))}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Trash2 size={20} color="#ef4444" />
+          Confirm Deletion
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ mb: 1.5, color: 'text.primary', fontWeight: 600 }}>
+            {deleteDialogState.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {deleteDialogState.descriptionText}
+          </Typography>
+          <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 1, fontWeight: 500 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            size="small"
+            onClick={() => setDeleteDialogState((prev) => ({ ...prev, open: false }))}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

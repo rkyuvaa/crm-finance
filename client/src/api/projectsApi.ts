@@ -446,7 +446,7 @@ export const projectsApi = createApi({
         url: `/tasks/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Tasks', 'Projects', 'TaskLists'],
+      invalidatesTags: ['Tasks', 'Projects', 'TaskLists', 'Milestones'],
     }),
 
     // Personal Tasks
@@ -660,7 +660,7 @@ export const projectsApi = createApi({
         url: `/projects/milestones/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Milestones'],
+      invalidatesTags: ['Milestones', 'Tasks', 'TaskLists', 'Projects'],
     }),
     // Task Lists (Milestone → Task List → Task)
     getProjectTaskLists: builder.query<ProjectTaskListItem[], number>({

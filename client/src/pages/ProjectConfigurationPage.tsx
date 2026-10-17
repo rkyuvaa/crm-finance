@@ -68,6 +68,7 @@ import {
 } from '@/api/projectsApi';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatStandardDateTime } from '@/utils/format';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1273,7 +1274,7 @@ export default function ProjectConfigurationPage() {
                 <TableBody>
                   {calendarConfig?.holidays?.map((h: any) => (
                     <TableRow key={h.id}>
-                      <TableCell>{h.holiday_date}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace' }}>{formatStandardDateTime(h.holiday_date)}</TableCell>
                       <TableCell>{h.description}</TableCell>
                       <TableCell>{h.recurs_yearly ? 'Yes' : 'No'}</TableCell>
                       <TableCell align="right">

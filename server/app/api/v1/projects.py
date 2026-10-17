@@ -420,12 +420,39 @@ def delete_project_milestone(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a milestone"""
+    """Delete a milestone and all its descendant task lists, tasks, and subtasks"""
     milestone = db.query(ProjectMilestone).filter(ProjectMilestone.id == milestone_id).first()
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
+
+    project_id = milestone.project_id
+
+    # 1. Soft-delete all tasks and their descendants under this milestone
+    m_tasks = db.query(Task).filter(Task.milestone_id == milestone_id, Task.is_deleted.is_(False)).all()
+
+    def _soft_delete_descendants(p_id: int):
+        child_subtasks = db.query(Task).filter(Task.parent_task_id == p_id, Task.is_deleted.is_(False)).all()
+        for child in child_subtasks:
+            child.is_deleted = True
+            _soft_delete_descendants(child.id)
+
+    for t in m_tasks:
+        t.is_deleted = True
+        _soft_delete_descendants(t.id)
+
+    # 2. Delete all task lists under this milestone
+    db.query(ProjectTaskList).filter(ProjectTaskList.milestone_id == milestone_id).delete()
+
+    # 3. Delete the milestone
     db.delete(milestone)
     db.commit()
+
+    # 4. Recalculate project rollup
+    from app.services.rollup_service import rollup_project
+    if project_id:
+        rollup_project(db, project_id)
+        db.commit()
+
     return None
 
 
@@ -549,24 +576,37 @@ def delete_project_task_list(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete a Task List.
-    Tasks inside this task list have their task_list_id cleared, preserving them under the milestone.
+    Delete a Task List and all its contained tasks and descendant sub-tasks.
     """
     task_list = db.query(ProjectTaskList).filter(ProjectTaskList.id == task_list_id).first()
     if not task_list:
         raise HTTPException(status_code=404, detail="Task List not found")
 
     milestone_id = task_list.milestone_id
+    project_id = task_list.project_id
 
-    # Dissociate child tasks without deleting them
-    db.query(Task).filter(Task.task_list_id == task_list_id).update({Task.task_list_id: None})
+    # 1. Soft-delete all tasks and their descendants inside this task list
+    tl_tasks = db.query(Task).filter(Task.task_list_id == task_list_id, Task.is_deleted.is_(False)).all()
+
+    def _soft_delete_descendants(p_id: int):
+        child_subtasks = db.query(Task).filter(Task.parent_task_id == p_id, Task.is_deleted.is_(False)).all()
+        for child in child_subtasks:
+            child.is_deleted = True
+            _soft_delete_descendants(child.id)
+
+    for t in tl_tasks:
+        t.is_deleted = True
+        _soft_delete_descendants(t.id)
 
     db.delete(task_list)
     db.commit()
 
-    # Recalculate milestone rollup
-    from app.services.rollup_service import rollup_milestone
-    rollup_milestone(db, milestone_id)
+    # 2. Recalculate milestone & project rollups
+    from app.services.rollup_service import rollup_milestone, rollup_project
+    if milestone_id:
+        rollup_milestone(db, milestone_id)
+    if project_id:
+        rollup_project(db, project_id)
     db.commit()
 
     return None

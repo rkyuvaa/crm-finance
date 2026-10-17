@@ -38,6 +38,7 @@ import {
 import { useGetProjectQuery } from '@/api/projectsApi';
 import ProjectTasksList from '@/components/projects/ProjectTasksList';
 import ProjectMilestonesList from '@/components/projects/ProjectMilestonesList';
+import { formatStandardDateTime } from '@/utils/format';
 import ProjectTimelineView from '@/components/projects/ProjectTimelineView';
 import ProjectTimesheetsView from '@/components/projects/ProjectTimesheetsView';
 import ProjectTeamView from '@/components/projects/ProjectTeamView';
@@ -290,8 +291,8 @@ export default function ProjectWorkspace() {
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET START DATE</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Calendar size={14} color="#64748B" /> {project.target_start_date || 'Not set'}
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
+                        <Calendar size={14} color="#64748B" /> {project.target_start_date ? formatStandardDateTime(project.target_start_date, project.target_start_time, '09:00') : 'Not set'}
                       </Typography>
                     </Box>
                   </Grid>
@@ -299,8 +300,8 @@ export default function ProjectWorkspace() {
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE & TIME</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Calendar size={14} color="#64748B" /> {project.target_end_date ? `${project.target_end_date}${project.target_end_time ? ' ' + project.target_end_time : ''}` : 'Not set'}
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
+                        <Calendar size={14} color="#64748B" /> {project.target_end_date ? formatStandardDateTime(project.target_end_date, project.target_end_time, '18:00') : 'Not set'}
                       </Typography>
                     </Box>
                   </Grid>
@@ -309,8 +310,8 @@ export default function ProjectWorkspace() {
                     <Grid item xs={12} sm={6}>
                       <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                         <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>ACTUAL COMPLETION DATE & TIME</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#5FCF87' : '#203020', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CheckCircle2 size={14} color={isDark ? '#5FCF87' : '#203020'} /> {project.completion_date}{project.completion_time ? ' ' + project.completion_time : ''}
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#5FCF87' : '#203020', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
+                          <CheckCircle2 size={14} color={isDark ? '#5FCF87' : '#203020'} /> {formatStandardDateTime(project.completion_date, project.completion_time)}
                         </Typography>
                       </Box>
                     </Grid>
