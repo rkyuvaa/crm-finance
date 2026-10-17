@@ -2186,25 +2186,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                     '&:hover': { borderColor: '#8B5CF6', bgcolor: '#F5F3FF' },
                                   }}
                                 >
-                                  Add Task List +
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<Plus size={13} />}
-                                  onClick={() => handleOpenCreateModal(1, milestone.id as number)}
-                                  sx={{
-                                    height: 24,
-                                    fontSize: '0.72rem',
-                                    textTransform: 'none',
-                                    py: 0,
-                                    px: 1,
-                                    color: isDark ? '#5FCF87' : '#203020',
-                                    borderColor: isDark ? 'rgba(95, 207, 135, 0.4)' : '#A7F3D0',
-                                    '&:hover': { borderColor: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : '#ECFDF5' },
-                                  }}
-                                >
-                                  + Task
+                                  Add Task List
                                 </Button>
                               </Box>
                             )}
@@ -2393,19 +2375,25 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
                                   {/* Duration: Automatically Calculated (End - Start) - Read-only */}
                                   <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
-                                    <Tooltip title="Calculated: Working duration between earliest start and latest end">
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 600, color: 'text.primary' }}>
-                                          {tl.duration_working_days ?? 0} WD
+                                    <Tooltip title={tl.duration_working_days != null ? "Calculated: Working duration between earliest start and latest end" : "Blank until tasks exist"}>
+                                      {tl.duration_working_days != null ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 600, color: 'text.primary' }}>
+                                            {tl.duration_working_days} WD
+                                          </Typography>
+                                          {Boolean(tl.duration_working_hours) && (
+                                            <Chip
+                                              label={`+${tl.duration_working_hours}h`}
+                                              size="small"
+                                              sx={{ height: 16, fontSize: '0.62rem', fontWeight: 600, bgcolor: '#FEF3C7', color: '#92400E' }}
+                                            />
+                                          )}
+                                        </Box>
+                                      ) : (
+                                        <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: 'text.disabled' }}>
+                                          —
                                         </Typography>
-                                        {Boolean(tl.duration_working_hours) && (
-                                          <Chip
-                                            label={`+${tl.duration_working_hours}h`}
-                                            size="small"
-                                            sx={{ height: 16, fontSize: '0.62rem', fontWeight: 600, bgcolor: '#FEF3C7', color: '#92400E' }}
-                                          />
-                                        )}
-                                      </Box>
+                                      )}
                                     </Tooltip>
                                   </TableCell>
 
