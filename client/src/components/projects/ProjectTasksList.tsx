@@ -36,6 +36,7 @@ import {
   useTheme,
   Menu,
   Divider,
+  Popover,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -341,6 +342,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       toast.showError(err?.data?.detail || 'Failed to create task');
     }
   };
+
+  // Assignee Popover Multi-Select State
+  const [assigneeMenuAnchor, setAssigneeMenuAnchor] = useState<{
+    anchorEl: HTMLElement;
+    task: TaskItem;
+    tempSelectedIds: number[];
+  } | null>(null);
 
   // Row Actions Context Menu State (Requirement 9)
   const [rowMenuAnchor, setRowMenuAnchor] = useState<{
@@ -1112,6 +1120,28 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     return (parts[0]?.charAt(0) || '?').toUpperCase();
   };
 
+  // Deterministic, high-contrast, visually distinguishable color palette for assignees
+  const ASSIGNEE_COLORS = [
+    '#1D4ED8', // Deep Blue
+    '#047857', // Deep Emerald
+    '#6D28D9', // Deep Purple / Violet
+    '#B45309', // Deep Amber
+    '#0E7490', // Deep Cyan / Teal
+    '#B91C1C', // Deep Red
+    '#4338CA', // Deep Indigo
+    '#9D174D', // Deep Rose / Pink
+    '#0F766E', // Deep Teal
+    '#C2410C', // Deep Orange
+    '#334155', // Deep Slate
+    '#0369A1', // Deep Sky
+  ];
+
+  const getAssigneeColor = (userId: number): { bg: string; color: string } => {
+    const safeId = Math.abs(Number(userId) || 0);
+    const bg = ASSIGNEE_COLORS[safeId % ASSIGNEE_COLORS.length];
+    return { bg, color: '#FFFFFF' };
+  };
+
   // Render Table Row for List View
   const renderListTableRow = (task: TaskItem, depth = 0) => {
     const subtaskList = getSubtasksForTask(task);
@@ -1455,7 +1485,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Box>
           </TableCell>
 
-          {/* 3. Assigned To (Compact Avatar with Name & Dropdown Chevron) */}
+          {/* 3. Assigned To (Multicolor Solid Pills & Names-Only Multi-Select Dropdown) */}
           <TableCell
             sx={{
               width: 170,
@@ -1463,228 +1493,100 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               maxWidth: 170,
               p: '4px 8px',
               verticalAlign: 'middle',
+              cursor: 'pointer',
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setAssigneeMenuAnchor({
+                anchorEl: e.currentTarget,
+                task,
+                tempSelectedIds: (task.assignees || []).map((a) => a.user_id),
+              });
+            }}
           >
-            <FormControl size="small" variant="standard" fullWidth>
-              <Select
-                multiple
-                displayEmpty
-                value={(task.assignees || []).map((a) => a.user_id)}
-                onChange={(e) => {
-                  const val = e.target.value as number[];
-                  handleCellUpdate(task.id, 'assignee_ids', val);
-                }}
-                disableUnderline
-                IconComponent={(props) => (
-                  <ChevronDown
-                    size={14}
-                    {...props}
-                    style={{
-                      ...props.style,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
-                renderValue={(selected) => {
-                  const selectedIds = selected as number[];
-                  if (selectedIds.length === 0) {
-                    return (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, width: '100%', py: 0.25 }}>
-                        <Avatar
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            fontSize: '0.72rem',
-                            bgcolor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                            color: 'text.disabled',
-                            border: '1px dashed',
-                            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.15)',
-                            flexShrink: 0,
-                          }}
-                        >
-                          —
-                        </Avatar>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontSize: '0.8rem',
-                            color: 'text.secondary',
-                            fontWeight: 400,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          Unassigned
-                        </Typography>
-                      </Box>
-                    );
-                  }
-                  const matched = users.filter((u) => selectedIds.includes(u.id));
-                  return (
-                    <Box
-                      sx={{
-                        maxHeight: 52,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                        width: '100%',
-                        pr: 0.5,
-                        '&::-webkit-scrollbar': { width: '3px' },
-                        '&::-webkit-scrollbar-thumb': {
-                          bgcolor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
-                          borderRadius: '2px',
-                        },
-                      }}
-                    >
-                      {matched.map((u) => {
-                        const displayName = u.full_name || u.email || 'Unknown';
-                        return (
-                          <Tooltip key={u.id} title={displayName} arrow placement="top">
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                minWidth: 0,
-                                width: '100%',
-                              }}
-                            >
-                              <Avatar
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  fontSize: '0.72rem',
-                                  fontWeight: 600,
-                                  bgcolor: isDark ? '#2B3D2B' : '#203020',
-                                  color: isDark ? '#E2FBE8' : '#FFFFFF',
-                                  border: isDark ? '1px solid rgba(95, 207, 135, 0.25)' : 'none',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {getAssigneeInitials(displayName)}
-                              </Avatar>
-                              <Typography
-                                variant="body2"
-                                noWrap
-                                sx={{
-                                  fontSize: '0.8rem',
-                                  fontWeight: 500,
-                                  color: 'text.primary',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  minWidth: 0,
-                                  flex: 1,
-                                }}
-                              >
-                                {displayName}
-                              </Typography>
-                            </Box>
-                          </Tooltip>
-                        );
-                      })}
-                    </Box>
-                  );
-                }}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                p: '3px 6px',
+                borderRadius: '6px',
+                minHeight: 28,
+                transition: 'background-color 0.15s ease',
+                '&:hover': { bgcolor: tTokens.inputBgHover },
+              }}
+            >
+              <Box
                 sx={{
-                  fontSize: '0.8rem',
-                  width: '100%',
-                  '& .MuiSelect-select': {
-                    py: 0.25,
-                    px: 0.5,
-                    pr: '22px !important',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    minHeight: 28,
-                    transition: 'background-color 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus },
-                  },
-                  '& .MuiSelect-icon': {
-                    right: 2,
-                    top: 'calc(50% - 7px)',
-                    color: 'text.secondary',
-                    transition: 'color 0.15s ease, transform 0.15s ease',
-                  },
-                  '&:hover .MuiSelect-icon': {
-                    color: isDark ? '#5FCF87' : '#203020',
-                  },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 280,
-                      borderRadius: '8px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                      bgcolor: 'background.paper',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    },
+                  maxHeight: 52,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: 0.5,
+                  width: 'calc(100% - 18px)',
+                  pr: 0.5,
+                  '&::-webkit-scrollbar': { width: '3px' },
+                  '&::-webkit-scrollbar-thumb': {
+                    bgcolor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                    borderRadius: '2px',
                   },
                 }}
               >
-                {users.map((u) => {
-                  const isSelected = (task.assignees || []).some((a) => a.user_id === u.id);
-                  const name = u.full_name || u.email || 'Unknown';
-                  return (
-                    <MenuItem
-                      key={u.id}
-                      value={u.id}
-                      sx={{
-                        gap: 1.25,
-                        py: 0.75,
-                        px: 1.5,
-                        '&.Mui-selected': {
-                          bgcolor: isDark ? 'rgba(95, 207, 135, 0.12)' : 'rgba(32, 48, 32, 0.06)',
-                          '&:hover': {
-                            bgcolor: isDark ? 'rgba(95, 207, 135, 0.18)' : 'rgba(32, 48, 32, 0.1)',
-                          },
-                        },
-                      }}
-                    >
-                      <Checkbox
-                        size="small"
-                        checked={isSelected}
-                        sx={{
-                          p: 0,
-                          color: 'text.secondary',
-                          '&.Mui-checked': {
-                            color: isDark ? '#5FCF87' : '#203020',
-                          },
-                        }}
-                      />
-                      <Avatar
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          bgcolor: isDark ? '#2B3D2B' : '#203020',
-                          color: isDark ? '#E2FBE8' : '#FFFFFF',
-                          border: isDark ? '1px solid rgba(95, 207, 135, 0.25)' : 'none',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {getAssigneeInitials(name)}
-                      </Avatar>
-                      <ListItemText
-                        primary={name}
-                        primaryTypographyProps={{
-                          fontSize: '0.82rem',
-                          fontWeight: isSelected ? 600 : 500,
-                          color: 'text.primary',
-                        }}
-                      />
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
+                {task.assignees && task.assignees.length > 0 ? (
+                  task.assignees.map((a) => {
+                    const u = users.find((usr) => usr.id === a.user_id) || {
+                      id: a.user_id,
+                      full_name: a.user_name || `User ${a.user_id}`,
+                    };
+                    const displayName = u.full_name || (u as any).email || `User ${u.id}`;
+                    const colorInfo = getAssigneeColor(u.id);
+                    return (
+                      <Tooltip key={u.id} title={displayName} arrow placement="top">
+                        <Box
+                          sx={{
+                            bgcolor: colorInfo.bg,
+                            color: colorInfo.color,
+                            borderRadius: '12px',
+                            px: 1,
+                            py: '2px',
+                            minHeight: '20px',
+                            maxWidth: '100%',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                          }}
+                        >
+                          <Typography
+                            noWrap
+                            component="span"
+                            sx={{
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                              color: colorInfo.color,
+                              lineHeight: 1.2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {displayName}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    );
+                  })
+                ) : (
+                  <Typography variant="body2" sx={{ fontSize: '0.78rem', color: 'text.secondary', fontStyle: 'italic' }}>
+                    Unassigned
+                  </Typography>
+                )}
+              </Box>
+
+              <ChevronDown size={14} color={isDark ? '#94A3B8' : '#64748B'} style={{ flexShrink: 0, opacity: 0.7 }} />
+            </Box>
           </TableCell>
 
           {/* 4. Start Date & Time */}
@@ -3603,6 +3505,152 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Assignee Multi-Select Dropdown (Names Only, Solid #203020 Highlight, Done Action) */}
+      <Popover
+        open={Boolean(assigneeMenuAnchor)}
+        anchorEl={assigneeMenuAnchor?.anchorEl}
+        onClose={() => setAssigneeMenuAnchor(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            width: 220,
+            borderRadius: '10px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            zIndex: 1400,
+          },
+        }}
+      >
+        <Box sx={{ p: 1, pb: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 700,
+              color: 'text.secondary',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              fontSize: '0.68rem',
+            }}
+          >
+            Select Assignees
+          </Typography>
+        </Box>
+
+        <Box sx={{ maxHeight: 220, overflowY: 'auto', py: 0.5 }}>
+          {users.length === 0 ? (
+            <Typography variant="body2" sx={{ p: 2, fontSize: '0.8rem', color: 'text.secondary', textAlign: 'center' }}>
+              No employees available
+            </Typography>
+          ) : (
+            users.map((u) => {
+              const isSelected = assigneeMenuAnchor?.tempSelectedIds.includes(u.id);
+              const displayName = u.full_name || u.email || `User ${u.id}`;
+              return (
+                <Box
+                  key={u.id}
+                  onClick={() => {
+                    if (!assigneeMenuAnchor) return;
+                    const cur = assigneeMenuAnchor.tempSelectedIds;
+                    const next = cur.includes(u.id)
+                      ? cur.filter((id) => id !== u.id)
+                      : [...cur, u.id];
+                    setAssigneeMenuAnchor({
+                      ...assigneeMenuAnchor,
+                      tempSelectedIds: next,
+                    });
+                  }}
+                  sx={{
+                    px: 1.5,
+                    py: 0.85,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    bgcolor: isSelected ? '#203020' : 'transparent',
+                    color: isSelected ? '#FFFFFF' : 'text.primary',
+                    transition: 'all 0.12s ease',
+                    '&:hover': {
+                      bgcolor: isSelected
+                        ? (isDark ? '#2E442E' : '#2A3F2A')
+                        : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                    },
+                  }}
+                >
+                  <Typography
+                    noWrap
+                    sx={{
+                      fontSize: '0.82rem',
+                      fontWeight: isSelected ? 600 : 500,
+                      color: isSelected ? '#FFFFFF' : 'text.primary',
+                    }}
+                  >
+                    {displayName}
+                  </Typography>
+                </Box>
+              );
+            })
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 1,
+            p: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+          }}
+        >
+          <Button
+            size="small"
+            onClick={() => setAssigneeMenuAnchor(null)}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              color: 'text.secondary',
+              minWidth: 50,
+              py: 0.25,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={async () => {
+              if (!assigneeMenuAnchor) return;
+              const { task, tempSelectedIds } = assigneeMenuAnchor;
+              setAssigneeMenuAnchor(null);
+              await handleCellUpdate(task.id, 'assignee_ids', tempSelectedIds);
+            }}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              bgcolor: tTokens.primaryBtn,
+              '&:hover': { bgcolor: tTokens.primaryBtnHover },
+              minWidth: 60,
+              py: 0.25,
+            }}
+          >
+            Done
+          </Button>
+        </Box>
+      </Popover>
     </Box>
   );
 }
