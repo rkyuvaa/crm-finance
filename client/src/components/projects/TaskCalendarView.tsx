@@ -7,6 +7,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  useTheme,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
@@ -17,6 +18,7 @@ interface TaskCalendarViewProps {
 }
 
 export default function TaskCalendarView({ tasks, onOpenTaskDetail }: TaskCalendarViewProps) {
+  const theme = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const year = currentDate.getFullYear();
@@ -65,7 +67,7 @@ export default function TaskCalendarView({ tasks, onOpenTaskDetail }: TaskCalend
       {/* Header Controls */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <CalendarIcon size={20} color="#04552B" />
+          <CalendarIcon size={20} color={theme.palette.mode === 'dark' ? '#5FCF87' : '#203020'} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
             {monthNames[month]} {year}
           </Typography>

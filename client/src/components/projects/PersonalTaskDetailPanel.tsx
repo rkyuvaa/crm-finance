@@ -96,12 +96,12 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         
         {/* Header */}
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#f8fafc' }}>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton onClick={toggleComplete} color={isCompleted ? 'success' : 'default'}>
               <CheckCircle2 size={24} />
             </IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: isCompleted ? 'text.secondary' : '#0F172A', textDecoration: isCompleted ? 'line-through' : 'none' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: isCompleted ? 'text.secondary' : 'text.primary', textDecoration: isCompleted ? 'line-through' : 'none' }}>
               {task.task_number}
             </Typography>
           </Box>
@@ -259,13 +259,13 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
         </Box>
 
         {/* Footer */}
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1, bgcolor: '#f8fafc' }}>
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1, bgcolor: 'background.default' }}>
           <Button onClick={onClose} color="inherit">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleSave}
             disabled={isLoading}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Save Changes'}
           </Button>

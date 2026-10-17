@@ -68,16 +68,16 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         top: 0,
         zIndex: 30,
         height: isSmallMobile ? 52 : 58,
-        background: mode === 'dark' ? '#161B22' : 'rgba(255, 255, 255, 0.94)',
+        background: mode === 'dark' ? '#15191E' : 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(8px)',
-        borderBottom: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+        borderBottom: mode === 'dark' ? '1px solid #262E36' : '1px solid #E2E8E2',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: isSmallMobile ? 8 : 14,
         padding: isSmallMobile ? '0 10px' : '0 20px',
         flexShrink: 0,
-        transition: 'background 0.2s ease, border-color 0.2s ease',
+        transition: 'background-color 0.18s ease, border-color 0.18s ease',
       }}
     >
       {/* Mobile-only drawer opener */}
@@ -86,10 +86,12 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
           sx={{
-            border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+            border: mode === 'dark' ? '1px solid #262E36' : '1px solid #E2E8E2',
             borderRadius: 2,
             p: 1,
-            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+            color: mode === 'dark' ? '#F3F5F7' : '#16231B',
+            transition: 'all 0.15s ease',
+            '&:hover': { background: mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(32, 48, 32, 0.04)' },
           }}
         >
           <MenuIcon size={19} />
@@ -98,9 +100,9 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
 
       {!isSmallMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', minWidth: 0 }}>
-          {!isTablet && <span style={{ fontSize: 13, color: mode === 'dark' ? '#8B949E' : '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>}
-          {!isTablet && <ChevronRight size={14} color={mode === 'dark' ? '#6E7681' : '#9BA99F'} />}
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: mode === 'dark' ? '#F0F6FC' : '#16231B' }}>{crumb[1]}</span>
+          {!isTablet && <span style={{ fontSize: 13, color: mode === 'dark' ? '#94A3B8' : '#7A8B80', fontWeight: 500 }}>{crumb[0]}</span>}
+          {!isTablet && <ChevronRight size={14} color={mode === 'dark' ? '#64748B' : '#9BA99F'} />}
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: mode === 'dark' ? '#F3F5F7' : '#16231B' }}>{crumb[1]}</span>
         </div>
       )}
 
@@ -110,11 +112,12 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             onClick={toggleThemeMode}
             aria-label="Toggle theme mode"
             sx={{
-              border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+              border: mode === 'dark' ? '1px solid #262E36' : '1px solid #E2E8E2',
               borderRadius: 2,
               p: 1,
-              color: mode === 'dark' ? '#F0F6FC' : '#16231B',
-              '&:hover': { background: mode === 'dark' ? '#21262D' : undefined },
+              color: mode === 'dark' ? '#F3F5F7' : '#16231B',
+              transition: 'all 0.15s ease',
+              '&:hover': { background: mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(32, 48, 32, 0.04)' },
             }}
           >
             {mode === 'dark' ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#64748B" />}
@@ -126,12 +129,13 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             onClick={() => navigate('/notifications')}
             aria-label="Notifications"
             sx={{
-              border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
+              border: mode === 'dark' ? '1px solid #262E36' : '1px solid #E2E8E2',
               borderRadius: 2,
               position: 'relative',
               p: 1,
-              color: mode === 'dark' ? '#F0F6FC' : '#16231B',
-              '&:hover': { background: mode === 'dark' ? '#21262D' : undefined },
+              color: mode === 'dark' ? '#F3F5F7' : '#16231B',
+              transition: 'all 0.15s ease',
+              '&:hover': { background: mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(32, 48, 32, 0.04)' },
             }}
           >
             <Bell size={18} />
@@ -162,22 +166,23 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             gap: isSmallMobile ? 4 : 8,
             padding: isSmallMobile ? '3px 6px' : '4px 10px 4px 5px',
             borderRadius: 24,
-            border: mode === 'dark' ? '1px solid #30363D' : '1px solid #E4EBE1',
-            background: mode === 'dark' ? '#161B22' : '#fff',
-            color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+            border: mode === 'dark' ? '1px solid #262E36' : '1px solid #E2E8E2',
+            background: mode === 'dark' ? '#181D22' : '#FFFFFF',
+            color: mode === 'dark' ? '#F3F5F7' : '#16231B',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            transition: 'all 0.15s ease',
           }}
         >
-          <Avatar sx={{ width: 26, height: 26, bgcolor: '#087A3D', fontSize: 11, fontWeight: 700 }}>
+          <Avatar sx={{ width: 26, height: 26, bgcolor: '#203020', color: '#FFFFFF', fontSize: 11, fontWeight: 700 }}>
             {user ? user.initials || initialsOf(user.full_name) : '?'}
           </Avatar>
           {!isSmallMobile && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: mode === 'dark' ? '#F0F6FC' : '#16231B' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: mode === 'dark' ? '#F3F5F7' : '#16231B' }}>
               {user?.full_name}
             </span>
           )}
-          <ChevronDown size={14} color={mode === 'dark' ? '#8B949E' : '#7A8B80'} />
+          <ChevronDown size={14} color={mode === 'dark' ? '#94A3B8' : '#7A8B80'} />
         </button>
 
         <Menu
@@ -187,9 +192,9 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           slotProps={{
             paper: {
               sx: {
-                bgcolor: mode === 'dark' ? '#161B22' : '#FFFFFF',
-                borderColor: mode === 'dark' ? '#30363D' : '#E4EBE1',
-                color: mode === 'dark' ? '#F0F6FC' : '#16231B',
+                bgcolor: mode === 'dark' ? '#1A2027' : '#FFFFFF',
+                borderColor: mode === 'dark' ? '#262E36' : '#E2E8E2',
+                color: mode === 'dark' ? '#F3F5F7' : '#16231B',
                 border: '1px solid',
               },
             },
@@ -213,7 +218,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             <Bell size={15} style={{ marginRight: 9 }} />
             Notifications
           </MenuItem>
-          <Divider sx={{ borderColor: mode === 'dark' ? '#30363D' : undefined }} />
+          <Divider sx={{ borderColor: mode === 'dark' ? '#262E36' : undefined }} />
           <MenuItem onClick={handleLogout}>
             <LogOut size={15} style={{ marginRight: 9 }} />
             Logout

@@ -8,6 +8,7 @@ import {
   LinearProgress,
   Chip,
   Card,
+  useTheme,
 } from '@mui/material';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
@@ -18,6 +19,8 @@ interface TeamWorkloadViewProps {
 }
 
 export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const { data: users = [] } = useUsersQuery();
   const safeTasks = Array.isArray(tasks) ? tasks : [];
 
@@ -25,7 +28,7 @@ export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Users size={22} color="#04552B" />
+          <Users size={22} color={isDark ? '#5FCF87' : '#203020'} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
             Team Workload & Capacity Overview
           </Typography>
@@ -58,11 +61,11 @@ export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
                     border: '1px solid',
                     borderColor: isOverloaded ? '#FCA5A5' : 'divider',
                     borderRadius: '12px',
-                    bgcolor: isOverloaded ? '#FEF2F2' : 'background.paper',
+                    bgcolor: isOverloaded ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2') : 'background.paper',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: '#04552B', fontWeight: 700 }}>
+                    <Avatar sx={{ width: 40, height: 40, bgcolor: isDark ? '#2A402A' : '#203020', color: '#FFFFFF', fontWeight: 700 }}>
                       {(user.full_name || '?').charAt(0)}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>

@@ -141,7 +141,7 @@ export default function ProjectWorkflowSettingsCard() {
             size="small"
             startIcon={<Plus size={16} />}
             onClick={() => setStatusDialogOpen(true)}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             Add Status
           </Button>
@@ -187,7 +187,7 @@ export default function ProjectWorkflowSettingsCard() {
             size="small"
             startIcon={<Plus size={16} />}
             onClick={() => setFieldDialogOpen(true)}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             Add Custom Field
           </Button>
@@ -255,7 +255,7 @@ export default function ProjectWorkflowSettingsCard() {
             onClick={handleAddStatus}
             variant="contained"
             disabled={submittingStatus}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             {submittingStatus ? 'Saving...' : 'Save Status'}
           </Button>
@@ -327,7 +327,7 @@ export default function ProjectWorkflowSettingsCard() {
             onClick={handleAddCustomField}
             variant="contained"
             disabled={submittingField}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             {submittingField ? 'Saving...' : 'Save Custom Field'}
           </Button>

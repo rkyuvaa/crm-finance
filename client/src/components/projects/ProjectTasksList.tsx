@@ -33,6 +33,7 @@ import {
   InputLabel,
   ListItemText,
   OutlinedInput,
+  useTheme,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -81,6 +82,31 @@ interface ProjectTasksListProps {
 export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const toast = useToast();
   const numericProjectId = Number(projectId);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  const tTokens = {
+    cardBg: isDark ? '#181D22' : '#FFFFFF',
+    subtleBg: isDark ? '#13171B' : '#F5F7F5',
+    subtleHover: isDark ? '#1C232B' : '#EDF2ED',
+    hoverBg: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(32, 48, 32, 0.035)',
+    stickyMainBg: isDark ? '#181D22' : '#FFFFFF',
+    stickyNestedBg: isDark ? '#13171B' : '#F5F7F5',
+    stickyHoverMain: isDark ? '#1F262E' : '#F5F7F5',
+    stickyHoverNested: isDark ? '#192027' : '#EEF2EE',
+    headerBg: isDark ? '#13171B' : '#F5F7F5',
+    groupHeaderBg: isDark ? '#15191E' : '#EFF4EF',
+    groupHeaderHover: isDark ? '#1A2128' : '#E6EDE6',
+    taskListBg: isDark ? '#161B21' : '#F4F7F4',
+    taskListHover: isDark ? '#1C232B' : '#ECF1EC',
+    inputBgHover: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(32, 48, 32, 0.04)',
+    inputBgFocus: isDark ? '#13171B' : '#FFFFFF',
+    inputBorderFocus: isDark ? '#5FCF87' : '#203020',
+    primaryBtn: '#203020',
+    primaryBtnHover: '#2A402A',
+    borderColor: isDark ? '#262E36' : '#E2E8E2',
+  };
+
   const { data: users = [] } = useUsersQuery();
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('list');
@@ -522,15 +548,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 sx={{
                   p: 1.25,
                   border: '1px solid',
-                  borderColor: isSubCompleted ? 'divider' : '#CBD5E1',
-                  borderLeft: '3px solid #04552B',
+                  borderColor: isSubCompleted ? 'divider' : tTokens.borderColor,
+                  borderLeft: '3px solid',
+                  borderLeftColor: isDark ? '#5FCF87' : '#203020',
                   borderRadius: '8px',
-                  bgcolor: isSubCompleted ? 'action.hover' : '#F8FAFC',
+                  bgcolor: isSubCompleted ? 'action.hover' : tTokens.subtleBg,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    borderColor: '#04552B',
+                    boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+                    borderColor: isDark ? '#5FCF87' : '#203020',
                   },
                 }}
                 onClick={(e) => {
@@ -546,7 +573,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       checked={!!isSubCompleted}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleToggleSubtaskCompleted(sub, e)}
-                      sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
+                      sx={{ p: 0.2, color: 'text.secondary', '&.Mui-checked': { color: isDark ? '#5FCF87' : '#203020' } }}
                     />
                     <Chip
                       label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
@@ -624,7 +651,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     )}
 
                     {sub.assignees && sub.assignees.length > 0 && (
-                      <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 18, height: 18, fontSize: 9, bgcolor: '#04552B' } }}>
+                      <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 18, height: 18, fontSize: 9, bgcolor: tTokens.primaryBtn, color: '#FFFFFF' } }}>
                         {sub.assignees.map((a) => (
                           <Avatar key={a.id} title={a.full_name}>
                             {a.full_name ? a.full_name.charAt(0).toUpperCase() : 'U'}
@@ -646,7 +673,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       mt: 0.75,
                       pt: 0.5,
                       cursor: 'pointer',
-                      color: '#04552B',
+                      color: isDark ? '#5FCF87' : '#203020',
                       fontSize: '0.72rem',
                       fontWeight: 700,
                     }}
@@ -686,9 +713,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           hover
           sx={{
             cursor: 'pointer',
-            bgcolor: depth > 0 ? '#F8FAFC' : 'inherit',
-            borderLeft: depth > 0 ? `${Math.min(depth, 3) * 3}px solid #04552B` : 'none',
-            '&:hover .sticky-cell': { bgcolor: depth > 0 ? '#F1F5F9' : '#F8FAFC' },
+            bgcolor: depth > 0 ? tTokens.stickyNestedBg : 'inherit',
+            borderLeft: depth > 0 ? `${Math.min(depth, 3) * 3}px solid ${isDark ? '#5FCF87' : '#203020'}` : 'none',
+            '&:hover .sticky-cell': { bgcolor: depth > 0 ? tTokens.stickyHoverNested : tTokens.stickyHoverMain },
           }}
           onClick={() => openTask(task)}
         >
@@ -701,7 +728,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               position: 'sticky',
               left: 0,
               zIndex: 1,
-              bgcolor: depth > 0 ? '#F8FAFC' : 'background.paper',
+              bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
               transition: 'background-color 0.15s ease',
               p: 0,
@@ -714,8 +741,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   onClick={(e) => toggleSubtasksExpand(task.id, e)}
                   sx={{
                     p: 0.4,
-                    color: isExpanded ? '#04552B' : '#64748B',
-                    '&:hover': { color: '#04552B', bgcolor: 'rgba(4, 85, 43, 0.08)' },
+                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
+                    '&:hover': { color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.08)' },
                   }}
                   title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
                 >
@@ -736,9 +763,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               position: 'sticky',
               left: 40,
               zIndex: 1,
-              bgcolor: depth > 0 ? '#F8FAFC' : 'background.paper',
+              bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
-              borderRight: '2px solid',
+              borderRight: '1px solid',
               borderColor: 'divider',
               minWidth: 360,
               width: 360,
@@ -760,9 +787,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     userSelect: 'none',
                     fontWeight: 'bold',
                     fontSize: '0.8rem',
-                    color: isExpanded ? '#04552B' : '#64748B',
+                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
                     mr: 0.25,
-                    '&:hover': { color: '#04552B' },
+                    '&:hover': { color: isDark ? '#5FCF87' : '#203020' },
                   }}
                   title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
                 >
@@ -822,7 +849,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     px: 0.5,
                     py: 0.25,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -836,11 +865,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     height: 18,
                     fontSize: '0.62rem',
                     fontWeight: 700,
-                    bgcolor: isExpanded ? 'rgba(4, 85, 43, 0.1)' : '#F1F5F9',
-                    color: isExpanded ? '#04552B' : '#475569',
+                    bgcolor: isExpanded ? (isDark ? 'rgba(95, 207, 135, 0.15)' : 'rgba(32, 48, 32, 0.08)') : tTokens.subtleBg,
+                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
                     flexShrink: 0,
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'rgba(4, 85, 43, 0.18)' },
+                    '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.25)' : 'rgba(32, 48, 32, 0.14)' },
                   }}
                 />
               )}
@@ -857,7 +886,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <Tooltip key={dep.id} title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${dt}${dep.lag_days ? ` +${dep.lag_days}d` : ''}${dep.lag_hours ? ` +${dep.lag_hours}h` : ''})`}>
                       <Chip
-                        icon={<Link2 size={10} color="#065F46" />}
+                        icon={<Link2 size={10} color={isDark ? '#5FCF87' : '#203020'} />}
                         label={`${num.replace(/0+([1-9]\d*)$/, '$1')} (${dt})`}
                         size="small"
                         onClick={(e) => {
@@ -868,8 +897,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           height: 20,
                           fontSize: '0.65rem',
                           fontWeight: 700,
-                          bgcolor: '#D1FAE5',
-                          color: '#065F46',
+                          bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#E8F5E9',
+                          color: isDark ? '#A7F3D0' : '#203020',
+                          border: '1px solid',
+                          borderColor: isDark ? 'rgba(95, 207, 135, 0.3)' : '#C8E6C9',
                           fontFamily: 'monospace',
                           cursor: 'pointer',
                         }}
@@ -881,7 +912,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <Typography
                   variant="body2"
                   onClick={() => openTask(task)}
-                  sx={{ color: 'text.disabled', cursor: 'pointer', fontSize: '0.75rem', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                  sx={{ color: 'text.disabled', cursor: 'pointer', fontSize: '0.75rem', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
                 >
                   —
                 </Typography>
@@ -910,7 +941,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                         <Chip
                           key={u.id}
                           avatar={
-                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: '#04552B', color: '#fff' }}>
+                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: tTokens.primaryBtn, color: '#fff' }}>
                               {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
                             </Avatar>
                           }
@@ -926,7 +957,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 disableUnderline
                 sx={{
                   fontSize: '0.8rem',
-                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: '#F1F5F9' } },
+                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: tTokens.inputBgHover } },
                 }}
               >
                 {users.map((u) => (
@@ -960,7 +991,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -983,7 +1016,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1012,7 +1047,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1035,7 +1072,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1069,7 +1108,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     px: 0.5,
                     textAlign: 'right',
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1152,7 +1193,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1176,7 +1219,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1211,7 +1256,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     py: 0.25,
                     px: 0.5,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1246,7 +1293,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     py: 0.25,
                     px: 0.5,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -1259,9 +1308,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
         {/* Inline Add Subtask Row under task when expanded */}
         {hasChildren && isExpanded && (
-          <TableRow sx={{ bgcolor: '#F8FAFC' }} onClick={(e) => e.stopPropagation()}>
-            <TableCell sx={{ bgcolor: '#F8FAFC', p: 0 }} />
-            <TableCell sx={{ bgcolor: '#F8FAFC', pl: (depth + 1) * 2.5 + 2, borderRight: '2px solid', borderColor: 'divider' }}>
+          <TableRow sx={{ bgcolor: tTokens.subtleBg }} onClick={(e) => e.stopPropagation()}>
+            <TableCell sx={{ bgcolor: tTokens.subtleBg, p: 0 }} />
+            <TableCell sx={{ bgcolor: tTokens.subtleBg, pl: (depth + 1) * 2.5 + 2, borderRight: '1px solid', borderColor: 'divider' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
                 <TextField
                   size="small"
@@ -1286,7 +1335,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       px: 0.75,
                       borderRadius: '4px',
                       bgcolor: 'background.paper',
-                      border: '1px dashed #CBD5E1',
+                      border: '1px dashed',
+                      borderColor: tTokens.borderColor,
                     },
                   }}
                 />
@@ -1298,8 +1348,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     sx={{
                       height: 24,
                       fontSize: '0.68rem',
-                      bgcolor: '#04552B',
-                      '&:hover': { bgcolor: '#034120' },
+                      bgcolor: tTokens.primaryBtn,
+                      '&:hover': { bgcolor: tTokens.primaryBtnHover },
                       textTransform: 'none',
                       px: 1,
                     }}
@@ -1309,7 +1359,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 )}
               </Box>
             </TableCell>
-            <TableCell colSpan={9} sx={{ bgcolor: '#F8FAFC' }} />
+            <TableCell colSpan={9} sx={{ bgcolor: tTokens.subtleBg }} />
           </TableRow>
         )}
       </React.Fragment>
@@ -1434,7 +1484,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             size="small"
             startIcon={<Plus size={15} />}
             onClick={() => handleOpenCreateModal(1)}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+            sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
           >
             Add Task
           </Button>
@@ -1567,7 +1617,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               {/* Assignee Avatar */}
                               <Tooltip title={task.assignee_name || 'Unassigned'}>
-                                <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#04552B', color: '#FFFFFF', fontWeight: 700 }}>
+                                <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: tTokens.primaryBtn, color: '#FFFFFF', fontWeight: 700 }}>
                                   {task.assignee_name?.charAt(0) || '?'}
                                 </Avatar>
                               </Tooltip>
@@ -1610,22 +1660,22 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 borderColor: 'divider',
                                 cursor: 'pointer',
                                 borderRadius: '6px',
-                                bgcolor: isExpanded ? 'action.selected' : '#F8FAFC',
+                                bgcolor: isExpanded ? 'action.selected' : tTokens.subtleBg,
                                 '&:hover': { bgcolor: 'action.selected' },
                                 transition: 'all 0.15s ease',
                               }}
                             >
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 {isExpanded ? (
-                                  <ChevronDown size={15} color="#04552B" />
+                                  <ChevronDown size={15} color={isDark ? '#5FCF87' : '#203020'} />
                                 ) : (
-                                  <ChevronRight size={15} color="#04552B" />
+                                  <ChevronRight size={15} color={isDark ? '#5FCF87' : '#203020'} />
                                 )}
                                 <Typography
                                   variant="caption"
                                   sx={{
                                     fontWeight: 700,
-                                    color: '#04552B',
+                                    color: isDark ? '#5FCF87' : '#203020',
                                     fontSize: '0.75rem',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1686,8 +1736,8 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                       fontSize: '0.7rem',
                                       minWidth: 50,
                                       px: 1.5,
-                                      bgcolor: '#04552B',
-                                      '&:hover': { bgcolor: '#033B1E' },
+                                      bgcolor: tTokens.primaryBtn,
+                                      '&:hover': { bgcolor: tTokens.primaryBtnHover },
                                     }}
                                   >
                                     Add
@@ -1734,7 +1784,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
       {viewMode === 'list' && (
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflowX: 'auto' }}>
           <Table size="small" sx={{ minWidth: 1200 }}>
-            <TableHead sx={{ bgcolor: 'background.default' }}>
+            <TableHead sx={{ bgcolor: tTokens.headerBg }}>
               <TableRow>
                 <TableCell
                   width={40}
@@ -1742,7 +1792,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     position: 'sticky',
                     left: 0,
                     zIndex: 3,
-                    bgcolor: 'background.default',
+                    bgcolor: tTokens.headerBg,
                     whiteSpace: 'nowrap',
                   }}
                 ></TableCell>
@@ -1751,11 +1801,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     position: 'sticky',
                     left: 40,
                     zIndex: 3,
-                    bgcolor: 'background.default',
+                    bgcolor: tTokens.headerBg,
                     fontWeight: 600,
                     color: 'text.secondary',
                     whiteSpace: 'nowrap',
-                    borderRight: '2px solid',
+                    borderRight: '1px solid',
                     borderColor: 'divider',
                     minWidth: 360,
                     width: 360,
@@ -1786,7 +1836,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       size="small"
                       startIcon={<Plus size={15} />}
                       onClick={() => handleOpenCreateModal(1)}
-                      sx={{ textTransform: 'none', color: '#04552B', borderColor: '#04552B' }}
+                      sx={{ textTransform: 'none', color: isDark ? '#5FCF87' : '#203020', borderColor: isDark ? '#5FCF87' : '#203020' }}
                     >
                       Create First Task
                     </Button>
@@ -1801,13 +1851,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <React.Fragment key={`status-${status.id}`}>
                       {/* Group Header */}
-                      <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(status.id)}>
+                      <TableRow sx={{ bgcolor: tTokens.groupHeaderBg, '&:hover': { bgcolor: tTokens.groupHeaderHover }, cursor: 'pointer' }} onClick={() => toggleGroup(status.id)}>
                         <TableCell
                           sx={{
                             position: 'sticky',
                             left: 0,
                             zIndex: 2,
-                            bgcolor: 'background.default',
+                            bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -1821,7 +1871,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             position: 'sticky',
                             left: 40,
                             zIndex: 2,
-                            bgcolor: 'background.default',
+                            bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -1852,13 +1902,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <React.Fragment key={`milestone-${groupId}`}>
                       {/* Milestone Header Row */}
-                      <TableRow sx={{ bgcolor: 'background.default', cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
+                      <TableRow sx={{ bgcolor: tTokens.groupHeaderBg, '&:hover': { bgcolor: tTokens.groupHeaderHover }, cursor: 'pointer' }} onClick={() => toggleGroup(groupId)}>
                         <TableCell
                           sx={{
                             position: 'sticky',
                             left: 0,
                             zIndex: 2,
-                            bgcolor: 'background.default',
+                            bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -1872,7 +1922,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             position: 'sticky',
                             left: 40,
                             zIndex: 2,
-                            bgcolor: 'background.default',
+                            bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -1884,7 +1934,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                               <Chip
                                 label={`${mTasks.length} Tasks`}
                                 size="small"
-                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: '#E2E8F0' }}
+                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: tTokens.subtleBg, color: 'text.secondary' }}
                               />
                               {mTaskLists.length > 0 && (
                                 <Chip
@@ -1925,9 +1975,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                     textTransform: 'none',
                                     py: 0,
                                     px: 1,
-                                    color: '#04552B',
-                                    borderColor: '#A7F3D0',
-                                    '&:hover': { borderColor: '#10B981', bgcolor: '#ECFDF5' },
+                                    color: isDark ? '#5FCF87' : '#203020',
+                                    borderColor: isDark ? 'rgba(95, 207, 135, 0.4)' : '#A7F3D0',
+                                    '&:hover': { borderColor: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : '#ECFDF5' },
                                   }}
                                 >
                                   + Task
@@ -1950,10 +2000,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 {/* Task List Header Row */}
                                 <TableRow
                                   sx={{
-                                    bgcolor: '#F8FAFC',
-                                    '&:hover': { bgcolor: '#F1F5F9' },
-                                    borderTop: '1px solid #E2E8F0',
-                                    borderBottom: '1px solid #E2E8F0',
+                                    bgcolor: tTokens.taskListBg,
+                                    '&:hover': { bgcolor: tTokens.taskListHover },
+                                    borderTop: '1px solid',
+                                    borderBottom: '1px solid',
+                                    borderColor: tTokens.borderColor,
                                   }}
                                 >
                                   {/* Expand / Collapse Chevron */}
@@ -1962,7 +2013,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                       position: 'sticky',
                                       left: 0,
                                       zIndex: 2,
-                                      bgcolor: '#F8FAFC',
+                                      bgcolor: 'inherit',
                                       whiteSpace: 'nowrap',
                                       pl: 1,
                                     }}
@@ -1978,9 +2029,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                       position: 'sticky',
                                       left: 40,
                                       zIndex: 2,
-                                      bgcolor: '#F8FAFC',
+                                      bgcolor: 'inherit',
                                       whiteSpace: 'nowrap',
-                                      borderRight: '2px solid',
+                                      borderRight: '1px solid',
                                       borderColor: 'divider',
                                       pl: 2,
                                     }}
@@ -2014,25 +2065,27 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                             '& .MuiInputBase-input': {
                                               fontWeight: 700,
                                               fontSize: '0.84rem',
-                                              color: '#1E293B',
+                                              color: 'text.primary',
                                               py: 0.25,
                                               px: 0.5,
                                               borderRadius: '4px',
-                                              '&:hover, &:focus': { bgcolor: '#E2E8F0' },
+                                              transition: 'all 0.15s ease',
+                                              '&:hover': { bgcolor: tTokens.inputBgHover },
+                                              '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                                             },
                                           }}
                                         />
                                         <Chip
                                           label={`${tlTasks.length} tasks`}
                                           size="small"
-                                          sx={{ height: 18, fontSize: '0.62rem', fontWeight: 600, bgcolor: '#E2E8F0', color: '#475569', flexShrink: 0 }}
+                                          sx={{ height: 18, fontSize: '0.62rem', fontWeight: 600, bgcolor: tTokens.subtleBg, color: 'text.secondary', flexShrink: 0 }}
                                         />
                                       </Box>
 
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }} onClick={(e) => e.stopPropagation()}>
                                         <Tooltip title="Add Task to this Task List">
                                           <IconButton size="small" onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}>
-                                            <Plus size={14} color="#04552B" />
+                                            <Plus size={14} color={isDark ? '#5FCF87' : '#203020'} />
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Rename Task List">
@@ -2050,17 +2103,17 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   </TableCell>
 
                                   {/* Dependencies: No dependencies allowed for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
 
                                   {/* Assigned To: No assigned to allowed for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
 
                                   {/* Start Date: Automatically Calculated (MIN) - Read-only */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
                                     <Tooltip title="Calculated: Earliest Start Date & Time among direct child tasks">
                                       <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.start_date ? 'text.primary' : 'text.disabled' }}>
                                         {tl.start_date ? `${tl.start_date.split('T')[0]} ${tl.start_time || ''}`.trim() : '—'}
@@ -2069,7 +2122,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   </TableCell>
 
                                   {/* Due Date (End): Automatically Calculated (MAX) - Read-only */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
                                     <Tooltip title="Calculated: Latest End Date & Time among direct child tasks">
                                       <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: tl.end_date ? 'text.primary' : 'text.disabled' }}>
                                         {tl.end_date ? `${tl.end_date.split('T')[0]} ${tl.end_time || ''}`.trim() : '—'}
@@ -2078,7 +2131,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   </TableCell>
 
                                   {/* Duration: Automatically Calculated (End - Start) - Read-only */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap' }}>
                                     <Tooltip title="Calculated: Working duration between earliest start and latest end">
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <Typography variant="body2" sx={{ fontSize: '0.78rem', fontFamily: 'monospace', fontWeight: 600, color: 'text.primary' }}>
@@ -2096,22 +2149,22 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   </TableCell>
 
                                   {/* Status: No status for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
 
                                   {/* Completion Date: None for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
 
                                   {/* Estimated Cost: No separate cost for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
 
                                   {/* Actual Cost: No separate cost for Task List */}
-                                  <TableCell sx={{ bgcolor: '#F8FAFC', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                  <TableCell sx={{ bgcolor: 'inherit', whiteSpace: 'nowrap', color: 'text.disabled', fontSize: '0.8rem' }}>
                                     —
                                   </TableCell>
                                 </TableRow>
@@ -2119,15 +2172,15 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 {/* Child Tasks inside this Task List */}
                                 {isTlExpanded && (
                                   tlTasks.length === 0 ? (
-                                    <TableRow sx={{ bgcolor: '#FAF5FF' }}>
-                                      <TableCell sx={{ bgcolor: '#FAF5FF' }} />
-                                      <TableCell colSpan={10} sx={{ py: 1.25, pl: 4, bgcolor: '#FAF5FF', borderRight: '2px solid', borderColor: 'divider' }}>
+                                    <TableRow sx={{ bgcolor: tTokens.subtleBg }}>
+                                      <TableCell sx={{ bgcolor: tTokens.subtleBg }} />
+                                      <TableCell colSpan={10} sx={{ py: 1.25, pl: 4, bgcolor: tTokens.subtleBg, borderRight: '1px solid', borderColor: 'divider' }}>
                                         <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
                                           No tasks in this task list.{' '}
                                           <Button
                                             size="small"
                                             onClick={() => handleOpenCreateModal(1, milestone.id as number, tl.id)}
-                                            sx={{ textTransform: 'none', fontSize: '0.75rem', p: 0, minWidth: 'auto', color: '#04552B', fontWeight: 600 }}
+                                            sx={{ textTransform: 'none', fontSize: '0.75rem', p: 0, minWidth: 'auto', color: isDark ? '#5FCF87' : '#203020', fontWeight: 600 }}
                                           >
                                             + Add Task
                                           </Button>
@@ -2144,9 +2197,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
                           {/* 2. Tasks under milestone not in any Task List */}
                           {directUngroupedTasks.length > 0 && mTaskLists.length > 0 && (
-                            <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                              <TableCell sx={{ bgcolor: '#F8FAFC' }} />
-                              <TableCell colSpan={10} sx={{ py: 0.75, pl: 2, bgcolor: '#F8FAFC', borderRight: '2px solid', borderColor: 'divider' }}>
+                            <TableRow sx={{ bgcolor: tTokens.subtleBg }}>
+                              <TableCell sx={{ bgcolor: tTokens.subtleBg }} />
+                              <TableCell colSpan={10} sx={{ py: 0.75, pl: 2, bgcolor: tTokens.subtleBg, borderRight: '1px solid', borderColor: 'divider' }}>
                                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.7rem' }}>
                                   Other Tasks (Ungrouped)
                                 </Typography>
@@ -2350,7 +2403,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveTask} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}>
+          <Button variant="contained" onClick={handleSaveTask} sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover } }}>
             Create Task
           </Button>
         </DialogActions>
@@ -2385,7 +2438,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             variant="contained"
             onClick={handleCreateTaskListSubmit}
             disabled={!newTaskListName.trim()}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover } }}
           >
             Create Task List
           </Button>
@@ -2418,7 +2471,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             variant="contained"
             onClick={handleUpdateTaskListSubmit}
             disabled={!editingTaskListName.trim()}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: tTokens.primaryBtn, '&:hover': { bgcolor: tTokens.primaryBtnHover } }}
           >
             Save Changes
           </Button>

@@ -28,6 +28,7 @@ import {
   Chip,
   InputAdornment,
   Grid,
+  useTheme,
 } from '@mui/material';
 import {
   Plus,
@@ -84,6 +85,8 @@ function CustomTabPanel(props: TabPanelProps) {
 }
 
 export default function ProjectConfigurationPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const toast = useToast();
   const [activeTab, setActiveTab] = useState(0);
   const [searchParams] = useSearchParams();
@@ -506,7 +509,7 @@ export default function ProjectConfigurationPage() {
                 px: 2.5,
                 '&.Mui-selected': { color: 'primary.main', fontWeight: 700 },
               },
-              '& .MuiTabs-indicator': { backgroundColor: '#04552B', height: 3 },
+              '& .MuiTabs-indicator': { backgroundColor: isDark ? '#5FCF87' : '#203020', height: 3 },
             }}
           >
             <Tab icon={<Sliders size={15} />} iconPosition="start" label="1. Workflow Statuses" />
@@ -554,7 +557,7 @@ export default function ProjectConfigurationPage() {
                   size="small"
                   startIcon={<Plus size={15} />}
                   onClick={() => handleOpenStatusModal()}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
                 >
                   Add Status
                 </Button>
@@ -651,7 +654,7 @@ export default function ProjectConfigurationPage() {
                   size="small"
                   startIcon={<Plus size={15} />}
                   onClick={() => handleOpenFieldModal()}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, height: 32, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
                 >
                   Add Custom Field
                 </Button>
@@ -863,7 +866,7 @@ export default function ProjectConfigurationPage() {
                 <Button
                   variant="contained"
                   onClick={handleSaveTaskSettings}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
                 >
                   Save Task Settings
                 </Button>
@@ -1006,7 +1009,7 @@ export default function ProjectConfigurationPage() {
                           } catch {}
                           toast.showSuccess(`Added category "${newCategoryInput.trim()}"`);
                         }}
-                        sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, height: 36 }}
+                        sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 13, height: 36 }}
                       >
                         Add Category
                       </Button>
@@ -1027,7 +1030,7 @@ export default function ProjectConfigurationPage() {
                           }}
                           variant="outlined"
                           size="small"
-                          sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: '#04552B', color: '#04552B' }}
+                          sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: isDark ? '#5FCF87' : '#203020', color: isDark ? '#5FCF87' : '#203020' }}
                         />
                       ))}
                     </Box>
@@ -1053,7 +1056,7 @@ export default function ProjectConfigurationPage() {
                 <Button
                   variant="contained"
                   onClick={handleSaveProjectSettings}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
                 >
                   Save Project Settings
                 </Button>
@@ -1116,7 +1119,7 @@ export default function ProjectConfigurationPage() {
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Zap size={20} color="#04552B" />
+                      <Zap size={20} color={isDark ? '#5FCF87' : '#203020'} />
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                           {rule.trigger}
@@ -1201,7 +1204,7 @@ export default function ProjectConfigurationPage() {
                       toast.showError(err?.data?.detail || 'Failed to update daily working hours');
                     }
                   }}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontWeight: 600, fontSize: 13 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontWeight: 600, fontSize: 13 }}
                 >
                   {isSavingHours ? 'Saving...' : 'Save Hours'}
                 </Button>
@@ -1255,7 +1258,7 @@ export default function ProjectConfigurationPage() {
                   if(!holidayDate || !holidayDesc) return;
                   await addHoliday({ holiday_date: holidayDate, description: holidayDesc, recurs_yearly: holidayRecurs });
                   setHolidayDate(''); setHolidayDesc(''); setHolidayRecurs(false);
-                }} sx={{ bgcolor: '#04552B', textTransform: 'none' }}>Add</Button>
+                }} sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none' }}>Add</Button>
               </Box>
 
               <Table size="small">
@@ -1303,7 +1306,7 @@ export default function ProjectConfigurationPage() {
                 variant="contained"
                 onClick={handleSavePmSettings}
                 disabled={savingPmSettings}
-                sx={{ textTransform: 'none', fontWeight: 600, fontSize: 13, bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+                sx={{ textTransform: 'none', fontWeight: 600, fontSize: 13, bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
               >
                 {savingPmSettings ? 'Saving...' : 'Save PM Settings'}
               </Button>
@@ -1466,7 +1469,7 @@ export default function ProjectConfigurationPage() {
             onClick={handleSaveStatus}
             variant="contained"
             disabled={submittingStatus}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
           >
             {submittingStatus ? 'Saving...' : 'Save Status'}
           </Button>
@@ -1596,7 +1599,7 @@ export default function ProjectConfigurationPage() {
                 color="success"
               />
             }
-            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: '#334155' }}>Required Field?</Typography>}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary' }}>Required Field?</Typography>}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -1607,7 +1610,7 @@ export default function ProjectConfigurationPage() {
             onClick={handleSaveCustomField}
             variant="contained"
             disabled={submittingField}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 13, fontWeight: 600 }}
           >
             {submittingField ? 'Saving...' : 'Save Field'}
           </Button>

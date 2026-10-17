@@ -16,6 +16,7 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  useTheme,
 } from '@mui/material';
 import {
   Plus,
@@ -54,6 +55,8 @@ interface TasksPageProps {
 }
 
 export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }: TasksPageProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [activeView, setActiveView] = useState<ActiveView>(defaultView);
   const [taskScope, setTaskScope] = useState<TaskScope>(defaultScope);
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -200,8 +203,8 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
             startIcon={<Plus size={18} />}
             onClick={() => setCreateOpen(true)}
             sx={{
-              bgcolor: '#04552B',
-              '&:hover': { bgcolor: '#034120' },
+              bgcolor: '#203020',
+              '&:hover': { bgcolor: '#2A402A' },
               borderRadius: '8px',
               textTransform: 'none',
               fontWeight: 700,
@@ -219,7 +222,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
         <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           {/* Scope Toggle: My Tasks vs Projects Tasks */}
           <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, mr: 0.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5, mr: 0.5 }}>
               Scope:
             </Typography>
             <Button
@@ -227,14 +230,17 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
               onClick={() => setTaskScope('my')}
               startIcon={<UserCheck size={16} />}
               sx={{
-                bgcolor: taskScope === 'my' ? '#04552B' : 'transparent',
-                borderColor: '#04552B',
-                color: taskScope === 'my' ? '#fff' : '#04552B',
+                bgcolor: taskScope === 'my' ? '#203020' : 'transparent',
+                borderColor: taskScope === 'my' ? '#203020' : (isDark ? 'rgba(255,255,255,0.15)' : 'divider'),
+                color: taskScope === 'my' ? '#fff' : (isDark ? '#5FCF87' : '#203020'),
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: 2,
                 height: 36,
-                '&:hover': { bgcolor: taskScope === 'my' ? '#034120' : 'rgba(4,85,43,0.08)' },
+                '&:hover': {
+                  bgcolor: taskScope === 'my' ? '#2A402A' : (isDark ? 'rgba(95,207,135,0.08)' : 'rgba(32,48,32,0.08)'),
+                  borderColor: isDark ? '#5FCF87' : '#203020',
+                },
               }}
             >
               My Tasks
@@ -244,14 +250,17 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
               onClick={() => setTaskScope('all')}
               startIcon={<Briefcase size={16} />}
               sx={{
-                bgcolor: taskScope === 'all' ? '#04552B' : 'transparent',
-                borderColor: '#04552B',
-                color: taskScope === 'all' ? '#fff' : '#04552B',
+                bgcolor: taskScope === 'all' ? '#203020' : 'transparent',
+                borderColor: taskScope === 'all' ? '#203020' : (isDark ? 'rgba(255,255,255,0.15)' : 'divider'),
+                color: taskScope === 'all' ? '#fff' : (isDark ? '#5FCF87' : '#203020'),
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: 2,
                 height: 36,
-                '&:hover': { bgcolor: taskScope === 'all' ? '#034120' : 'rgba(4,85,43,0.08)' },
+                '&:hover': {
+                  bgcolor: taskScope === 'all' ? '#2A402A' : (isDark ? 'rgba(95,207,135,0.08)' : 'rgba(32,48,32,0.08)'),
+                  borderColor: isDark ? '#5FCF87' : '#203020',
+                },
               }}
             >
               Projects Tasks
@@ -268,9 +277,10 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
                 fontWeight: 700,
                 fontSize: 14,
                 minHeight: 40,
+                color: 'text.secondary',
               },
-              '& .Mui-selected': { color: '#04552B' },
-              '& .MuiTabs-indicator': { bgcolor: '#04552B', height: 3 },
+              '& .Mui-selected': { color: isDark ? '#5FCF87' : '#203020' },
+              '& .MuiTabs-indicator': { bgcolor: isDark ? '#5FCF87' : '#203020', height: 3 },
             }}
           >
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
@@ -323,7 +333,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
       {/* Main Content View Container */}
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress size={40} sx={{ color: '#04552B' }} />
+          <CircularProgress size={40} sx={{ color: isDark ? '#5FCF87' : '#203020' }} />
         </Box>
       ) : isError ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -475,7 +485,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
             variant="contained"
             onClick={handleCreateTask}
             disabled={isCreating}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             {isCreating ? 'Creating...' : 'Save Task'}
           </Button>

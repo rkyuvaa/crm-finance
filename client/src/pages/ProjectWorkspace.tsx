@@ -16,6 +16,7 @@ import {
   Paper,
   Divider,
   Tooltip,
+  useTheme,
 } from '@mui/material';
 import {
   ArrowLeft,
@@ -42,6 +43,8 @@ import ProjectTimesheetsView from '@/components/projects/ProjectTimesheetsView';
 import ProjectTeamView from '@/components/projects/ProjectTeamView';
 
 export default function ProjectWorkspace() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const { id } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
@@ -54,7 +57,7 @@ export default function ProjectWorkspace() {
   // Whiteboard Canvas State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [penColor, setPenColor] = useState('#04552B');
+  const [penColor, setPenColor] = useState('#203020');
   const [penLineWidth, setPenLineWidth] = useState(3);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
@@ -164,8 +167,9 @@ export default function ProjectWorkspace() {
               <Chip
                 label={`Progress: ${progressPercent}%`}
                 sx={{
-                  bgcolor: '#04552B',
-                  color: '#FFFFFF',
+                  bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#203020',
+                  color: isDark ? '#5FCF87' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(95, 207, 135, 0.3)' : 'none',
                   fontWeight: 700,
                   fontSize: 12,
                   height: 32,
@@ -177,8 +181,9 @@ export default function ProjectWorkspace() {
               <Chip
                 label={`Tasks Completion: ${doneTasks}/${totalTasks}`}
                 sx={{
-                  bgcolor: '#04552B',
-                  color: '#FFFFFF',
+                  bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#203020',
+                  color: isDark ? '#5FCF87' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(95, 207, 135, 0.3)' : 'none',
                   fontWeight: 700,
                   fontSize: 12,
                   height: 32,
@@ -190,8 +195,9 @@ export default function ProjectWorkspace() {
               <Chip
                 label={`Budget Usage: ₹${(project.actual_cost || 0).toLocaleString()} / ₹${(project.budget || 0).toLocaleString()}`}
                 sx={{
-                  bgcolor: '#04552B',
-                  color: '#FFFFFF',
+                  bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#203020',
+                  color: isDark ? '#5FCF87' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(95, 207, 135, 0.3)' : 'none',
                   fontWeight: 700,
                   fontSize: 12,
                   height: 32,
@@ -226,8 +232,11 @@ export default function ProjectWorkspace() {
               minHeight: 40,
               py: 1,
             },
+            '& .Mui-selected': {
+              color: isDark ? '#5FCF87' : '#203020',
+            },
             '& .MuiTabs-indicator': {
-              backgroundColor: '#04552B',
+              backgroundColor: isDark ? '#5FCF87' : '#203020',
               height: 3,
             },
           }}
@@ -273,7 +282,7 @@ export default function ProjectWorkspace() {
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                       <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>PROJECT OWNER</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <User size={14} color="#04552B" /> {project.owner_name || 'Admin'}
+                        <User size={14} color={isDark ? '#5FCF87' : '#203020'} /> {project.owner_name || 'Admin'}
                       </Typography>
                     </Box>
                   </Grid>
@@ -300,8 +309,8 @@ export default function ProjectWorkspace() {
                     <Grid item xs={12} sm={6}>
                       <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
                         <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>ACTUAL COMPLETION DATE & TIME</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#04552B', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CheckCircle2 size={14} color="#04552B" /> {project.completion_date}{project.completion_time ? ' ' + project.completion_time : ''}
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#5FCF87' : '#203020', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CheckCircle2 size={14} color={isDark ? '#5FCF87' : '#203020'} /> {project.completion_date}{project.completion_time ? ' ' + project.completion_time : ''}
                         </Typography>
                       </Box>
                     </Grid>
@@ -317,12 +326,12 @@ export default function ProjectWorkspace() {
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Overall Project Progress</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>{progressPercent}%</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? '#5FCF87' : '#203020' }}>{progressPercent}%</Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
                     value={progressPercent}
-                    sx={{ height: 8, borderRadius: 4, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+                    sx={{ height: 8, borderRadius: 4, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: isDark ? '#5FCF87' : '#203020' } }}
                   />
                 </Box>
               </Paper>
@@ -373,14 +382,14 @@ export default function ProjectWorkspace() {
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="textSecondary">Actual Cost Logged:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#16A34A' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? '#5FCF87' : '#16A34A' }}>
                       ₹{(project.actual_cost || 0).toLocaleString()}
                     </Typography>
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Remaining Budget:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#04552B' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: isDark ? '#5FCF87' : '#203020' }}>
                       ₹{Math.max(0, (project.budget || 0) - (project.actual_cost || 0)).toLocaleString()}
                     </Typography>
                   </Box>
@@ -402,13 +411,13 @@ export default function ProjectWorkspace() {
           <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PenTool size={20} color="#04552B" /> Project Interactive Whiteboard
+                <PenTool size={20} color={isDark ? '#5FCF87' : '#203020'} /> Project Interactive Whiteboard
               </Typography>
 
               {/* Whiteboard Controls */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center' }}>
-                  {['#04552B', '#2563EB', '#D97706', '#DC2626', '#0F172A'].map((c) => (
+                  {['#203020', '#2563EB', '#D97706', '#DC2626', '#0F172A'].map((c) => (
                     <Box
                       key={c}
                       onClick={() => setPenColor(c)}
@@ -418,7 +427,7 @@ export default function ProjectWorkspace() {
                         borderRadius: '50%',
                         bgcolor: c,
                         cursor: 'pointer',
-                        border: penColor === c ? '2px solid #000' : 'none',
+                        border: penColor === c ? (isDark ? '2px solid #5FCF87' : '2px solid #000') : 'none',
                       }}
                     />
                   ))}
@@ -439,14 +448,14 @@ export default function ProjectWorkspace() {
                   variant="contained"
                   startIcon={<Download size={14} />}
                   onClick={handleDownloadCanvas}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 12, fontWeight: 600 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 12, fontWeight: 600 }}
                 >
                   Export Design
                 </Button>
               </Box>
             </Box>
 
-            <Box sx={{ border: '2px dashed', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden', bgcolor: '#FFFFFF' }}>
+            <Box sx={{ border: '2px dashed', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden', bgcolor: isDark ? '#181D22' : '#FFFFFF' }}>
               <canvas
                 ref={canvasRef}
                 width={1000}
@@ -463,7 +472,7 @@ export default function ProjectWorkspace() {
 
         {tab === 'expenses' && (
           <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 4, textAlign: 'center' }}>
-            <DollarSign size={32} color="#04552B" style={{ marginBottom: 8 }} />
+            <DollarSign size={32} color={isDark ? '#5FCF87' : '#203020'} style={{ marginBottom: 8 }} />
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Project Expenses</Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
               Track purchase orders, vendor invoices, and material costs logged against {project.name}.
@@ -473,7 +482,7 @@ export default function ProjectWorkspace() {
 
         {tab === 'documents' && (
           <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 4, textAlign: 'center' }}>
-            <FileText size={32} color="#04552B" style={{ marginBottom: 8 }} />
+            <FileText size={32} color={isDark ? '#5FCF87' : '#203020'} style={{ marginBottom: 8 }} />
             <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>Project Documents</Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
               Centralized file attachment repository for engineering blueprints, customer approvals, and invoices.

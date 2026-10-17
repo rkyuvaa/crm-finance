@@ -26,6 +26,7 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
+  useTheme,
 } from '@mui/material';
 import {
   Briefcase,
@@ -62,6 +63,8 @@ export default function ProjectsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const { showToast } = useToast();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const { data: projects = [], isLoading, isError, refetch } = useGetProjectsQuery({ q: searchQ || undefined });
   const { data: leadsData } = useApplicationsQuery({ page: 1, page_size: 100 });
@@ -194,8 +197,8 @@ export default function ProjectsPage() {
             startIcon={<Plus size={18} />}
             onClick={() => setCreateOpen(true)}
             sx={{
-              backgroundColor: '#04552B',
-              '&:hover': { backgroundColor: '#034120' },
+              backgroundColor: '#203020',
+              '&:hover': { backgroundColor: '#2A402A' },
               borderRadius: '8px',
               textTransform: 'none',
               fontWeight: 600,
@@ -211,7 +214,7 @@ export default function ProjectsPage() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: '#16A34A' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: isDark ? '#5FCF87' : '#203020' }}>
                 <Briefcase size={20} />
               </Box>
               <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
@@ -300,7 +303,7 @@ export default function ProjectsPage() {
         <Box sx={{ p: 3 }}>
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-              <CircularProgress size={32} sx={{ color: '#04552B' }} />
+              <CircularProgress size={32} sx={{ color: isDark ? '#5FCF87' : '#203020' }} />
             </Box>
           ) : isError ? (
             <Box sx={{ textAlignment: 'center', py: 6 }}>
@@ -549,7 +552,7 @@ export default function ProjectsPage() {
             variant="contained"
             onClick={handleCreate}
             disabled={isCreating}
-            sx={{ backgroundColor: '#04552B', '&:hover': { backgroundColor: '#034120' } }}
+            sx={{ backgroundColor: '#203020', '&:hover': { backgroundColor: '#2A402A' } }}
           >
             {isCreating ? 'Creating...' : 'Create Project'}
           </Button>

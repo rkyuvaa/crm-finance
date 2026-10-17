@@ -15,6 +15,7 @@ import {
   Checkbox,
   TextField,
   Button,
+  useTheme,
 } from '@mui/material';
 import {
   Clock,
@@ -49,6 +50,11 @@ export default function TaskBoardView({
   onDeleteTask,
   onQuickCreateTask,
 }: TaskBoardViewProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const brandAccent = isDark ? '#5FCF87' : '#203020';
+  const brandSurface = isDark ? '#2A402A' : '#203020';
+  const subtaskCardBg = isDark ? '#141D14' : '#F8FAFC';
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
   const [updateTask] = useUpdateTaskMutation();
   const [addSubtask] = useAddSubtaskMutation();
@@ -137,15 +143,15 @@ export default function TaskBoardView({
                 sx={{
                   p: 1.25,
                   border: '1px solid',
-                  borderColor: isSubCompleted ? 'divider' : '#CBD5E1',
-                  borderLeft: '3px solid #04552B',
+                  borderColor: isSubCompleted ? 'divider' : (isDark ? '#262E36' : '#CBD5E1'),
+                  borderLeft: `3px solid ${brandAccent}`,
                   borderRadius: '8px',
-                  bgcolor: isSubCompleted ? 'action.hover' : '#F8FAFC',
+                  bgcolor: isSubCompleted ? 'action.hover' : subtaskCardBg,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   '&:hover': {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    borderColor: '#04552B',
+                    borderColor: brandAccent,
                   },
                 }}
                 onClick={(e) => {
@@ -161,7 +167,7 @@ export default function TaskBoardView({
                       checked={!!isSubCompleted}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleToggleTaskCompleted(sub, e)}
-                      sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
+                      sx={{ p: 0.2, color: '#64748B', '&.Mui-checked': { color: brandAccent } }}
                     />
                     <Chip
                       label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
@@ -258,7 +264,7 @@ export default function TaskBoardView({
                     )}
 
                     {sub.assignees && sub.assignees.length > 0 && (
-                      <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 18, height: 18, fontSize: 9, bgcolor: '#04552B' } }}>
+                      <AvatarGroup max={2} sx={{ '& .MuiAvatar-root': { width: 18, height: 18, fontSize: 9, bgcolor: brandSurface, color: '#FFFFFF' } }}>
                         {sub.assignees.map((a) => (
                           <Avatar key={a.id} title={a.full_name}>
                             {a.full_name ? a.full_name.charAt(0).toUpperCase() : 'U'}
@@ -280,7 +286,7 @@ export default function TaskBoardView({
                       mt: 0.75,
                       pt: 0.5,
                       cursor: 'pointer',
-                      color: '#04552B',
+                      color: brandAccent,
                       fontSize: '0.72rem',
                       fontWeight: 700,
                     }}
@@ -428,7 +434,7 @@ export default function TaskBoardView({
                                           setExpandedTaskIds((prev) => ({ ...prev, [task.id]: true }));
                                           setAddingSubtaskId(task.id);
                                         }}
-                                        sx={{ color: '#04552B', p: 0.2 }}
+                                        sx={{ color: brandAccent, p: 0.2 }}
                                       >
                                         <Plus size={14} />
                                       </IconButton>
@@ -511,7 +517,7 @@ export default function TaskBoardView({
                                   )}
 
                                   {task.assignees && task.assignees.length > 0 ? (
-                                    <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 22, height: 22, fontSize: 10, bgcolor: '#04552B', color: '#FFFFFF' } }}>
+                                    <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 22, height: 22, fontSize: 10, bgcolor: brandSurface, color: '#FFFFFF' } }}>
                                       {task.assignees.map((a) => (
                                         <Avatar key={a.id} title={a.user?.full_name || `User #${a.user_id}`}>
                                           {(a.user?.full_name || '?').charAt(0).toUpperCase()}
@@ -541,22 +547,22 @@ export default function TaskBoardView({
                                       borderColor: 'divider',
                                       cursor: 'pointer',
                                       borderRadius: '6px',
-                                      bgcolor: isExpanded ? 'action.selected' : '#F8FAFC',
+                                      bgcolor: isExpanded ? 'action.selected' : subtaskCardBg,
                                       '&:hover': { bgcolor: 'action.selected' },
                                       transition: 'all 0.15s ease',
                                     }}
                                   >
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                       {isExpanded ? (
-                                        <ChevronDown size={15} color="#04552B" />
+                                        <ChevronDown size={15} color={brandAccent} />
                                       ) : (
-                                        <ChevronRight size={15} color="#04552B" />
+                                        <ChevronRight size={15} color={brandAccent} />
                                       )}
                                       <Typography
                                         variant="caption"
                                         sx={{
                                           fontWeight: 700,
-                                          color: '#04552B',
+                                          color: brandAccent,
                                           fontSize: '0.75rem',
                                           display: 'flex',
                                           alignItems: 'center',
@@ -617,8 +623,8 @@ export default function TaskBoardView({
                                             fontSize: '0.7rem',
                                             minWidth: 50,
                                             px: 1.5,
-                                            bgcolor: '#04552B',
-                                            '&:hover': { bgcolor: '#033B1E' },
+                                            bgcolor: brandAccent,
+                                            '&:hover': { bgcolor: '#2A402A' },
                                           }}
                                         >
                                           Add

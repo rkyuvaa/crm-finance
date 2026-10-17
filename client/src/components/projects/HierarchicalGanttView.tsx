@@ -18,6 +18,7 @@ import {
   Popover,
   Divider,
   Alert,
+  useTheme,
 } from '@mui/material';
 import {
   ChevronRight,
@@ -114,6 +115,8 @@ export default function HierarchicalGanttView({
   projectId,
 }: HierarchicalGanttViewProps) {
   const { showToast } = useToast();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [updateTask] = useUpdateTaskMutation();
   const [addSubtask] = useAddSubtaskMutation();
   const [rescheduleDependenciesApi] = useRescheduleDependenciesMutation();
@@ -759,7 +762,7 @@ export default function HierarchicalGanttView({
     if (node.hasChildren) return '#334155';
     if (node.priority === 'URGENT') return '#DC2626';
     if (node.priority === 'HIGH') return '#D97706';
-    return '#04552B';
+    return isDark ? '#5FCF87' : '#203020';
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -836,7 +839,16 @@ export default function HierarchicalGanttView({
                 key={mode}
                 size="small"
                 onClick={() => setScale(mode)}
-                sx={{ height: 30, fontSize: 11, px: 1.5, borderRadius: 0, bgcolor: scale === mode ? '#04552B' : 'transparent', color: scale === mode ? '#FFFFFF' : 'text.primary', fontWeight: scale === mode ? 700 : 500, '&:hover': { bgcolor: scale === mode ? '#034120' : 'action.hover' } }}
+                sx={{
+                  height: 30,
+                  fontSize: 11,
+                  px: 1.5,
+                  borderRadius: 0,
+                  bgcolor: scale === mode ? (isDark ? '#5FCF87' : '#203020') : 'transparent',
+                  color: scale === mode ? (isDark ? '#0F1215' : '#FFFFFF') : 'text.primary',
+                  fontWeight: scale === mode ? 700 : 500,
+                  '&:hover': { bgcolor: scale === mode ? (isDark ? '#4AB870' : '#2A402A') : 'action.hover' },
+                }}
               >
                 {mode}
               </Button>
@@ -925,14 +937,14 @@ export default function HierarchicalGanttView({
                     {node.is_blocked && <Tooltip title="Blocked by dependencies"><Lock size={12} color="#DC2626" /></Tooltip>}
 
                     <Tooltip title="Add subtask">
-                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); setInlineSubtaskParentId(isInlineAdding ? null : node.id); }} sx={{ p: 0.5, opacity: 0.6, '&:hover': { opacity: 1, color: '#04552B' } }}>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); setInlineSubtaskParentId(isInlineAdding ? null : node.id); }} sx={{ p: 0.5, opacity: 0.6, '&:hover': { opacity: 1, color: isDark ? '#5FCF87' : '#203020' } }}>
                         <Plus size={14} />
                       </IconButton>
                     </Tooltip>
                   </Box>
 
                   {isInlineAdding && (
-                    <Box sx={{ p: 1, pl: `${(node.depth + 1) * 20 + 20}px`, display: 'flex', gap: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#F0FDF4' }}>
+                    <Box sx={{ p: 1, pl: `${(node.depth + 1) * 20 + 20}px`, display: 'flex', gap: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: isDark ? 'rgba(95, 207, 135, 0.08)' : '#F0FDF4' }}>
                       <TextField
                         size="small" fullWidth placeholder="Subtask name..."
                         value={inlineSubtaskTitle}
@@ -941,7 +953,7 @@ export default function HierarchicalGanttView({
                         sx={{ '& .MuiOutlinedInput-root': { height: 32, fontSize: 12, bgcolor: 'background.paper' } }}
                         autoFocus
                       />
-                      <Button size="small" variant="contained" onClick={() => handleCreateSubtaskInline(node.id)} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, height: 32, textTransform: 'none', px: 1.5, fontSize: 11 }}>Save</Button>
+                      <Button size="small" variant="contained" onClick={() => handleCreateSubtaskInline(node.id)} sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, height: 32, textTransform: 'none', px: 1.5, fontSize: 11 }}>Save</Button>
                     </Box>
                   )}
                 </Box>
@@ -953,7 +965,7 @@ export default function HierarchicalGanttView({
         {/* RESIZER DIVIDER */}
         <Box
           onMouseDown={handleMouseDownResizer}
-          sx={{ width: 4, cursor: 'col-resize', bgcolor: isResizingLeft ? '#04552B' : 'divider', transition: 'background-color 0.15s ease', zIndex: 15, '&:hover': { bgcolor: '#04552B' } }}
+          sx={{ width: 4, cursor: 'col-resize', bgcolor: isResizingLeft ? (isDark ? '#5FCF87' : '#203020') : 'divider', transition: 'background-color 0.15s ease', zIndex: 15, '&:hover': { bgcolor: isDark ? '#5FCF87' : '#203020' } }}
         />
 
         {/* RIGHT PANE: Timeline */}
@@ -1315,7 +1327,7 @@ export default function HierarchicalGanttView({
                   onClick={depPopover.existingDep ? handleUpdateDep : handleCreateDep}
                   disabled={depPopoverLoading}
                   startIcon={depPopoverLoading ? <CircularProgress size={12} color="inherit" /> : <Check size={13} />}
-                  sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontSize: 12 }}
+                  sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontSize: 12 }}
                 >
                   {depPopover.existingDep ? 'Update' : 'Link Tasks'}
                 </Button>

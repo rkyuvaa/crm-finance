@@ -143,8 +143,8 @@ export default function MyTasksPage() {
           startIcon={<Plus size={18} />}
           onClick={() => setCreateOpen(true)}
           sx={{
-            bgcolor: '#04552B',
-            '&:hover': { bgcolor: '#034120' },
+            bgcolor: '#203020',
+            '&:hover': { bgcolor: '#2A402A' },
             borderRadius: '8px',
             textTransform: 'none',
             fontWeight: 700,
@@ -164,8 +164,8 @@ export default function MyTasksPage() {
             onChange={(_, val) => setActiveView(val)}
             sx={{
               '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, fontSize: 14, minHeight: 40 },
-              '& .Mui-selected': { color: '#04552B' },
-              '& .MuiTabs-indicator': { bgcolor: '#04552B', height: 3 },
+              '& .Mui-selected': { color: 'primary.main' },
+              '& .MuiTabs-indicator': { bgcolor: 'primary.main', height: 3 },
             }}
           >
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
@@ -304,7 +304,7 @@ export default function MyTasksPage() {
             variant="contained"
             disabled={isCreating}
             onClick={handleCreatePersonalTask}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}
           >
             {isCreating ? <CircularProgress size={20} color="inherit" /> : 'Create Personal Task'}
           </Button>

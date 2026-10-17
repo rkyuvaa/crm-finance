@@ -145,29 +145,32 @@ export function getTaskIdBadgeStyle(
   }
 
   if (depth === 0) {
-    // Main task -> Solid Blue
+    // Main task -> Refined Blue tint
     return {
-      bgcolor: '#2563EB',
-      color: '#FFFFFF',
-      fontWeight: 700,
+      bgcolor: 'rgba(37, 99, 235, 0.12)',
+      color: '#2563EB',
+      border: '1px solid rgba(37, 99, 235, 0.25)',
+      fontWeight: 600,
       fontFamily: 'monospace',
       flexShrink: 0,
     };
   } else if (depth === 1) {
-    // Sub task -> Solid Green
+    // Sub task -> Refined Emerald tint
     return {
-      bgcolor: '#16A34A',
-      color: '#FFFFFF',
-      fontWeight: 700,
+      bgcolor: 'rgba(22, 163, 74, 0.12)',
+      color: '#16A34A',
+      border: '1px solid rgba(22, 163, 74, 0.25)',
+      fontWeight: 600,
       fontFamily: 'monospace',
       flexShrink: 0,
     };
   } else {
-    // Nested task (depth >= 2) -> Solid Yellow
+    // Nested task (depth >= 2) -> Refined Amber tint
     return {
-      bgcolor: '#EAB308',
-      color: '#0F172A',
-      fontWeight: 700,
+      bgcolor: 'rgba(217, 119, 6, 0.12)',
+      color: '#D97706',
+      border: '1px solid rgba(217, 119, 6, 0.25)',
+      fontWeight: 600,
       fontFamily: 'monospace',
       flexShrink: 0,
     };

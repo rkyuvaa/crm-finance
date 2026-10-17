@@ -36,8 +36,9 @@ export default function AppLayout() {
             sx={{
               '& .MuiDrawer-paper': {
                 width: 244,
-                borderRight: '1px solid #E4EBE1',
-                boxShadow: '0 8px 24px rgba(2, 48, 32, 0.10)',
+                background: 'var(--sidebar-bg, #141d14)',
+                borderRight: '1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08))',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
               },
             }}
           >

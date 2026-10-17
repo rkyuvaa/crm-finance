@@ -62,7 +62,7 @@ export default function PersonalTaskBoardView({
           sx={{
             width: 300,
             minWidth: 300,
-            bgcolor: '#f8fafc',
+            bgcolor: 'background.default',
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: '10px',
@@ -71,7 +71,7 @@ export default function PersonalTaskBoardView({
           }}
         >
           <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#334155' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
               {columnTitles[colId]} ({tasksByColumn[colId].length})
             </Typography>
             {colId === 'NOT_STARTED' && (
@@ -90,16 +90,17 @@ export default function PersonalTaskBoardView({
                   borderRadius: '8px',
                   border: '1px solid',
                   borderColor: 'divider',
-                  bgcolor: '#fff',
+                  bgcolor: 'background.paper',
                   cursor: 'pointer',
-                  '&:hover': { borderColor: '#cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
+                  transition: 'all 0.15s ease',
+                  '&:hover': { borderColor: 'primary.main', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
                 }}
                 onClick={() => onOpenTaskDetail(task)}
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography
                     variant="body2"
-                    sx={{ fontWeight: 600, color: '#0F172A', textDecoration: task.is_completed ? 'line-through' : 'none' }}
+                    sx={{ fontWeight: 600, color: 'text.primary', textDecoration: task.is_completed ? 'line-through' : 'none' }}
                   >
                     {task.title}
                   </Typography>

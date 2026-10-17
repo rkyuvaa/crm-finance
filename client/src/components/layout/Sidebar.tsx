@@ -320,8 +320,8 @@ export default function Sidebar({
       aria-label="Primary navigation"
       style={{
         width: collapsed ? 76 : 244,
-        background: '#1a3a2a',
-        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'var(--sidebar-bg, #141d14)',
+        borderRight: '1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08))',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -331,7 +331,7 @@ export default function Sidebar({
         height: '100vh',
         zIndex: isMobile ? undefined : 40,
         overflow: 'hidden',
-        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.18s ease',
       }}
     >
       {/* Dynamic CSS styles for animations, hover states, active accent bar */}
@@ -354,11 +354,14 @@ export default function Sidebar({
           font-family: inherit;
           text-decoration: none;
           white-space: nowrap;
-          transition: background 0.15s ease, color 0.15s ease;
+          transition: background 0.16s ease, color 0.16s ease, transform 0.1s ease;
         }
         .sb-parent-btn:hover {
           background: rgba(255, 255, 255, 0.07);
           color: #ffffff;
+        }
+        .sb-parent-btn:active {
+          transform: scale(0.99);
         }
         .sb-parent-btn.open-state {
           background: rgba(255, 255, 255, 0.10);
@@ -384,39 +387,43 @@ export default function Sidebar({
           font-family: inherit;
           text-decoration: none;
           white-space: nowrap;
-          transition: background 0.15s ease, color 0.15s ease, border-left-color 0.15s ease;
+          transition: background 0.16s ease, color 0.16s ease, border-left-color 0.16s ease, transform 0.1s ease;
         }
         .sb-sub-item:hover {
           background: rgba(255, 255, 255, 0.07);
           color: #ffffff;
         }
+        .sb-sub-item:active {
+          transform: scale(0.99);
+        }
         .sb-sub-item.active {
           color: #5fcf87 !important;
-          background: rgba(95, 207, 135, 0.08) !important;
+          background: rgba(95, 207, 135, 0.12) !important;
           border-left: 3px solid #5fcf87 !important;
           font-weight: 600 !important;
         }
         .sb-submenu {
           overflow: hidden;
-          transition: max-height 250ms ease, opacity 250ms ease;
+          transition: max-height 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease;
         }
         .sb-chevron {
-          transition: transform 200ms ease;
+          transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sb-search-input {
           width: 100%;
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 8px;
           padding: 7px 28px 7px 30px;
           color: #ffffff;
           font-size: 12.5px;
           outline: none;
-          transition: all 0.15s ease;
+          transition: all 0.16s ease;
         }
         .sb-search-input:focus {
-          background: rgba(255, 255, 255, 0.10);
+          background: rgba(255, 255, 255, 0.09);
           border-color: #5fcf87;
+          box-shadow: 0 0 0 2px rgba(95, 207, 135, 0.2);
         }
         .sb-search-input::placeholder {
           color: rgba(255, 255, 255, 0.40);

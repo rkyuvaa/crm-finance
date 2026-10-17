@@ -25,6 +25,7 @@ import {
   Menu,
   InputAdornment,
   Autocomplete,
+  useTheme,
 } from '@mui/material';
 import {
   X,
@@ -161,6 +162,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const [editFieldValue, setEditFieldValue] = useState('');
 
   const { showToast } = useToast();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const [toggleSubtask] = useToggleSubtaskMutation();
   const [addSubtask, { isLoading: isAddingSubtask }] = useAddSubtaskMutation();
@@ -812,7 +815,18 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               size="small"
               startIcon={<ArrowRight style={{ transform: 'rotate(180deg)' }} size={13} />}
               onClick={() => setActiveTaskId(currentTask.parent_task_id!)}
-              sx={{ textTransform: 'none', fontSize: 12, py: 0.25, px: 1, color: '#04552B', fontWeight: 700, bgcolor: '#F0FDF4' }}
+              sx={{
+                textTransform: 'none',
+                fontSize: 12,
+                py: 0.25,
+                px: 1,
+                color: isDark ? '#5FCF87' : '#203020',
+                fontWeight: 700,
+                bgcolor: isDark ? 'rgba(95, 207, 135, 0.12)' : 'rgba(32, 48, 32, 0.08)',
+                '&:hover': {
+                  bgcolor: isDark ? 'rgba(95, 207, 135, 0.2)' : 'rgba(32, 48, 32, 0.14)',
+                },
+              }}
             >
               Parent Task
             </Button>
@@ -826,8 +840,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             label={currentTask?.priority || 'NORMAL'}
             size="small"
             sx={{
-              bgcolor: currentTask?.priority === 'URGENT' ? '#FEE2E2' : currentTask?.priority === 'HIGH' ? '#FEF3C7' : '#04552B',
-              color: currentTask?.priority === 'URGENT' ? '#DC2626' : currentTask?.priority === 'HIGH' ? '#D97706' : '#FFFFFF',
+              bgcolor: currentTask?.priority === 'URGENT' ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : currentTask?.priority === 'HIGH' ? (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : (isDark ? 'rgba(95, 207, 135, 0.15)' : '#203020'),
+              color: currentTask?.priority === 'URGENT' ? '#EF4444' : currentTask?.priority === 'HIGH' ? '#F59E0B' : (isDark ? '#5FCF87' : '#FFFFFF'),
               fontWeight: 700,
             }}
           />
@@ -847,11 +861,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               px: 1.5,
               py: 0.5,
               borderRadius: '20px',
-              bgcolor: isTimerRunning ? '#F0FDF4' : 'background.paper',
-              borderColor: isTimerRunning ? '#16A34A' : 'divider',
+              bgcolor: isTimerRunning ? (isDark ? 'rgba(95, 207, 135, 0.12)' : '#F0FDF4') : 'background.paper',
+              borderColor: isTimerRunning ? (isDark ? '#5FCF87' : '#203020') : 'divider',
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: isTimerRunning ? '#16A34A' : 'text.primary' }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: isTimerRunning ? (isDark ? '#5FCF87' : '#203020') : 'text.primary' }}>
               {formatTimer(timerSeconds)}
             </Typography>
             <Button
@@ -898,18 +912,18 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 p: 2,
                 mb: 3,
                 borderRadius: '8px',
-                bgcolor: '#FEF2F2',
-                borderColor: '#EF4444',
+                bgcolor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+                borderColor: isDark ? 'rgba(239, 68, 68, 0.4)' : '#EF4444',
                 boxShadow: '0 1px 3px rgba(239,68,68,0.1)',
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <AlertTriangle size={20} color="#DC2626" style={{ marginTop: 2, flexShrink: 0 }} />
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#991B1B' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: isDark ? '#FCA5A5' : '#991B1B' }}>
                     {currentTask.dependency_conflict.conflict_message}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#B91C1C', display: 'block', mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: isDark ? '#F87171' : '#B91C1C', display: 'block', mt: 0.5 }}>
                     Recommended Start Date: <strong>{currentTask.dependency_conflict.recommended_start_date}</strong>
                   </Typography>
                   <Button
@@ -955,7 +969,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ListTree size={18} color="#04552B" />
+                <ListTree size={18} color={isDark ? '#5FCF87' : '#203020'} />
                 <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700 }}>
                   Subtasks & Work Breakdown
                 </Typography>
@@ -968,7 +982,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             <LinearProgress
               variant="determinate"
               value={currentTask.progress_percentage || 0}
-              sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: '#04552B' } }}
+              sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: isDark ? '#5FCF87' : '#203020' } }}
             />
 
             {((currentTask as any).nested_subtasks || currentTask.subtasks || []).length > 0 && (
@@ -986,7 +1000,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       borderRadius: '8px',
                       bgcolor: sub.is_completed ? 'action.hover' : 'background.default',
                       transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: 'action.hover', borderColor: '#04552B' },
+                      '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#5FCF87' : '#203020' },
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, overflow: 'hidden' }}>
@@ -997,7 +1011,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                           e.stopPropagation();
                           handleToggleSubtask(sub.id);
                         }}
-                        style={{ cursor: 'pointer', width: 17, height: 17, accentColor: '#04552B' }}
+                        style={{ cursor: 'pointer', width: 17, height: 17, accentColor: isDark ? '#5FCF87' : '#203020' }}
                       />
                       <Chip
                         label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
@@ -1016,7 +1030,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                           fontWeight: sub.is_completed ? 400 : 600,
                           textDecoration: sub.is_completed ? 'line-through' : 'none',
                           color: sub.is_completed ? 'text.secondary' : 'text.primary',
-                          '&:hover': { color: '#04552B', textDecoration: 'underline' },
+                          transition: 'color 0.15s ease',
+                          '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' },
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1035,14 +1050,14 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                             height: 18,
                             fontSize: '0.6rem',
                             fontWeight: 700,
-                            bgcolor: sub.priority === 'URGENT' ? '#FEE2E2' : sub.priority === 'HIGH' ? '#FEF3C7' : '#F1F5F9',
-                            color: sub.priority === 'URGENT' ? '#DC2626' : sub.priority === 'HIGH' ? '#D97706' : '#475569',
+                            bgcolor: sub.priority === 'URGENT' ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : sub.priority === 'HIGH' ? (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : 'action.hover',
+                            color: sub.priority === 'URGENT' ? '#EF4444' : sub.priority === 'HIGH' ? '#F59E0B' : 'text.secondary',
                           }}
                         />
                       )}
                       <Tooltip title="Open subtask">
                         <IconButton size="small" onClick={() => setActiveTaskId(sub.id)}>
-                          <ArrowRight size={15} color="#04552B" />
+                          <ArrowRight size={15} color={isDark ? '#5FCF87' : '#203020'} />
                         </IconButton>
                       </Tooltip>
                       <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(sub.id); }}>
@@ -1070,7 +1085,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 size="small"
                 onClick={handleAddSubtask}
                 disabled={isAddingSubtask}
-                sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', px: 2 }}
+                sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', px: 2, color: '#fff' }}
               >
                 Add Subtask
               </Button>
@@ -1203,7 +1218,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
-                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
                         >
                           {dep.depends_on_task_title}
                         </Typography>
@@ -1217,10 +1232,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                               fontSize: '0.65rem',
                               cursor: 'pointer',
                               fontWeight: 600,
-                              bgcolor: '#FEF3C7',
-                              color: '#92400E',
-                              border: '1px solid #FDE68A',
-                              '&:hover': { bgcolor: '#FDE68A' },
+                              bgcolor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7',
+                              color: isDark ? '#FBBF24' : '#92400E',
+                              border: '1px solid',
+                              borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#FDE68A',
+                              '&:hover': { bgcolor: isDark ? 'rgba(245, 158, 11, 0.25)' : '#FDE68A' },
                             }}
                           />
                         </Tooltip>
@@ -1268,8 +1284,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         borderRadius: '8px',
-                        bgcolor: dep.depends_on_is_completed ? '#F0FDF4' : '#FEF2F2',
-                        borderColor: dep.depends_on_is_completed ? '#BBF7D0' : '#FECACA',
+                        bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.1)' : '#F0FDF4') : (isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2'),
+                        borderColor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.25)' : '#BBF7D0') : (isDark ? 'rgba(239, 68, 68, 0.25)' : '#FECACA'),
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -1280,15 +1296,15 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                             height: 18,
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            bgcolor: dep.depends_on_is_completed ? '#DCFCE7' : '#FEE2E2',
-                            color: dep.depends_on_is_completed ? '#166534' : '#DC2626',
+                            bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.2)' : '#DCFCE7') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2'),
+                            color: dep.depends_on_is_completed ? (isDark ? '#5FCF87' : '#166534') : '#DC2626',
                           }}
                         />
                         <Chip label={dep.depends_on_task_number ? dep.depends_on_task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
-                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
                         >
                           {dep.depends_on_task_title}
                         </Typography>
@@ -1302,10 +1318,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                               fontSize: '0.65rem',
                               cursor: 'pointer',
                               fontWeight: 600,
-                              bgcolor: '#E0F2FE',
-                              color: '#0369A1',
-                              border: '1px solid #BAE6FD',
-                              '&:hover': { bgcolor: '#BAE6FD' },
+                              bgcolor: isDark ? 'rgba(56, 189, 248, 0.15)' : '#E0F2FE',
+                              color: isDark ? '#38BDF8' : '#0369A1',
+                              border: '1px solid',
+                              borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : '#BAE6FD',
+                              '&:hover': { bgcolor: isDark ? 'rgba(56, 189, 248, 0.25)' : '#BAE6FD' },
                             }}
                           />
                         </Tooltip>
@@ -1355,7 +1372,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 {attachments.map((file) => (
                   <Paper key={file.id} variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <FileText size={18} color="#04552B" />
+                      <FileText size={18} color={isDark ? '#5FCF87' : '#203020'} />
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{file.filename}</Typography>
                     </Box>
                     <IconButton size="small" onClick={() => handleRemoveAttachment(file.id)}>
@@ -1376,7 +1393,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-              <Avatar sx={{ width: 32, height: 32, bgcolor: '#04552B', fontSize: 13, fontWeight: 700 }}>A</Avatar>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: isDark ? '#2A402A' : '#203020', fontSize: 13, fontWeight: 700 }}>A</Avatar>
               <TextField
                 fullWidth
                 size="small"
@@ -1387,7 +1404,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 multiline
                 rows={2}
               />
-              <IconButton onClick={handlePostComment} disabled={isAddingComment || !commentText.trim()} sx={{ bgcolor: '#04552B', color: '#FFF' }}>
+              <IconButton onClick={handlePostComment} disabled={isAddingComment || !commentText.trim()} sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, color: '#FFF' }}>
                 <Send size={16} />
               </IconButton>
             </Box>
@@ -1808,7 +1825,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   Variance (₹)
                 </Typography>
                 <Box sx={{ height: 36, display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: ((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)) < 0 ? '#DC2626' : '#16A34A' }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: ((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)) < 0 ? '#DC2626' : (isDark ? '#5FCF87' : '#16A34A') }}>
                     ₹{((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)).toLocaleString('en-IN')}
                   </Typography>
                 </Box>
@@ -2107,7 +2124,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   justifyContent: 'space-between',
                   cursor: 'pointer',
                   borderRadius: '8px',
-                  '&:hover': { bgcolor: 'action.hover', borderColor: '#04552B' },
+                  '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#5FCF87' : '#203020' },
                 }}
               >
                 <Box>
@@ -2296,7 +2313,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             onClick={handleUpdateDependency}
             disabled={isUpdatingDep}
             startIcon={isUpdatingDep ? <CircularProgress size={14} color="inherit" /> : <Check size={14} />}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', px: 2.5 }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', px: 2.5, color: '#fff' }}
           >
             {isUpdatingDep ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -2315,9 +2332,9 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
           <DialogContentText sx={{ mb: 2, color: 'text.primary' }}>
             This task is currently blocked by incomplete tasks:
           </DialogContentText>
-          <Box sx={{ bgcolor: '#FEF2F2', p: 1.5, borderRadius: '8px', border: '1px solid #FECACA', mb: 2 }}>
+          <Box sx={{ bgcolor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2', p: 1.5, borderRadius: '8px', border: '1px solid', borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#FECACA', mb: 2 }}>
             {blockedWarning.blockingTasks.map((tn) => (
-              <Typography key={tn} variant="body2" sx={{ fontWeight: 700, color: '#991B1B', fontFamily: 'monospace' }}>
+              <Typography key={tn} variant="body2" sx={{ fontWeight: 700, color: isDark ? '#FCA5A5' : '#991B1B', fontFamily: 'monospace' }}>
                 • {tn}
               </Typography>
             ))}

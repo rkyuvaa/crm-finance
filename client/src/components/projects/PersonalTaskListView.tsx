@@ -62,7 +62,7 @@ export default function PersonalTaskListView({
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px' }}>
       <Table size="small">
-        <TableHead sx={{ bgcolor: '#f8fafc' }}>
+        <TableHead sx={{ bgcolor: 'background.default' }}>
           <TableRow>
             <TableCell padding="checkbox">
               <Checkbox
@@ -75,11 +75,11 @@ export default function PersonalTaskListView({
                 }}
               />
             </TableCell>
-            <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: 13 }}>Task</TableCell>
-            <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: 13 }}>Status</TableCell>
-            <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: 13 }}>Priority</TableCell>
-            <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: 13 }}>Due Date</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600, color: '#475569', fontSize: 13 }}>Actions</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>Task</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>Priority</TableCell>
+            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>Due Date</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: 13 }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -97,7 +97,7 @@ export default function PersonalTaskListView({
                   sx={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                   onClick={() => onOpenTaskDetail(task)}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#0F172A', textDecoration: task.is_completed ? 'line-through' : 'none' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', textDecoration: task.is_completed ? 'line-through' : 'none' }}>
                     {task.title}
                   </Typography>
                   {task.description && (

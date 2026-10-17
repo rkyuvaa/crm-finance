@@ -98,7 +98,7 @@ export default function MyTasksView({ tasks = [], onOpenTaskDetail }: MyTasksVie
                     Due: {task.due_date || 'No date'}
                   </Typography>
 
-                  <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#04552B' }}>
+                  <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#203020', color: '#FFFFFF' }}>
                     {task.assignees?.[0]?.full_name?.charAt(0) || 'U'}
                   </Avatar>
                 </Box>

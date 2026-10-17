@@ -32,7 +32,7 @@ export default function ProjectTimesheetsView({ projectId }: ProjectTimesheetsVi
             <Typography variant="body2" color="textSecondary">Live labor allocation and tracked time for this project</Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#04552B' }}>{totalHours} hrs</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main' }}>{totalHours} hrs</Typography>
             <Typography variant="caption" color="textSecondary">Total Hours Logged</Typography>
           </Box>
         </Box>
@@ -62,7 +62,7 @@ export default function ProjectTimesheetsView({ projectId }: ProjectTimesheetsVi
               <TableRow key={t.id} hover>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar sx={{ width: 26, height: 26, fontSize: '0.75rem', bgcolor: '#04552B' }}>
+                    <Avatar sx={{ width: 26, height: 26, fontSize: '0.75rem', bgcolor: 'primary.main', color: '#FFFFFF' }}>
                       {t.assignee_name?.charAt(0) || '?'}
                     </Avatar>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>

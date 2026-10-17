@@ -19,6 +19,7 @@ import {
   InputLabel,
   Collapse,
   LinearProgress,
+  useTheme,
 } from '@mui/material';
 import { Plus, Flag, Trash2, Edit2, ChevronDown, ChevronRight, CheckCircle2, Circle, Link2 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
@@ -40,6 +41,8 @@ interface ProjectMilestonesListProps {
 
 export default function ProjectMilestonesList({ projectId }: ProjectMilestonesListProps) {
   const { showToast } = useToast();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const numericProjectId = Number(projectId);
 
   const { data: milestones = [], isLoading } = useGetProjectMilestonesQuery(numericProjectId, {
@@ -188,7 +191,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
             size="small"
             startIcon={<Plus size={16} />}
             onClick={() => setCreateOpen(true)}
-            sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' }, textTransform: 'none', fontWeight: 600 }}
+            sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' }, textTransform: 'none', fontWeight: 600 }}
           >
             Add Milestone
           </Button>
@@ -224,7 +227,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
             size="small"
             startIcon={<Plus size={16} />}
             onClick={() => setCreateOpen(true)}
-            sx={{ color: '#04552B', borderColor: '#04552B', textTransform: 'none', fontWeight: 600 }}
+            sx={{ color: isDark ? '#5FCF87' : '#203020', borderColor: isDark ? '#5FCF87' : '#203020', textTransform: 'none', fontWeight: 600 }}
           >
             Create First Milestone
           </Button>
@@ -256,7 +259,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    bgcolor: '#F8FAFC',
+                    bgcolor: isDark ? '#14181D' : '#F5F7F5',
                     borderBottom: isExpanded ? '1px solid' : 'none',
                     borderColor: 'divider',
                     flexWrap: 'wrap',
@@ -267,7 +270,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     <IconButton size="small" onClick={() => toggleExpand(m.id)}>
                       {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </IconButton>
-                    <Flag size={20} color="#04552B" fill="#04552B" />
+                    <Flag size={20} color={isDark ? '#5FCF87' : '#203020'} fill={isDark ? '#5FCF87' : '#203020'} />
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -276,7 +279,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                         <Chip
                           label={`${completedTaskCount}/${milestoneTasks.length} Tasks`}
                           size="small"
-                          sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, bgcolor: '#E2E8F0', color: '#334155' }}
+                          sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, bgcolor: isDark ? '#1F262E' : '#E2E8F0', color: 'text.secondary' }}
                         />
                       </Box>
                       {m.description && (
@@ -294,7 +297,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem' }}>
                           Progress
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#04552B', fontSize: '0.75rem' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: isDark ? '#5FCF87' : '#203020', fontSize: '0.75rem' }}>
                           {progressPct}%
                         </Typography>
                       </Box>
@@ -304,16 +307,16 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                         sx={{
                           height: 8,
                           borderRadius: 4,
-                          bgcolor: '#E2E8F0',
+                          bgcolor: isDark ? '#262E36' : '#E2E8F0',
                           '& .MuiLinearProgress-bar': {
-                            bgcolor: '#04552B',
+                            bgcolor: isDark ? '#5FCF87' : '#203020',
                             borderRadius: 4,
                           },
                         }}
                       />
                     </Box>
 
-                    <IconButton size="small" onClick={() => handleOpenEdit(m)} sx={{ color: '#475569' }}>
+                    <IconButton size="small" onClick={() => handleOpenEdit(m)} sx={{ color: 'text.secondary' }}>
                       <Edit2 size={16} />
                     </IconButton>
                     <IconButton size="small" onClick={() => handleDeleteMilestone(m.id)} sx={{ color: '#EF4444' }}>
@@ -344,9 +347,9 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                               px: 2,
                               display: 'flex',
                               alignItems: 'center',
-                              justify: 'space-between',
+                              justifyContent: 'space-between',
                               borderRadius: '6px',
-                              bgcolor: t.is_completed ? '#F8FAFC' : 'background.paper',
+                              bgcolor: t.is_completed ? (isDark ? '#13171B' : '#F5F7F5') : 'background.paper',
                             }}
                           >
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -460,7 +463,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
           <Button onClick={() => setCreateOpen(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} variant="contained" disabled={isSubmitting} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}>
+          <Button onClick={handleCreate} variant="contained" disabled={isSubmitting} sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}>
             {isSubmitting ? 'Creating...' : 'Create'}
           </Button>
         </DialogActions>
@@ -493,7 +496,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
           <Button onClick={() => setEditOpen(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSaveEdit} variant="contained" disabled={isSubmitting} sx={{ bgcolor: '#04552B', '&:hover': { bgcolor: '#034120' } }}>
+          <Button onClick={handleSaveEdit} variant="contained" disabled={isSubmitting} sx={{ bgcolor: '#203020', '&:hover': { bgcolor: '#2A402A' } }}>
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>

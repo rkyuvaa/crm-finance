@@ -21,6 +21,7 @@ import {
   TextField,
   FormControl,
   ListItemText,
+  useTheme,
 } from '@mui/material';
 import {
   ChevronRight,
@@ -71,6 +72,26 @@ export default function TaskListView({
   const { data: users = [] } = useUsersQuery();
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();
   const { showToast } = useToast();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  const tTokens = {
+    cardBg: isDark ? '#181D22' : '#FFFFFF',
+    subtleBg: isDark ? '#13171B' : '#F5F7F5',
+    subtleHover: isDark ? '#1C232B' : '#EDF2ED',
+    hoverBg: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(32, 48, 32, 0.035)',
+    stickyMainBg: isDark ? '#181D22' : '#FFFFFF',
+    stickyNestedBg: isDark ? '#13171B' : '#F5F7F5',
+    stickyHoverMain: isDark ? '#1F262E' : '#F5F7F5',
+    stickyHoverNested: isDark ? '#192027' : '#EEF2EE',
+    inputBgHover: isDark ? 'rgba(255, 255, 255, 0.05)' : '#EDF2ED',
+    inputBgFocus: isDark ? '#1D232A' : '#FFFFFF',
+    inputBorderFocus: isDark ? '#5FCF87' : '#203020',
+    primaryColor: isDark ? '#5FCF87' : '#203020',
+    primaryBtn: '#203020',
+    primaryBtnHover: '#2A402A',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(32, 48, 32, 0.1)',
+  };
 
   const defaultStatuses = [
     { id: 1, name: 'To Do', color: '#64748B' },
@@ -193,9 +214,10 @@ export default function TaskListView({
           onClick={() => onOpenTaskDetail(task)}
           sx={{
             cursor: 'pointer',
-            bgcolor: isSelected ? 'action.selected' : depth > 0 ? 'action.hover' : 'inherit',
-            '&:hover': { bgcolor: 'action.hover' },
-            '&:hover .sticky-cell': { bgcolor: '#F8FAFC' },
+            bgcolor: isSelected ? 'action.selected' : depth > 0 ? tTokens.subtleBg : 'inherit',
+            transition: 'background-color 0.15s ease',
+            '&:hover': { bgcolor: depth > 0 ? tTokens.subtleHover : tTokens.hoverBg },
+            '&:hover .sticky-cell': { bgcolor: depth > 0 ? tTokens.stickyHoverNested : tTokens.stickyHoverMain },
           }}
         >
           {/* Checkbox (Sticky) */}
@@ -207,7 +229,7 @@ export default function TaskListView({
               position: 'sticky',
               left: 0,
               zIndex: 1,
-              bgcolor: 'background.paper',
+              bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
               transition: 'background-color 0.15s ease',
             }}
@@ -216,7 +238,7 @@ export default function TaskListView({
               size="small"
               checked={isSelected}
               onChange={() => onToggleSelectTask(task.id)}
-              sx={{ color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
+              sx={{ color: 'text.secondary', '&.Mui-checked': { color: tTokens.primaryColor } }}
             />
           </TableCell>
 
@@ -227,9 +249,9 @@ export default function TaskListView({
               position: 'sticky',
               left: 48,
               zIndex: 1,
-              bgcolor: 'background.paper',
+              bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
-              borderRight: '2px solid',
+              borderRight: '1px solid',
               borderColor: 'divider',
               minWidth: 360,
               width: 360,
@@ -246,11 +268,12 @@ export default function TaskListView({
                     userSelect: 'none',
                     fontWeight: 'bold',
                     fontSize: '0.8rem',
-                    color: isExpanded ? '#04552B' : '#64748B',
+                    color: isExpanded ? tTokens.primaryColor : 'text.secondary',
                     mr: 0.25,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    '&:hover': { color: '#04552B' },
+                    transition: 'color 0.15s ease',
+                    '&:hover': { color: tTokens.primaryColor },
                   }}
                   title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
                 >
@@ -294,7 +317,9 @@ export default function TaskListView({
                     px: 0.5,
                     py: 0.25,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -311,7 +336,7 @@ export default function TaskListView({
                 <Chip
                   label={`${task.completed_subtask_count || 0}/${task.subtask_count} subtasks`}
                   size="small"
-                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: '#F1F5F9', color: '#475569', flexShrink: 0 }}
+                  sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: tTokens.subtleBg, color: 'text.secondary', flexShrink: 0 }}
                 />
               )}
             </Box>
@@ -366,7 +391,7 @@ export default function TaskListView({
               <Typography
                 variant="caption"
                 onClick={() => onOpenTaskDetail(task)}
-                sx={{ color: 'text.disabled', fontSize: 11, cursor: 'pointer', '&:hover': { color: '#04552B', textDecoration: 'underline' } }}
+                sx={{ color: 'text.disabled', fontSize: 11, cursor: 'pointer', '&:hover': { color: tTokens.primaryColor, textDecoration: 'underline' } }}
               >
                 —
               </Typography>
@@ -394,7 +419,7 @@ export default function TaskListView({
                         <Chip
                           key={u.id}
                           avatar={
-                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: '#04552B', color: '#fff' }}>
+                            <Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem', bgcolor: isDark ? '#2A402A' : '#203020', color: '#fff' }}>
                               {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
                             </Avatar>
                           }
@@ -410,7 +435,7 @@ export default function TaskListView({
                 disableUnderline
                 sx={{
                   fontSize: '0.8rem',
-                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: '#F1F5F9' } },
+                  '& .MuiSelect-select': { py: 0.25, px: 0.5, borderRadius: '4px', '&:hover': { bgcolor: tTokens.inputBgHover } },
                 }}
               >
                 {users.map((u) => (
@@ -445,7 +470,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -468,7 +495,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -497,7 +526,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -520,7 +551,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -554,7 +587,9 @@ export default function TaskListView({
                     px: 0.5,
                     textAlign: 'right',
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -636,7 +671,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -660,7 +697,9 @@ export default function TaskListView({
                     borderRadius: '4px',
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9', color: 'text.primary' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
                   },
                 }}
               />
@@ -695,7 +734,9 @@ export default function TaskListView({
                     py: 0.25,
                     px: 0.5,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -730,7 +771,9 @@ export default function TaskListView({
                     py: 0.25,
                     px: 0.5,
                     borderRadius: '4px',
-                    '&:hover, &:focus': { bgcolor: '#F1F5F9' },
+                    transition: 'all 0.15s ease',
+                    '&:hover': { bgcolor: tTokens.inputBgHover },
+                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
                 }}
               />
@@ -776,7 +819,7 @@ export default function TaskListView({
                 size="small"
                 checked={isAllSelected}
                 onChange={() => onSelectAllTasks(isAllSelected ? [] : allTaskIds)}
-                sx={{ color: '#64748B', '&.Mui-checked': { color: '#04552B' } }}
+                sx={{ color: 'text.secondary', '&.Mui-checked': { color: tTokens.primaryColor } }}
               />
             </TableCell>
             <ErpSortHeaderCell
@@ -791,7 +834,7 @@ export default function TaskListView({
                 zIndex: 3,
                 bgcolor: 'background.default',
                 whiteSpace: 'nowrap',
-                borderRight: '2px solid',
+                borderRight: '1px solid',
                 borderColor: 'divider',
                 minWidth: 360,
                 width: 360,
