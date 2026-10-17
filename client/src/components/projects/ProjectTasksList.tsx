@@ -86,6 +86,7 @@ import { useToast } from '@/components/ui/ToastHost';
 import { time24To12, time12To24, formatDateTime12h, formatStandardDateTime, formatDependencyLabel, getTaskIdBadgeStyle } from '@/utils/format';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 import DependencyModal from '@/components/projects/DependencyModal';
+import DurationInlineCell from '@/components/projects/DurationInlineCell';
 
 interface ProjectTasksListProps {
   projectId: string;
@@ -1705,50 +1706,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             </Tooltip>
           </TableCell>
 
-          {/* 6. Duration (Inline Numeric Edit) */}
+          {/* 6. Duration (Inline D - H Edit) */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="number"
-                size="small"
-                variant="standard"
-                value={getTaskDurationDisplay(task)}
-                disabled={task.is_parent}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  handleCellUpdate(task.id, 'duration_working_days', val);
-                }}
-                onKeyDown={(e: any) => {
-                  if (e.key === 'Enter') e.target.blur();
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  width: 45,
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    fontFamily: 'monospace',
-                    color: 'text.primary',
-                    py: 0.25,
-                    px: 0.5,
-                    textAlign: 'right',
-                    borderRadius: '4px',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
-                  },
-                }}
-              />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-                {task.is_parent ? 'CD' : 'WD'}
-              </Typography>
-              {!task.is_parent && Boolean(task.duration_working_hours) && (
-                <Chip
-                  label={`+${task.duration_working_hours}h`}
-                  size="small"
-                  sx={{ height: 16, fontSize: '0.65rem', fontWeight: 600, bgcolor: '#FEF3C7', color: '#92400E' }}
-                />
-              )}
-            </Box>
+            <DurationInlineCell task={task} />
           </TableCell>
 
           {/* 7. Status (Inline Status Selector) */}

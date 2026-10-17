@@ -1671,7 +1671,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         endAdornment: <InputAdornment position="end">Days</InputAdornment>,
                       }}
                       inputProps={{ min: 0 }}
-                      sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                        '& input[type=number]': { MozAppearance: 'textfield' },
+                      }}
                     />
                   </Grid>
                   <Grid item xs={6}>
@@ -1707,7 +1711,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       inputProps={{ min: 0, max: Math.max(0, dailyWorkingHours - 0.01) }}
                       helperText={typeof durationHours === 'number' && durationHours >= dailyWorkingHours ? `< ${dailyWorkingHours}h` : undefined}
                       error={typeof durationHours === 'number' && durationHours >= dailyWorkingHours}
-                      sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                        '& input[type=number]': { MozAppearance: 'textfield' },
+                      }}
                     />
                   </Grid>
                 </Grid>
