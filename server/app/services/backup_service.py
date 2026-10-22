@@ -200,6 +200,8 @@ def serialize_value(val: Any) -> Any:
         return val.value
     if isinstance(val, Decimal):
         return float(val)
+    if isinstance(val, bool):
+        return val
     return val
 
 
@@ -208,6 +210,8 @@ def sql_format_value(val: Any) -> str:
         return "NULL"
     if isinstance(val, bool):
         return "TRUE" if val else "FALSE"
+    if isinstance(val, str) and val.strip().lower() in ("true", "false"):
+        return "TRUE" if val.strip().lower() == "true" else "FALSE"
     if isinstance(val, (int, float, Decimal)):
         return str(val)
     if isinstance(val, (datetime, date)):
@@ -223,16 +227,88 @@ def sql_format_value(val: Any) -> str:
     return f"'{escaped}'"
 
 
-def deserialize_value(val: Any, col_type: Any) -> Any:
-    if val is None:
-        return None
+def deserialize_value(val: Any, col: Any) -> Any:
+    """Deserializes raw JSON or string values into exact Python/SQLAlchemy types for column ingestion."""
+    col_type = getattr(col, "type", col)
     type_str = str(col_type).upper()
+    is_nullable = getattr(col, "nullable", True)
+
+    if val is None:
+        if not is_nullable:
+            if "BOOL" in type_str:
+                return False
+            if "INT" in type_str and not ("POINT" in type_str):
+                return 0
+            if any(k in type_str for k in ("FLOAT", "NUMERIC", "DECIMAL", "REAL", "DOUBLE")):
+                return 0.0
+            if any(k in type_str for k in ("VARCHAR", "STRING", "TEXT")):
+                return ""
+        return None
+
+    # 1. Booleans (crucial for PostgreSQL which rejects string 'true'/'false')
+    if "BOOL" in type_str:
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, str):
+            clean = val.strip().lower()
+            return clean in ("true", "t", "1", "yes", "y")
+        if isinstance(val, (int, float)):
+            return bool(val)
+        return bool(val)
+
+    # 2. Datetime / Timestamp
     if "DATETIME" in type_str or "TIMESTAMP" in type_str:
         if isinstance(val, str):
-            return datetime.fromisoformat(val)
+            try:
+                val_clean = val.replace("Z", "+00:00")
+                return datetime.fromisoformat(val_clean)
+            except Exception:
+                return val
+        return val
+
+    # 3. Date
     elif "DATE" in type_str:
         if isinstance(val, str):
-            return date.fromisoformat(val)
+            try:
+                return date.fromisoformat(val.split("T")[0])
+            except Exception:
+                return val
+        return val
+
+    # 4. JSON / Dict / List
+    elif "JSON" in type_str:
+        if isinstance(val, str):
+            try:
+                return json.loads(val)
+            except Exception:
+                return val
+        return val
+
+    # 5. Integers
+    elif "INT" in type_str and not ("POINT" in type_str):
+        if isinstance(val, str):
+            clean = val.strip()
+            if clean.lstrip("-").isdigit():
+                return int(clean)
+        return val
+
+    # 6. Float / Numeric / Decimal
+    elif any(k in type_str for k in ("FLOAT", "NUMERIC", "DECIMAL", "REAL", "DOUBLE")):
+        if isinstance(val, str):
+            try:
+                return float(val.strip())
+            except ValueError:
+                return val
+        return val
+
+    # 7. Enum
+    if hasattr(col_type, "enum_class") and col_type.enum_class:
+        if isinstance(val, str):
+            try:
+                return col_type.enum_class(val)
+            except Exception:
+                pass
+
     return val
 
 
@@ -247,15 +323,20 @@ def create_system_backup(db: Session, include_audit_logs: bool = False) -> Dict[
 
     for key, model in models_to_export:
         mapper = inspect(model)
-        col_names = [col.key for col in mapper.columns]
+        columns = {col.key: col for col in mapper.columns}
         
         records = db.scalars(select(model)).unique().all()
         rows = []
         for rec in records:
             row_data = {}
-            for col in col_names:
-                val = getattr(rec, col)
-                row_data[col] = serialize_value(val)
+            for col_name, col in columns.items():
+                val = getattr(rec, col_name)
+                if "BOOL" in str(col.type).upper() and val is not None:
+                    if isinstance(val, str):
+                        val = val.strip().lower() in ("true", "t", "1", "yes", "y")
+                    elif isinstance(val, (int, float)):
+                        val = bool(val)
+                row_data[col_name] = serialize_value(val)
             rows.append(row_data)
         
         tables_payload[key] = rows
@@ -290,15 +371,24 @@ def generate_sql_dump(db: Session, include_audit_logs: bool = False) -> str:
     for key, model in models_to_export:
         table_name = model.__tablename__
         mapper = inspect(model)
-        col_names = [col.key for col in mapper.columns]
+        columns = {col.key: col for col in mapper.columns}
 
         records = db.scalars(select(model)).unique().all()
         sql_lines.append(f"-- Table: {table_name}")
 
         if records:
             for rec in records:
-                col_sql = ", ".join([f'"{col}"' for col in col_names])
-                val_sql = ", ".join([sql_format_value(getattr(rec, col)) for col in col_names])
+                col_sql = ", ".join([f'"{col}"' for col in columns.keys()])
+                vals = []
+                for col_name, col in columns.items():
+                    val = getattr(rec, col_name)
+                    if "BOOL" in str(col.type).upper() and val is not None:
+                        if isinstance(val, str):
+                            val = val.strip().lower() in ("true", "t", "1", "yes", "y")
+                        elif isinstance(val, (int, float)):
+                            val = bool(val)
+                    vals.append(sql_format_value(val))
+                val_sql = ", ".join(vals)
                 sql_lines.append(f'INSERT INTO "{table_name}" ({col_sql}) VALUES ({val_sql});')
         else:
             sql_lines.append(f"-- (0 records in {table_name})")
@@ -377,15 +467,15 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
                 continue
 
             mapper = inspect(model)
-            col_types = {col.key: col.type for col in mapper.columns}
+            columns = {col.key: col for col in mapper.columns}
             rows = tables_data[key]
             inserted_count = 0
 
             for row_dict in rows:
                 processed_row = {}
                 for col_name, val in row_dict.items():
-                    if col_name in col_types:
-                        processed_row[col_name] = deserialize_value(val, col_types[col_name])
+                    if col_name in columns:
+                        processed_row[col_name] = deserialize_value(val, columns[col_name])
                 
                 if mode == "merge":
                     pk_cols = [pk.key for pk in mapper.primary_key]
