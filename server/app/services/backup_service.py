@@ -7,7 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
 
@@ -128,9 +128,8 @@ def get_primary_upload_dir() -> Path:
     dirs = get_upload_dirs()
     return dirs[0]
 
-# Topological model list for export and import across all system domains
-# Topological model list for export and import across all system domains
-TABLE_MODELS = [
+# Baseline topological model ordering across all standard system domains
+BASELINE_MODELS = [
     ("finance_companies", FinanceCompany),
     ("pipeline_stages", PipelineStage),
     ("vehicle_models", VehicleModel),
@@ -218,6 +217,66 @@ TABLE_MODELS = [
     ("task_custom_field_definitions", TaskCustomFieldDefinition),
     ("task_custom_field_values", TaskCustomFieldValue),
 ]
+
+
+def get_all_system_models() -> List[Tuple[str, Any]]:
+    """Dynamically discovers all SQLAlchemy models inheriting from Base across all application modules,
+    topologically ordered by foreign-key relationships.
+    Automatically includes any newly created modules, tables, or models without manual registration.
+    """
+    import importlib
+    import pkgutil
+    import app.models
+    from app.db.base import Base
+
+    # 1. Dynamically import all submodules in app.models to ensure everything is registered on Base
+    if hasattr(app.models, "__path__"):
+        for _, module_name, _ in pkgutil.iter_modules(app.models.__path__):
+            try:
+                importlib.import_module(f"app.models.{module_name}")
+            except Exception:
+                pass
+
+    # 2. Build mapping of table_name -> Model class
+    table_to_model = {}
+    for mapper in Base.registry.mappers:
+        cls = mapper.class_
+        tbl_name = getattr(cls, "__tablename__", None)
+        if tbl_name:
+            table_to_model[tbl_name] = cls
+
+    ordered = []
+    seen = set()
+
+    # 3. Add known baseline tables in tested topological order first
+    for tname, model in BASELINE_MODELS:
+        model_cls = table_to_model.get(tname, model)
+        if tname not in seen:
+            ordered.append((tname, model_cls))
+            seen.add(tname)
+
+    # 4. Automatically add ANY newly created tables in foreign-key dependency order
+    for table in Base.metadata.sorted_tables:
+        tname = table.name
+        if tname == "audit_logs":
+            continue
+        if tname in table_to_model and tname not in seen:
+            ordered.append((tname, table_to_model[tname]))
+            seen.add(tname)
+
+    # 5. Fallback for any model class registered on Base that wasn't in sorted_tables
+    for tname, model_cls in table_to_model.items():
+        if tname == "audit_logs":
+            continue
+        if tname not in seen:
+            ordered.append((tname, model_cls))
+            seen.add(tname)
+
+    return ordered
+
+
+# Dynamic module-level alias for backward compatibility
+TABLE_MODELS = get_all_system_models()
 
 
 def serialize_value(val: Any) -> Any:
@@ -344,7 +403,7 @@ def create_system_backup(db: Session, include_audit_logs: bool = False) -> Dict[
     tables_payload = {}
     record_counts = {}
 
-    models_to_export = list(TABLE_MODELS)
+    models_to_export = list(get_all_system_models())
     if include_audit_logs:
         models_to_export.append(("audit_logs", AuditLog))
 
@@ -391,7 +450,7 @@ def generate_sql_dump(db: Session, include_audit_logs: bool = False) -> str:
         "BEGIN;\n"
     ]
 
-    models_to_export = list(TABLE_MODELS)
+    models_to_export = list(get_all_system_models())
     if include_audit_logs:
         models_to_export.append(("audit_logs", AuditLog))
 
@@ -490,13 +549,15 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
         elif db.bind and db.bind.dialect.name == "sqlite":
             db.execute(text("PRAGMA foreign_keys = OFF;"))
 
+        models_to_restore = get_all_system_models()
+
         if mode == "overwrite":
-            for key, model in reversed(TABLE_MODELS):
+            for key, model in reversed(models_to_restore):
                 db.query(model).delete(synchronize_session=False)
             db.flush()
             db.expire_all()
 
-        for key, model in TABLE_MODELS:
+        for key, model in models_to_restore:
             if key not in tables_data:
                 continue
 
@@ -534,7 +595,7 @@ def restore_system_backup(db: Session, backup_payload: Dict[str, Any], mode: str
             restored_summary[key] = inserted_count
 
         if is_postgres:
-            for key, model in TABLE_MODELS:
+            for key, model in models_to_restore:
                 table_name = model.__tablename__
                 try:
                     db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), COALESCE(MAX(id), 1)) FROM {table_name};"))
@@ -612,7 +673,7 @@ def restore_system_zip_backup(
 def get_system_summary(db: Session) -> Dict[str, Any]:
     """Returns database record counts for summary inspection."""
     summary = {}
-    for key, model in TABLE_MODELS:
+    for key, model in get_all_system_models():
         count = db.query(model).count()
         summary[key] = count
     return summary
