@@ -74,29 +74,9 @@ export function parseDurationInput(raw: string, dailyWorkingHours: number): Pars
 }
 
 export function getFormattedDuration(task: TaskItem): string {
-  if (task.is_parent) {
-    return String(task.duration_working_days ?? 0);
-  }
-  const days = task.duration_working_days;
-  const hours = task.duration_working_hours;
-
-  if ((days === null || days === undefined) && (hours === null || hours === undefined)) {
-    return '';
-  }
-
-  if (hours && hours > 0) {
-    return `${days || 0} - ${hours}`;
-  }
-
-  if (days !== null && days !== undefined && days > 0) {
-    return `${days}`;
-  }
-
-  if (days === 0 && (!hours || hours === 0)) {
-    return '0';
-  }
-
-  return '';
+  const days = task.duration_working_days ?? 0;
+  const hours = task.duration_working_hours ?? 0;
+  return `${days}d ${hours}h`;
 }
 
 interface DurationInlineCellProps {
@@ -112,7 +92,7 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
   const { data: calendarConfig } = useGetCalendarConfigQuery();
   const [updateTask] = useUpdateTaskMutation();
 
-  const dailyWorkingHours = calendarConfig?.daily_working_hours || 9;
+  const dailyWorkingHours = calendarConfig?.daily_working_hours || 8;
 
   const tTokens = {
     inputBgHover: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
@@ -120,45 +100,99 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
     inputBorderFocus: isDark ? '#5FCF87' : '#203020',
   };
 
-  const [localValue, setLocalValue] = useState<string>(() => getFormattedDuration(task));
+  const initialDays = task.duration_working_days !== undefined && task.duration_working_days !== null
+    ? task.duration_working_days
+    : 0;
+  const initialHours = task.duration_working_hours !== undefined && task.duration_working_hours !== null
+    ? task.duration_working_hours
+    : 0;
+
+  const [daysStr, setDaysStr] = useState<string>(String(initialDays));
+  const [hoursStr, setHoursStr] = useState<string>(String(initialHours));
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!isEditing) {
-      setLocalValue(getFormattedDuration(task));
+      setDaysStr(String(task.duration_working_days ?? 0));
+      setHoursStr(String(task.duration_working_hours ?? 0));
     }
-  }, [task.duration_working_days, task.duration_working_hours, task.is_parent, isEditing]);
+  }, [task.duration_working_days, task.duration_working_hours, isEditing]);
+
+  const isParent = Boolean(task.is_parent);
+  const isReadOnly = isParent || disabled;
 
   // Read-only parent rollup task
-  if (task.is_parent || disabled) {
+  if (isReadOnly) {
+    const pDays = task.duration_working_days ?? 0;
+    const pHours = task.duration_working_hours ?? 0;
+
     return (
       <Tooltip
-        title={`Summary Task: ${task.duration_working_days ?? 0} Calendar Days (CD) calculated from child tasks`}
+        title={`Summary Task: ${pDays} Days, ${pHours} Hours calculated from child tasks`}
         arrow
         placement="top"
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35, whiteSpace: 'nowrap' }}>
           <TextField
             size="small"
             variant="standard"
-            value={task.duration_working_days ?? 0}
+            value={pDays}
             disabled
             InputProps={{ disableUnderline: true }}
             sx={{
-              width: 52,
+              width: 34,
               '& .MuiInputBase-input': {
                 fontSize: '0.8rem',
                 fontFamily: 'monospace',
                 color: 'text.secondary',
                 py: 0.25,
-                px: 0.5,
+                px: 0.25,
                 textAlign: 'center',
                 borderRadius: '4px',
                 cursor: 'default',
               },
             }}
           />
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontWeight: 600 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            d
+          </Typography>
+
+          <TextField
+            size="small"
+            variant="standard"
+            value={pHours}
+            disabled
+            InputProps={{ disableUnderline: true }}
+            sx={{
+              width: 30,
+              ml: 0.25,
+              '& .MuiInputBase-input': {
+                fontSize: '0.8rem',
+                fontFamily: 'monospace',
+                color: 'text.secondary',
+                py: 0.25,
+                px: 0.25,
+                textAlign: 'center',
+                borderRadius: '4px',
+                cursor: 'default',
+              },
+            }}
+          />
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            h
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontFamily: 'monospace',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              ml: 0.5,
+              letterSpacing: 0.3,
+            }}
+          >
             CD
           </Typography>
         </Box>
@@ -166,46 +200,49 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
     );
   }
 
-  const handleCommit = async () => {
+  const handleCommit = async (customDays?: number, customHours?: number) => {
     setIsEditing(false);
-    const trimmed = localValue.trim();
-    const currentDays = task.duration_working_days ?? 0;
-    const currentHours = task.duration_working_hours ?? 0;
 
-    if (!trimmed) {
-      setLocalValue(getFormattedDuration(task));
-      return;
-    }
+    let d = customDays !== undefined ? customDays : parseInt(daysStr, 10);
+    let h = customHours !== undefined ? customHours : parseInt(hoursStr, 10);
 
-    const parsed = parseDurationInput(trimmed, dailyWorkingHours);
-    if (!parsed.isValid) {
-      toast.showError(parsed.error || 'Invalid duration');
-      setLocalValue(getFormattedDuration(task));
-      return;
+    if (isNaN(d) || d < 0) d = 0;
+    if (isNaN(h) || h < 0) h = 0;
+
+    // Rollover hours if >= dailyWorkingHours
+    if (h >= dailyWorkingHours) {
+      const extraDays = Math.floor(h / dailyWorkingHours);
+      const remHours = h % dailyWorkingHours;
+      d += extraDays;
+      h = remHours;
+      toast.showSuccess(`Converted ${extraDays * dailyWorkingHours + remHours}h to ${d}d ${h}h (${dailyWorkingHours}h workday)`);
     }
 
     // Default to at least 1 day if both are 0
-    let targetDays = parsed.days;
-    let targetHours = parsed.hours;
-    if (targetDays === 0 && targetHours === 0) {
-      targetDays = 1;
+    if (d === 0 && h === 0) {
+      d = 1;
+      h = 0;
     }
 
-    // Unchanged check
-    if (targetDays === currentDays && targetHours === currentHours) {
-      setLocalValue(getFormattedDuration({ ...task, duration_working_days: targetDays, duration_working_hours: targetHours }));
+    setDaysStr(String(d));
+    setHoursStr(String(h));
+
+    const currentDays = task.duration_working_days ?? 0;
+    const currentHours = task.duration_working_hours ?? 0;
+
+    if (d === currentDays && h === currentHours) {
       return;
     }
 
     try {
       if (onUpdate) {
-        await onUpdate(task.id, targetDays, targetHours);
+        await onUpdate(task.id, d, h);
       } else {
         await updateTask({
           id: task.id,
           body: {
-            duration_working_days: targetDays,
-            duration_working_hours: targetHours,
+            duration_working_days: d,
+            duration_working_hours: h,
           },
         }).unwrap();
         toast.showSuccess('Duration updated');
@@ -213,7 +250,8 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
     } catch (err: any) {
       const msg = err?.data?.detail || err?.data?.message || err?.message || 'Failed to update duration';
       toast.showError(typeof msg === 'string' ? msg : 'Failed to update duration');
-      setLocalValue(getFormattedDuration(task));
+      setDaysStr(String(currentDays));
+      setHoursStr(String(currentHours));
     }
   };
 
@@ -222,41 +260,42 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
       title={
         <Box sx={{ p: 0.5 }}>
           <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
-            Duration (D - H)
+            Duration (Days & Hours)
           </Typography>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', display: 'block' }}>
-            Format: Days - Hours (e.g. 2 - 4 or 3).
+            Set working days (d) and hours (h).
           </Typography>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block' }}>
-            Hours must be less than daily working hours ({dailyWorkingHours}h).
+            Hours auto-rollover into days if &ge; {dailyWorkingHours}h.
           </Typography>
         </Box>
       }
       arrow
       placement="top"
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.35, whiteSpace: 'nowrap' }}>
+        {/* Days Input */}
         <TextField
-          type="text"
+          type="number"
           size="small"
           variant="standard"
-          placeholder="D - H"
-          value={localValue}
+          value={daysStr}
           onFocus={() => setIsEditing(true)}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleCommit}
+          onChange={(e) => setDaysStr(e.target.value)}
+          onBlur={() => handleCommit()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               (e.target as HTMLElement).blur();
             } else if (e.key === 'Escape') {
               setIsEditing(false);
-              setLocalValue(getFormattedDuration(task));
+              setDaysStr(String(task.duration_working_days ?? 0));
               (e.target as HTMLElement).blur();
             }
           }}
+          inputProps={{ min: 0 }}
           InputProps={{ disableUnderline: true }}
           sx={{
-            width: 58,
+            width: 34,
             '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
               WebkitAppearance: 'none',
               margin: 0,
@@ -269,22 +308,79 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
               fontFamily: 'monospace',
               color: 'text.primary',
               py: 0.25,
-              px: 0.5,
+              px: 0.25,
               textAlign: 'center',
               borderRadius: '4px',
               transition: 'all 0.15s ease',
               '&:hover': { bgcolor: tTokens.inputBgHover },
               '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
-              '&::placeholder': {
-                color: 'text.disabled',
-                opacity: 0.75,
-                fontFamily: 'monospace',
-                fontSize: '0.75rem',
-              },
             },
           }}
         />
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontWeight: 600 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+          d
+        </Typography>
+
+        {/* Hours Input */}
+        <TextField
+          type="number"
+          size="small"
+          variant="standard"
+          value={hoursStr}
+          onFocus={() => setIsEditing(true)}
+          onChange={(e) => setHoursStr(e.target.value)}
+          onBlur={() => handleCommit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              (e.target as HTMLElement).blur();
+            } else if (e.key === 'Escape') {
+              setIsEditing(false);
+              setHoursStr(String(task.duration_working_hours ?? 0));
+              (e.target as HTMLElement).blur();
+            }
+          }}
+          inputProps={{ min: 0 }}
+          InputProps={{ disableUnderline: true }}
+          sx={{
+            width: 30,
+            ml: 0.25,
+            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+              WebkitAppearance: 'none',
+              margin: 0,
+            },
+            '& input[type=number]': {
+              MozAppearance: 'textfield',
+            },
+            '& .MuiInputBase-input': {
+              fontSize: '0.8rem',
+              fontFamily: 'monospace',
+              color: 'text.primary',
+              py: 0.25,
+              px: 0.25,
+              textAlign: 'center',
+              borderRadius: '4px',
+              transition: 'all 0.15s ease',
+              '&:hover': { bgcolor: tTokens.inputBgHover },
+              '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
+            },
+          }}
+        />
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+          h
+        </Typography>
+
+        {/* WD Unit Tag */}
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            fontSize: '0.7rem',
+            ml: 0.5,
+            letterSpacing: 0.3,
+          }}
+        >
           WD
         </Typography>
       </Box>
