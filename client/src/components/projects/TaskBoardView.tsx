@@ -293,7 +293,7 @@ export default function TaskBoardView({
                   >
                     {isSubExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                     <span>
-                      {isSubExpanded ? '▼' : '▶'} {subChildren.length} {subChildren.length === 1 ? 'subtask' : 'subtasks'}
+                      {subChildren.length} {subChildren.length === 1 ? 'subtask' : 'subtasks'}
                     </span>
                   </Box>
                 )}
@@ -569,7 +569,7 @@ export default function TaskBoardView({
                                           gap: 0.5,
                                         }}
                                       >
-                                        <span>{isExpanded ? '▼' : '▶'}</span>
+
                                         <span>
                                           {subtaskCount === 1
                                             ? '1 subtask'

@@ -1092,7 +1092,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   >
                     {isSubExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                     <span>
-                      {isSubExpanded ? '▼' : '▶'} {subChildren.length} {subChildren.length === 1 ? 'subtask' : 'subtasks'}
+                      {subChildren.length} {subChildren.length === 1 ? 'subtask' : 'subtasks'}
                     </span>
                   </Box>
                 )}
@@ -1195,7 +1195,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               p: 0,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 0.25 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
               <Box
                 draggable
                 onDragStart={(e) => {
@@ -1231,24 +1231,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               >
                 <GripVertical size={14} />
               </Box>
-              {hasChildren ? (
-                <IconButton
-                  size="small"
-                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
-                  sx={{
-                    p: 0.25,
-                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
-                    '&:hover': { color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(95, 207, 135, 0.1)' : 'rgba(32, 48, 32, 0.08)' },
-                  }}
-                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
-                >
-                  <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
-                    {isExpanded ? '▼' : '▶'}
-                  </Typography>
-                </IconButton>
-              ) : (
-                <Box sx={{ width: 18 }} />
-              )}
             </Box>
           </TableCell>
 
@@ -2278,7 +2260,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                     gap: 0.5,
                                   }}
                                 >
-                                  <span>{isExpanded ? '▼' : '▶'}</span>
                                   <span>
                                     {subtaskCount === 1
                                       ? '1 subtask'
