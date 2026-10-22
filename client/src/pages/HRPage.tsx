@@ -86,6 +86,7 @@ import {
 import { useGetUsersQuery } from '@/api/rbacApi';
 import EmployeeMaster from '@/components/hr/EmployeeMaster';
 import RecruitmentManagement from '@/components/hr/RecruitmentManagement';
+import { formatDate, formatDateTime } from '@/utils/format';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -542,7 +543,7 @@ export default function HRPage() {
                       <Typography variant="body2">{item.role}</Typography>
                       <Typography variant="caption" sx={{ color: '#64748b' }}>{item.dept}</Typography>
                     </TableCell>
-                    <TableCell>{item.joinDate}</TableCell>
+                    <TableCell>{item.joinDate ? formatDate(item.joinDate) : '-'}</TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>{item.stage}</Typography>
                     </TableCell>
@@ -659,7 +660,7 @@ export default function HRPage() {
                   {sortedAttendanceRecords.map((record) => (
                     <TableRow key={record.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>{record.user_name}</TableCell>
-                      <TableCell>{record.attendance_date}</TableCell>
+                      <TableCell>{record.attendance_date ? formatDate(record.attendance_date) : '-'}</TableCell>
                       <TableCell>{record.check_in_time || '-'}</TableCell>
                       <TableCell>{record.check_out_time || '-'}</TableCell>
                       <TableCell>{record.hours_worked ? `${record.hours_worked.toFixed(1)} hrs` : '-'}</TableCell>
@@ -755,8 +756,8 @@ export default function HRPage() {
                     <TableRow key={leave.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>{leave.user_name}</TableCell>
                       <TableCell><Chip label={leave.leave_type} size="small" variant="outlined" /></TableCell>
-                      <TableCell>{leave.start_date}</TableCell>
-                      <TableCell>{leave.end_date}</TableCell>
+                      <TableCell>{leave.start_date ? formatDate(leave.start_date) : '-'}</TableCell>
+                      <TableCell>{leave.end_date ? formatDate(leave.end_date) : '-'}</TableCell>
                       <TableCell>{leave.reason}</TableCell>
                       <TableCell>
                         <Chip
@@ -897,7 +898,7 @@ export default function HRPage() {
                         fullWidth
                         variant="contained"
                         startIcon={<Clock size={18} />}
-                        onClick={() => showToast('Clocked in successfully at ' + new Date().toLocaleTimeString(), 'success')}
+                        onClick={() => showToast('Clocked in successfully at ' + formatDateTime(new Date()), 'success')}
                         sx={{ bgcolor: '#087A3D', py: 1.5, textTransform: 'none', borderRadius: 2 }}
                       >
                         Clock In Now

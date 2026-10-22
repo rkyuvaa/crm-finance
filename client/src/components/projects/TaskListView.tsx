@@ -39,7 +39,8 @@ import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useTableSort } from '@/hooks/useTableSort';
 import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
-import { time24To12, time12To24, getTaskIdBadgeStyle } from '@/utils/format';
+import { time24To12, time12To24, getTaskIdBadgeStyle, formatDate } from '@/utils/format';
+import StandardDateInput from '@/components/common/StandardDateInput';
 import DurationInlineCell from '@/components/projects/DurationInlineCell';
 
 const DEP_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -458,30 +459,9 @@ export default function TaskListView({
           {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'start_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
-                  },
-                }}
+              <StandardDateInput
+                value={task.start_date}
+                onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
               />
               <TextField
                 type="time"
@@ -514,30 +494,9 @@ export default function TaskListView({
           {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.due_date ? task.due_date.split('T')[0].split(' ')[0] : ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'due_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
-                  },
-                }}
+              <StandardDateInput
+                value={task.due_date}
+                onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
               />
               <TextField
                 type="time"
@@ -618,30 +577,9 @@ export default function TaskListView({
           {/* 8. Completion Date & Time (Inline Edit) */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <TextField
-                type="date"
-                size="small"
-                variant="standard"
-                value={task.completion_date ? task.completion_date.split('T')[0].split(' ')[0] : (task.completed_at ? task.completed_at.split('T')[0] : '')}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleCellUpdate(task.id, 'completion_date', val || null);
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.5,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
-                  },
-                }}
+              <StandardDateInput
+                value={task.completion_date || task.completed_at}
+                onChange={(val) => handleCellUpdate(task.id, 'completion_date', val || null)}
               />
               <TextField
                 type="time"

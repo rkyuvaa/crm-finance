@@ -47,6 +47,7 @@ import {
 import { useTableSort } from '../hooks/useTableSort';
 import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatDate } from '@/utils/format';
 import { useAppSelector } from '../app/hooks';
 import { RequirementItem } from '@/types/requirements';
 import ITRequirementFormModal from '@/components/requirements/ITRequirementFormModal';
@@ -687,7 +688,7 @@ export default function RequirementsPage() {
                   </TableCell>
                 )}
                 <TableCell>{item.department}</TableCell>
-                <TableCell sx={{ fontSize: '0.8rem' }}>{item.preferred_go_live_date || item.required_by_date}</TableCell>
+                <TableCell sx={{ fontSize: '0.8rem' }}>{formatDate(item.preferred_go_live_date || item.required_by_date)}</TableCell>
                 <TableCell>{item.urgency ? <Chip label={item.urgency} size="small" variant="outlined" /> : getPriorityChip(item.priority)}</TableCell>
                 <TableCell>{getStatusChip(item.status)}</TableCell>
                 <TableCell align="right" onClick={(e) => e.stopPropagation()}>

@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { Plus, Flag, Trash2, Edit2, ChevronDown, ChevronRight, CheckCircle2, Circle, Link2 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastHost';
-import { getTaskIdBadgeStyle } from '@/utils/format';
+import { getTaskIdBadgeStyle, formatDate } from '@/utils/format';
 import {
   useGetProjectMilestonesQuery,
   useCreateProjectMilestoneMutation,
@@ -373,7 +373,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                                 <Chip label={t.status_name} size="small" sx={{ height: 20, fontSize: '0.68rem', bgcolor: t.status_color || '#64748B', color: '#FFF' }} />
                               )}
                               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
-                                {t.start_date || '—'} → {t.due_date || '—'}
+                                {(t.start_date ? formatDate(t.start_date) : '—')} → {(t.due_date ? formatDate(t.due_date) : '—')}
                               </Typography>
                               <Button
                                 size="small"

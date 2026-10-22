@@ -28,7 +28,7 @@ import {
   useGetCalendarConfigQuery,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { getTaskIdBadgeStyle } from '@/utils/format';
+import { getTaskIdBadgeStyle, formatDate } from '@/utils/format';
 
 interface DependencyModalProps {
   open: boolean;
@@ -304,7 +304,7 @@ export default function DependencyModal({
                     </Typography>
                   </Box>
                   <Typography variant="caption" color="textSecondary" sx={{ flexShrink: 0, fontSize: '0.72rem' }}>
-                    {option.due_date ? `Due: ${option.due_date}` : 'No date'}
+                    {option.due_date ? `Due: ${formatDate(option.due_date)}` : 'No date'}
                   </Typography>
                 </Box>
               </li>

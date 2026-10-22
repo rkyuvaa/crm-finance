@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Paper, IconButton, Chip } from '@mui/material';
 import { Plus, Edit3, Trash2, Calendar, CheckCircle2 } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
-import { format } from 'date-fns';
+import { formatDate } from '@/utils/format';
 
 interface PersonalTaskBoardViewProps {
   tasks: TaskItem[];
@@ -121,7 +121,7 @@ export default function PersonalTaskBoardView({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: task.is_completed ? '#10b981' : '#64748b' }}>
                     {task.is_completed ? <CheckCircle2 size={14} /> : <Calendar size={14} />}
                     <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      {task.due_date ? format(new Date(task.due_date), 'MMM dd') : 'No Date'}
+                      {task.due_date ? formatDate(task.due_date) : 'No Date'}
                     </Typography>
                   </Box>
                   <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }} sx={{ color: '#ef4444', p: 0.5 }}>

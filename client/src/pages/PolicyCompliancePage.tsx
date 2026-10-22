@@ -51,6 +51,7 @@ import {
 import { useTableSort } from '../hooks/useTableSort';
 import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatDate } from '@/utils/format';
 
 export interface PolicyComplianceItem {
   id: string; // e.g. POL-1, AUD-1, SOP-1, ACK-1
@@ -645,7 +646,7 @@ export default function PolicyCompliancePage() {
                 <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.75rem' }}>{item.version}</TableCell>
                 <TableCell>{item.department}</TableCell>
                 <TableCell>{item.owner}</TableCell>
-                <TableCell sx={{ fontSize: '0.8rem' }}>{item.effective_date}</TableCell>
+                <TableCell sx={{ fontSize: '0.8rem' }}>{formatDate(item.effective_date)}</TableCell>
                 <TableCell>{getStatusChip(item.status)}</TableCell>
                 <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="View Details">
@@ -899,7 +900,7 @@ export default function PolicyCompliancePage() {
                   Effective Date
                 </Typography>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {selectedDetailItem.effective_date}
+                  {formatDate(selectedDetailItem.effective_date)}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -907,7 +908,7 @@ export default function PolicyCompliancePage() {
                   Next Review Date
                 </Typography>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {selectedDetailItem.review_date || 'N/A'}
+                  {selectedDetailItem.review_date ? formatDate(selectedDetailItem.review_date) : 'N/A'}
                 </Typography>
               </Grid>
             </Grid>

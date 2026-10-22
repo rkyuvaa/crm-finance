@@ -82,6 +82,7 @@ import {
 } from '@/api/recruitmentApi';
 import { useGetDepartmentsQuery } from '@/api/rbacApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatDate, formatDateTime } from '@/utils/format';
 
 const RECRUITMENT_STAGES = [
   'Job Requisition',
@@ -917,7 +918,7 @@ export default function RecruitmentManagement() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#d97706', mb: 0.5 }}>
                               <Calendar size={12} />
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                Int: {new Date(cand.interview_date).toLocaleDateString()}
+                                Int: {formatDate(cand.interview_date)}
                               </Typography>
                             </Box>
                           )}
@@ -926,7 +927,7 @@ export default function RecruitmentManagement() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#047857', mb: 0.5 }}>
                               <UserCheck size={12} />
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                Join: {cand.confirmed_joining_date}
+                                Join: {formatDate(cand.confirmed_joining_date)}
                               </Typography>
                             </Box>
                           )}
@@ -1440,7 +1441,7 @@ export default function RecruitmentManagement() {
                           {hist.previous_stage || 'Created'} → <span style={{ color: '#087A3D' }}>{hist.new_stage}</span>
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#64748b' }}>
-                          {new Date(hist.changed_at).toLocaleString()}
+                          {formatDateTime(hist.changed_at)}
                         </Typography>
                       </Box>
                       <Typography variant="caption" sx={{ color: '#475569', display: 'block' }}>

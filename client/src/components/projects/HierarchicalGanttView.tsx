@@ -48,7 +48,7 @@ import {
   useRemoveDependencyMutation,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { getTaskIdBadgeStyle } from '@/utils/format';
+import { getTaskIdBadgeStyle, formatDate } from '@/utils/format';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 type TimeScale = 'DAY' | 'WEEK' | 'MONTH';
@@ -1113,7 +1113,7 @@ export default function HierarchicalGanttView({
                             <Box sx={{ p: 0.5 }}>
                               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{node.title}</Typography>
                               <Typography variant="caption" sx={{ display: 'block' }}>Status: {node.status_name || 'Active'} · Priority: {node.priority}</Typography>
-                              <Typography variant="caption" sx={{ display: 'block' }}>Dates: {node.start_date || '—'} → {node.due_date || '—'}</Typography>
+                              <Typography variant="caption" sx={{ display: 'block' }}>Dates: {(node.start_date ? formatDate(node.start_date) : '—')} → {(node.due_date ? formatDate(node.due_date) : '—')}</Typography>
                               <Typography variant="caption" sx={{ display: 'block' }}>Progress: {node.progress_percentage || 0}%</Typography>
                               {isCritical && <Typography variant="caption" sx={{ display: 'block', color: '#EF4444', fontWeight: 700 }}>⚠ Critical Path</Typography>}
                             </Box>

@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Trash2, Edit3, Calendar } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
-import { format } from 'date-fns';
+import { formatDate } from '@/utils/format';
 
 interface PersonalTaskListViewProps {
   tasks: TaskItem[];
@@ -130,7 +130,7 @@ export default function PersonalTaskListView({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#64748b' }}>
                     <Calendar size={14} />
                     <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                      {format(new Date(task.due_date), 'MMM dd, yyyy')}
+                      {formatDate(task.due_date)}
                     </Typography>
                   </Box>
                 ) : (

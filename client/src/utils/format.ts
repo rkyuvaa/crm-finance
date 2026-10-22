@@ -44,21 +44,73 @@ export function formatAmount(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`;
 }
 
-export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+export function formatDate(iso?: string | Date | null): string {
+  if (!iso) return '';
+
+  if (iso instanceof Date) {
+    if (isNaN(iso.getTime())) return '';
+    const dd = String(iso.getDate()).padStart(2, '0');
+    const mm = String(iso.getMonth() + 1).padStart(2, '0');
+    const yyyy = iso.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  const raw = String(iso).trim();
+  if (!raw) return '';
+
+  // YYYY-MM-DD (e.g. 2026-10-22)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [yyyy, mm, dd] = raw.split('-');
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // Already dd/mm/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+    return raw;
+  }
+
+  // If contains T or space, take date part if it matches YYYY-MM-DD
+  const datePart = raw.split(/[T ]/)[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    const [yyyy, mm, dd] = datePart.split('-');
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
-export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+export function formatDateTime(iso?: string | Date | null): string {
+  if (!iso) return '';
+
+  if (iso instanceof Date) {
+    if (isNaN(iso.getTime())) return '';
+    const dd = String(iso.getDate()).padStart(2, '0');
+    const mm = String(iso.getMonth() + 1).padStart(2, '0');
+    const yyyy = iso.getFullYear();
+    const hh = String(iso.getHours()).padStart(2, '0');
+    const min = String(iso.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  }
+
+  const raw = String(iso).trim();
+  if (!raw) return '';
+
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  }
+
+  return formatStandardDateTime(raw);
 }
 
 export function initialsOf(name?: string | null): string {
@@ -102,9 +154,10 @@ export function time12To24(time12?: string | null): string {
 
 export function formatDateTime12h(dateStr?: string | null, timeStr?: string | null): string {
   if (!dateStr) return '—';
-  if (!timeStr) return dateStr;
+  const formattedDate = formatDate(dateStr) || dateStr;
+  if (!timeStr) return formattedDate;
   const formattedTime = time24To12(timeStr);
-  return `${dateStr} ${formattedTime}`;
+  return `${formattedDate} ${formattedTime}`;
 }
 
 export interface TaskBadgeStyle {

@@ -59,6 +59,7 @@ import { useTableSort } from '../hooks/useTableSort';
 import ErpSortHeaderCell from '../components/ui/ErpSortHeaderCell';
 import { useTestSmtpConnectionMutation } from '../api/smtpApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatDate } from '@/utils/format';
 
 export interface RenewalItem {
   id: number;
@@ -1325,13 +1326,13 @@ export default function RenewalTrackerPage() {
                           </Typography>
                         </TableCell>
                         <TableCell sx={{ fontSize: 14.5, fontWeight: 700, color: getDaysRemaining(r.due_date) < 0 ? '#DC2626' : '#16231B' }}>
-                          {r.due_date}
+                          {r.due_date ? formatDate(r.due_date) : '—'}
                         </TableCell>
                         <TableCell>
                           <Chip label={r.renewal_cycle || 'Yearly'} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 13, color: '#04552B', borderColor: '#A7F3D0' }} />
                         </TableCell>
                         <TableCell>{renderDaysRemainingChip(r.due_date)}</TableCell>
-                        <TableCell sx={{ fontSize: 14.5, color: '#44584C' }}>{r.last_renewed_date || 'N/A'}</TableCell>
+                        <TableCell sx={{ fontSize: 14.5, color: '#44584C' }}>{r.last_renewed_date ? formatDate(r.last_renewed_date) : 'N/A'}</TableCell>
                         <TableCell sx={{ fontSize: 14.5, fontWeight: 700, color: '#04552B' }}>
                           {displayAmt ? `₹${Number(displayAmt).toLocaleString('en-IN')}` : '—'}
                         </TableCell>

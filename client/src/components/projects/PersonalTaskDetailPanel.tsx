@@ -5,6 +5,7 @@ import {
 import { X, CheckCircle2, Clock } from 'lucide-react';
 import { TaskItem, useUpdatePersonalTaskMutation, useGetStatusDefinitionsQuery, useGetTaskTagsQuery } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
+import { formatDateTime, formatStandardDateTime } from '@/utils/format';
 import Autocomplete from '@mui/material/Autocomplete';
 
 interface PersonalTaskDetailPanelProps {
@@ -247,12 +248,12 @@ export default function PersonalTaskDetailPanel({ open, onClose, task }: Persona
 
           {task.created_by_name && (
             <Typography variant="caption" color="text.secondary">
-              Created by {task.created_by_name} on {new Date(task.created_at).toLocaleString()}
+              Created by {task.created_by_name} on {formatDateTime(task.created_at)}
             </Typography>
           )}
           {task.completion_date && (
             <Typography variant="caption" color="text.secondary">
-              Completed on {task.completion_date} {task.completion_time || ''}
+              Completed on {formatStandardDateTime(task.completion_date, task.completion_time)}
             </Typography>
           )}
 

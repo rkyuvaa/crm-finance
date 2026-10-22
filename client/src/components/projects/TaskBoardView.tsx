@@ -35,7 +35,7 @@ import {
   useGetStatusDefinitionsQuery,
 } from '@/api/projectsApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { getTaskIdBadgeStyle } from '@/utils/format';
+import { getTaskIdBadgeStyle, formatDate } from '@/utils/format';
 
 interface TaskBoardViewProps {
   tasks: TaskItem[];
@@ -256,7 +256,7 @@ export default function TaskBoardView({
                             fontWeight: isSubOverdue ? 700 : 500,
                           }}
                         >
-                          {sub.due_date}
+                          {formatDate(sub.due_date)}
                         </Typography>
                       </Box>
                     ) : (
@@ -507,7 +507,7 @@ export default function TaskBoardView({
                                           fontSize: 11,
                                         }}
                                       >
-                                        {task.due_date}
+                                        {formatDate(task.due_date)}
                                       </Typography>
                                     </Box>
                                   ) : (

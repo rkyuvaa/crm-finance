@@ -94,7 +94,7 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { time24To12, time12To24, getTaskIdBadgeStyle } from '@/utils/format';
+import { time24To12, time12To24, getTaskIdBadgeStyle, formatDate, formatDateTime } from '@/utils/format';
 
 interface TaskDetailPanelProps {
   open: boolean;
@@ -924,7 +924,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     {currentTask.dependency_conflict.conflict_message}
                   </Typography>
                   <Typography variant="caption" sx={{ color: isDark ? '#F87171' : '#B91C1C', display: 'block', mt: 0.5 }}>
-                    Recommended Start Date: <strong>{currentTask.dependency_conflict.recommended_start_date}</strong>
+                    Recommended Start Date: <strong>{formatDate(currentTask.dependency_conflict.recommended_start_date)}</strong>
                   </Typography>
                   <Button
                     size="small"
@@ -1430,7 +1430,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   <Box key={act.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
                     <ActivityIcon size={13} color="#64748B" />
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      <strong>{act.actor_name}</strong>: {act.description || act.action_type} ({new Date(act.created_at).toLocaleTimeString()})
+                      <strong>{act.actor_name}</strong>: {act.description || act.action_type} ({formatDateTime(act.created_at)})
                     </Typography>
                   </Box>
                 ))}
@@ -2143,7 +2143,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     </Typography>
                   </Box>
                   <Typography variant="caption" color="textSecondary" sx={{ fontSize: 11 }}>
-                    {t.project_name || 'General Project'} • {t.assignee_name || 'Unassigned'} • Due: {t.due_date || 'No Date'}
+                    {t.project_name || 'General Project'} • {t.assignee_name || 'Unassigned'} • Due: {t.due_date ? formatDate(t.due_date) : 'No Date'}
                   </Typography>
                 </Box>
                 <Chip

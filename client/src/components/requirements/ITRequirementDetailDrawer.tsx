@@ -33,6 +33,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { RequirementItem, AttachmentFile } from '@/types/requirements';
+import { formatDate } from '@/utils/format';
 
 interface ITRequirementDetailDrawerProps {
   item: RequirementItem | null;
@@ -188,7 +189,7 @@ export default function ITRequirementDetailDrawer({
                   Preferred Go-Live Date
                 </Typography>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                  {item.preferred_go_live_date || item.required_by_date}
+                  {formatDate(item.preferred_go_live_date || item.required_by_date)}
                 </Typography>
               </Grid>
 
@@ -197,7 +198,7 @@ export default function ITRequirementDetailDrawer({
                   Date of Request
                 </Typography>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1E293B' }}>
-                  {item.date_of_request || item.created_at?.split('T')[0]}
+                  {formatDate(item.date_of_request || item.created_at)}
                 </Typography>
               </Grid>
 
@@ -368,7 +369,7 @@ export default function ITRequirementDetailDrawer({
                       A. RAISED BY
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.requested_by}</Typography>
-                    <Typography variant="caption" color="textSecondary">{item.date_of_request || item.created_at?.split('T')[0]}</Typography>
+                    <Typography variant="caption" color="textSecondary">{formatDate(item.date_of_request || item.created_at)}</Typography>
                   </Paper>
                 </Grid>
 

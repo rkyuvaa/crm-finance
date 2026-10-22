@@ -83,7 +83,8 @@ import {
 } from '@/api/projectsApi';
 import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
-import { time24To12, time12To24, formatDateTime12h, formatStandardDateTime, formatDependencyLabel, getTaskIdBadgeStyle } from '@/utils/format';
+import { formatDate, time24To12, time12To24, formatDateTime12h, formatStandardDateTime, formatDependencyLabel, getTaskIdBadgeStyle } from '@/utils/format';
+import StandardDateInput from '@/components/common/StandardDateInput';
 import TaskDetailPanel from '@/components/projects/TaskDetailPanel';
 import DependencyModal from '@/components/projects/DependencyModal';
 import DurationInlineCell from '@/components/projects/DurationInlineCell';
@@ -1055,7 +1056,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                             fontWeight: isSubOverdue ? 700 : 500,
                           }}
                         >
-                          {sub.due_date}
+                          {formatDate(sub.due_date)}
                         </Typography>
                       </Box>
                     ) : (
@@ -1611,30 +1612,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Tooltip title={effectiveStartDate ? (hasChildren ? `Calculated Earliest Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}` : `Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}`) : 'Set start date and time'}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TextField
-                  type="date"
-                  size="small"
-                  variant="standard"
-                  value={effectiveStartDate ? effectiveStartDate.split('T')[0].split(' ')[0] : ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    handleCellUpdate(task.id, 'start_date', val || null);
-                  }}
-                  InputProps={{ disableUnderline: true }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.8rem',
-                      color: 'text.secondary',
-                      py: 0.25,
-                      px: 0.5,
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                    },
-                  }}
+                <StandardDateInput
+                  value={effectiveStartDate}
+                  onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
                 />
                 <TextField
                   type="time"
@@ -1669,30 +1649,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Tooltip title={effectiveDueDate ? (hasChildren ? `Calculated Latest Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}` : `Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}`) : 'Set due date and time'}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TextField
-                  type="date"
-                  size="small"
-                  variant="standard"
-                  value={effectiveDueDate ? effectiveDueDate.split('T')[0].split(' ')[0] : ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    handleCellUpdate(task.id, 'due_date', val || null);
-                  }}
-                  InputProps={{ disableUnderline: true }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.8rem',
-                      color: 'text.secondary',
-                      py: 0.25,
-                      px: 0.5,
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                    },
-                  }}
+                <StandardDateInput
+                  value={effectiveDueDate}
+                  onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
                 />
                 <TextField
                   type="time"
@@ -1775,30 +1734,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
             <Tooltip title={(task.completion_date || task.completed_at) ? `Completed: ${formatStandardDateTime(task.completion_date || task.completed_at, task.completion_time)}` : 'Set completion date and time'}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TextField
-                  type="date"
-                  size="small"
-                  variant="standard"
-                  value={task.completion_date ? task.completion_date.split('T')[0].split(' ')[0] : (task.completed_at ? task.completed_at.split('T')[0] : '')}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    handleCellUpdate(task.id, 'completion_date', val || null);
-                  }}
-                  InputProps={{ disableUnderline: true }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      fontSize: '0.8rem',
-                      color: 'text.secondary',
-                      py: 0.25,
-                      px: 0.5,
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
-                    },
-                  }}
+                <StandardDateInput
+                  value={task.completion_date || task.completed_at}
+                  onChange={(val) => handleCellUpdate(task.id, 'completion_date', val || null)}
                 />
                 <TextField
                   type="time"
@@ -2246,7 +2184,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'text.secondary' }}>
                                   <Calendar size={12} />
                                   <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 500 }}>
-                                    {task.due_date}
+                                    {formatDate(task.due_date)}
                                   </Typography>
                                 </Box>
                               )}

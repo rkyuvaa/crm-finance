@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { CheckCircle2, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { TaskItem } from '@/api/projectsApi';
-import { getTaskIdBadgeStyle } from '@/utils/format';
+import { getTaskIdBadgeStyle, formatDate } from '@/utils/format';
 
 interface MyTasksViewProps {
   tasks: TaskItem[];
@@ -95,7 +95,7 @@ export default function MyTasksView({ tasks = [], onOpenTaskDetail }: MyTasksVie
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: toneColor }}>
-                    Due: {task.due_date || 'No date'}
+                    Due: {task.due_date ? formatDate(task.due_date) : 'No date'}
                   </Typography>
 
                   <Avatar sx={{ width: 22, height: 22, fontSize: 10, bgcolor: '#203020', color: '#FFFFFF' }}>
