@@ -327,43 +327,11 @@ def _get_all_descendants(db: Session, parent_id: int) -> list[Task]:
 
 
 def _sync_parent_due_date(db: Session, parent_id: Optional[int]) -> None:
-    """Sync parent task due date to be the latest date among all its child tasks (recursive upward)."""
+    """Sync parent task dates, times, duration, and progress from child tasks (recursive upward)."""
     if not parent_id:
         return
-    parent = db.get(Task, parent_id)
-    if not parent:
-        return
-
-    descendants = _get_all_descendants(db, parent_id)
-    if not descendants:
-        return
-
-    if all(d.is_completed for d in descendants):
-        dates = []
-        for d in descendants:
-            dt = d.completion_date or (d.completed_at.date() if d.completed_at else None) or d.due_date
-            if dt:
-                dates.append(dt)
-        if dates:
-            highest_date = max(dates)
-            if parent.due_date != highest_date:
-                parent.due_date = highest_date
-                db.add(parent)
-    else:
-        children = db.query(Task).filter(
-            Task.parent_task_id == parent_id,
-            Task.is_deleted.is_(False)
-        ).all()
-        child_due_dates = [c.due_date for c in children if c.due_date is not None]
-        if child_due_dates:
-            latest_due = max(child_due_dates)
-            if parent.due_date != latest_due:
-                parent.due_date = latest_due
-                db.add(parent)
-
-    # Recurse up if parent also has a parent
-    if parent.parent_task_id:
-        _sync_parent_due_date(db, parent.parent_task_id)
+    from app.services.rollup_service import rollup_work_item
+    rollup_work_item(db, parent_id)
 
 
 def _batch_load_task_metadata(db: Session, task_ids: list[int]):
@@ -759,17 +727,68 @@ def _format_task_out(
     raw_auto = getattr(t, 'auto_schedule', True)
     out.auto_schedule = True if raw_auto is None else bool(raw_auto)
     out.is_parent = out.subtask_count > 0
-    if out.is_parent and t.start_date and t.due_date:
+    if out.is_parent:
+        # Dynamically derive missing start_time, due_time, start_date, or due_date from child subtasks
+        if not out.start_time or not out.due_time or not out.start_date or not out.due_date:
+            child_tasks = out.nested_subtasks or []
+            if not child_tasks:
+                child_tasks = db.query(Task).filter(Task.parent_task_id == t.id, Task.is_deleted.is_(False)).all()
+
+            if child_tasks:
+                from app.services.calendar_service import get_working_calendar as get_cal, parse_hhmm_time
+                from datetime import datetime
+                cal = get_cal(db)
+
+                if not out.start_time or not out.start_date:
+                    s_candidates = []
+                    for ct in child_tasks:
+                        c_sdate = getattr(ct, 'start_date', None)
+                        c_stime = getattr(ct, 'start_time', None)
+                        if c_sdate:
+                            st_time = parse_hhmm_time(c_stime, cal.work_start_time)
+                            s_candidates.append((datetime.combine(c_sdate, st_time), c_stime))
+                    if s_candidates:
+                        min_s_dt, min_raw = min(s_candidates, key=lambda x: x[0])
+                        if not out.start_date:
+                            out.start_date = min_s_dt.date()
+                        if not out.start_time:
+                            out.start_time = min_raw or min_s_dt.strftime("%H:%M")
+
+                if not out.due_time or not out.due_date:
+                    d_candidates = []
+                    for ct in child_tasks:
+                        c_ddate = getattr(ct, 'due_date', None)
+                        c_dtime = getattr(ct, 'due_time', None)
+                        if c_ddate:
+                            dt_time = parse_hhmm_time(c_dtime, cal.work_end_time)
+                            d_candidates.append((datetime.combine(c_ddate, dt_time), c_dtime))
+                    if d_candidates:
+                        max_d_dt, max_raw = max(d_candidates, key=lambda x: x[0])
+                        if not out.due_date:
+                            out.due_date = max_d_dt.date()
+                        if not out.due_time:
+                            out.due_time = max_raw or max_d_dt.strftime("%H:%M")
+
+    effective_start_date = out.start_date or t.start_date
+    effective_due_date = out.due_date or t.due_date
+    effective_start_time = out.start_time or t.start_time
+    effective_due_time = out.due_time or t.due_time
+
+    if out.is_parent and effective_start_date and effective_due_date:
         from app.services.calendar_service import get_working_calendar as get_cal, count_working_hours, parse_hhmm_time
         from datetime import datetime
         cal = get_cal(db)
-        s_time = parse_hhmm_time(t.start_time, cal.work_start_time)
-        d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
-        s_dt = datetime.combine(t.start_date, s_time)
-        d_dt = datetime.combine(t.due_date, d_time)
-        c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
-        out.duration_working_days = c_days
-        out.duration_working_hours = c_hours
+        s_time = parse_hhmm_time(effective_start_time, cal.work_start_time)
+        d_time = parse_hhmm_time(effective_due_time, cal.work_end_time)
+        s_dt = datetime.combine(effective_start_date, s_time)
+        d_dt = datetime.combine(effective_due_date, d_time)
+        if s_dt <= d_dt:
+            c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+            out.duration_working_days = c_days
+            out.duration_working_hours = c_hours
+        else:
+            out.duration_working_days = 0
+            out.duration_working_hours = 0
     elif not out.is_parent and t.duration_working_days is None and getattr(t, 'duration_working_hours', None) is None and t.start_date and t.due_date:
         from app.services.calendar_service import get_working_calendar as get_cal, count_working_hours, parse_hhmm_time
         from datetime import datetime
@@ -778,9 +797,13 @@ def _format_task_out(
         d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
         s_dt = datetime.combine(t.start_date, s_time)
         d_dt = datetime.combine(t.due_date, d_time)
-        c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
-        out.duration_working_days = c_days
-        out.duration_working_hours = c_hours
+        if s_dt <= d_dt:
+            c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+            out.duration_working_days = c_days
+            out.duration_working_hours = c_hours
+        else:
+            out.duration_working_days = 0
+            out.duration_working_hours = 0
     else:
         out.duration_working_hours = getattr(t, 'duration_working_hours', 0) or 0
 
@@ -1637,9 +1660,41 @@ def update_task(
             task.due_date = None
             task.duration_working_days = 0
             task.duration_working_hours = 0
+    elif "start_time" in update_dict and "start_date" not in update_dict and "due_date" not in update_dict and not dur_changed:
+        new_start_time = update_dict["start_time"]
+        if new_start_time:
+            s_time = parse_hhmm_time(new_start_time, cal.work_start_time)
+            task.start_time = s_time.strftime("%H:%M")
+        else:
+            task.start_time = None
+        if task.start_date and task.due_date and task.start_time and task.due_time:
+            s_time = parse_hhmm_time(task.start_time, cal.work_start_time)
+            d_time = parse_hhmm_time(task.due_time, cal.work_end_time)
+            s_dt = datetime.combine(task.start_date, s_time)
+            d_dt = datetime.combine(task.due_date, d_time)
+            if s_dt <= d_dt:
+                c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+                task.duration_working_days = c_days
+                task.duration_working_hours = c_hours
+    elif "due_time" in update_dict and "start_date" not in update_dict and "due_date" not in update_dict and not dur_changed:
+        new_due_time = update_dict["due_time"]
+        if new_due_time:
+            d_time = parse_hhmm_time(new_due_time, cal.work_end_time)
+            task.due_time = d_time.strftime("%H:%M")
+        else:
+            task.due_time = None
+        if task.start_date and task.due_date and task.start_time and task.due_time:
+            s_time = parse_hhmm_time(task.start_time, cal.work_start_time)
+            d_time = parse_hhmm_time(task.due_time, cal.work_end_time)
+            s_dt = datetime.combine(task.start_date, s_time)
+            d_dt = datetime.combine(task.due_date, d_time)
+            if s_dt <= d_dt:
+                c_days, c_hours = count_working_hours(s_dt, d_dt, cal)
+                task.duration_working_days = c_days
+                task.duration_working_hours = c_hours
 
     # Reject dates that conflict with predecessor dependencies unless override_dependencies is requested
-    if ("start_date" in update_dict or "due_date" in update_dict or "duration_working_days" in update_dict or "duration_working_hours" in update_dict) and not data.override_dependencies:
+    if ("start_date" in update_dict or "due_date" in update_dict or "start_time" in update_dict or "due_time" in update_dict or "duration_working_days" in update_dict or "duration_working_hours" in update_dict) and not data.override_dependencies:
         from app.services.scheduling_engine import check_dependency_conflict
         conflict = check_dependency_conflict(db, task)
         if conflict and conflict.get("has_conflict"):
@@ -2861,6 +2916,8 @@ def convert_subtask_to_task(
 
     if old_parent_id:
         _update_parent_progress(db, old_parent_id)
+        _sync_parent_due_date(db, old_parent_id)
+        db.commit()
 
     return _format_task_out(task, db)
 
@@ -2917,7 +2974,10 @@ def convert_task_to_subtask(
 
     if old_parent_id:
         _update_parent_progress(db, old_parent_id)
+        _sync_parent_due_date(db, old_parent_id)
     _update_parent_progress(db, data.target_parent_id)
+    _sync_parent_due_date(db, data.target_parent_id)
+    db.commit()
 
     return _format_task_out(task, db)
 

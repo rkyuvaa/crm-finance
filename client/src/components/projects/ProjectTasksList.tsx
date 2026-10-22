@@ -1152,6 +1152,40 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
     const isExpanded = !!expandedTaskIds[task.id];
     const completedCount = task.completed_subtask_count ?? subtaskList.filter((s) => s.is_completed).length;
 
+    // Effective rolled-up dates and times for parent tasks if not yet saved on parent record
+    let effectiveStartDate = task.start_date;
+    let effectiveStartTime = task.start_time;
+    let effectiveDueDate = task.due_date;
+    let effectiveDueTime = task.due_time;
+
+    if (hasChildren && subtaskList.length > 0) {
+      if (!effectiveStartDate || !effectiveStartTime) {
+        const withStart = [...subtaskList.filter((c) => c.start_date)];
+        if (withStart.length > 0) {
+          withStart.sort((a, b) => {
+            const dtA = `${(a.start_date || '').split('T')[0]} ${time12To24(a.start_time || '09:00')}`;
+            const dtB = `${(b.start_date || '').split('T')[0]} ${time12To24(b.start_time || '09:00')}`;
+            return dtA.localeCompare(dtB);
+          });
+          if (!effectiveStartDate) effectiveStartDate = withStart[0].start_date;
+          if (!effectiveStartTime) effectiveStartTime = withStart[0].start_time || '09:00';
+        }
+      }
+
+      if (!effectiveDueDate || !effectiveDueTime) {
+        const withDue = [...subtaskList.filter((c) => c.due_date)];
+        if (withDue.length > 0) {
+          withDue.sort((a, b) => {
+            const dtA = `${(a.due_date || '').split('T')[0]} ${time12To24(a.due_time || '18:00')}`;
+            const dtB = `${(b.due_date || '').split('T')[0]} ${time12To24(b.due_time || '18:00')}`;
+            return dtB.localeCompare(dtA);
+          });
+          if (!effectiveDueDate) effectiveDueDate = withDue[0].due_date;
+          if (!effectiveDueTime) effectiveDueTime = withDue[0].due_time || '18:00';
+        }
+      }
+    }
+
     return (
       <React.Fragment key={task.id}>
         <TableRow
@@ -1575,13 +1609,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
           {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={task.start_date ? `Start: ${formatStandardDateTime(task.start_date, task.start_time, '09:00')}` : 'Set start date and time'}>
+            <Tooltip title={effectiveStartDate ? (hasChildren ? `Calculated Earliest Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}` : `Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}`) : 'Set start date and time'}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <TextField
                   type="date"
                   size="small"
                   variant="standard"
-                  value={task.start_date ? task.start_date.split('T')[0].split(' ')[0] : ''}
+                  value={effectiveStartDate ? effectiveStartDate.split('T')[0].split(' ')[0] : ''}
                   onChange={(e) => {
                     const val = e.target.value;
                     handleCellUpdate(task.id, 'start_date', val || null);
@@ -1606,7 +1640,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   type="time"
                   size="small"
                   variant="standard"
-                  value={time12To24(task.start_time || '')}
+                  value={time12To24(effectiveStartTime || '')}
                   onChange={(e) => {
                     const val = e.target.value ? time24To12(e.target.value) : '';
                     handleCellUpdate(task.id, 'start_time', val || null);
@@ -1633,13 +1667,13 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
           {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={task.due_date ? `Due: ${formatStandardDateTime(task.due_date, task.due_time, '18:00')}` : 'Set due date and time'}>
+            <Tooltip title={effectiveDueDate ? (hasChildren ? `Calculated Latest Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}` : `Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}`) : 'Set due date and time'}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <TextField
                   type="date"
                   size="small"
                   variant="standard"
-                  value={task.due_date ? task.due_date.split('T')[0].split(' ')[0] : ''}
+                  value={effectiveDueDate ? effectiveDueDate.split('T')[0].split(' ')[0] : ''}
                   onChange={(e) => {
                     const val = e.target.value;
                     handleCellUpdate(task.id, 'due_date', val || null);
@@ -1664,7 +1698,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   type="time"
                   size="small"
                   variant="standard"
-                  value={time12To24(task.due_time || '')}
+                  value={time12To24(effectiveDueTime || '')}
                   onChange={(e) => {
                     const val = e.target.value ? time24To12(e.target.value) : '';
                     handleCellUpdate(task.id, 'due_time', val || null);

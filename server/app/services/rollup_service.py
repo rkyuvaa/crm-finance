@@ -113,7 +113,8 @@ def rollup_task_list(db: Session, task_list_id: int) -> None:
 
 def rollup_work_item(db: Session, task_id: int) -> None:
     """
-    If task has children: recompute its start_date, due_date, estimated_cost, actual_cost.
+    If task has children: recompute its start_date, start_time, due_date, due_time,
+    estimated_cost, actual_cost, and working duration.
     Then recurse up to its parent (if any), then to task list / milestone / project.
     Does NOT commit — caller is responsible for commit.
     """
@@ -127,30 +128,74 @@ def rollup_work_item(db: Session, task_id: int) -> None:
     ).all()
 
     if children:
+        from app.services.calendar_service import get_working_calendar, count_working_hours, parse_hhmm_time
+        cal = get_working_calendar(db)
+
+        # 1. Earliest Start Datetime (MIN among direct children)
+        start_dts = []
+        for c in children:
+            if c.start_date:
+                s_time = parse_hhmm_time(c.start_time, cal.work_start_time)
+                start_dts.append((datetime.combine(c.start_date, s_time), c.start_time))
+
+        if start_dts:
+            earliest_dt, raw_start_time = min(start_dts, key=lambda x: x[0])
+            task.start_date = earliest_dt.date()
+            task.start_time = raw_start_time or earliest_dt.strftime("%H:%M")
+        else:
+            task.start_date = None
+            task.start_time = None
+
+        # 2. Latest Due / End Datetime (MAX among direct children or completed descendants)
         descendants = get_all_descendants(db, task_id)
         if descendants and all(d.is_completed for d in descendants):
-            dates = []
+            comp_dts = []
             for d in descendants:
-                dt = d.completion_date or (d.completed_at.date() if d.completed_at else None) or d.due_date
-                if dt:
-                    dates.append(dt)
-            if dates:
-                task.due_date = max(dates)
+                if d.completed_at:
+                    comp_dts.append((d.completed_at, d.completed_at.strftime("%H:%M")))
+                elif d.completion_date:
+                    c_time = parse_hhmm_time(d.completion_time, cal.work_end_time)
+                    comp_dts.append((datetime.combine(d.completion_date, c_time), d.completion_time))
+                elif d.due_date:
+                    d_time = parse_hhmm_time(d.due_time, cal.work_end_time)
+                    comp_dts.append((datetime.combine(d.due_date, d_time), d.due_time))
+            if comp_dts:
+                latest_dt, raw_due_time = max(comp_dts, key=lambda x: x[0])
+                task.due_date = latest_dt.date()
+                task.due_time = raw_due_time or latest_dt.strftime("%H:%M")
         else:
-            end_dates = [c.due_date for c in children if c.due_date]
-            if end_dates:
-                task.due_date = max(end_dates)
-
-        start_dates = [c.start_date for c in children if c.start_date]
-        if start_dates:
-            task.start_date = min(start_dates)
+            end_dts = []
+            for c in children:
+                if c.due_date:
+                    d_time = parse_hhmm_time(c.due_time, cal.work_end_time)
+                    end_dts.append((datetime.combine(c.due_date, d_time), c.due_time))
+            if end_dts:
+                latest_dt, raw_due_time = max(end_dts, key=lambda x: x[0])
+                task.due_date = latest_dt.date()
+                task.due_time = raw_due_time or latest_dt.strftime("%H:%M")
+            else:
+                task.due_date = None
+                task.due_time = None
 
         task.estimated_cost = sum(c.estimated_cost or 0.0 for c in children)
         task.actual_cost = sum(c.actual_cost or 0.0 for c in children)
 
-        # Parent duration is a read-only calendar-day span for display only.
-        task.duration_working_days = None
-        task.duration_working_hours = None
+        # 3. Compute working duration for parent task
+        if task.start_date and task.due_date:
+            s_time = parse_hhmm_time(task.start_time, cal.work_start_time)
+            d_time = parse_hhmm_time(task.due_time, cal.work_end_time)
+            s_dt = datetime.combine(task.start_date, s_time)
+            d_dt = datetime.combine(task.due_date, d_time)
+            if s_dt <= d_dt:
+                w_days, w_hours = count_working_hours(s_dt, d_dt, cal)
+                task.duration_working_days = w_days
+                task.duration_working_hours = w_hours
+            else:
+                task.duration_working_days = 0
+                task.duration_working_hours = 0
+        else:
+            task.duration_working_days = None
+            task.duration_working_hours = None
 
         db.add(task)
 
