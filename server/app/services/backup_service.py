@@ -101,6 +101,33 @@ from app.models import (
 
 UPLOAD_DIR_PATH = Path("uploads")
 
+
+def get_upload_dirs() -> List[Path]:
+    """Finds all existing upload root paths across development and container layouts."""
+    candidates = [
+        Path("uploads"),
+        Path("server/uploads"),
+        Path("/app/uploads"),
+        Path(__file__).resolve().parent.parent.parent.parent / "uploads",
+        Path(__file__).resolve().parent.parent.parent / "uploads",
+    ]
+    seen = set()
+    valid_dirs = []
+    for p in candidates:
+        try:
+            resolved = p.resolve()
+            if resolved not in seen and resolved.exists() and resolved.is_dir():
+                seen.add(resolved)
+                valid_dirs.append(p)
+        except Exception:
+            pass
+    return valid_dirs or [Path("uploads")]
+
+
+def get_primary_upload_dir() -> Path:
+    dirs = get_upload_dirs()
+    return dirs[0]
+
 # Topological model list for export and import across all system domains
 # Topological model list for export and import across all system domains
 TABLE_MODELS = [
@@ -399,7 +426,7 @@ def generate_sql_dump(db: Session, include_audit_logs: bool = False) -> str:
     return "\n".join(sql_lines)
 
 
-def create_system_zip_backup(db: Session, target_upload_dir: Path = UPLOAD_DIR_PATH) -> bytes:
+def create_system_zip_backup(db: Session, target_upload_dir: Optional[Path] = None) -> bytes:
     """Generates a complete system backup ZIP containing SQL dump, JSON metadata, and uploaded images/files."""
     backup_payload = create_system_backup(db, include_audit_logs=True)
     sql_dump_str = generate_sql_dump(db, include_audit_logs=True)
@@ -412,15 +439,22 @@ def create_system_zip_backup(db: Session, target_upload_dir: Path = UPLOAD_DIR_P
         # 2. Add JSON Backup
         zip_file.writestr("backup_data.json", json.dumps(backup_payload, indent=2, ensure_ascii=False).encode("utf-8"))
 
-        # 3. Add Uploaded images / files directory if it exists
+        # 3. Add Uploaded images / files directory (all attachment subdirectories)
         uploaded_files_count = 0
-        if target_upload_dir.exists() and target_upload_dir.is_dir():
-            for root, _, files in os.walk(target_upload_dir):
-                for file in files:
-                    file_path = Path(root) / file
-                    arcname = Path("uploads") / file_path.relative_to(target_upload_dir)
-                    zip_file.write(file_path, arcname=str(arcname))
-                    uploaded_files_count += 1
+        added_rel_paths = set()
+        scan_dirs = [target_upload_dir] if target_upload_dir is not None else get_upload_dirs()
+
+        for base_dir in scan_dirs:
+            if base_dir.exists() and base_dir.is_dir():
+                for root, _, files in os.walk(base_dir):
+                    for file in files:
+                        file_path = Path(root) / file
+                        rel_path = file_path.relative_to(base_dir)
+                        if rel_path not in added_rel_paths:
+                            arcname = Path("uploads") / rel_path
+                            zip_file.write(file_path, arcname=str(arcname))
+                            added_rel_paths.add(rel_path)
+                            uploaded_files_count += 1
 
         # 4. Manifest
         manifest = {
@@ -531,7 +565,7 @@ def restore_system_zip_backup(
     db: Session,
     zip_bytes: bytes,
     mode: str = "overwrite",
-    target_upload_dir: Path = UPLOAD_DIR_PATH,
+    target_upload_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Restores database AND uploaded images/files from a complete ZIP backup archive."""
     try:
@@ -551,13 +585,14 @@ def restore_system_zip_backup(
             db_result = restore_system_backup(db, backup_payload, mode=mode)
 
             # 2. Restore Uploaded files/images
+            dest_dir = target_upload_dir if target_upload_dir is not None else get_primary_upload_dir()
+            dest_dir.mkdir(parents=True, exist_ok=True)
             restored_files_count = 0
-            target_upload_dir.mkdir(parents=True, exist_ok=True)
 
             for member in zip_file.infolist():
                 if member.filename.startswith("uploads/") and not member.is_dir():
                     rel_path = Path(member.filename).relative_to("uploads")
-                    dest_file = target_upload_dir / rel_path
+                    dest_file = dest_dir / rel_path
                     dest_file.parent.mkdir(parents=True, exist_ok=True)
 
                     with zip_file.open(member) as source, open(dest_file, "wb") as target:
