@@ -3448,7 +3448,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         </DialogActions>
       </Dialog>
 
-      {/* Assignee Multi-Select Dropdown (Names Only, Solid #203020 Highlight, Done Action) */}
+      {/* Assignee Multi-Select Dropdown (Pill Rounded Effect on Selected, Done Action) */}
       <Popover
         open={Boolean(assigneeMenuAnchor)}
         anchorEl={assigneeMenuAnchor?.anchorEl}
@@ -3500,6 +3500,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             users.map((u) => {
               const isSelected = assigneeMenuAnchor?.tempSelectedIds.includes(u.id);
               const displayName = u.full_name || u.email || `User ${u.id}`;
+              const colorInfo = getAssigneeColor(u.id);
               return (
                 <Box
                   key={u.id}
@@ -3515,30 +3516,46 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                     });
                   }}
                   sx={{
-                    px: 1.5,
-                    py: 0.85,
+                    px: 1,
+                    py: 0.4,
+                    mx: 0.5,
                     cursor: 'pointer',
                     userSelect: 'none',
-                    bgcolor: isSelected ? '#203020' : 'transparent',
-                    color: isSelected ? '#FFFFFF' : 'text.primary',
-                    transition: 'all 0.12s ease',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'background-color 0.12s ease',
                     '&:hover': {
-                      bgcolor: isSelected
-                        ? (isDark ? '#2E442E' : '#2A3F2A')
-                        : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                      bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                     },
                   }}
                 >
-                  <Typography
-                    noWrap
+                  <Box
                     sx={{
-                      fontSize: '0.82rem',
-                      fontWeight: isSelected ? 600 : 500,
-                      color: isSelected ? '#FFFFFF' : 'text.primary',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      bgcolor: isSelected ? colorInfo.bg : 'transparent',
+                      color: isSelected ? colorInfo.color : 'text.primary',
+                      borderRadius: '12px',
+                      px: 1.2,
+                      py: '3px',
+                      boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
+                      transition: 'all 0.14s ease',
+                      maxWidth: '100%',
                     }}
                   >
-                    {displayName}
-                  </Typography>
+                    <Typography
+                      noWrap
+                      sx={{
+                        fontSize: '0.82rem',
+                        fontWeight: isSelected ? 600 : 500,
+                        color: isSelected ? colorInfo.color : 'text.primary',
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {displayName}
+                    </Typography>
+                  </Box>
                 </Box>
               );
             })
