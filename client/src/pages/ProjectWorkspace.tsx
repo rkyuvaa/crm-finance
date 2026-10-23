@@ -16,6 +16,11 @@ import {
   Paper,
   Divider,
   Tooltip,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputAdornment,
   useTheme,
 } from '@mui/material';
 import {
@@ -35,13 +40,18 @@ import {
   Download,
   RotateCcw,
 } from 'lucide-react';
-import { useGetProjectQuery } from '@/api/projectsApi';
+import { useGetProjectQuery, useUpdateProjectMutation } from '@/api/projectsApi';
+import { useUsersQuery } from '@/api/mastersApi';
 import ProjectTasksList from '@/components/projects/ProjectTasksList';
 import ProjectMilestonesList from '@/components/projects/ProjectMilestonesList';
-import { formatStandardDateTime } from '@/utils/format';
+import { formatStandardDateTime, time24To12, time12To24 } from '@/utils/format';
 import ProjectTimelineView from '@/components/projects/ProjectTimelineView';
 import ProjectTimesheetsView from '@/components/projects/ProjectTimesheetsView';
 import ProjectTeamView from '@/components/projects/ProjectTeamView';
+import AutoSaveStatusBadge from '@/components/common/AutoSaveStatusBadge';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { useToast } from '@/components/ui/ToastHost';
+import StandardDateInput from '@/components/common/StandardDateInput';
 
 export default function ProjectWorkspace() {
   const theme = useTheme();
@@ -55,6 +65,69 @@ export default function ProjectWorkspace() {
     skip: !numericId,
   });
 
+  const { showToast } = useToast();
+  const [updateProject] = useUpdateProjectMutation();
+  const { data: users = [] } = useUsersQuery();
+
+  const DEFAULT_PROJECT_CATEGORIES = [
+    'Vehicle Customization',
+    'Delivery & Payout',
+    'Document Operations',
+    'General ERP Task',
+    'IT & Software',
+    'Finance & Audit',
+    'Construction & Operations',
+  ];
+
+  // Editable Project Form States
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Vehicle Customization');
+  const [ownerId, setOwnerId] = useState<number | ''>('');
+  const [targetStartDate, setTargetStartDate] = useState('');
+  const [targetEndDate, setTargetEndDate] = useState('');
+  const [targetEndTime, setTargetEndTime] = useState('');
+  const [completionDate, setCompletionDate] = useState('');
+  const [completionTime, setCompletionTime] = useState('');
+  const [budget, setBudget] = useState<number | ''>('');
+
+  const autoSave = useAutoSave({
+    onSave: async (patch) => {
+      if (!numericId) return;
+      return await updateProject({ id: numericId, body: patch }).unwrap();
+    },
+    onError: (_patch, err) => {
+      showToast(err?.data?.detail || 'Failed to auto-save project changes', 'error');
+    },
+  });
+
+  useEffect(() => {
+    if (project) {
+      setName(project.name || '');
+      setDescription(project.description || '');
+      setCategory(project.category || 'Vehicle Customization');
+      setOwnerId(project.owner_id ?? '');
+      setTargetStartDate(project.target_start_date ? project.target_start_date.split('T')[0] : '');
+      setTargetEndDate(project.target_end_date ? project.target_end_date.split('T')[0] : '');
+      setTargetEndTime(project.target_end_time || '');
+      setCompletionDate(project.completion_date ? project.completion_date.split('T')[0] : '');
+      setCompletionTime(project.completion_time || '');
+      setBudget(project.budget !== undefined && project.budget !== null ? project.budget : '');
+    }
+  }, [
+    project?.id,
+    project?.name,
+    project?.description,
+    project?.category,
+    project?.owner_id,
+    project?.target_start_date,
+    project?.target_end_date,
+    project?.target_end_time,
+    project?.completion_date,
+    project?.completion_time,
+    project?.budget,
+  ]);
+
   // Whiteboard Canvas State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -62,6 +135,7 @@ export default function ProjectWorkspace() {
   const [penLineWidth, setPenLineWidth] = useState(3);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+    autoSave.flushPending();
     setTab(newValue);
   };
 
@@ -158,10 +232,48 @@ export default function ProjectWorkspace() {
             <IconButton onClick={() => navigate('/projects')} size="small">
               <ArrowLeft size={20} />
             </IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
-              {project.name}
-            </Typography>
+            <TextField
+              variant="standard"
+              value={name}
+              placeholder="Project Name..."
+              onChange={(e) => {
+                setName(e.target.value);
+                autoSave.registerPendingChange('name', e.target.value.trim(), project.name);
+              }}
+              onBlur={() => {
+                const trimmed = name.trim();
+                if (trimmed && trimmed !== project.name) {
+                  autoSave.saveField('name', trimmed, project.name);
+                } else if (!trimmed) {
+                  setName(project.name);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLElement).blur();
+              }}
+              InputProps={{
+                disableUnderline: true,
+                sx: {
+                  fontSize: '1.4rem',
+                  fontWeight: 700,
+                  color: 'text.primary',
+                  borderRadius: '6px',
+                  px: 0.5,
+                  py: 0.25,
+                  transition: 'background-color 0.15s',
+                  '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                  '&.Mui-focused': { bgcolor: isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.06)' },
+                },
+              }}
+              sx={{ minWidth: 240, maxWidth: 450 }}
+            />
             <Chip size="small" label={projectCode} variant="outlined" sx={{ fontWeight: 600, fontSize: 12, borderRadius: '6px' }} />
+            <AutoSaveStatusBadge
+              status={autoSave.status}
+              lastSaved={autoSave.lastSaved}
+              errorMessage={autoSave.errorMessage}
+              onRetry={autoSave.retry}
+            />
 
             {/* Beautiful Solid Green Pill Badges (Button Size & Rounded) */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', ml: { xs: 0, sm: 1 } }}>
@@ -265,57 +377,133 @@ export default function ProjectWorkspace() {
                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
                   Project Overview
                 </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 3, lineHeight: 1.6 }}>
-                  {project.description || 'No detailed description provided for this project yet.'}
-                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    autoSave.registerPendingChange('description', e.target.value.trim(), project.description || '');
+                  }}
+                  onBlur={() => autoSave.saveField('description', description.trim(), project.description || '')}
+                  placeholder="Add detailed description, objectives, and scope for this project..."
+                  sx={{ mb: 3, '& .MuiOutlinedInput-root': { fontSize: 14 } }}
+                />
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>CATEGORY</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5 }}>
-                        {project.category || 'Vehicle Customization'}
-                      </Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>CATEGORY</Typography>
+                      <Select
+                        size="small"
+                        fullWidth
+                        value={category}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCategory(val);
+                          autoSave.saveField('category', val, project.category);
+                        }}
+                        sx={{ bgcolor: 'background.paper', fontSize: 13, fontWeight: 600 }}
+                      >
+                        {DEFAULT_PROJECT_CATEGORIES.map((c) => (
+                          <MenuItem key={c} value={c}>{c}</MenuItem>
+                        ))}
+                      </Select>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>PROJECT OWNER</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <User size={14} color={isDark ? '#5FCF87' : '#203020'} /> {project.owner_name || 'Admin'}
-                      </Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>PROJECT OWNER</Typography>
+                      <Select
+                        size="small"
+                        fullWidth
+                        displayEmpty
+                        value={ownerId}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? undefined : Number(e.target.value);
+                          setOwnerId(val ?? '');
+                          autoSave.saveField('owner_id', val || null, project.owner_id);
+                        }}
+                        sx={{ bgcolor: 'background.paper', fontSize: 13, fontWeight: 600 }}
+                      >
+                        <MenuItem value=""><em>Unassigned</em></MenuItem>
+                        {users.map((u) => (
+                          <MenuItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </MenuItem>
+                        ))}
+                      </Select>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET START DATE</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
-                        <Calendar size={14} color="#64748B" /> {project.target_start_date ? formatStandardDateTime(project.target_start_date, project.target_start_time, '09:00') : 'Not set'}
-                      </Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>TARGET START DATE</Typography>
+                      <StandardDateInput
+                        value={targetStartDate}
+                        onChange={(val) => {
+                          setTargetStartDate(val);
+                          autoSave.saveField('target_start_date', val || null, project.target_start_date);
+                        }}
+                      />
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>TARGET COMPLETION DATE & TIME</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
-                        <Calendar size={14} color="#64748B" /> {project.target_end_date ? formatStandardDateTime(project.target_end_date, project.target_end_time, '18:00') : 'Not set'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-
-                  {project.completion_date && (
-                    <Grid item xs={12} sm={6}>
-                      <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>ACTUAL COMPLETION DATE & TIME</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#5FCF87' : '#203020', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'monospace' }}>
-                          <CheckCircle2 size={14} color={isDark ? '#5FCF87' : '#203020'} /> {formatStandardDateTime(project.completion_date, project.completion_time)}
-                        </Typography>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>TARGET COMPLETION DATE & TIME</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <StandardDateInput
+                          value={targetEndDate}
+                          onChange={(val) => {
+                            setTargetEndDate(val);
+                            autoSave.saveField('target_end_date', val || null, project.target_end_date);
+                          }}
+                        />
+                        <TextField
+                          type="time"
+                          size="small"
+                          value={time12To24(targetEndTime)}
+                          onChange={(e) => {
+                            const val = e.target.value ? time24To12(e.target.value) : '';
+                            setTargetEndTime(val);
+                            autoSave.registerPendingChange('target_end_time', val || null, project.target_end_time);
+                          }}
+                          onBlur={() => autoSave.saveField('target_end_time', targetEndTime || null, project.target_end_time)}
+                          sx={{ width: 110, '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                        />
                       </Box>
-                    </Grid>
-                  )}
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>ACTUAL COMPLETION DATE & TIME</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <StandardDateInput
+                          value={completionDate}
+                          onChange={(val) => {
+                            setCompletionDate(val);
+                            autoSave.saveField('completion_date', val || null, project.completion_date);
+                          }}
+                        />
+                        <TextField
+                          type="time"
+                          size="small"
+                          value={time12To24(completionTime)}
+                          onChange={(e) => {
+                            const val = e.target.value ? time24To12(e.target.value) : '';
+                            setCompletionTime(val);
+                            autoSave.registerPendingChange('completion_time', val || null, project.completion_time);
+                          }}
+                          onBlur={() => autoSave.saveField('completion_time', completionTime || null, project.completion_time)}
+                          sx={{ width: 110, '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
+                        />
+                      </Box>
+                    </Box>
+                  </Grid>
                 </Grid>
               </Paper>
 
@@ -369,11 +557,23 @@ export default function ProjectWorkspace() {
                   FINANCIAL SUMMARY
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2" color="textSecondary">Total Budget:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                      ₹{(project.budget || 0).toLocaleString()}
-                    </Typography>
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={budget}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                        setBudget(val);
+                        autoSave.registerPendingChange('budget', val === '' ? 0 : Number(val), project.budget || 0);
+                      }}
+                      onBlur={() => autoSave.saveField('budget', budget === '' ? 0 : Number(budget), project.budget || 0)}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start"><Typography variant="caption" sx={{ fontWeight: 700 }}>₹</Typography></InputAdornment>,
+                      }}
+                      sx={{ width: 150, '& .MuiOutlinedInput-root': { height: 32, fontSize: 13, fontWeight: 700, bgcolor: 'background.default' } }}
+                    />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="textSecondary">Estimated Cost:</Typography>

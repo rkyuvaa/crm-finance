@@ -179,6 +179,7 @@ def get_project(
     return _format_project_out(project, db)
 
 
+@router.patch("/{project_id}", response_model=ProjectOut)
 @router.put("/{project_id}", response_model=ProjectOut)
 def update_project(
     project_id: int,

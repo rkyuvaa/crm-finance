@@ -1617,13 +1617,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
                 />
                 <TextField
+                  key={`st-${task.id}-${effectiveStartTime}`}
                   type="time"
                   size="small"
                   variant="standard"
-                  value={time12To24(effectiveStartTime || '')}
-                  onChange={(e) => {
+                  defaultValue={time12To24(effectiveStartTime || '')}
+                  onBlur={(e) => {
                     const val = e.target.value ? time24To12(e.target.value) : '';
-                    handleCellUpdate(task.id, 'start_time', val || null);
+                    if (val !== (effectiveStartTime || '')) {
+                      handleCellUpdate(task.id, 'start_time', val || null);
+                    }
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter') e.target.blur();
                   }}
                   InputProps={{ disableUnderline: true }}
                   sx={{
@@ -1654,13 +1660,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
                 />
                 <TextField
+                  key={`dt-${task.id}-${effectiveDueTime}`}
                   type="time"
                   size="small"
                   variant="standard"
-                  value={time12To24(effectiveDueTime || '')}
-                  onChange={(e) => {
+                  defaultValue={time12To24(effectiveDueTime || '')}
+                  onBlur={(e) => {
                     const val = e.target.value ? time24To12(e.target.value) : '';
-                    handleCellUpdate(task.id, 'due_time', val || null);
+                    if (val !== (effectiveDueTime || '')) {
+                      handleCellUpdate(task.id, 'due_time', val || null);
+                    }
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter') e.target.blur();
                   }}
                   InputProps={{ disableUnderline: true }}
                   sx={{
@@ -1739,13 +1751,19 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   onChange={(val) => handleCellUpdate(task.id, 'completion_date', val || null)}
                 />
                 <TextField
+                  key={`ct-${task.id}-${task.completion_time}`}
                   type="time"
                   size="small"
                   variant="standard"
-                  value={time12To24(task.completion_time || '')}
-                  onChange={(e) => {
+                  defaultValue={time12To24(task.completion_time || '')}
+                  onBlur={(e) => {
                     const val = e.target.value ? time24To12(e.target.value) : '';
-                    handleCellUpdate(task.id, 'completion_time', val || null);
+                    if (val !== (task.completion_time || '')) {
+                      handleCellUpdate(task.id, 'completion_time', val || null);
+                    }
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter') e.target.blur();
                   }}
                   InputProps={{ disableUnderline: true }}
                   sx={{

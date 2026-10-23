@@ -1370,6 +1370,7 @@ def create_personal_task(
 
 
 @router.put("/personal/{task_id}", response_model=TaskOut)
+@router.patch("/personal/{task_id}", response_model=TaskOut)
 def update_personal_task(
     task_id: int,
     data: TaskUpdate,

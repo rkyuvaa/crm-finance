@@ -464,13 +464,19 @@ export default function TaskListView({
                 onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
               />
               <TextField
+                key={`st-${task.id}-${task.start_time}`}
                 type="time"
                 size="small"
                 variant="standard"
-                value={time12To24(task.start_time || '')}
-                onChange={(e) => {
+                defaultValue={time12To24(task.start_time || '')}
+                onBlur={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'start_time', val || null);
+                  if (val !== (task.start_time || '')) {
+                    handleCellUpdate(task.id, 'start_time', val || null);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -499,13 +505,19 @@ export default function TaskListView({
                 onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
               />
               <TextField
+                key={`dt-${task.id}-${task.due_time}`}
                 type="time"
                 size="small"
                 variant="standard"
-                value={time12To24(task.due_time || '')}
-                onChange={(e) => {
+                defaultValue={time12To24(task.due_time || '')}
+                onBlur={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'due_time', val || null);
+                  if (val !== (task.due_time || '')) {
+                    handleCellUpdate(task.id, 'due_time', val || null);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{
@@ -582,13 +594,19 @@ export default function TaskListView({
                 onChange={(val) => handleCellUpdate(task.id, 'completion_date', val || null)}
               />
               <TextField
+                key={`ct-${task.id}-${task.completion_time}`}
                 type="time"
                 size="small"
                 variant="standard"
-                value={time12To24(task.completion_time || '')}
-                onChange={(e) => {
+                defaultValue={time12To24(task.completion_time || '')}
+                onBlur={(e) => {
                   const val = e.target.value ? time24To12(e.target.value) : '';
-                  handleCellUpdate(task.id, 'completion_time', val || null);
+                  if (val !== (task.completion_time || '')) {
+                    handleCellUpdate(task.id, 'completion_time', val || null);
+                  }
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.key === 'Enter') e.target.blur();
                 }}
                 InputProps={{ disableUnderline: true }}
                 sx={{

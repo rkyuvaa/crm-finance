@@ -95,6 +95,8 @@ import {
 import { useUsersQuery, useCostCentersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { time24To12, time12To24, getTaskIdBadgeStyle, formatDate, formatDateTime } from '@/utils/format';
+import AutoSaveStatusBadge from '@/components/common/AutoSaveStatusBadge';
+import { useAutoSave } from '@/hooks/useAutoSave';
 
 interface TaskDetailPanelProps {
   open: boolean;
@@ -110,7 +112,6 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   // Editable Title & Description State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Failed'>('Saved');
 
   // Editable Date & Time State
   const [startDate, setStartDate] = useState('');
@@ -126,6 +127,9 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [editSeries, setEditSeries] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [estimatedCost, setEstimatedCost] = useState<number | ''>('');
+  const [actualCost, setActualCost] = useState<number | ''>('');
+  const [estimatedHours, setEstimatedHours] = useState<number | ''>('');
 
   // Checklist State
   const [newChecklistTitle, setNewChecklistTitle] = useState('');
@@ -283,6 +287,10 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
       setRecurrenceType(currentTask.recurrence_rule?.type || 'None');
       setRecurrenceEndDate(sanitizeDate(currentTask.recurrence_end_date));
       setEditSeries(false);
+
+      setEstimatedCost(currentTask.estimated_cost !== undefined && currentTask.estimated_cost !== null ? currentTask.estimated_cost : '');
+      setActualCost(currentTask.actual_cost !== undefined && currentTask.actual_cost !== null ? currentTask.actual_cost : '');
+      setEstimatedHours(currentTask.estimated_hours !== undefined && currentTask.estimated_hours !== null ? currentTask.estimated_hours : '');
     }
   }, [
     currentTask?.id,
@@ -300,7 +308,20 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     currentTask?.reminder_at,
     currentTask?.recurrence_rule,
     currentTask?.recurrence_end_date,
+    currentTask?.estimated_cost,
+    currentTask?.actual_cost,
+    currentTask?.estimated_hours,
   ]);
+
+  const autoSave = useAutoSave({
+    onSave: async (patch) => {
+      if (!currentTaskId) return;
+      return await updateTask({ id: currentTaskId, body: patch }).unwrap();
+    },
+    onError: (_patch, err) => {
+      showToast(err?.data?.detail || 'Failed to save changes', 'error');
+    },
+  });
 
 
   // Timer Tick Effect
@@ -326,29 +347,16 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   };
 
   const handleTitleBlur = async () => {
-    if (!title.trim() || title === currentTask?.title) return;
-    setSaveStatus('Saving...');
-    try {
-      await updateTask({ id: currentTaskId, body: { title: title.trim() } }).unwrap();
-      setSaveStatus('Saved');
-      showToast('Title updated', 'success');
-    } catch {
-      setSaveStatus('Failed');
-      showToast('Failed to update title', 'error');
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitle(currentTask?.title || '');
+      return;
     }
+    await autoSave.saveField('title', trimmed, currentTask?.title);
   };
 
   const handleDescriptionBlur = async () => {
-    if (description === currentTask?.description) return;
-    setSaveStatus('Saving...');
-    try {
-      await updateTask({ id: currentTaskId, body: { description: description.trim() } }).unwrap();
-      setSaveStatus('Saved');
-      showToast('Description saved', 'success');
-    } catch {
-      setSaveStatus('Failed');
-      showToast('Failed to save description', 'error');
-    }
+    await autoSave.saveField('description', description.trim(), currentTask?.description || '');
   };
 
   const handleToggleTimer = async () => {
@@ -373,108 +381,52 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
   };
 
   const handleStatusChange = async (statusId: number) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { status_id: statusId } }).unwrap();
-      showToast('Status updated', 'success');
-    } catch {
-      showToast('Failed to update status', 'error');
-    }
+    await autoSave.saveField('status_id', statusId, currentTask?.status_id);
   };
 
   const handleMilestoneChange = async (milestoneId: number | '') => {
-    try {
-      await updateTask({ id: currentTaskId, body: { milestone_id: milestoneId ? Number(milestoneId) : (null as any), task_list_id: (null as any) } }).unwrap();
-      showToast('Milestone updated', 'success');
-    } catch {
-      showToast('Failed to update milestone', 'error');
-    }
+    await autoSave.saveMultiple(
+      { milestone_id: milestoneId ? Number(milestoneId) : null, task_list_id: null },
+      { milestone_id: currentTask?.milestone_id ?? null, task_list_id: currentTask?.task_list_id ?? null }
+    );
   };
 
   const handleTaskListChange = async (taskListId: number | '') => {
-    try {
-      await updateTask({ id: currentTaskId, body: { task_list_id: taskListId ? Number(taskListId) : (null as any) } }).unwrap();
-      showToast('Task list updated', 'success');
-    } catch {
-      showToast('Failed to update task list', 'error');
-    }
+    await autoSave.saveField('task_list_id', taskListId ? Number(taskListId) : null, currentTask?.task_list_id ?? null);
   };
 
   const handlePriorityChange = async (priority: string) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { priority: priority as any } }).unwrap();
-      showToast('Priority updated', 'success');
-    } catch {
-      showToast('Failed to update priority', 'error');
-    }
+    await autoSave.saveField('priority', priority, currentTask?.priority);
   };
 
   const handleStartDateChange = async (d: string) => {
     const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
     setStartDate(cleanDate);
-    try {
-      await updateTask({ id: currentTaskId, body: { start_date: cleanDate || (null as any) } }).unwrap();
-      showToast('Start date updated', 'success');
-    } catch (err: any) {
-      setStartDate(currentTask?.start_date ? currentTask.start_date.split('T')[0].split(' ')[0] : '');
-      showToast(err?.data?.detail || 'Failed to update start date', 'error');
-    }
+    await autoSave.saveField('start_date', cleanDate || null, currentTask?.start_date ? currentTask.start_date.split('T')[0] : null);
   };
 
-  const handleStartTimeChange = async (t: string) => {
-    setStartTime(t);
-    try {
-      await updateTask({ id: currentTaskId, body: { start_time: t || (null as any) } }).unwrap();
-      showToast('Start time updated', 'success');
-    } catch (err: any) {
-      setStartTime(currentTask?.start_time || '');
-      showToast(err?.data?.detail || 'Failed to update start time', 'error');
-    }
+  const handleStartTimeBlur = async () => {
+    await autoSave.saveField('start_time', startTime || null, currentTask?.start_time || null);
   };
 
   const handleDueDateChange = async (d: string) => {
     const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
     setDueDate(cleanDate);
-    try {
-      await updateTask({ id: currentTaskId, body: { due_date: cleanDate || (null as any) } }).unwrap();
-      showToast('Due date updated', 'success');
-    } catch (err: any) {
-      setDueDate(currentTask?.due_date ? currentTask.due_date.split('T')[0].split(' ')[0] : '');
-      showToast(err?.data?.detail || 'Failed to update due date', 'error');
-    }
+    await autoSave.saveField('due_date', cleanDate || null, currentTask?.due_date ? currentTask.due_date.split('T')[0] : null);
   };
 
-  const handleDueTimeChange = async (t: string) => {
-    setDueTime(t);
-    try {
-      await updateTask({ id: currentTaskId, body: { due_time: t || (null as any) } }).unwrap();
-      showToast('Due time updated', 'success');
-    } catch (err: any) {
-      setDueTime(currentTask?.due_time || '');
-      showToast(err?.data?.detail || 'Failed to update due time', 'error');
-    }
+  const handleDueTimeBlur = async () => {
+    await autoSave.saveField('due_time', dueTime || null, currentTask?.due_time || null);
   };
 
   const handleCompletionDateChange = async (d: string) => {
     const cleanDate = d ? d.split('T')[0].split(' ')[0] : '';
     setCompletionDate(cleanDate);
-    try {
-      await updateTask({ id: currentTaskId, body: { completion_date: cleanDate || (null as any) } }).unwrap();
-      showToast('Completion date updated', 'success');
-    } catch (err: any) {
-      setCompletionDate(currentTask?.completion_date ? currentTask.completion_date.split('T')[0].split(' ')[0] : '');
-      showToast(err?.data?.detail || 'Failed to update completion date', 'error');
-    }
+    await autoSave.saveField('completion_date', cleanDate || null, currentTask?.completion_date ? currentTask.completion_date.split('T')[0] : null);
   };
 
-  const handleCompletionTimeChange = async (t: string) => {
-    setCompletionTime(t);
-    try {
-      await updateTask({ id: currentTaskId, body: { completion_time: t || (null as any) } }).unwrap();
-      showToast('Completion time updated', 'success');
-    } catch (err: any) {
-      setCompletionTime(currentTask?.completion_time || '');
-      showToast(err?.data?.detail || 'Failed to update completion time', 'error');
-    }
+  const handleCompletionTimeBlur = async () => {
+    await autoSave.saveField('completion_time', completionTime || null, currentTask?.completion_time || null);
   };
 
   const handleDurationChange = async (days: number, hours: number) => {
@@ -486,50 +438,37 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     }
     setDuration(days);
     setDurationHours(hours);
-    try {
-      await updateTask({ id: currentTaskId, body: { duration_working_days: days, duration_working_hours: hours } as any }).unwrap();
-      showToast('Duration updated', 'success');
-    } catch (err: any) {
-      setDuration(currentTask?.duration_working_days ?? 1);
-      setDurationHours(currentTask?.duration_working_hours ?? 0);
-      showToast(err?.data?.detail || 'Failed to update duration', 'error');
-    }
+    await autoSave.saveMultiple(
+      { duration_working_days: days, duration_working_hours: hours },
+      { duration_working_days: currentTask?.duration_working_days ?? 1, duration_working_hours: currentTask?.duration_working_hours ?? 0 }
+    );
   };
 
   const handleTagsChange = async (newTags: string[]) => {
     setTags(newTags);
-    try {
-      await updateTask({ id: currentTaskId, body: { tag_names: newTags } }).unwrap();
-    } catch {
-      showToast('Failed to update tags', 'error');
-    }
+    const currentTags = currentTask?.tags_list?.map(t => t.name) || [];
+    await autoSave.saveField('tag_names', newTags, currentTags);
   };
 
-  const handleReminderChange = async (d: string) => {
-    setReminderAt(d);
-    try {
-      await updateTask({ id: currentTaskId, body: { reminder_at: d ? new Date(d).toISOString() : (null as any) } }).unwrap();
-    } catch {
-      showToast('Failed to update reminder', 'error');
-    }
+  const handleReminderBlur = async () => {
+    const reminderIso = reminderAt ? new Date(reminderAt).toISOString() : null;
+    await autoSave.saveField('reminder_at', reminderIso, currentTask?.reminder_at || null);
   };
 
   const handleRecurrenceTypeChange = async (val: string) => {
     setRecurrenceType(val);
-    try {
-      await updateTask({ id: currentTaskId, body: { recurrence_rule: val !== 'None' ? { type: val } : null, edit_series: editSeries } }).unwrap();
-    } catch {
-      showToast('Failed to update recurrence', 'error');
-    }
+    await autoSave.saveMultiple(
+      { recurrence_rule: val !== 'None' ? { type: val } : null, edit_series: editSeries },
+      { recurrence_rule: currentTask?.recurrence_rule ?? null, edit_series: false }
+    );
   };
 
   const handleRecurrenceEndDateChange = async (d: string) => {
     setRecurrenceEndDate(d);
-    try {
-      await updateTask({ id: currentTaskId, body: { recurrence_end_date: d || (null as any), edit_series: editSeries } }).unwrap();
-    } catch {
-      showToast('Failed to update recurrence end date', 'error');
-    }
+    await autoSave.saveMultiple(
+      { recurrence_end_date: d || null, edit_series: editSeries },
+      { recurrence_end_date: currentTask?.recurrence_end_date || null, edit_series: false }
+    );
   };
 
   const handleAutoAdjustDate = async () => {
@@ -542,57 +481,52 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
     }
   };
 
-  const handleEstimatedHoursChange = async (hrs: number) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { estimated_hours: hrs, estimated_minutes: Math.round(hrs * 60) } }).unwrap();
-      showToast('Estimated time updated', 'success');
-    } catch {
-      showToast('Failed to update estimated time', 'error');
-    }
+  const handleEstimatedHoursBlur = async () => {
+    const val = estimatedHours === '' ? 0 : Number(estimatedHours);
+    await autoSave.saveMultiple(
+      { estimated_hours: val, estimated_minutes: Math.round(val * 60) },
+      { estimated_hours: currentTask?.estimated_hours ?? 0, estimated_minutes: currentTask?.estimated_minutes ?? 0 }
+    );
   };
 
-  const handleEstimatedCostChange = async (cost: number) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { estimated_cost: cost } as any }).unwrap();
-      showToast('Estimated cost updated', 'success');
-    } catch {
-      showToast('Failed to update estimated cost', 'error');
-    }
+  const handleEstimatedCostBlur = async () => {
+    const val = estimatedCost === '' ? 0 : Number(estimatedCost);
+    await autoSave.saveField('estimated_cost', val, currentTask?.estimated_cost ?? 0);
   };
 
-  const handleActualCostChange = async (cost: number) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { actual_cost: cost } as any }).unwrap();
-      showToast('Actual cost updated', 'success');
-    } catch {
-      showToast('Failed to update actual cost', 'error');
-    }
+  const handleActualCostBlur = async () => {
+    const val = actualCost === '' ? 0 : Number(actualCost);
+    await autoSave.saveField('actual_cost', val, currentTask?.actual_cost ?? 0);
   };
 
   const handleCostCenterChange = async (ccId: number | '') => {
-    try {
-      await updateTask({ id: currentTaskId, body: { cost_center_id: ccId || undefined } as any }).unwrap();
-      showToast('Cost Center updated', 'success');
-    } catch (err: any) {
-      showToast(err?.data?.detail || 'Failed to update cost center', 'error');
-    }
+    await autoSave.saveField('cost_center_id', ccId || null, currentTask?.cost_center_id ?? null);
   };
 
   const handleAssigneeChange = async (selectedUserIds: number[]) => {
-    try {
-      await updateTask({ id: currentTaskId, body: { assignee_ids: selectedUserIds } as any }).unwrap();
-      showToast('Assignees updated', 'success');
-    } catch (err: any) {
-      showToast(err?.data?.detail || 'Failed to update assignees', 'error');
-    }
+    const currentIds = (currentTask?.assignees || []).map(a => a.user_id || a.id);
+    await autoSave.saveField('assignee_ids', selectedUserIds, currentIds);
   };
 
   const handleFollowerChange = async (selectedUserIds: number[]) => {
+    const currentIds = (currentTask?.followers || []).map(f => f.user_id || f.id);
+    await autoSave.saveField('follower_ids', selectedUserIds, currentIds);
+  };
+
+  const handleCustomFieldBlur = async (fieldId: number) => {
+    const currentVal = customValues.find(v => v.field_id === fieldId)?.value || '';
+    if (editFieldValue.trim() === currentVal.trim()) {
+      setEditingFieldId(null);
+      return;
+    }
+    autoSave.setStatus('saving');
     try {
-      await updateTask({ id: currentTaskId, body: { follower_ids: selectedUserIds } as any }).unwrap();
-      showToast('Followers updated', 'success');
+      await saveCustomField({ taskId: currentTaskId, field_id: fieldId, value: editFieldValue.trim() }).unwrap();
+      autoSave.setStatus('saved');
+      setEditingFieldId(null);
     } catch (err: any) {
-      showToast(err?.data?.detail || 'Failed to update followers', 'error');
+      autoSave.setStatus('error');
+      showToast(err?.data?.detail || 'Failed to save custom field', 'error');
     }
   };
 
@@ -845,9 +779,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               fontWeight: 700,
             }}
           />
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-            {saveStatus === 'Saving...' ? 'Saving...' : saveStatus === 'Saved' ? 'Saved ✓' : 'Save Error'}
-          </Typography>
+          <AutoSaveStatusBadge
+            status={autoSave.status}
+            lastSaved={autoSave.lastSaved}
+            errorMessage={autoSave.errorMessage}
+            onRetry={autoSave.retry}
+          />
         </Box>
 
         {/* Stopwatch Timer Widget */}
@@ -1560,7 +1497,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   size="small"
                   fullWidth
                   value={time12To24(startTime || '09:00 AM')}
-                  onChange={(e) => handleStartTimeChange(e.target.value ? time24To12(e.target.value) : '')}
+                  onChange={(e) => {
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    setStartTime(val);
+                    autoSave.registerPendingChange('start_time', val || null, currentTask?.start_time || null);
+                  }}
+                  onBlur={handleStartTimeBlur}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
@@ -1594,7 +1536,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   size="small"
                   fullWidth
                   value={time12To24(dueTime || '05:00 PM')}
-                  onChange={(e) => handleDueTimeChange(e.target.value ? time24To12(e.target.value) : '')}
+                  onChange={(e) => {
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    setDueTime(val);
+                    autoSave.registerPendingChange('due_time', val || null, currentTask?.due_time || null);
+                  }}
+                  onBlur={handleDueTimeBlur}
                   InputLabelProps={{ shrink: true }}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
@@ -1627,7 +1574,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     size="small"
                     fullWidth
                     value={time12To24(completionTime || '05:00 PM')}
-                    onChange={(e) => handleCompletionTimeChange(e.target.value ? time24To12(e.target.value) : '')}
+                    onChange={(e) => {
+                      const val = e.target.value ? time24To12(e.target.value) : '';
+                      setCompletionTime(val);
+                      autoSave.registerPendingChange('completion_time', val || null, currentTask?.completion_time || null);
+                    }}
+                    onBlur={handleCompletionTimeBlur}
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                   />
@@ -1744,7 +1696,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                   value={reminderAt}
-                  onChange={e => handleReminderChange(e.target.value)}
+                  onChange={(e) => {
+                    setReminderAt(e.target.value);
+                    autoSave.registerPendingChange('reminder_at', e.target.value ? new Date(e.target.value).toISOString() : null, currentTask?.reminder_at || null);
+                  }}
+                  onBlur={handleReminderBlur}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
                 />
               </Box>
@@ -1810,8 +1766,13 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   type="number"
                   size="small"
                   fullWidth
-                  value={currentTask.estimated_cost ?? ''}
-                  onChange={(e) => handleEstimatedCostChange(Number(e.target.value))}
+                  value={estimatedCost}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                    setEstimatedCost(val);
+                    autoSave.registerPendingChange('estimated_cost', val === '' ? 0 : Number(val), currentTask?.estimated_cost ?? 0);
+                  }}
+                  onBlur={handleEstimatedCostBlur}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
                 />
               </Grid>
@@ -1823,8 +1784,13 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   type="number"
                   size="small"
                   fullWidth
-                  value={currentTask.actual_cost ?? ''}
-                  onChange={(e) => handleActualCostChange(Number(e.target.value))}
+                  value={actualCost}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                    setActualCost(val);
+                    autoSave.registerPendingChange('actual_cost', val === '' ? 0 : Number(val), currentTask?.actual_cost ?? 0);
+                  }}
+                  onBlur={handleActualCostBlur}
                   sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
                 />
               </Grid>
@@ -1850,8 +1816,13 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 size="small"
                 fullWidth
                 placeholder="e.g. 8.0"
-                value={currentTask.estimated_hours || ''}
-                onChange={(e) => handleEstimatedHoursChange(Number(e.target.value))}
+                value={estimatedHours}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? '' : Number(e.target.value);
+                  setEstimatedHours(val);
+                  autoSave.registerPendingChange('estimated_hours', val === '' ? 0 : Number(val), currentTask?.estimated_hours ?? 0);
+                }}
+                onBlur={handleEstimatedHoursBlur}
                 sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
               />
             </Box>
@@ -1988,13 +1959,25 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{def.label}</Typography>
                   {isEditing ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                      <TextField size="small" value={editFieldValue} onChange={(e) => setEditFieldValue(e.target.value)} />
-                      <IconButton size="small" onClick={() => handleSaveCustomField(def.id)}><Check size={16} /></IconButton>
+                      <TextField
+                        size="small"
+                        autoFocus
+                        value={editFieldValue}
+                        onChange={(e) => setEditFieldValue(e.target.value)}
+                        onBlur={() => handleCustomFieldBlur(def.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCustomFieldBlur(def.id);
+                        }}
+                      />
+                      <IconButton size="small" onClick={() => handleCustomFieldBlur(def.id)}><Check size={16} /></IconButton>
                     </Box>
                   ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{valObj?.value || 'Not set'}</Typography>
-                      <IconButton size="small" onClick={() => { setEditingFieldId(def.id); setEditFieldValue(valObj?.value || ''); }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', py: 0.5 }}
+                      onClick={() => { setEditingFieldId(def.id); setEditFieldValue(valObj?.value || ''); }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{valObj?.value || 'Click to edit...'}</Typography>
+                      <IconButton size="small">
                         <Edit2 size={13} />
                       </IconButton>
                     </Box>
