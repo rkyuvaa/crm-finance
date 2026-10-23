@@ -1,6 +1,6 @@
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
@@ -352,84 +352,67 @@ def delete_user_admin(
     user_name = u.full_name
 
     try:
-        # 1. Self-referential reporting manager
-        db.query(User).filter(User.reporting_manager_id == u.id).update({User.reporting_manager_id: None})
+        # 1. Nullify all optional foreign key references across all tables
+        nullify_targets = [
+            ("users", "reporting_manager_id"),
+            ("departments", "head_id"),
+            ("roles", "created_by"),
+            ("applications", "assigned_to"),
+            ("verifications", "verified_by"),
+            ("projects", "owner_id"),
+            ("tasks", "assignee_id"),
+            ("tasks", "created_by"),
+            ("tasks", "updated_by"),
+            ("tasks", "completed_by"),
+            ("task_assignees", "assigned_by"),
+            ("task_checklist_items", "assignee_id"),
+            ("task_checklist_items", "completed_by"),
+            ("task_attachments", "uploaded_by"),
+            ("task_activities", "actor_id"),
+            ("task_templates", "created_by"),
+            ("department_users", "assigned_by"),
+            ("user_roles", "assigned_by"),
+            ("user_permissions", "assigned_by"),
+            ("planned_activities", "assigned_to"),
+            ("planned_activities", "created_by"),
+            ("activity_logs", "actor_id"),
+            ("activities", "actor_id"),
+            ("financier_document_access_tokens", "sent_by_user_id"),
+            ("crm_lead_custom_field_values", "verified_by_id"),
+            ("hr_leave_requests", "approved_by_id"),
+            ("hr_performance_reviews", "reviewer_id"),
+            ("hr_job_requisitions", "requester_id"),
+            ("hr_candidates", "created_employee_id"),
+            ("hr_candidate_stage_history", "changed_by_id"),
+        ]
+        for table, col in nullify_targets:
+            try:
+                db.execute(text(f"UPDATE {table} SET {col} = NULL WHERE {col} = :uid"), {"uid": user_id})
+            except Exception:
+                pass
 
-        # 2. Departments head & Roles created_by
-        from app.models.rbac import Department, Role
-        db.query(Department).filter(Department.head_id == u.id).update({Department.head_id: None})
-        db.query(Role).filter(Role.created_by == u.id).update({Role.created_by: None})
-
-        # 3. Project & Task references
-        from app.models.projects import (
-            TaskAssignee, TaskFollower, Task, Project,
-            TaskChecklistItem, TaskTimeLog, TaskComment,
-            TaskTimeEntry, TaskAttachment, TaskActivity, TaskTemplate
-        )
-        db.query(TaskAssignee).filter(TaskAssignee.user_id == u.id).delete()
-        db.query(TaskAssignee).filter(TaskAssignee.assigned_by == u.id).update({TaskAssignee.assigned_by: None})
-        db.query(TaskFollower).filter(TaskFollower.user_id == u.id).delete()
-        db.query(Task).filter(Task.assignee_id == u.id).update({Task.assignee_id: None})
-        db.query(Task).filter(Task.created_by == u.id).update({Task.created_by: None})
-        db.query(Task).filter(Task.updated_by == u.id).update({Task.updated_by: None})
-        db.query(Task).filter(Task.completed_by == u.id).update({Task.completed_by: None})
-        db.query(Project).filter(Project.owner_id == u.id).update({Project.owner_id: None})
-        db.query(TaskChecklistItem).filter(TaskChecklistItem.assignee_id == u.id).update({TaskChecklistItem.assignee_id: None})
-        db.query(TaskChecklistItem).filter(TaskChecklistItem.completed_by == u.id).update({TaskChecklistItem.completed_by: None})
-        db.query(TaskTimeLog).filter(TaskTimeLog.user_id == u.id).delete()
-        db.query(TaskComment).filter(TaskComment.user_id == u.id).delete()
-        db.query(TaskTimeEntry).filter(TaskTimeEntry.user_id == u.id).delete()
-        db.query(TaskAttachment).filter(TaskAttachment.uploaded_by == u.id).update({TaskAttachment.uploaded_by: None})
-        db.query(TaskActivity).filter(TaskActivity.actor_id == u.id).update({TaskActivity.actor_id: None})
-        db.query(TaskTemplate).filter(TaskTemplate.created_by == u.id).update({TaskTemplate.created_by: None})
-
-        # 4. RBAC & Departments
-        from app.models.rbac import DepartmentUser, UserRole as RbacUserRole, UserPermission, AuditLog
-        db.query(DepartmentUser).filter(DepartmentUser.user_id == u.id).delete()
-        db.query(DepartmentUser).filter(DepartmentUser.assigned_by == u.id).update({DepartmentUser.assigned_by: None})
-        db.query(RbacUserRole).filter(RbacUserRole.user_id == u.id).delete()
-        db.query(RbacUserRole).filter(RbacUserRole.assigned_by == u.id).update({RbacUserRole.assigned_by: None})
-        db.query(UserPermission).filter(UserPermission.user_id == u.id).delete()
-        db.query(UserPermission).filter(UserPermission.assigned_by == u.id).update({UserPermission.assigned_by: None})
-
-        # 5. Notifications & Audit logs
-        from app.models.notification import Notification
-        db.query(Notification).filter(Notification.user_id == u.id).delete()
-        db.query(AuditLog).filter(AuditLog.user_id == u.id).delete()
-
-        # 6. Application assignments
-        from app.models.application import Application
-        db.query(Application).filter(Application.assigned_to == u.id).update({Application.assigned_to: None})
-
-        # 7. HR models if present
-        try:
-            from app.models.hr import Attendance, LeaveRequest, Payroll, PerformanceReview
-            db.query(Attendance).filter(Attendance.user_id == u.id).delete()
-            db.query(LeaveRequest).filter(LeaveRequest.user_id == u.id).delete()
-            db.query(LeaveRequest).filter(LeaveRequest.approved_by_id == u.id).update({LeaveRequest.approved_by_id: None})
-            db.query(Payroll).filter(Payroll.user_id == u.id).delete()
-            db.query(PerformanceReview).filter(PerformanceReview.user_id == u.id).delete()
-            db.query(PerformanceReview).filter(PerformanceReview.reviewer_id == u.id).update({PerformanceReview.reviewer_id: None})
-        except Exception:
-            pass
-
-        try:
-            from app.models.recruitment import JobRequisition, Candidate, CandidateStageHistory
-            db.query(JobRequisition).filter(JobRequisition.requester_id == u.id).update({JobRequisition.requester_id: None})
-            db.query(Candidate).filter(Candidate.created_employee_id == u.id).update({Candidate.created_employee_id: None})
-            db.query(CandidateStageHistory).filter(CandidateStageHistory.changed_by_id == u.id).update({CandidateStageHistory.changed_by_id: None})
-        except Exception:
-            pass
-
-        # 8. Activity logs & planned activities
-        try:
-            from app.models.application import PlannedActivity, ActivityLog, Verification
-            db.query(PlannedActivity).filter(PlannedActivity.assigned_to == u.id).update({PlannedActivity.assigned_to: None})
-            db.query(PlannedActivity).filter(PlannedActivity.created_by == u.id).update({PlannedActivity.created_by: None})
-            db.query(ActivityLog).filter(ActivityLog.actor_id == u.id).update({ActivityLog.actor_id: None})
-            db.query(Verification).filter(Verification.verified_by == u.id).update({Verification.verified_by: None})
-        except Exception:
-            pass
+        # 2. Delete non-nullable child rows that belong specifically to this user
+        delete_targets = [
+            ("task_assignees", "user_id"),
+            ("task_followers", "user_id"),
+            ("task_time_logs", "user_id"),
+            ("task_comments", "user_id"),
+            ("task_time_entries", "user_id"),
+            ("department_users", "user_id"),
+            ("user_roles", "user_id"),
+            ("user_permissions", "user_id"),
+            ("notifications", "user_id"),
+            ("audit_logs", "user_id"),
+            ("hr_attendance", "user_id"),
+            ("hr_leave_requests", "user_id"),
+            ("hr_payroll", "user_id"),
+            ("hr_performance_reviews", "user_id"),
+        ]
+        for table, col in delete_targets:
+            try:
+                db.execute(text(f"DELETE FROM {table} WHERE {col} = :uid"), {"uid": user_id})
+            except Exception:
+                pass
 
         db.delete(u)
         db.commit()
