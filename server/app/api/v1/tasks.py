@@ -1265,6 +1265,10 @@ def create_task(
         from app.services.rollup_service import rollup_task_list
         rollup_task_list(db, task.task_list_id)
 
+    if task.project_id:
+        from app.services.rollup_service import rollup_project
+        rollup_project(db, task.project_id)
+
     db.commit()
     db.refresh(task)
 
@@ -1902,6 +1906,14 @@ def update_task(
     if task.task_list_id:
         from app.services.rollup_service import rollup_task_list
         rollup_task_list(db, task.task_list_id)
+
+    if task.parent_task_id:
+        from app.services.rollup_service import rollup_work_item
+        rollup_work_item(db, task.parent_task_id)
+
+    if task.project_id:
+        from app.services.rollup_service import rollup_project
+        rollup_project(db, task.project_id)
 
     db.commit()
     db.refresh(task)

@@ -25,6 +25,50 @@ from sqlalchemy.orm import Session
 from app.models.projects import Task, ProjectMilestone, ProjectTaskList, Project
 
 
+def compute_project_costs(tasks: list[Task]) -> tuple[float, float]:
+    """
+    Computes total (estimated_cost, actual_cost) for a project given all its non-deleted tasks.
+    Bottom-up rollup: If a parent task's children have costs, children's costs are aggregated;
+    otherwise the task's own cost is used. Top-level tasks are summed up to avoid double counting.
+    """
+    if not tasks:
+        return 0.0, 0.0
+
+    children_by_parent: dict[int, list[Task]] = {}
+    for t in tasks:
+        if t.parent_task_id:
+            children_by_parent.setdefault(t.parent_task_id, []).append(t)
+
+    def get_task_costs(task_item: Task) -> tuple[float, float]:
+        ch = children_by_parent.get(task_item.id, [])
+        if ch:
+            c_est = 0.0
+            c_act = 0.0
+            has_child_est = False
+            has_child_act = False
+            for c in ch:
+                e, a = get_task_costs(c)
+                c_est += e
+                c_act += a
+                if (c.estimated_cost or 0.0) > 0 or e > 0:
+                    has_child_est = True
+                if (c.actual_cost or 0.0) > 0 or a > 0:
+                    has_child_act = True
+            est = c_est if has_child_est else (task_item.estimated_cost or 0.0)
+            act = c_act if has_child_act else (task_item.actual_cost or 0.0)
+            return est, act
+        return (task_item.estimated_cost or 0.0), (task_item.actual_cost or 0.0)
+
+    top_tasks = [t for t in tasks if t.parent_task_id is None]
+    tot_est = 0.0
+    tot_act = 0.0
+    for tt in top_tasks:
+        e, a = get_task_costs(tt)
+        tot_est += e
+        tot_act += a
+    return tot_est, tot_act
+
+
 def get_all_descendants(db: Session, parent_id: int) -> list[Task]:
     res = []
     children = db.query(Task).filter(Task.parent_task_id == parent_id, Task.is_deleted.is_(False)).all()
@@ -106,9 +150,11 @@ def rollup_task_list(db: Session, task_list_id: int) -> None:
 
     db.add(task_list)
 
-    # Recurse up to milestone
+    # Recurse up to milestone or project
     if task_list.milestone_id:
         rollup_milestone(db, task_list.milestone_id)
+    elif task_list.project_id:
+        rollup_project(db, task_list.project_id)
 
 
 def rollup_work_item(db: Session, task_id: int) -> None:
@@ -177,8 +223,13 @@ def rollup_work_item(db: Session, task_id: int) -> None:
                 task.due_date = None
                 task.due_time = None
 
-        task.estimated_cost = sum(c.estimated_cost or 0.0 for c in children)
-        task.actual_cost = sum(c.actual_cost or 0.0 for c in children)
+        child_est_sum = sum(c.estimated_cost or 0.0 for c in children)
+        if any((c.estimated_cost or 0.0) > 0 for c in children):
+            task.estimated_cost = child_est_sum
+
+        child_act_sum = sum(c.actual_cost or 0.0 for c in children)
+        if any((c.actual_cost or 0.0) > 0 for c in children):
+            task.actual_cost = child_act_sum
 
         # 3. Compute working duration for parent task
         if task.start_date and task.due_date:
@@ -205,9 +256,9 @@ def rollup_work_item(db: Session, task_id: int) -> None:
     else:
         if task.task_list_id:
             rollup_task_list(db, task.task_list_id)
-        elif task.milestone_id:
+        if task.milestone_id:
             rollup_milestone(db, task.milestone_id)
-        elif task.project_id:
+        if task.project_id:
             rollup_project(db, task.project_id)
 
 
@@ -313,9 +364,7 @@ def rollup_project(db: Session, project_id: int) -> None:
         else:
             project.rollup_end_date = None
 
-        top_tasks = [t for t in tasks if t.parent_task_id is None]
-        project.estimated_cost = sum(t.estimated_cost or 0.0 for t in top_tasks)
-        project.actual_cost = sum(t.actual_cost or 0.0 for t in top_tasks)
+        project.estimated_cost, project.actual_cost = compute_project_costs(tasks)
     elif milestones:
         start_dates = [m.rollup_start_date for m in milestones if m.rollup_start_date]
         end_dates = [m.rollup_end_date for m in milestones if m.rollup_end_date]

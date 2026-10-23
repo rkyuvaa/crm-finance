@@ -1850,7 +1850,16 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     autoSave.registerPendingChange('estimated_cost', val === '' ? 0 : Number(val), currentTask?.estimated_cost ?? 0);
                   }}
                   onBlur={handleEstimatedCostBlur}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                    '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                      WebkitAppearance: 'none',
+                      margin: 0,
+                    },
+                    '& input[type=number]': {
+                      MozAppearance: 'textfield',
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={4}>
@@ -1868,7 +1877,16 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                     autoSave.registerPendingChange('actual_cost', val === '' ? 0 : Number(val), currentTask?.actual_cost ?? 0);
                   }}
                   onBlur={handleActualCostBlur}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                    '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                      WebkitAppearance: 'none',
+                      margin: 0,
+                    },
+                    '& input[type=number]': {
+                      MozAppearance: 'textfield',
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={4}>
@@ -1900,7 +1918,16 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   autoSave.registerPendingChange('estimated_hours', val === '' ? 0 : Number(val), currentTask?.estimated_hours ?? 0);
                 }}
                 onBlur={handleEstimatedHoursBlur}
-                sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0,
+                  },
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield',
+                  },
+                }}
               />
             </Box>
 

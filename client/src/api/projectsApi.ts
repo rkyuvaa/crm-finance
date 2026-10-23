@@ -381,7 +381,7 @@ export const projectsApi = createApi({
     }),
     getProject: builder.query<ProjectItem, number>({
       query: (id) => `/projects/${id}`,
-      providesTags: (_res, _err, id) => [{ type: 'Projects', id }],
+      providesTags: (_res, _err, id) => [{ type: 'Projects', id }, 'Projects'],
     }),
     createProject: builder.mutation<ProjectItem, Partial<ProjectItem>>({
       query: (body) => ({
@@ -432,7 +432,12 @@ export const projectsApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Tasks', 'Projects', 'TaskLists'],
+      invalidatesTags: (res) => [
+        'Tasks',
+        'Projects',
+        'TaskLists',
+        ...(res?.project_id ? [{ type: 'Projects' as const, id: res.project_id }] : []),
+      ],
     }),
     updateTask: builder.mutation<TaskItem, { id: number; body: Partial<TaskItem> }>({
       query: ({ id, body }) => ({
@@ -440,7 +445,13 @@ export const projectsApi = createApi({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: (_res, _err, { id }) => ['Tasks', { type: 'Tasks', id }, 'Projects', 'TaskLists'],
+      invalidatesTags: (res, _err, { id }) => [
+        'Tasks',
+        { type: 'Tasks', id },
+        'Projects',
+        'TaskLists',
+        ...(res?.project_id ? [{ type: 'Projects' as const, id: res.project_id }] : []),
+      ],
     }),
     deleteTask: builder.mutation<void, number>({
       query: (id) => ({

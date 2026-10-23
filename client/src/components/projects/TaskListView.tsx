@@ -685,6 +685,7 @@ export default function TaskListView({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>₹</Typography>
               <TextField
+                key={`ec-${task.id}-${task.estimated_cost || 0}`}
                 type="number"
                 size="small"
                 variant="standard"
@@ -712,6 +713,13 @@ export default function TaskListView({
                     '&:hover': { bgcolor: tTokens.inputBgHover },
                     '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
                   },
+                  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0,
+                  },
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield',
+                  },
                 }}
               />
             </Box>
@@ -722,6 +730,7 @@ export default function TaskListView({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>₹</Typography>
               <TextField
+                key={`ac-${task.id}-${task.actual_cost || 0}`}
                 type="number"
                 size="small"
                 variant="standard"
@@ -748,6 +757,13 @@ export default function TaskListView({
                     transition: 'all 0.15s ease',
                     '&:hover': { bgcolor: tTokens.inputBgHover },
                     '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}` },
+                  },
+                  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0,
+                  },
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield',
                   },
                 }}
               />

@@ -647,7 +647,17 @@ export default function ProjectWorkspace() {
                       InputProps={{
                         startAdornment: <InputAdornment position="start"><Typography variant="caption" sx={{ fontWeight: 700 }}>₹</Typography></InputAdornment>,
                       }}
-                      sx={{ width: 150, '& .MuiOutlinedInput-root': { height: 32, fontSize: 13, fontWeight: 700, bgcolor: 'background.default' } }}
+                      sx={{
+                        width: 150,
+                        '& .MuiOutlinedInput-root': { height: 32, fontSize: 13, fontWeight: 700, bgcolor: 'background.default' },
+                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                          WebkitAppearance: 'none',
+                          margin: 0,
+                        },
+                        '& input[type=number]': {
+                          MozAppearance: 'textfield',
+                        },
+                      }}
                     />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

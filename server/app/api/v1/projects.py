@@ -106,6 +106,24 @@ def _format_project_out(p: Project, db: Session, task_counts: dict[str, int] | N
     p_out.tasks_count = {"total": total_tasks, "done": done_tasks}
     p_out.progress = calc_progress
     p_out.status_name = status_name
+
+    p_tasks = db.query(Task).filter(
+        Task.project_id == p.id,
+        Task.is_deleted.is_(False)
+    ).all()
+    if p_tasks:
+        from app.services.rollup_service import compute_project_costs
+        tot_est, tot_act = compute_project_costs(p_tasks)
+        p_out.estimated_cost = tot_est
+        p_out.actual_cost = tot_act
+        if p.estimated_cost != tot_est or p.actual_cost != tot_act:
+            p.estimated_cost = tot_est
+            p.actual_cost = tot_act
+            db.add(p)
+            try:
+                db.commit()
+            except Exception:
+                pass
     return p_out
 
 
