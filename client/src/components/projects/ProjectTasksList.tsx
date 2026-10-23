@@ -207,9 +207,9 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const handleDirectRemoveDependency = async (taskId: number, dependencyId: number) => {
     try {
       await removeDependency({ taskId, dependencyId }).unwrap();
-      showToast('Dependency removed successfully', 'success');
+      toast.showSuccess('Dependency removed successfully');
     } catch (err: any) {
-      showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to remove dependency', 'error');
+      toast.showError(err?.data?.detail?.message || err?.data?.detail || 'Failed to remove dependency');
     }
   };
 

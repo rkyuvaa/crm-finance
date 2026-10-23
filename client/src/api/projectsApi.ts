@@ -250,8 +250,6 @@ export interface TaskItem {
   estimated_cost: number;
   actual_cost: number;
   cost_variance: number;
-  completion_date?: string;
-  completion_time?: string;
   is_parent: boolean;
   start_date_locked: boolean;
   end_date_locked: boolean;
