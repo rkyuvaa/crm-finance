@@ -125,7 +125,7 @@ export default function DependencyModal({
     });
   }, [task, projectTasks, dependency]);
 
-  const handleReset = () => {
+  const handleReset = (notify = true) => {
     if (dependency) {
       const predId = dependency.predecessor_task_id || dependency.depends_on_task_id;
       const found = projectTasks.find((t) => t.id === predId) || null;
@@ -139,6 +139,14 @@ export default function DependencyModal({
       setLagDays(0);
       setLagHours(0);
     }
+    if (notify) {
+      showToast('Form reset to default values', 'info');
+    }
+  };
+
+  const handleCancel = () => {
+    handleReset(false);
+    onClose();
   };
 
   const handleRemove = async () => {
@@ -455,11 +463,20 @@ export default function DependencyModal({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Button
             size="small"
-            onClick={handleReset}
+            onClick={() => handleReset(true)}
             disabled={isSaving}
             sx={{ textTransform: 'none', color: 'text.secondary', fontSize: '0.82rem' }}
           >
-            Cancel / Reset
+            Reset
+          </Button>
+
+          <Button
+            size="small"
+            onClick={handleCancel}
+            disabled={isSaving}
+            sx={{ textTransform: 'none', color: 'text.secondary', fontSize: '0.82rem' }}
+          >
+            Cancel
           </Button>
 
           <Button
