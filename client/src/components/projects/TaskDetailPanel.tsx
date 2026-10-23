@@ -1473,222 +1473,283 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             </Box>
 
             {/* Start Date & Time */}
-            <Grid container spacing={1}>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Start Date
-                </Typography>
-                <TextField
-                  type="date"
-                  size="small"
-                  fullWidth
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Start Time
-                </Typography>
-                <TextField
-                  type="time"
-                  size="small"
-                  fullWidth
-                  value={time12To24(startTime || '09:00 AM')}
-                  onChange={(e) => {
-                    const val = e.target.value ? time24To12(e.target.value) : '';
-                    setStartTime(val);
-                    autoSave.registerPendingChange('start_time', val || null, currentTask?.start_time || null);
-                  }}
-                  onBlur={handleStartTimeBlur}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Due Date & Time */}
-            <Grid container spacing={1}>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Due Date {currentTask.end_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
-                </Typography>
-                <TextField
-                  type="date"
-                  size="small"
-                  fullWidth
-                  value={dueDate}
-                  onChange={(e) => handleDueDateChange(e.target.value)}
-                  disabled={currentTask.end_date_locked}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                  Due Time
-                </Typography>
-                <TextField
-                  type="time"
-                  size="small"
-                  fullWidth
-                  value={time12To24(dueTime || '05:00 PM')}
-                  onChange={(e) => {
-                    const val = e.target.value ? time24To12(e.target.value) : '';
-                    setDueTime(val);
-                    autoSave.registerPendingChange('due_time', val || null, currentTask?.due_time || null);
-                  }}
-                  onBlur={handleDueTimeBlur}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                />
-              </Grid>
-            </Grid>
-
-            {/* Completion Date & Time (if set or completed) */}
-            {(currentTask.is_completed || completionDate || currentTask.completion_date) && (
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                    Completion Date
-                  </Typography>
-                  <TextField
-                    type="date"
-                    size="small"
-                    fullWidth
-                    value={completionDate}
-                    onChange={(e) => handleCompletionDateChange(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                    Completion Time
-                  </Typography>
-                  <TextField
-                    type="time"
-                    size="small"
-                    fullWidth
-                    value={time12To24(completionTime || '05:00 PM')}
-                    onChange={(e) => {
-                      const val = e.target.value ? time24To12(e.target.value) : '';
-                      setCompletionTime(val);
-                      autoSave.registerPendingChange('completion_time', val || null, currentTask?.completion_time || null);
-                    }}
-                    onBlur={handleCompletionTimeBlur}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                  />
-                </Grid>
-              </Grid>
-            )}
-
-            {/* Duration Display & Edit */}
-            <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
-                Duration ({currentTask.is_parent ? 'Calendar Days' : 'Working Days + Hours'})
-              </Typography>
-              {currentTask.is_parent ? (
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, py: 0.75 }}>
-                  {currentTask.duration_working_days || 0} CD (Parent Rollup)
-                </Typography>
-              ) : (
-                <Grid container spacing={1}>
-                  <Grid item xs={6}>
-                    <TextField
-                      type="number"
-                      size="small"
-                      fullWidth
-                      value={duration}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? '' : Number(e.target.value);
-                        setDuration(val);
-                        autoSave.registerPendingChange(
-                          'duration_working_days',
-                          val === '' ? 1 : val,
-                          currentTask?.duration_working_days ?? 1
-                        );
-                      }}
-                      onBlur={() => {
-                        let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
-                        let h = typeof durationHours === 'number' ? durationHours : 0;
-                        if (d < 0) d = 0;
-                        if (h < 0) h = 0;
-                        if (d === 0 && h === 0) {
-                          d = 1;
-                        }
-                        setDuration(d);
-                        setDurationHours(h);
-                        handleDurationChange(d, h);
-                      }}
-                      onKeyDown={(e: any) => {
-                        if (e.key === 'Enter') e.target.blur();
-                      }}
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">Days</InputAdornment>,
-                      }}
-                      inputProps={{ min: 0 }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
-                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
-                        '& input[type=number]': { MozAppearance: 'textfield' },
-                      }}
-                    />
+            {(() => {
+              const isParentTask = Boolean(currentTask.is_parent || (currentTask.subtask_count && currentTask.subtask_count > 0));
+              return (
+                <>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                        Start Date {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>} {currentTask.start_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
+                      </Typography>
+                      <Tooltip title={isParentTask ? "Calculated: Earliest Start Date calculated from child tasks" : ""}>
+                        <TextField
+                          type="date"
+                          size="small"
+                          fullWidth
+                          value={startDate}
+                          disabled={isParentTask || currentTask.start_date_locked}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            handleStartDateChange(e.target.value);
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                        Start Time {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>}
+                      </Typography>
+                      <Tooltip title={isParentTask ? "Calculated: Start Time from earliest child task" : ""}>
+                        <TextField
+                          type="time"
+                          size="small"
+                          fullWidth
+                          disabled={isParentTask}
+                          value={time12To24(startTime || '09:00 AM')}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            const val = e.target.value ? time24To12(e.target.value) : '';
+                            setStartTime(val);
+                            autoSave.registerPendingChange('start_time', val || null, currentTask?.start_time || null);
+                          }}
+                          onBlur={() => {
+                            if (isParentTask) return;
+                            handleStartTimeBlur();
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Tooltip>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      type="number"
-                      size="small"
-                      fullWidth
-                      value={durationHours}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? '' : Number(e.target.value);
-                        setDurationHours(val);
-                        autoSave.registerPendingChange(
-                          'duration_working_hours',
-                          val === '' ? 0 : val,
-                          currentTask?.duration_working_hours ?? 0
-                        );
-                      }}
-                      onBlur={() => {
-                        let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
-                        let h = typeof durationHours === 'number' ? durationHours : 0;
-                        if (d < 0) d = 0;
-                        if (h < 0) h = 0;
-                        if (h >= dailyWorkingHours) {
-                          const extraDays = Math.floor(h / dailyWorkingHours);
-                          h = h % dailyWorkingHours;
-                          d += extraDays;
-                        }
-                        if (d === 0 && h === 0) {
-                          d = 1;
-                        }
-                        setDuration(d);
-                        setDurationHours(h);
-                        handleDurationChange(d, h);
-                      }}
-                      onKeyDown={(e: any) => {
-                        if (e.key === 'Enter') e.target.blur();
-                      }}
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">Hours</InputAdornment>,
-                      }}
-                      inputProps={{ min: 0 }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
-                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
-                        '& input[type=number]': { MozAppearance: 'textfield' },
-                      }}
-                    />
+
+                  {/* Due Date & Time */}
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                        Due Date {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>} {currentTask.end_date_locked && <Tooltip title="Locked by dependencies"><span><Lock size={12} color="#D97706" style={{ marginLeft: 4 }} /></span></Tooltip>}
+                      </Typography>
+                      <Tooltip title={isParentTask ? "Calculated: Latest Due Date calculated from child tasks" : ""}>
+                        <TextField
+                          type="date"
+                          size="small"
+                          fullWidth
+                          value={dueDate}
+                          disabled={isParentTask || currentTask.end_date_locked}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            handleDueDateChange(e.target.value);
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          inputProps={{ min: '1900-01-01', max: '2100-12-31' }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                        Due Time {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>}
+                      </Typography>
+                      <Tooltip title={isParentTask ? "Calculated: Due Time from latest child task" : ""}>
+                        <TextField
+                          type="time"
+                          size="small"
+                          fullWidth
+                          disabled={isParentTask}
+                          value={time12To24(dueTime || '05:00 PM')}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            const val = e.target.value ? time24To12(e.target.value) : '';
+                            setDueTime(val);
+                            autoSave.registerPendingChange('due_time', val || null, currentTask?.due_time || null);
+                          }}
+                          onBlur={() => {
+                            if (isParentTask) return;
+                            handleDueTimeBlur();
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Tooltip>
+                    </Grid>
                   </Grid>
-                </Grid>
-              )}
-            </Box>
+
+                  {/* Completion Date & Time (if set or completed) */}
+                  {(currentTask.is_completed || completionDate || currentTask.completion_date) && (
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                          Completion Date {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>}
+                        </Typography>
+                        <TextField
+                          type="date"
+                          size="small"
+                          fullWidth
+                          disabled={isParentTask}
+                          value={completionDate}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            handleCompletionDateChange(e.target.value);
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                          Completion Time {isParentTask && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated)</span>}
+                        </Typography>
+                        <TextField
+                          type="time"
+                          size="small"
+                          fullWidth
+                          disabled={isParentTask}
+                          value={time12To24(completionTime || '05:00 PM')}
+                          onChange={(e) => {
+                            if (isParentTask) return;
+                            const val = e.target.value ? time24To12(e.target.value) : '';
+                            setCompletionTime(val);
+                            autoSave.registerPendingChange('completion_time', val || null, currentTask?.completion_time || null);
+                          }}
+                          onBlur={() => {
+                            if (isParentTask) return;
+                            handleCompletionTimeBlur();
+                          }}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: isParentTask ? 'action.hover' : 'background.paper' },
+                            '& .MuiInputBase-input': { cursor: isParentTask ? 'default' : 'pointer' },
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  )}
+
+                  {/* Duration Display & Edit */}
+                  <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5, fontWeight: 600 }}>
+                      Duration ({isParentTask ? 'Calendar Days' : 'Working Days + Hours'})
+                    </Typography>
+                    {isParentTask ? (
+                      <Tooltip title="Calculated: Working duration between earliest start and latest due of child tasks">
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, py: 0.75 }}>
+                          {currentTask.duration_working_days || 0} CD (Parent Rollup)
+                        </Typography>
+                      </Tooltip>
+                    ) : (
+                      <Grid container spacing={1}>
+                        <Grid item xs={6}>
+                          <TextField
+                            type="number"
+                            size="small"
+                            fullWidth
+                            value={duration}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              setDuration(val);
+                              autoSave.registerPendingChange(
+                                'duration_working_days',
+                                val === '' ? 1 : val,
+                                currentTask?.duration_working_days ?? 1
+                              );
+                            }}
+                            onBlur={() => {
+                              let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
+                              let h = typeof durationHours === 'number' ? durationHours : 0;
+                              if (d < 0) d = 0;
+                              if (h < 0) h = 0;
+                              if (d === 0 && h === 0) {
+                                d = 1;
+                              }
+                              setDuration(d);
+                              setDurationHours(h);
+                              handleDurationChange(d, h);
+                            }}
+                            onKeyDown={(e: any) => {
+                              if (e.key === 'Enter') e.target.blur();
+                            }}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">Days</InputAdornment>,
+                            }}
+                            inputProps={{ min: 0 }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                              '& input[type=number]': { MozAppearance: 'textfield' },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <TextField
+                            type="number"
+                            size="small"
+                            fullWidth
+                            value={durationHours}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              setDurationHours(val);
+                              autoSave.registerPendingChange(
+                                'duration_working_hours',
+                                val === '' ? 0 : val,
+                                currentTask?.duration_working_hours ?? 0
+                              );
+                            }}
+                            onBlur={() => {
+                              let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
+                              let h = typeof durationHours === 'number' ? durationHours : 0;
+                              if (d < 0) d = 0;
+                              if (h < 0) h = 0;
+                              if (h >= dailyWorkingHours) {
+                                const extraDays = Math.floor(h / dailyWorkingHours);
+                                h = h % dailyWorkingHours;
+                                d += extraDays;
+                              }
+                              if (d === 0 && h === 0) {
+                                d = 1;
+                              }
+                              setDuration(d);
+                              setDurationHours(h);
+                              handleDurationChange(d, h);
+                            }}
+                            onKeyDown={(e: any) => {
+                              if (e.key === 'Enter') e.target.blur();
+                            }}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">Hours</InputAdornment>,
+                            }}
+                            inputProps={{ min: 0 }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
+                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                              '& input[type=number]': { MozAppearance: 'textfield' },
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    )}
+                  </Box>
+                </>
+              );
+            })()}
 
             <Autocomplete
               multiple

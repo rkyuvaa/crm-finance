@@ -118,7 +118,7 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
     }
   }, [task.duration_working_days, task.duration_working_hours, isEditing]);
 
-  const isParent = Boolean(task.is_parent);
+  const isParent = Boolean(task.is_parent || (task.subtask_count && task.subtask_count > 0));
   const isReadOnly = isParent || disabled;
 
   // Read-only parent rollup task

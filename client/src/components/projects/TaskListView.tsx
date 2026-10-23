@@ -39,7 +39,7 @@ import { useUsersQuery } from '@/api/mastersApi';
 import { useToast } from '@/components/ui/ToastHost';
 import { useTableSort } from '@/hooks/useTableSort';
 import ErpSortHeaderCell from '@/components/ui/ErpSortHeaderCell';
-import { time24To12, time12To24, getTaskIdBadgeStyle, formatDate } from '@/utils/format';
+import { time24To12, time12To24, getTaskIdBadgeStyle, formatDate, formatStandardDateTime } from '@/utils/format';
 import StandardDateInput from '@/components/common/StandardDateInput';
 import DurationInlineCell from '@/components/projects/DurationInlineCell';
 
@@ -208,6 +208,40 @@ export default function TaskListView({
     const hasChildren = Boolean(task.is_parent || subtaskCount > 0 || subtaskList.length > 0);
     const isExpanded = !!expandedTaskIds[task.id];
     const isSelected = selectedTaskIds.includes(task.id);
+
+    // Effective rolled-up dates and times for parent tasks if not yet saved on parent record
+    let effectiveStartDate = task.start_date;
+    let effectiveStartTime = task.start_time;
+    let effectiveDueDate = task.due_date;
+    let effectiveDueTime = task.due_time;
+
+    if (hasChildren && subtaskList.length > 0) {
+      if (!effectiveStartDate || !effectiveStartTime) {
+        const withStart = [...subtaskList.filter((c) => c.start_date)];
+        if (withStart.length > 0) {
+          withStart.sort((a, b) => {
+            const dtA = `${(a.start_date || '').split('T')[0]} ${time12To24(a.start_time || '09:00')}`;
+            const dtB = `${(b.start_date || '').split('T')[0]} ${time12To24(b.start_time || '09:00')}`;
+            return dtA.localeCompare(dtB);
+          });
+          if (!effectiveStartDate) effectiveStartDate = withStart[0].start_date;
+          if (!effectiveStartTime) effectiveStartTime = withStart[0].start_time || '09:00';
+        }
+      }
+
+      if (!effectiveDueDate || !effectiveDueTime) {
+        const withDue = [...subtaskList.filter((c) => c.due_date)];
+        if (withDue.length > 0) {
+          withDue.sort((a, b) => {
+            const dtA = `${(a.due_date || '').split('T')[0]} ${time12To24(a.due_time || '18:00')}`;
+            const dtB = `${(b.due_date || '').split('T')[0]} ${time12To24(b.due_time || '18:00')}`;
+            return dtB.localeCompare(dtA);
+          });
+          if (!effectiveDueDate) effectiveDueDate = withDue[0].due_date;
+          if (!effectiveDueTime) effectiveDueTime = withDue[0].due_time || '18:00';
+        }
+      }
+    }
 
     return (
       <React.Fragment key={task.id}>
@@ -460,84 +494,100 @@ export default function TaskListView({
 
           {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <StandardDateInput
-                value={task.start_date}
-                onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
-              />
-              <TextField
-                key={`st-${task.id}-${task.start_time}`}
-                type="time"
-                size="small"
-                variant="standard"
-                defaultValue={time12To24(task.start_time || '')}
-                onBlur={(e) => {
-                  const val = e.target.value ? time24To12(e.target.value) : '';
-                  if (val !== (task.start_time || '')) {
-                    handleCellUpdate(task.id, 'start_time', val || null);
-                  }
-                }}
-                onKeyDown={(e: any) => {
-                  if (e.key === 'Enter') e.target.blur();
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.25,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
-                  },
-                }}
-              />
-            </Box>
+            <Tooltip title={effectiveStartDate ? (hasChildren ? `Summary Task: Earliest Start ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')} calculated from child tasks` : `Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}`) : (hasChildren ? 'Calculated from child tasks' : 'Set start date and time')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <StandardDateInput
+                  value={effectiveStartDate}
+                  disabled={hasChildren}
+                  onChange={(val) => {
+                    if (hasChildren) return;
+                    handleCellUpdate(task.id, 'start_date', val);
+                  }}
+                />
+                <TextField
+                  key={`st-${task.id}-${effectiveStartTime}`}
+                  type="time"
+                  size="small"
+                  variant="standard"
+                  disabled={hasChildren}
+                  defaultValue={time12To24(effectiveStartTime || '')}
+                  onBlur={(e) => {
+                    if (hasChildren) return;
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    if (val !== (effectiveStartTime || '')) {
+                      handleCellUpdate(task.id, 'start_time', val || null);
+                    }
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter') e.target.blur();
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.25,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: hasChildren ? 'default' : 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': hasChildren ? {} : { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': hasChildren ? {} : { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
+                    },
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </TableCell>
 
           {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <StandardDateInput
-                value={task.due_date}
-                onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
-              />
-              <TextField
-                key={`dt-${task.id}-${task.due_time}`}
-                type="time"
-                size="small"
-                variant="standard"
-                defaultValue={time12To24(task.due_time || '')}
-                onBlur={(e) => {
-                  const val = e.target.value ? time24To12(e.target.value) : '';
-                  if (val !== (task.due_time || '')) {
-                    handleCellUpdate(task.id, 'due_time', val || null);
-                  }
-                }}
-                onKeyDown={(e: any) => {
-                  if (e.key === 'Enter') e.target.blur();
-                }}
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    py: 0.25,
-                    px: 0.25,
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                    '&:focus': { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
-                  },
-                }}
-              />
-            </Box>
+            <Tooltip title={effectiveDueDate ? (hasChildren ? `Summary Task: Latest Due ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')} calculated from child tasks` : `Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}`) : (hasChildren ? 'Calculated from child tasks' : 'Set due date and time')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <StandardDateInput
+                  value={effectiveDueDate}
+                  disabled={hasChildren}
+                  onChange={(val) => {
+                    if (hasChildren) return;
+                    handleCellUpdate(task.id, 'due_date', val);
+                  }}
+                />
+                <TextField
+                  key={`dt-${task.id}-${effectiveDueTime}`}
+                  type="time"
+                  size="small"
+                  variant="standard"
+                  disabled={hasChildren}
+                  defaultValue={time12To24(effectiveDueTime || '')}
+                  onBlur={(e) => {
+                    if (hasChildren) return;
+                    const val = e.target.value ? time24To12(e.target.value) : '';
+                    if (val !== (effectiveDueTime || '')) {
+                      handleCellUpdate(task.id, 'due_time', val || null);
+                    }
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter') e.target.blur();
+                  }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      py: 0.25,
+                      px: 0.25,
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      cursor: hasChildren ? 'default' : 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': hasChildren ? {} : { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': hasChildren ? {} : { bgcolor: tTokens.inputBgFocus, outline: `1px solid ${tTokens.inputBorderFocus}`, color: 'text.primary' },
+                    },
+                  }}
+                />
+              </Box>
+            </Tooltip>
           </TableCell>
 
           {/* 6. Duration (Inline D - H Edit) */}

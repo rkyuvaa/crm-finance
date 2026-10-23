@@ -1644,19 +1644,25 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
           {/* 4. Start Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={effectiveStartDate ? (hasChildren ? `Calculated Earliest Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}` : `Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}`) : 'Set start date and time'}>
+            <Tooltip title={effectiveStartDate ? (hasChildren ? `Summary Task: Earliest Start ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')} calculated from child tasks` : `Start: ${formatStandardDateTime(effectiveStartDate, effectiveStartTime, '09:00')}`) : (hasChildren ? 'Calculated from child tasks' : 'Set start date and time')}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <StandardDateInput
                   value={effectiveStartDate}
-                  onChange={(val) => handleCellUpdate(task.id, 'start_date', val)}
+                  disabled={hasChildren}
+                  onChange={(val) => {
+                    if (hasChildren) return;
+                    handleCellUpdate(task.id, 'start_date', val);
+                  }}
                 />
                 <TextField
                   key={`st-${task.id}-${effectiveStartTime}`}
                   type="time"
                   size="small"
                   variant="standard"
+                  disabled={hasChildren}
                   defaultValue={time12To24(effectiveStartTime || '')}
                   onBlur={(e) => {
+                    if (hasChildren) return;
                     const val = e.target.value ? time24To12(e.target.value) : '';
                     if (val !== (effectiveStartTime || '')) {
                       handleCellUpdate(task.id, 'start_time', val || null);
@@ -1674,10 +1680,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       px: 0.25,
                       borderRadius: '4px',
                       fontFamily: 'monospace',
-                      cursor: 'pointer',
+                      cursor: hasChildren ? 'default' : 'pointer',
                       transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                      '&:hover': hasChildren ? {} : { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': hasChildren ? {} : { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                     },
                   }}
                 />
@@ -1687,19 +1693,25 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
 
           {/* 5. End Date & Time */}
           <TableCell sx={{ whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-            <Tooltip title={effectiveDueDate ? (hasChildren ? `Calculated Latest Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}` : `Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}`) : 'Set due date and time'}>
+            <Tooltip title={effectiveDueDate ? (hasChildren ? `Summary Task: Latest Due ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')} calculated from child tasks` : `Due: ${formatStandardDateTime(effectiveDueDate, effectiveDueTime, '18:00')}`) : (hasChildren ? 'Calculated from child tasks' : 'Set due date and time')}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <StandardDateInput
                   value={effectiveDueDate}
-                  onChange={(val) => handleCellUpdate(task.id, 'due_date', val)}
+                  disabled={hasChildren}
+                  onChange={(val) => {
+                    if (hasChildren) return;
+                    handleCellUpdate(task.id, 'due_date', val);
+                  }}
                 />
                 <TextField
                   key={`dt-${task.id}-${effectiveDueTime}`}
                   type="time"
                   size="small"
                   variant="standard"
+                  disabled={hasChildren}
                   defaultValue={time12To24(effectiveDueTime || '')}
                   onBlur={(e) => {
+                    if (hasChildren) return;
                     const val = e.target.value ? time24To12(e.target.value) : '';
                     if (val !== (effectiveDueTime || '')) {
                       handleCellUpdate(task.id, 'due_time', val || null);
@@ -1717,10 +1729,10 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                       px: 0.25,
                       borderRadius: '4px',
                       fontFamily: 'monospace',
-                      cursor: 'pointer',
+                      cursor: hasChildren ? 'default' : 'pointer',
                       transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
-                      '&:focus': { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
+                      '&:hover': hasChildren ? {} : { bgcolor: tTokens.inputBgHover, color: 'text.primary' },
+                      '&:focus': hasChildren ? {} : { bgcolor: tTokens.inputBgFocus, color: 'text.primary', outline: `1px solid ${tTokens.inputBorderFocus}` },
                     },
                   }}
                 />

@@ -193,6 +193,15 @@ def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     update_dict = data.model_dump(exclude_unset=True)
+
+    # When child tasks exist, Start Date/Time and Due/End Date/Time are automatically calculated and read-only
+    date_fields = {"target_start_date", "target_start_time", "target_end_date", "target_end_time"}
+    if date_fields.intersection(update_dict.keys()):
+        has_tasks = db.query(Task).filter(Task.project_id == project_id, Task.is_deleted.is_(False)).count() > 0
+        if has_tasks:
+            for f in date_fields:
+                update_dict.pop(f, None)
+
     for field, val in update_dict.items():
         setattr(project, field, val)
 

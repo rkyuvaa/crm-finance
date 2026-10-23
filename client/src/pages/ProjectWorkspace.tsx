@@ -85,6 +85,7 @@ export default function ProjectWorkspace() {
   const [category, setCategory] = useState('Vehicle Customization');
   const [ownerId, setOwnerId] = useState<number | ''>('');
   const [targetStartDate, setTargetStartDate] = useState('');
+  const [targetStartTime, setTargetStartTime] = useState('');
   const [targetEndDate, setTargetEndDate] = useState('');
   const [targetEndTime, setTargetEndTime] = useState('');
   const [completionDate, setCompletionDate] = useState('');
@@ -108,6 +109,7 @@ export default function ProjectWorkspace() {
       setCategory(project.category || 'Vehicle Customization');
       setOwnerId(project.owner_id ?? '');
       setTargetStartDate(project.target_start_date ? project.target_start_date.split('T')[0] : '');
+      setTargetStartTime(project.target_start_time || '');
       setTargetEndDate(project.target_end_date ? project.target_end_date.split('T')[0] : '');
       setTargetEndTime(project.target_end_time || '');
       setCompletionDate(project.completion_date ? project.completion_date.split('T')[0] : '');
@@ -121,12 +123,27 @@ export default function ProjectWorkspace() {
     project?.category,
     project?.owner_id,
     project?.target_start_date,
+    project?.target_start_time,
     project?.target_end_date,
     project?.target_end_time,
     project?.completion_date,
     project?.completion_time,
     project?.budget,
   ]);
+
+  const hasTasks = Boolean(project?.tasks_count && project.tasks_count.total > 0);
+
+  const projectDurationDisplay = useMemo(() => {
+    const s = targetStartDate;
+    const e = targetEndDate;
+    if (!s || !e) return null;
+    const d1 = new Date(s);
+    const d2 = new Date(e);
+    const diffTime = d2.getTime() - d1.getTime();
+    if (diffTime < 0) return '0 Days';
+    const diffDays = Math.round(diffTime / (1000 * 3600 * 24)) + 1;
+    return `${diffDays} Days`;
+  }, [targetStartDate, targetEndDate]);
 
   // Whiteboard Canvas State
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -440,41 +457,99 @@ export default function ProjectWorkspace() {
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>TARGET START DATE</Typography>
-                      <StandardDateInput
-                        value={targetStartDate}
-                        onChange={(val) => {
-                          setTargetStartDate(val);
-                          autoSave.saveField('target_start_date', val || null, project.target_start_date);
-                        }}
-                      />
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+                        TARGET START DATE & TIME {hasTasks && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated from Tasks)</span>}
+                      </Typography>
+                      <Tooltip title={hasTasks ? "Calculated: Earliest Start Date & Time among project tasks" : ""}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <StandardDateInput
+                            value={targetStartDate}
+                            disabled={hasTasks}
+                            onChange={(val) => {
+                              if (hasTasks) return;
+                              setTargetStartDate(val);
+                              autoSave.saveField('target_start_date', val || null, project.target_start_date);
+                            }}
+                          />
+                          <TextField
+                            type="time"
+                            size="small"
+                            disabled={hasTasks}
+                            value={time12To24(targetStartTime || '')}
+                            onChange={(e) => {
+                              if (hasTasks) return;
+                              const val = e.target.value ? time24To12(e.target.value) : '';
+                              setTargetStartTime(val);
+                              autoSave.registerPendingChange('target_start_time', val || null, project.target_start_time);
+                            }}
+                            onBlur={() => {
+                              if (hasTasks) return;
+                              autoSave.saveField('target_start_time', targetStartTime || null, project.target_start_time);
+                            }}
+                            sx={{
+                              width: 110,
+                              '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: hasTasks ? 'action.hover' : 'background.paper' },
+                              '& .MuiInputBase-input': { cursor: hasTasks ? 'default' : 'pointer' },
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
                     </Box>
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
                     <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>TARGET COMPLETION DATE & TIME</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <StandardDateInput
-                          value={targetEndDate}
-                          onChange={(val) => {
-                            setTargetEndDate(val);
-                            autoSave.saveField('target_end_date', val || null, project.target_end_date);
-                          }}
-                        />
-                        <TextField
-                          type="time"
-                          size="small"
-                          value={time12To24(targetEndTime)}
-                          onChange={(e) => {
-                            const val = e.target.value ? time24To12(e.target.value) : '';
-                            setTargetEndTime(val);
-                            autoSave.registerPendingChange('target_end_time', val || null, project.target_end_time);
-                          }}
-                          onBlur={() => autoSave.saveField('target_end_time', targetEndTime || null, project.target_end_time)}
-                          sx={{ width: 110, '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: 'background.paper' } }}
-                        />
-                      </Box>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+                        TARGET COMPLETION DATE & TIME {hasTasks && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated from Tasks)</span>}
+                      </Typography>
+                      <Tooltip title={hasTasks ? "Calculated: Latest Due Date & Time among project tasks" : ""}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <StandardDateInput
+                            value={targetEndDate}
+                            disabled={hasTasks}
+                            onChange={(val) => {
+                              if (hasTasks) return;
+                              setTargetEndDate(val);
+                              autoSave.saveField('target_end_date', val || null, project.target_end_date);
+                            }}
+                          />
+                          <TextField
+                            type="time"
+                            size="small"
+                            disabled={hasTasks}
+                            value={time12To24(targetEndTime || '')}
+                            onChange={(e) => {
+                              if (hasTasks) return;
+                              const val = e.target.value ? time24To12(e.target.value) : '';
+                              setTargetEndTime(val);
+                              autoSave.registerPendingChange('target_end_time', val || null, project.target_end_time);
+                            }}
+                            onBlur={() => {
+                              if (hasTasks) return;
+                              autoSave.saveField('target_end_time', targetEndTime || null, project.target_end_time);
+                            }}
+                            sx={{
+                              width: 110,
+                              '& .MuiOutlinedInput-root': { height: 36, fontSize: 12, bgcolor: hasTasks ? 'action.hover' : 'background.paper' },
+                              '& .MuiInputBase-input': { cursor: hasTasks ? 'default' : 'pointer' },
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </Box>
+                  </Grid>
+
+                  {/* Project Duration Card */}
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: '6px', border: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+                        PROJECT DURATION {hasTasks && <span style={{ fontWeight: 400, opacity: 0.8 }}>(Calculated from Tasks)</span>}
+                      </Typography>
+                      <Tooltip title={hasTasks ? "Calculated: Duration between earliest start and latest completion of child tasks" : "Estimated Project Duration"}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, py: 0.75, color: projectDurationDisplay ? 'text.primary' : 'text.disabled' }}>
+                          {projectDurationDisplay || '—'}
+                        </Typography>
+                      </Tooltip>
                     </Box>
                   </Grid>
 

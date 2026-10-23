@@ -20,6 +20,7 @@ export interface ProjectItem {
   estimated_cost: float;
   actual_cost: float;
   target_start_date?: string;
+  target_start_time?: string;
   target_end_date?: string;
   target_end_time?: string;
   completion_date?: string;

@@ -605,6 +605,7 @@ class ProjectBase(BaseModel):
     estimated_cost: float = 0.0
     actual_cost: float = 0.0
     target_start_date: Optional[date] = None
+    target_start_time: Optional[str] = None
     target_end_date: Optional[date] = None
     target_end_time: Optional[str] = None
     completion_date: Optional[date] = None
@@ -630,6 +631,7 @@ class ProjectUpdate(BaseModel):
     estimated_cost: Optional[float] = None
     actual_cost: Optional[float] = None
     target_start_date: Optional[date] = None
+    target_start_time: Optional[str] = None
     target_end_date: Optional[date] = None
     target_end_time: Optional[str] = None
     completion_date: Optional[date] = None

@@ -156,6 +156,7 @@ class Project(Base):
     estimated_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     actual_cost: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     target_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    target_start_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     target_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     target_end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     completion_date: Mapped[date | None] = mapped_column(Date, nullable=True)

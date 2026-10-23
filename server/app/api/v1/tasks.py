@@ -1516,6 +1516,13 @@ def update_task(
     task = _get_task_or_404_with_auth(db, task_id, current_user)
 
     update_dict = data.model_dump(exclude_unset=True)
+
+    # When child tasks / subtasks exist, Start Date/Time, Due Date/Time, and Duration are auto-calculated and read-only
+    has_subtasks = db.query(Task).filter(Task.parent_task_id == task_id, Task.is_deleted.is_(False)).count() > 0
+    if has_subtasks:
+        for f in ("start_date", "start_time", "due_date", "due_time", "duration_working_days", "duration_working_hours"):
+            update_dict.pop(f, None)
+
     old_due_date = task.due_date
     old_start_date = task.start_date
     old_task_list_id = task.task_list_id

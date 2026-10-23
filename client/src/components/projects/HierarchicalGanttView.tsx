@@ -509,6 +509,7 @@ export default function HierarchicalGanttView({
   // ── Bar Drag & Resize Mouse Handlers ─────────────────────────────────────
   const handleMouseDownBar = (node: TreeNode, mode: 'MOVE' | 'RESIZE_LEFT' | 'RESIZE_RIGHT', e: React.MouseEvent) => {
     e.stopPropagation();
+    if (node.hasChildren) return;
     const coords = getBarPixelCoords(node);
     if (!coords) return;
     setDraggingState({
@@ -1141,28 +1142,30 @@ export default function HierarchicalGanttView({
                               userSelect: 'none',
                               transition: isCurrentlyDragging ? 'none' : 'all 0.15s ease',
                               opacity: isCurrentlyDragging ? 0.88 : 1,
-                              '&:active': { cursor: 'grabbing' },
+                              '&:active': { cursor: node.hasChildren ? 'default' : 'grabbing' },
                             }}
                           >
                             {/* LEFT RESIZE HANDLE + CONNECTOR */}
-                            <Box
-                              sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, cursor: 'ew-resize', zIndex: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              onMouseDown={(e) => { e.stopPropagation(); handleMouseDownBar(node, 'RESIZE_LEFT', e); }}
-                            >
+                            {!node.hasChildren && (
                               <Box
-                                id={`dep-connector-${node.id}-left`}
-                                onMouseDown={(e) => { e.stopPropagation(); handleDepConnectorMouseDown(node.id, 'left', e); }}
-                                onMouseEnter={() => setHoverConnectorTaskId({ taskId: node.id, edge: 'left' })}
-                                onMouseLeave={() => setHoverConnectorTaskId(null)}
-                                sx={{
-                                  width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFFFFF', border: '2px solid rgba(255,255,255,0.5)',
-                                  cursor: 'crosshair', zIndex: 9,
-                                  transition: 'all 0.1s ease',
-                                  opacity: (depDrawState || hoverConnectorTaskId?.taskId === node.id) ? 1 : 0,
-                                  '&:hover': { opacity: 1, transform: 'scale(1.3)' },
-                                }}
-                              />
-                            </Box>
+                                sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, cursor: 'ew-resize', zIndex: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                onMouseDown={(e) => { e.stopPropagation(); handleMouseDownBar(node, 'RESIZE_LEFT', e); }}
+                              >
+                                <Box
+                                  id={`dep-connector-${node.id}-left`}
+                                  onMouseDown={(e) => { e.stopPropagation(); handleDepConnectorMouseDown(node.id, 'left', e); }}
+                                  onMouseEnter={() => setHoverConnectorTaskId({ taskId: node.id, edge: 'left' })}
+                                  onMouseLeave={() => setHoverConnectorTaskId(null)}
+                                  sx={{
+                                    width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFFFFF', border: '2px solid rgba(255,255,255,0.5)',
+                                    cursor: 'crosshair', zIndex: 9,
+                                    transition: 'all 0.1s ease',
+                                    opacity: (depDrawState || hoverConnectorTaskId?.taskId === node.id) ? 1 : 0,
+                                    '&:hover': { opacity: 1, transform: 'scale(1.3)' },
+                                  }}
+                                />
+                              </Box>
+                            )}
 
                             {/* Progress Fill */}
                             {(node.progress_percentage || 0) > 0 && (
@@ -1182,24 +1185,26 @@ export default function HierarchicalGanttView({
                             </Box>
 
                             {/* RIGHT RESIZE HANDLE + CONNECTOR */}
-                            <Box
-                              sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 10, cursor: 'ew-resize', zIndex: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              onMouseDown={(e) => { e.stopPropagation(); handleMouseDownBar(node, 'RESIZE_RIGHT', e); }}
-                            >
+                            {!node.hasChildren && (
                               <Box
-                                id={`dep-connector-${node.id}-right`}
-                                onMouseDown={(e) => { e.stopPropagation(); handleDepConnectorMouseDown(node.id, 'right', e); }}
-                                onMouseEnter={() => setHoverConnectorTaskId({ taskId: node.id, edge: 'right' })}
-                                onMouseLeave={() => setHoverConnectorTaskId(null)}
-                                sx={{
-                                  width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFFFFF', border: '2px solid rgba(255,255,255,0.5)',
-                                  cursor: 'crosshair', zIndex: 9,
-                                  transition: 'all 0.1s ease',
-                                  opacity: (depDrawState || hoverConnectorTaskId?.taskId === node.id) ? 1 : 0,
-                                  '&:hover': { opacity: 1, transform: 'scale(1.3)' },
-                                }}
-                              />
-                            </Box>
+                                sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 10, cursor: 'ew-resize', zIndex: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                onMouseDown={(e) => { e.stopPropagation(); handleMouseDownBar(node, 'RESIZE_RIGHT', e); }}
+                              >
+                                <Box
+                                  id={`dep-connector-${node.id}-right`}
+                                  onMouseDown={(e) => { e.stopPropagation(); handleDepConnectorMouseDown(node.id, 'right', e); }}
+                                  onMouseEnter={() => setHoverConnectorTaskId({ taskId: node.id, edge: 'right' })}
+                                  onMouseLeave={() => setHoverConnectorTaskId(null)}
+                                  sx={{
+                                    width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFFFFF', border: '2px solid rgba(255,255,255,0.5)',
+                                    cursor: 'crosshair', zIndex: 9,
+                                    transition: 'all 0.1s ease',
+                                    opacity: (depDrawState || hoverConnectorTaskId?.taskId === node.id) ? 1 : 0,
+                                    '&:hover': { opacity: 1, transform: 'scale(1.3)' },
+                                  }}
+                                />
+                              </Box>
+                            )}
                           </Box>
                         </Tooltip>
                       )}

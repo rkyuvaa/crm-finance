@@ -265,31 +265,74 @@ def rollup_milestone(db: Session, milestone_id: int) -> None:
 
 def rollup_project(db: Session, project_id: int) -> None:
     """
-    Aggregate from all milestones under this project.
-    Updates rollup_start_date, rollup_end_date, estimated_cost, actual_cost on the Project.
+    Aggregate from all milestones and tasks under this project.
+    Updates target_start_date, target_start_time, target_end_date, target_end_time,
+    rollup_start_date, rollup_end_date, estimated_cost, actual_cost on the Project.
     Does NOT commit.
     """
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         return
 
+    from app.services.calendar_service import get_working_calendar, parse_hhmm_time
+    cal = get_working_calendar(db)
+
+    tasks = db.query(Task).filter(
+        Task.project_id == project_id,
+        Task.is_deleted.is_(False)
+    ).all()
+
     milestones = db.query(ProjectMilestone).filter(
         ProjectMilestone.project_id == project_id
     ).all()
 
-    if not milestones:
-        project.rollup_start_date = None
-        project.rollup_end_date = None
-        project.estimated_cost = 0.0
-        project.actual_cost = 0.0
-    else:
+    if tasks:
+        start_candidates = []
+        for t in tasks:
+            if t.start_date:
+                s_time = parse_hhmm_time(t.start_time, cal.work_start_time)
+                start_candidates.append((datetime.combine(t.start_date, s_time), t.start_time))
+        if start_candidates:
+            earliest_dt, raw_st = min(start_candidates, key=lambda x: x[0])
+            project.target_start_date = earliest_dt.date()
+            project.target_start_time = raw_st or earliest_dt.strftime("%H:%M")
+            project.rollup_start_date = earliest_dt.date()
+        else:
+            project.rollup_start_date = None
+
+        due_candidates = []
+        for t in tasks:
+            if t.due_date:
+                d_time = parse_hhmm_time(t.due_time, cal.work_end_time)
+                due_candidates.append((datetime.combine(t.due_date, d_time), t.due_time))
+        if due_candidates:
+            latest_dt, raw_dt = max(due_candidates, key=lambda x: x[0])
+            project.target_end_date = latest_dt.date()
+            project.target_end_time = raw_dt or latest_dt.strftime("%H:%M")
+            project.rollup_end_date = latest_dt.date()
+        else:
+            project.rollup_end_date = None
+
+        top_tasks = [t for t in tasks if t.parent_task_id is None]
+        project.estimated_cost = sum(t.estimated_cost or 0.0 for t in top_tasks)
+        project.actual_cost = sum(t.actual_cost or 0.0 for t in top_tasks)
+    elif milestones:
         start_dates = [m.rollup_start_date for m in milestones if m.rollup_start_date]
         end_dates = [m.rollup_end_date for m in milestones if m.rollup_end_date]
 
         project.rollup_start_date = min(start_dates) if start_dates else None
         project.rollup_end_date = max(end_dates) if end_dates else None
+        if project.rollup_start_date:
+            project.target_start_date = project.rollup_start_date
+        if project.rollup_end_date:
+            project.target_end_date = project.rollup_end_date
         project.estimated_cost = sum(m.rollup_estimated_cost or 0.0 for m in milestones)
         project.actual_cost = sum(m.rollup_actual_cost or 0.0 for m in milestones)
+    else:
+        project.rollup_start_date = None
+        project.rollup_end_date = None
+        project.estimated_cost = 0.0
+        project.actual_cost = 0.0
 
     db.add(project)
 
