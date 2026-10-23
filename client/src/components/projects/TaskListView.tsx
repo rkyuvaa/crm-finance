@@ -281,7 +281,9 @@ export default function TaskListView({
                 >
                   {isExpanded ? '▼' : '▶'}
                 </Typography>
-              ) : null}
+              ) : (
+                <Box sx={{ width: 14 }} />
+              )}
 
               <Chip
                 label={task.task_number ? task.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${task.id}`}

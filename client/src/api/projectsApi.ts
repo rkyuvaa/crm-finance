@@ -802,7 +802,7 @@ export const projectsApi = createApi({
         url: `/tasks/${taskId}/dependencies/${dependencyId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks'],
+      invalidatesTags: (_res, _err, { taskId }) => [{ type: 'Tasks', id: taskId }, 'Tasks', 'Projects'],
     }),
     getCascadePreview: builder.query<CascadePreviewOut, { taskId: number; days_shift: number }>({
       query: ({ taskId, days_shift }) => `/tasks/${taskId}/cascade-preview?days_shift=${days_shift}`,

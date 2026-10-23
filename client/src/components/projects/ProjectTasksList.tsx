@@ -61,6 +61,7 @@ import {
   CornerDownRight,
   ArrowUpToLine,
   ArrowDownToLine,
+  X,
 } from 'lucide-react';
 import {
   useGetTasksQuery,
@@ -77,6 +78,7 @@ import {
   useDeleteTaskListMutation,
   useReorderTaskListsMutation,
   useReorderTasksMutation,
+  useRemoveDependencyMutation,
   TaskItem,
   TaskDependencyInfo,
   ProjectTaskListItem,
@@ -200,6 +202,16 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
   const [deleteProjectMilestone] = useDeleteProjectMilestoneMutation();
   const [reorderTaskLists] = useReorderTaskListsMutation();
   const [reorderTasks] = useReorderTasksMutation();
+  const [removeDependency] = useRemoveDependencyMutation();
+
+  const handleDirectRemoveDependency = async (taskId: number, dependencyId: number) => {
+    try {
+      await removeDependency({ taskId, dependencyId }).unwrap();
+      showToast('Dependency removed successfully', 'success');
+    } catch (err: any) {
+      showToast(err?.data?.detail?.message || err?.data?.detail || 'Failed to remove dependency', 'error');
+    }
+  };
 
   // Dependency Modal State
   const [depModalOpen, setDepModalOpen] = useState(false);
@@ -1219,7 +1231,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
           <TableCell
             className="sticky-cell"
             align="center"
-            width={44}
+            width={48}
             sx={{
               position: 'sticky',
               left: 0,
@@ -1230,7 +1242,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               p: 0,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25, width: '100%', px: 0.5 }}>
               <Box
                 draggable
                 onDragStart={(e) => {
@@ -1266,6 +1278,31 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               >
                 <GripVertical size={14} />
               </Box>
+              {hasChildren ? (
+                <Typography
+                  component="span"
+                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
+                  sx={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 16,
+                    height: 16,
+                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
+                    borderRadius: '3px',
+                    '&:hover': { color: isDark ? '#5FCF87' : '#203020', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
+                  }}
+                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                >
+                  {isExpanded ? '▼' : '▶'}
+                </Typography>
+              ) : (
+                <Box sx={{ width: 16, height: 16 }} />
+              )}
             </Box>
           </TableCell>
 
@@ -1274,7 +1311,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             className="sticky-cell"
             sx={{
               position: 'sticky',
-              left: 44,
+              left: 48,
               zIndex: 1,
               bgcolor: depth > 0 ? tTokens.stickyNestedBg : tTokens.stickyMainBg,
               whiteSpace: 'nowrap',
@@ -1289,24 +1326,6 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
               {depth > 0 && (
                 <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 700, fontSize: '0.85rem', userSelect: 'none', mr: -0.25 }}>
                   ↳
-                </Typography>
-              )}
-              {hasChildren && (
-                <Typography
-                  component="span"
-                  onClick={(e) => toggleSubtasksExpand(task.id, e)}
-                  sx={{
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    fontWeight: 'bold',
-                    fontSize: '0.8rem',
-                    color: isExpanded ? (isDark ? '#5FCF87' : '#203020') : 'text.secondary',
-                    mr: 0.25,
-                    '&:hover': { color: isDark ? '#5FCF87' : '#203020' },
-                  }}
-                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
-                >
-                  {isExpanded ? '▼' : '▶'}
                 </Typography>
               )}
               {task.task_number && (
@@ -1431,7 +1450,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             }}
             onClick={(e) => {
               e.stopPropagation();
-              handleOpenDependencyModal(task, null);
+              if (task.dependencies && task.dependencies.length === 1) {
+                handleOpenDependencyModal(task, task.dependencies[0]);
+              } else {
+                handleOpenDependencyModal(task, null);
+              }
             }}
           >
             <Box
@@ -1443,7 +1466,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 flexWrap: 'wrap',
                 gap: 0.5,
                 alignItems: 'center',
-                '&::-webkit-scrollbar': { width: '4px' },
+                '&::-webkit-scrollbar': { width: '4px', height: '4px' },
                 '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.15)', borderRadius: '2px' },
               }}
             >
@@ -1455,7 +1478,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                   return (
                     <Tooltip
                       key={dep.id}
-                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${chipLabel}) - Click to edit`}
+                      title={`${dep.predecessor_task_title || dep.depends_on_task_title || 'Task'} (${chipLabel}) - Click to edit, or click ✕ to remove`}
                     >
                       <Chip
                         icon={<Link2 size={10} color={isDark ? '#5FCF87' : '#203020'} />}
@@ -1465,6 +1488,11 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           e.stopPropagation();
                           handleOpenDependencyModal(task, dep);
                         }}
+                        onDelete={(e) => {
+                          e.stopPropagation();
+                          handleDirectRemoveDependency(task.id, dep.id);
+                        }}
+                        deleteIcon={<X size={12} />}
                         sx={{
                           height: 22,
                           fontSize: '0.65rem',
@@ -1477,6 +1505,12 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           cursor: 'pointer',
                           maxWidth: '100%',
                           '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                          '& .MuiChip-deleteIcon': {
+                            color: isDark ? '#A7F3D0' : '#203020',
+                            opacity: 0.65,
+                            marginRight: '3px',
+                            '&:hover': { opacity: 1, color: '#EF4444' },
+                          },
                           '&:hover': { bgcolor: isDark ? 'rgba(95, 207, 135, 0.25)' : '#C8E6C9' },
                         }}
                       />
@@ -2354,7 +2388,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
             <TableHead sx={{ bgcolor: tTokens.headerBg }}>
               <TableRow>
                 <TableCell
-                  width={44}
+                  width={48}
                   sx={{
                     position: 'sticky',
                     left: 0,
@@ -2366,7 +2400,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                 <TableCell
                   sx={{
                     position: 'sticky',
-                    left: 44,
+                    left: 48,
                     zIndex: 3,
                     bgcolor: tTokens.headerBg,
                     fontWeight: 600,
@@ -2436,7 +2470,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           colSpan={10}
                           sx={{
                             position: 'sticky',
-                            left: 44,
+                            left: 48,
                             zIndex: 2,
                             bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
@@ -2508,7 +2542,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                           colSpan={10}
                           sx={{
                             position: 'sticky',
-                            left: 44,
+                            left: 48,
                             zIndex: 2,
                             bgcolor: 'inherit',
                             whiteSpace: 'nowrap',
@@ -2654,7 +2688,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
                                   <TableCell
                                     sx={{
                                       position: 'sticky',
-                                      left: 44,
+                                      left: 48,
                                       zIndex: 2,
                                       bgcolor: 'inherit',
                                       whiteSpace: 'nowrap',

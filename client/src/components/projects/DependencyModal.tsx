@@ -163,6 +163,11 @@ export default function DependencyModal({
   const handleSave = async () => {
     if (!task) return;
     if (!selectedPredecessor) {
+      if (dependency) {
+        // Clearing predecessor on existing dependency treats as removal
+        await handleRemove();
+        return;
+      }
       showToast('Please select a predecessor task', 'error');
       return;
     }
