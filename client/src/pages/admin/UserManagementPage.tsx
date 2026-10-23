@@ -61,10 +61,7 @@ export default function UserManagementPage() {
   const [createForm, setCreateForm] = useState({
     full_name: '',
     email: '',
-    username: '',
     password: '',
-    mobile: '',
-    employee_id: '',
     designation: '',
     primary_role: 'SALES_EXECUTIVE',
     role_ids: [] as number[],
@@ -85,9 +82,7 @@ export default function UserManagementPage() {
         ...createForm,
         full_name: createForm.full_name.trim(),
         email: createForm.email.trim(),
-        username: createForm.username.trim(),
-        mobile: createForm.mobile.trim() || undefined,
-        employee_id: createForm.employee_id.trim() || undefined,
+        username: createForm.email.trim().toLowerCase(),
         designation: createForm.designation.trim() || undefined,
         department_ids: createForm.department_ids.filter((id) => Boolean(id) && !isNaN(id)),
         role_ids: createForm.role_ids.filter((id) => Boolean(id) && !isNaN(id)),
@@ -100,10 +95,7 @@ export default function UserManagementPage() {
       setCreateForm({
         full_name: '',
         email: '',
-        username: '',
         password: '',
-        mobile: '',
-        employee_id: '',
         designation: '',
         primary_role: 'SALES_EXECUTIVE',
         role_ids: [],
@@ -127,9 +119,7 @@ export default function UserManagementPage() {
         ...editForm,
         full_name: editForm.full_name?.trim(),
         email: editForm.email?.trim(),
-        username: editForm.username?.trim(),
-        mobile: editForm.mobile?.trim() || undefined,
-        employee_id: editForm.employee_id?.trim() || undefined,
+        username: editForm.email?.trim().toLowerCase(),
         designation: editForm.designation?.trim() || undefined,
         department_ids: editForm.department_ids?.filter((id) => Boolean(id) && !isNaN(id)),
         role_ids: editForm.role_ids?.filter((id) => Boolean(id) && !isNaN(id)),
@@ -144,7 +134,7 @@ export default function UserManagementPage() {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (confirm(`Are you sure you want to soft-delete user ${name}?`)) {
+    if (confirm(`Are you sure you want to delete user ${name}? This action cannot be undone.`)) {
       try {
         await deleteUser(id).unwrap();
         refetch();
@@ -205,7 +195,7 @@ export default function UserManagementPage() {
           <Search size={16} color="#7A8B80" style={{ position: 'absolute', left: 12, top: 11 }} />
           <input
             type="text"
-            placeholder="Search by name, email, employee ID..."
+            placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -250,7 +240,6 @@ export default function UserManagementPage() {
           <thead>
             <tr style={{ background: '#F8FAF8', borderBottom: '1px solid #E4EBE1', color: '#44584C', fontWeight: 700 }}>
               <th style={{ padding: '12px 16px' }}>User</th>
-              <th style={{ padding: '12px 16px' }}>Employee ID</th>
               <th style={{ padding: '12px 16px' }}>Department</th>
               <th style={{ padding: '12px 16px' }}>Designation</th>
               <th style={{ padding: '12px 16px' }}>Roles</th>
@@ -262,13 +251,13 @@ export default function UserManagementPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} style={{ padding: 32, textAlign: 'center', color: '#7A8B80' }}>
+                <td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#7A8B80' }}>
                   Loading users...
                 </td>
               </tr>
             ) : !usersData?.items || usersData.items.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: 32, textAlign: 'center', color: '#7A8B80' }}>
+                <td colSpan={7} style={{ padding: 32, textAlign: 'center', color: '#7A8B80' }}>
                   No users found matching filter criteria.
                 </td>
               </tr>
@@ -299,7 +288,7 @@ export default function UserManagementPage() {
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#44584C' }}>{u.employee_id || '-'}</td>
+                  
                   <td style={{ padding: '12px 16px', color: '#04552B', fontWeight: 600 }}>{u.primary_department_name || '-'}</td>
                   <td style={{ padding: '12px 16px', color: '#44584C' }}>{u.designation || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>
@@ -365,7 +354,7 @@ export default function UserManagementPage() {
                         <Edit2 size={15} />
                       </button>
                       <button
-                        title="Soft Delete User"
+                        title="Delete User"
                         onClick={() => handleDelete(u.id, u.full_name)}
                         style={{ padding: 6, borderRadius: 6, border: '1px solid #FCA5A5', background: '#FEF2F2', cursor: 'pointer', color: '#DC2626' }}
                       >
@@ -417,48 +406,15 @@ export default function UserManagementPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Username *</label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.username}
-                    onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={createForm.password}
-                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Employee ID</label>
-                  <input
-                    type="text"
-                    value={createForm.employee_id}
-                    onChange={(e) => setCreateForm({ ...createForm, employee_id: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Mobile Number</label>
-                  <input
-                    type="text"
-                    value={createForm.mobile}
-                    onChange={(e) => setCreateForm({ ...createForm, mobile: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                  />
-                </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                />
               </div>
 
               <div>
@@ -542,48 +498,15 @@ export default function UserManagementPage() {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Email Address *</label>
-                      <input
-                        type="email"
-                        required
-                        value={editForm.email || ''}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Username *</label>
-                      <input
-                        type="text"
-                        required
-                        value={editForm.username || ''}
-                        onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Employee ID</label>
-                      <input
-                        type="text"
-                        value={editForm.employee_id || ''}
-                        onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Mobile Number</label>
-                      <input
-                        type="text"
-                        value={editForm.mobile || ''}
-                        onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                      />
-                    </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      value={editForm.email || ''}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                    />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

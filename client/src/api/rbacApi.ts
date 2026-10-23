@@ -18,7 +18,7 @@ import type {
   UserDetail,
 } from '../types/rbac';
 
-import { baseQueryWithReauth } from './baseApi';
+import { baseQueryWithReauth, baseApi } from './baseApi';
 
 const rawRbacQuery = fetchBaseQuery({
   baseUrl: '/api/v1/admin',
@@ -78,6 +78,12 @@ export const rbacApi = createApi({
         body,
       }),
       invalidatesTags: ['Users'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(baseApi.util.invalidateTags(['Users']));
+        } catch {}
+      },
     }),
 
     updateUser: builder.mutation<UserDetail, { id: number; data: Partial<UserDetail> & { password?: string; role_ids?: number[]; department_ids?: number[] } }>({
@@ -87,6 +93,12 @@ export const rbacApi = createApi({
         body: data,
       }),
       invalidatesTags: (_res, _err, { id }) => [{ type: 'Users', id }, 'Users'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(baseApi.util.invalidateTags(['Users']));
+        } catch {}
+      },
     }),
 
     deleteUser: builder.mutation<void, number>({
@@ -95,6 +107,12 @@ export const rbacApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: ['Users'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(baseApi.util.invalidateTags(['Users']));
+        } catch {}
+      },
     }),
 
     getUserEffectivePermissions: builder.query<EffectiveAccessSummary, number>({

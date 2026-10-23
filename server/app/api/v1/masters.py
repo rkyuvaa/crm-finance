@@ -740,11 +740,12 @@ def reorder_tab_fields(
 
 @router.get("/users", response_model=list[UserBrief])
 def list_users(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    users = db.query(User).order_by(User.full_name.asc()).all()
+    from app.models.user import UserStatus
+    users = db.query(User).filter(User.status == UserStatus.ACTIVE).order_by(User.full_name.asc()).all()
     return [
         UserBrief(
             id=u.id,
-            full_name=u.full_name,
+            full_name=u.full_name or u.email,
             role=u.role,
             email=u.email,
         )

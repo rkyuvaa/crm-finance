@@ -3518,7 +3518,7 @@ export default function ProjectTasksList({ projectId }: ProjectTasksListProps) {
         <Box sx={{ maxHeight: 220, overflowY: 'auto', py: 0.5 }}>
           {users.length === 0 ? (
             <Typography variant="body2" sx={{ p: 2, fontSize: '0.8rem', color: 'text.secondary', textAlign: 'center' }}>
-              No employees available
+              No users available
             </Typography>
           ) : (
             users.map((u) => {

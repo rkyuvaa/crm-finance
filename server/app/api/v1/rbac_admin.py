@@ -155,20 +155,23 @@ def create_user_admin(
     if not can_user(db, current_user, "create", "users"):
         raise HTTPException(status_code=403, detail="Permission denied to create users")
 
-    if db.query(User).filter(User.email == payload.email).first():
+    email_clean = str(payload.email).lower().strip()
+    if db.query(User).filter(User.email.ilike(email_clean)).first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    if payload.username and db.query(User).filter(User.username == payload.username).first():
+    username_clean = (payload.username or email_clean).lower().strip()
+    existing_by_uname = db.query(User).filter(User.username.ilike(username_clean)).first()
+    if existing_by_uname and existing_by_uname.email.lower() != email_clean:
         raise HTTPException(status_code=400, detail="Username is already taken")
 
     user = User(
-        email=payload.email,
-        username=payload.username,
+        email=email_clean,
+        username=username_clean,
         password_hash=hash_password(payload.password),
-        full_name=payload.full_name,
-        mobile=payload.mobile,
-        employee_id=payload.employee_id,
-        designation=payload.designation,
+        full_name=payload.full_name.strip(),
+        mobile=payload.mobile.strip() if payload.mobile else None,
+        employee_id=payload.employee_id.strip() if payload.employee_id else None,
+        designation=payload.designation.strip() if payload.designation else None,
         role=payload.primary_role,
         status=payload.status,
         force_password_change=payload.force_password_change,
@@ -269,11 +272,13 @@ def update_user_admin(
     old_data = {"email": u.email, "full_name": u.full_name, "status": u.status, "role": u.role}
 
     if payload.email is not None:
-        u.email = payload.email
+        u.email = str(payload.email).lower().strip()
+        if payload.username is None:
+            u.username = u.email
     if payload.full_name is not None:
-        u.full_name = payload.full_name
+        u.full_name = payload.full_name.strip()
     if payload.username is not None:
-        u.username = payload.username
+        u.username = payload.username.lower().strip()
     if payload.mobile is not None:
         u.mobile = payload.mobile
     if payload.employee_id is not None:
@@ -329,7 +334,7 @@ def delete_user_admin(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Soft delete user by setting status to INACTIVE."""
+    """Delete a user permanently, cleaning up relationships."""
     if not can_user(db, current_user, "delete", "users"):
         raise HTTPException(status_code=403, detail="Permission denied to delete users")
 
@@ -340,8 +345,49 @@ def delete_user_admin(
     if u.email == "admin@kim.com":
         raise HTTPException(status_code=400, detail="Cannot delete default Super Admin account")
 
-    u.status = UserStatus.INACTIVE
-    db.commit()
+    if u.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    user_email = u.email
+    user_name = u.full_name
+
+    try:
+        # 1. Self-referential reporting manager
+        db.query(User).filter(User.reporting_manager_id == u.id).update({User.reporting_manager_id: None})
+
+        # 2. Project Task Assignees & Followers
+        from app.models.projects import TaskAssignee, TaskFollower, Task, Project
+        db.query(TaskAssignee).filter(TaskAssignee.user_id == u.id).delete()
+        db.query(TaskFollower).filter(TaskFollower.user_id == u.id).delete()
+        db.query(Task).filter(Task.assigned_to == u.id).update({Task.assigned_to: None})
+        db.query(Project).filter(Project.lead_id == u.id).update({Project.lead_id: None})
+
+        # 3. RBAC & Departments
+        from app.models.rbac import DepartmentUser, UserRole as RbacUserRole, UserPermission
+        db.query(DepartmentUser).filter(DepartmentUser.user_id == u.id).delete()
+        db.query(RbacUserRole).filter(RbacUserRole.user_id == u.id).delete()
+        db.query(UserPermission).filter(UserPermission.user_id == u.id).delete()
+
+        # 4. Notifications
+        from app.models.notification import Notification
+        db.query(Notification).filter(Notification.user_id == u.id).delete()
+
+        # 5. Application assignments
+        from app.models.application import Application
+        db.query(Application).filter(Application.assigned_to == u.id).update({Application.assigned_to: None})
+        db.query(Application).filter(Application.verified_by == u.id).update({Application.verified_by: None})
+
+        db.delete(u)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Fallback to soft delete if DB constraint prevents hard deletion
+        fallback_u = db.get(User, user_id)
+        if fallback_u:
+            fallback_u.status = UserStatus.INACTIVE
+            db.commit()
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
 
     log_audit_event(
         db,
@@ -349,11 +395,12 @@ def delete_user_admin(
         user_id=current_user.id,
         module="administration",
         resource="users",
-        record_id=str(u.id),
-        previous_value={"status": "ACTIVE"},
-        new_value={"status": "INACTIVE"},
+        record_id=str(user_id),
+        previous_value={"email": user_email, "full_name": user_name},
+        new_value=None,
         req=req,
     )
+    return Response(status_code=204)
 
 
 @router.get("/users/{user_id}/effective-permissions", response_model=EffectiveAccessSummary)

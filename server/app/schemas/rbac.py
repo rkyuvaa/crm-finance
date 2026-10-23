@@ -175,7 +175,7 @@ class RoleDuplicateInput(BaseModel):
 class UserCreateAdmin(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=2, max_length=120)
-    username: str = Field(..., min_length=3, max_length=50)
+    username: str | None = None
     password: str = Field(..., min_length=6)
     mobile: str | None = None
     employee_id: str | None = None
