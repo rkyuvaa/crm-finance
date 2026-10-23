@@ -355,39 +355,87 @@ def delete_user_admin(
         # 1. Self-referential reporting manager
         db.query(User).filter(User.reporting_manager_id == u.id).update({User.reporting_manager_id: None})
 
-        # 2. Project Task Assignees & Followers
-        from app.models.projects import TaskAssignee, TaskFollower, Task, Project
+        # 2. Departments head & Roles created_by
+        from app.models.rbac import Department, Role
+        db.query(Department).filter(Department.head_id == u.id).update({Department.head_id: None})
+        db.query(Role).filter(Role.created_by == u.id).update({Role.created_by: None})
+
+        # 3. Project & Task references
+        from app.models.projects import (
+            TaskAssignee, TaskFollower, Task, Project,
+            TaskChecklistItem, TaskTimeLog, TaskComment,
+            TaskTimeEntry, TaskAttachment, TaskActivity, TaskTemplate
+        )
         db.query(TaskAssignee).filter(TaskAssignee.user_id == u.id).delete()
+        db.query(TaskAssignee).filter(TaskAssignee.assigned_by == u.id).update({TaskAssignee.assigned_by: None})
         db.query(TaskFollower).filter(TaskFollower.user_id == u.id).delete()
-        db.query(Task).filter(Task.assigned_to == u.id).update({Task.assigned_to: None})
-        db.query(Project).filter(Project.lead_id == u.id).update({Project.lead_id: None})
+        db.query(Task).filter(Task.assignee_id == u.id).update({Task.assignee_id: None})
+        db.query(Task).filter(Task.created_by == u.id).update({Task.created_by: None})
+        db.query(Task).filter(Task.updated_by == u.id).update({Task.updated_by: None})
+        db.query(Task).filter(Task.completed_by == u.id).update({Task.completed_by: None})
+        db.query(Project).filter(Project.owner_id == u.id).update({Project.owner_id: None})
+        db.query(TaskChecklistItem).filter(TaskChecklistItem.assignee_id == u.id).update({TaskChecklistItem.assignee_id: None})
+        db.query(TaskChecklistItem).filter(TaskChecklistItem.completed_by == u.id).update({TaskChecklistItem.completed_by: None})
+        db.query(TaskTimeLog).filter(TaskTimeLog.user_id == u.id).delete()
+        db.query(TaskComment).filter(TaskComment.user_id == u.id).delete()
+        db.query(TaskTimeEntry).filter(TaskTimeEntry.user_id == u.id).delete()
+        db.query(TaskAttachment).filter(TaskAttachment.uploaded_by == u.id).update({TaskAttachment.uploaded_by: None})
+        db.query(TaskActivity).filter(TaskActivity.actor_id == u.id).update({TaskActivity.actor_id: None})
+        db.query(TaskTemplate).filter(TaskTemplate.created_by == u.id).update({TaskTemplate.created_by: None})
 
-        # 3. RBAC & Departments
-        from app.models.rbac import DepartmentUser, UserRole as RbacUserRole, UserPermission
+        # 4. RBAC & Departments
+        from app.models.rbac import DepartmentUser, UserRole as RbacUserRole, UserPermission, AuditLog
         db.query(DepartmentUser).filter(DepartmentUser.user_id == u.id).delete()
+        db.query(DepartmentUser).filter(DepartmentUser.assigned_by == u.id).update({DepartmentUser.assigned_by: None})
         db.query(RbacUserRole).filter(RbacUserRole.user_id == u.id).delete()
+        db.query(RbacUserRole).filter(RbacUserRole.assigned_by == u.id).update({RbacUserRole.assigned_by: None})
         db.query(UserPermission).filter(UserPermission.user_id == u.id).delete()
+        db.query(UserPermission).filter(UserPermission.assigned_by == u.id).update({UserPermission.assigned_by: None})
 
-        # 4. Notifications
+        # 5. Notifications & Audit logs
         from app.models.notification import Notification
         db.query(Notification).filter(Notification.user_id == u.id).delete()
+        db.query(AuditLog).filter(AuditLog.user_id == u.id).delete()
 
-        # 5. Application assignments
+        # 6. Application assignments
         from app.models.application import Application
         db.query(Application).filter(Application.assigned_to == u.id).update({Application.assigned_to: None})
-        db.query(Application).filter(Application.verified_by == u.id).update({Application.verified_by: None})
+
+        # 7. HR models if present
+        try:
+            from app.models.hr import Attendance, LeaveRequest, Payroll, PerformanceReview
+            db.query(Attendance).filter(Attendance.user_id == u.id).delete()
+            db.query(LeaveRequest).filter(LeaveRequest.user_id == u.id).delete()
+            db.query(LeaveRequest).filter(LeaveRequest.approved_by_id == u.id).update({LeaveRequest.approved_by_id: None})
+            db.query(Payroll).filter(Payroll.user_id == u.id).delete()
+            db.query(PerformanceReview).filter(PerformanceReview.user_id == u.id).delete()
+            db.query(PerformanceReview).filter(PerformanceReview.reviewer_id == u.id).update({PerformanceReview.reviewer_id: None})
+        except Exception:
+            pass
+
+        try:
+            from app.models.recruitment import JobRequisition, Candidate, CandidateStageHistory
+            db.query(JobRequisition).filter(JobRequisition.requester_id == u.id).update({JobRequisition.requester_id: None})
+            db.query(Candidate).filter(Candidate.created_employee_id == u.id).update({Candidate.created_employee_id: None})
+            db.query(CandidateStageHistory).filter(CandidateStageHistory.changed_by_id == u.id).update({CandidateStageHistory.changed_by_id: None})
+        except Exception:
+            pass
+
+        # 8. Activity logs & planned activities
+        try:
+            from app.models.application import PlannedActivity, ActivityLog, Verification
+            db.query(PlannedActivity).filter(PlannedActivity.assigned_to == u.id).update({PlannedActivity.assigned_to: None})
+            db.query(PlannedActivity).filter(PlannedActivity.created_by == u.id).update({PlannedActivity.created_by: None})
+            db.query(ActivityLog).filter(ActivityLog.actor_id == u.id).update({ActivityLog.actor_id: None})
+            db.query(Verification).filter(Verification.verified_by == u.id).update({Verification.verified_by: None})
+        except Exception:
+            pass
 
         db.delete(u)
         db.commit()
     except Exception as e:
         db.rollback()
-        # Fallback to soft delete if DB constraint prevents hard deletion
-        fallback_u = db.get(User, user_id)
-        if fallback_u:
-            fallback_u.status = UserStatus.INACTIVE
-            db.commit()
-        else:
-            raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
 
     log_audit_event(
         db,

@@ -5,7 +5,11 @@ import {
   Shield,
   Edit2,
   Trash2,
+  MoreVertical,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
+import { Menu, MenuItem, Divider } from '@mui/material';
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -39,6 +43,48 @@ export default function UserManagementPage() {
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [inspectUserId, setInspectUserId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<{ anchorEl: HTMLElement; user: UserDetail } | null>(null);
+
+  const handleOpenMenu = (e: React.MouseEvent<HTMLElement>, user: UserDetail) => {
+    e.stopPropagation();
+    setMenuAnchor({ anchorEl: e.currentTarget, user });
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleOpenEdit = (u: UserDetail) => {
+    setSelectedUser(u);
+    setEditForm({
+      full_name: u.full_name,
+      email: u.email,
+      username: u.username || '',
+      mobile: u.mobile || '',
+      employee_id: u.employee_id || '',
+      designation: u.designation || '',
+      status: u.status,
+      primary_role: u.role,
+      primary_department_id: u.primary_department_id || undefined,
+      reporting_manager_id: u.reporting_manager_id || undefined,
+      force_password_change: u.force_password_change || false,
+      role_ids: u.assigned_roles?.map((r) => r.id) || [],
+      department_ids: u.departments?.map((d) => d.id) || [],
+    });
+  };
+
+  const handleToggleStatus = async (user: UserDetail) => {
+    const nextStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const actionLabel = nextStatus === 'INACTIVE' ? 'mark as inactive' : 'mark as active';
+    if (confirm(`Are you sure you want to ${actionLabel} user ${user.full_name}?`)) {
+      try {
+        await updateUser({ id: user.id, body: { status: nextStatus } }).unwrap();
+        refetch();
+      } catch (err: any) {
+        alert(getErrorMessage(err));
+      }
+    }
+  };
   const [editTab, setEditTab] = useState<'profile' | 'account' | 'roles' | 'department' | 'permissions' | 'activity'>('profile');
 
   // API Queries
@@ -321,44 +367,26 @@ export default function UserManagementPage() {
                     {u.last_login_at ? formatDateTime(u.last_login_at) : 'Never'}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                       <button
-                        title="Effective Access Inspector"
-                        onClick={() => setInspectUserId(u.id)}
-                        style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#087A3D' }}
-                      >
-                        <Shield size={15} />
-                      </button>
-                      <button
-                        title="Edit User"
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setEditForm({
-                            full_name: u.full_name,
-                            email: u.email,
-                            username: u.username || '',
-                            mobile: u.mobile || '',
-                            employee_id: u.employee_id || '',
-                            designation: u.designation || '',
-                            status: u.status,
-                            primary_role: u.role,
-                            primary_department_id: u.primary_department_id || undefined,
-                            reporting_manager_id: u.reporting_manager_id || undefined,
-                            force_password_change: u.force_password_change || false,
-                            role_ids: u.assigned_roles?.map((r) => r.id) || [],
-                            department_ids: u.departments?.map((d) => d.id) || [],
-                          });
+                        title="Actions"
+                        onClick={(e) => handleOpenMenu(e, u)}
+                        style={{
+                          padding: 6,
+                          borderRadius: 6,
+                          border: '1px solid #D8E2D5',
+                          background: '#FFF',
+                          cursor: 'pointer',
+                          color: '#44584C',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease',
                         }}
-                        style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#0369A1' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#F0FDF4'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#FFF'; }}
                       >
-                        <Edit2 size={15} />
-                      </button>
-                      <button
-                        title="Delete User"
-                        onClick={() => handleDelete(u.id, u.full_name)}
-                        style={{ padding: 6, borderRadius: 6, border: '1px solid #FCA5A5', background: '#FEF2F2', cursor: 'pointer', color: '#DC2626' }}
-                      >
-                        <Trash2 size={15} />
+                        <MoreVertical size={16} />
                       </button>
                     </div>
                   </td>
@@ -368,6 +396,80 @@ export default function UserManagementPage() {
           </tbody>
         </table>
       </div>
+
+      {/* 3-Dot Actions Menu */}
+      <Menu
+        anchorEl={menuAnchor?.anchorEl}
+        open={Boolean(menuAnchor)}
+        onClose={handleCloseMenu}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          elevation: 4,
+          sx: {
+            borderRadius: '10px',
+            minWidth: 220,
+            py: 0.5,
+            border: '1px solid #E5E7EB',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (menuAnchor) handleOpenEdit(menuAnchor.user);
+            handleCloseMenu();
+          }}
+          sx={{ fontSize: 13, gap: 1.5, py: 1 }}
+        >
+          <Edit2 size={15} color="#0369A1" />
+          <span>Edit</span>
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            if (menuAnchor) setInspectUserId(menuAnchor.user.id);
+            handleCloseMenu();
+          }}
+          sx={{ fontSize: 13, gap: 1.5, py: 1 }}
+        >
+          <Shield size={15} color="#087A3D" />
+          <span>Effective Access Inspection</span>
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            if (menuAnchor) handleToggleStatus(menuAnchor.user);
+            handleCloseMenu();
+          }}
+          sx={{ fontSize: 13, gap: 1.5, py: 1 }}
+        >
+          {menuAnchor?.user.status === 'ACTIVE' ? (
+            <>
+              <UserX size={15} color="#D97706" />
+              <span>Inactive</span>
+            </>
+          ) : (
+            <>
+              <UserCheck size={15} color="#059669" />
+              <span>Active</span>
+            </>
+          )}
+        </MenuItem>
+
+        <Divider sx={{ my: 0.5 }} />
+
+        <MenuItem
+          onClick={() => {
+            if (menuAnchor) handleDelete(menuAnchor.user.id, menuAnchor.user.full_name);
+            handleCloseMenu();
+          }}
+          sx={{ fontSize: 13, gap: 1.5, py: 1, color: '#DC2626' }}
+        >
+          <Trash2 size={15} color="#DC2626" />
+          <span>Delete</span>
+        </MenuItem>
+      </Menu>
 
       {/* Effective Access Inspector Modal */}
       {inspectUserId && (
