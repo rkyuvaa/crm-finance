@@ -431,11 +431,12 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
 
   const handleDurationChange = async (days: number, hours: number) => {
     if (!currentTaskId) return;
-    if (days === 0 && hours === 0) days = 1;
     if (hours >= dailyWorkingHours) {
-      showToast(`Duration hours (${hours}h) must be less than daily working hours (${dailyWorkingHours}h)`, 'error');
-      return;
+      const extraDays = Math.floor(hours / dailyWorkingHours);
+      hours = hours % dailyWorkingHours;
+      days += extraDays;
     }
+    if (days === 0 && hours === 0) days = 1;
     setDuration(days);
     setDurationHours(hours);
     await autoSave.saveMultiple(
@@ -1607,17 +1608,26 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       onChange={(e) => {
                         const val = e.target.value === '' ? '' : Number(e.target.value);
                         setDuration(val);
-                        if (typeof val === 'number' && val >= 0) {
-                          handleDurationChange(val, typeof durationHours === 'number' ? durationHours : 0);
-                        }
+                        autoSave.registerPendingChange(
+                          'duration_working_days',
+                          val === '' ? 1 : val,
+                          currentTask?.duration_working_days ?? 1
+                        );
                       }}
                       onBlur={() => {
-                        const d = typeof duration === 'number' ? duration : 0;
-                        const h = typeof durationHours === 'number' ? durationHours : 0;
+                        let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
+                        let h = typeof durationHours === 'number' ? durationHours : 0;
+                        if (d < 0) d = 0;
+                        if (h < 0) h = 0;
                         if (d === 0 && h === 0) {
-                          setDuration(1);
-                          handleDurationChange(1, h);
+                          d = 1;
                         }
+                        setDuration(d);
+                        setDurationHours(h);
+                        handleDurationChange(d, h);
+                      }}
+                      onKeyDown={(e: any) => {
+                        if (e.key === 'Enter') e.target.blur();
                       }}
                       InputProps={{
                         endAdornment: <InputAdornment position="end">Days</InputAdornment>,
@@ -1639,30 +1649,36 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       onChange={(e) => {
                         const val = e.target.value === '' ? '' : Number(e.target.value);
                         setDurationHours(val);
-                        if (typeof val === 'number' && val >= 0 && val < dailyWorkingHours) {
-                          handleDurationChange(typeof duration === 'number' ? duration : 0, val);
-                        }
+                        autoSave.registerPendingChange(
+                          'duration_working_hours',
+                          val === '' ? 0 : val,
+                          currentTask?.duration_working_hours ?? 0
+                        );
                       }}
                       onBlur={() => {
-                        const d = typeof duration === 'number' ? duration : 0;
+                        let d = typeof duration === 'number' ? duration : (duration === '' ? 1 : 0);
                         let h = typeof durationHours === 'number' ? durationHours : 0;
+                        if (d < 0) d = 0;
+                        if (h < 0) h = 0;
                         if (h >= dailyWorkingHours) {
-                          h = Math.max(0, dailyWorkingHours - 1);
-                          setDurationHours(h);
+                          const extraDays = Math.floor(h / dailyWorkingHours);
+                          h = h % dailyWorkingHours;
+                          d += extraDays;
                         }
                         if (d === 0 && h === 0) {
-                          setDuration(1);
-                          handleDurationChange(1, 0);
-                        } else {
-                          handleDurationChange(d, h);
+                          d = 1;
                         }
+                        setDuration(d);
+                        setDurationHours(h);
+                        handleDurationChange(d, h);
+                      }}
+                      onKeyDown={(e: any) => {
+                        if (e.key === 'Enter') e.target.blur();
                       }}
                       InputProps={{
                         endAdornment: <InputAdornment position="end">Hours</InputAdornment>,
                       }}
-                      inputProps={{ min: 0, max: Math.max(0, dailyWorkingHours - 0.01) }}
-                      helperText={typeof durationHours === 'number' && durationHours >= dailyWorkingHours ? `< ${dailyWorkingHours}h` : undefined}
-                      error={typeof durationHours === 'number' && durationHours >= dailyWorkingHours}
+                      inputProps={{ min: 0 }}
                       sx={{
                         '& .MuiOutlinedInput-root': { height: 36, fontSize: 13, bgcolor: 'background.paper' },
                         '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },

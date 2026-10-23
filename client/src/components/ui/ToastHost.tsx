@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Alert, AlertColor, Snackbar } from '@mui/material';
+import { Alert, AlertColor } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Toast {
@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((message: string, severity: AlertColor = 'info') => {
     const id = ++counter.current;
-    setToasts((prev) => [...prev.slice(-2), { id, message, severity }]);
+    setToasts((prev) => [...prev.slice(-3), { id, message, severity }]);
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3500);
@@ -53,9 +53,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         style={{
           position: 'fixed',
-          bottom: 20,
-          right: 20,
-          zIndex: 100,
+          top: 24,
+          right: 24,
+          zIndex: 9999,
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -66,17 +66,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: -16, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
               style={{ pointerEvents: 'auto' }}
             >
-              <Snackbar open autoHideDuration={null}>
-                <Alert severity={toast.severity} variant="filled" sx={{ borderRadius: 2 }}>
-                  {toast.message}
-                </Alert>
-              </Snackbar>
+              <Alert
+                severity={toast.severity}
+                variant="filled"
+                onClose={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+                sx={{
+                  borderRadius: 2,
+                  minWidth: 280,
+                  maxWidth: 420,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                }}
+              >
+                {toast.message}
+              </Alert>
             </motion.div>
           ))}
         </AnimatePresence>
