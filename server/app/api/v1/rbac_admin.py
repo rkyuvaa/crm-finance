@@ -104,7 +104,7 @@ def list_users(
 
     total = query.count()
     pages = (total + page_size - 1) // page_size
-    items = query.order_by(User.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    items = query.order_by(User.id.asc()).offset((page - 1) * page_size).limit(page_size).all()
 
     # Format user output
     result_items = []

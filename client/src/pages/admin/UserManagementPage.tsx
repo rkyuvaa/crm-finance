@@ -8,6 +8,8 @@ import {
   MoreVertical,
   UserCheck,
   UserX,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Menu, MenuItem, Divider } from '@mui/material';
 import {
@@ -36,7 +38,8 @@ function getErrorMessage(err: any): string {
 }
 
 export default function UserManagementPage() {
-  const [page] = useState(1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState<number | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -90,7 +93,7 @@ export default function UserManagementPage() {
   // API Queries
   const { data: usersData, isLoading, refetch } = useGetUsersQuery({
     page,
-    page_size: 15,
+    page_size: pageSize,
     search: search || undefined,
     department_id: deptFilter,
     user_status: statusFilter || undefined,
@@ -243,7 +246,7 @@ export default function UserManagementPage() {
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             style={{
               width: '100%',
               padding: '8px 12px 8px 36px',
@@ -257,7 +260,7 @@ export default function UserManagementPage() {
 
         <select
           value={deptFilter || ''}
-          onChange={(e) => setDeptFilter(e.target.value ? Number(e.target.value) : undefined)}
+          onChange={(e) => { setDeptFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
           style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, color: '#44584C' }}
         >
           <option value="">All Departments</option>
@@ -270,7 +273,7 @@ export default function UserManagementPage() {
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, color: '#44584C' }}
         >
           <option value="">All Statuses</option>
@@ -396,6 +399,135 @@ export default function UserManagementPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Footer */}
+      {usersData && usersData.total > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginTop: 16,
+            padding: '12px 16px',
+            background: '#FFFFFF',
+            borderRadius: 10,
+            border: '1px solid #E4EBE1',
+            fontSize: 13,
+            color: '#44584C',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span>
+              Showing <strong>{((page - 1) * pageSize) + 1}</strong>–
+              <strong>{Math.min(page * pageSize, usersData.total)}</strong> of{' '}
+              <strong>{usersData.total}</strong> users
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: '#7A8B80' }}>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: '1px solid #D8E2D5',
+                  fontSize: 12,
+                  color: '#44584C',
+                  background: '#FFF',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value={15}>15</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: '1px solid #D8E2D5',
+                background: page <= 1 ? '#F9FAFB' : '#FFF',
+                color: page <= 1 ? '#9CA3AF' : '#1F2937',
+                cursor: page <= 1 ? 'not-allowed' : 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              <ChevronLeft size={14} /> Previous
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {Array.from({ length: usersData.pages || 1 }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === usersData.pages || Math.abs(p - page) <= 2)
+                .map((p, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  const showEllipsis = prev && p - prev > 1;
+                  return (
+                    <span key={p} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {showEllipsis && <span style={{ padding: '0 4px', color: '#9CA3AF' }}>...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setPage(p)}
+                        style={{
+                          minWidth: 32,
+                          height: 32,
+                          padding: '0 6px',
+                          borderRadius: 6,
+                          border: p === page ? '1px solid #087A3D' : '1px solid #D8E2D5',
+                          background: p === page ? '#087A3D' : '#FFF',
+                          color: p === page ? '#FFF' : '#44584C',
+                          fontWeight: p === page ? 700 : 500,
+                          fontSize: 12,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {p}
+                      </button>
+                    </span>
+                  );
+                })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(usersData.pages || 1, p + 1))}
+              disabled={page >= (usersData.pages || 1)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: '1px solid #D8E2D5',
+                background: page >= (usersData.pages || 1) ? '#F9FAFB' : '#FFF',
+                color: page >= (usersData.pages || 1) ? '#9CA3AF' : '#1F2937',
+                cursor: page >= (usersData.pages || 1) ? 'not-allowed' : 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3-Dot Actions Menu */}
       <Menu
