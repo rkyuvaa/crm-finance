@@ -15,12 +15,12 @@ import sys
 
 # Setup Python paths so both 'python -m scripts.import_employees' (inside /app)
 # and 'python server/scripts/import_employees.py' (from repo root) work
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
 SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, ".."))
 
-for p in [SERVER_DIR, CURRENT_DIR, REPO_ROOT]:
-    if p not in sys.path:
+for p in [os.getcwd(), "/app", SERVER_DIR, CURRENT_DIR, REPO_ROOT]:
+    if p and p not in sys.path:
         sys.path.insert(0, p)
 
 from app.db.session import SessionLocal
