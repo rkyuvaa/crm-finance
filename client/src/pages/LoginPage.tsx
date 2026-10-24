@@ -1,18 +1,32 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, CircularProgress, TextField, Typography } from '@mui/material';
-import { FileText, LockKeyhole, Mail } from 'lucide-react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useLoginMutation } from '@/api/authApi';
 import { setCredentials } from '@/auth/authSlice';
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z
+    .string()
+    .min(1, 'Password is required'),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -23,6 +37,8 @@ export default function LoginPage() {
   const location = useLocation();
   const token = useAppSelector((state) => state.auth.token);
   const [login, { isLoading, error }] = useLoginMutation();
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -40,181 +56,289 @@ export default function LoginPage() {
   }, [token, navigate]);
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/';
-  const sessionExpired = (location.state as { sessionExpired?: boolean } | null)?.sessionExpired;
 
   if (token) {
     return <Navigate to="/" replace />;
   }
 
+  const handleTogglePassword = () => {
+    setShowPassword((prev) => !prev);
+  };
+
   const onSubmit = async (values: LoginForm) => {
+    // 3. Trim unnecessary spaces from the username/email field
+    const trimmedEmail = values.email.trim();
+    // 4. Do not automatically trim or modify the password
+    const rawPassword = values.password;
+
     try {
-      const result = await login(values as any).unwrap();
+      const result = await login({ email: trimmedEmail, password: rawPassword } as any).unwrap();
       dispatch(setCredentials({ token: result.access_token, user: result.user }));
       navigate(from, { replace: true });
     } catch {
-      // error surfaced via `error` below
+      // Error is caught and surfaced via RTK Query `error` state
     }
   };
 
+  const errorMessage =
+    (error as any)?.data?.detail ||
+    (error as any)?.data?.message ||
+    (error ? 'Invalid email or password. Please try again.' : null);
+
+  // Left side brand panel with centered KIM ERP on a #203020 gradient
   const brandPanel = (
     <Box
       sx={{
-        flex: '1 1 45%',
-        background: 'linear-gradient(160deg, #023020 0%, #04552B 100%)',
-        color: '#fff',
+        flex: '1 1 50%',
+        background: 'linear-gradient(145deg, #2A3F2A 0%, #203020 48%, #121C12 100%)',
+        color: '#FFFFFF',
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
-        justifyContent: 'space-between',
-        p: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        p: 6,
+        overflow: 'hidden',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box>
-          <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.2, color: '#FFF' }}>
-            KIM <span style={{ color: '#4ADE80' }}>ERP</span>
-          </Typography>
-          <Typography sx={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5, color: '#9FD9B4', mt: 0.5 }}>
-            Version 2.0
-          </Typography>
-        </Box>
+      {/* Decorative ambient glowing ring */}
+      <Box
+        sx={{
+          position: 'absolute',
+          width: 440,
+          height: 440,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(22, 196, 127, 0.14) 0%, rgba(32, 48, 32, 0) 70%)',
+          filter: 'blur(30px)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Centered KIM ERP Title */}
+      <Box sx={{ textAlign: 'center', zIndex: 1 }}>
+        <Typography
+          component="h1"
+          sx={{
+            fontSize: { md: 52, lg: 64 },
+            fontWeight: 900,
+            letterSpacing: '-0.035em',
+            lineHeight: 1.05,
+            color: '#FFFFFF',
+            textShadow: '0 4px 24px rgba(0, 0, 0, 0.35)',
+          }}
+        >
+          KIM <span style={{ color: '#16C47F' }}>ERP</span>
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: '#A3D9B8',
+            mt: 2,
+          }}
+        >
+          Version 2.0
+        </Typography>
       </Box>
 
-      <Box>
-        <Typography variant="h4" sx={{ maxWidth: 440, lineHeight: 1.25 }}>
-          Enterprise Management Platform.
-        </Typography>
-        <Typography sx={{ mt: 2, color: '#BFE6CC', fontSize: 14, maxWidth: 400 }}>
-          Manage CRM, projects, tasks, HR & compliance end-to-end in one unified platform.
-        </Typography>
-      </Box>
-
-      <Typography sx={{ fontSize: 12, color: '#8FC5A5' }}>
+      {/* Subtle bottom copyright */}
+      <Typography
+        sx={{
+          position: 'absolute',
+          bottom: 24,
+          fontSize: 12,
+          color: 'rgba(255, 255, 255, 0.45)',
+          letterSpacing: '0.02em',
+        }}
+      >
         © 2026 KIM ERP. All rights reserved.
       </Typography>
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#F7F9F5' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#F8FAF8' }}>
       {brandPanel}
 
       <Box
         sx={{
-          flex: '1 1 55%',
+          flex: '1 1 50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          p: 4,
+          p: { xs: 3, sm: 6 },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 420 }}>
-          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.5, mb: 5 }}>
-            <Box
+        <Box sx={{ width: '100%', maxWidth: 400 }}>
+          {/* Mobile view branding header */}
+          <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 4 }}>
+            <Typography
+              component="h1"
               sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 2,
-                background: '#16C47F',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
+                fontSize: 32,
+                fontWeight: 900,
+                letterSpacing: '-0.02em',
+                color: '#203020',
               }}
             >
-              <FileText size={20} />
-            </Box>
-            <Typography sx={{ fontWeight: 800, color: '#023020' }}>
-              CRM<span style={{ color: '#16C47F' }}>FINANCE</span>
+              KIM <span style={{ color: '#16C47F' }}>ERP</span>
+            </Typography>
+            <Typography sx={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', color: '#7A8B80', textTransform: 'uppercase', mt: 0.5 }}>
+              Version 2.0
             </Typography>
           </Box>
 
-          <Typography variant="h5" sx={{ color: '#023020' }}>
+          <Typography
+            component="h2"
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              color: '#203020',
+              letterSpacing: '-0.02em',
+              mb: 3,
+            }}
+          >
             Welcome back
           </Typography>
-          <Typography sx={{ color: '#7A8B80', fontSize: 13, mt: 0.5, mb: 4 }}>
-            Sign in to the KIM finance dashboard.
-          </Typography>
 
-          {sessionExpired && (
-            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-              Your session has expired after 10 hours of activity. Please sign in again.
-            </Alert>
-          )}
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-              Invalid email or password. Please try again.
+          {errorMessage && (
+            <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }}>
+              {errorMessage}
             </Alert>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            {/* Email Field with Tab navigation and inline validation */}
             <TextField
               fullWidth
+              id="login-email"
               label="Email"
               type="email"
               autoComplete="email"
+              autoFocus
+              tabIndex={1}
               margin="normal"
               error={Boolean(errors.email)}
               helperText={errors.email?.message}
-              slotProps={{
-                input: {
-                  startAdornment: <Mail size={16} color="#9BA99F" style={{ marginRight: 8 }} />,
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Mail size={18} color="#9BA99F" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#16C47F',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#16C47F',
                 },
               }}
               {...register('email')}
             />
+
+            {/* Password Field: Masked by default, Eye icon toggle, Tab/Enter support */}
             <TextField
               fullWidth
+              id="login-password"
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
+              tabIndex={2}
               margin="normal"
               error={Boolean(errors.password)}
               helperText={errors.password?.message}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <LockKeyhole size={16} color="#9BA99F" style={{ marginRight: 8 }} />
-                  ),
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockKeyhole size={18} color="#9BA99F" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      type="button"
+                      tabIndex={3}
+                      onClick={handleTogglePassword}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                      size="small"
+                      sx={{
+                        color: showPassword ? '#16C47F' : '#9BA99F',
+                        '&:hover': { color: '#16C47F' },
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#16C47F',
+                  },
+                },
+                '& .MuiInputLabel-root.Mui-focused': {
+                  color: '#16C47F',
                 },
               }}
               {...register('password')}
             />
 
+            {/* Sign In Button: Disabled while loading to prevent duplicate submissions */}
             <Button
               fullWidth
               type="submit"
               variant="contained"
+              tabIndex={4}
               disabled={isLoading}
-              sx={{ mt: 3, py: 1.2, fontWeight: 700 }}
+              sx={{
+                mt: 3.5,
+                py: 1.35,
+                fontWeight: 700,
+                fontSize: 15,
+                borderRadius: 2,
+                textTransform: 'none',
+                bgcolor: '#16C47F',
+                color: '#FFFFFF',
+                '&:hover': {
+                  bgcolor: '#12A66C',
+                },
+                '&.Mui-disabled': {
+                  bgcolor: 'rgba(22, 196, 127, 0.6)',
+                  color: '#FFFFFF',
+                },
+                boxShadow: '0 4px 14px rgba(22, 196, 127, 0.28)',
+              }}
             >
-              {isLoading ? <CircularProgress size={20} color="inherit" /> : 'Sign In'}
+              {isLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <CircularProgress size={18} color="inherit" thickness={4} />
+                  <span>Signing in...</span>
+                </Box>
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
 
-          <Box
-            sx={{
-              mt: 4,
-              p: 2,
-              borderRadius: 2,
-              background: '#F2FAF0',
-              border: '1px solid #E4EBE1',
-              fontSize: 12,
-              color: '#44584C',
-            }}
-          >
-            <Typography sx={{ fontWeight: 700, color: '#04552B', mb: 0.5 }}>Demo credentials</Typography>
-            sales@kim.com / Kim@2025
-            <br />
-            finance@kim.com · delivery@kim.com · admin@kim.com (same password)
-          </Box>
-
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
+          {/* Clean footer */}
+          <Box sx={{ mt: 5, textAlign: 'center' }}>
             <Link
               to="/"
               style={{ fontSize: 12, color: '#7A8B80', textDecoration: 'none' }}
             >
-              © 2025 CRMFinance · Privacy · Terms
+              © 2026 KIM ERP · Privacy · Terms
             </Link>
           </Box>
         </Box>
