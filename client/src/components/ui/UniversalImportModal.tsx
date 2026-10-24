@@ -289,7 +289,7 @@ export default function UniversalImportModal({
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, pt: 2, px: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <FileSpreadsheet size={24} style={{ color: '#087A3D' }} />
+          <FileSpreadsheet size={24} style={{ color: '#16C47F' }} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a' }}>
             {title || `Import ${entityName}`}
           </Typography>
@@ -307,8 +307,8 @@ export default function UniversalImportModal({
               <StepLabel
                 StepIconProps={{
                   sx: {
-                    '&.Mui-active': { color: '#087A3D' },
-                    '&.Mui-completed': { color: '#087A3D' },
+                    '&.Mui-active': { color: '#16C47F' },
+                    '&.Mui-completed': { color: '#16C47F' },
                   },
                 }}
               >
@@ -328,10 +328,10 @@ export default function UniversalImportModal({
 
         {isImporting && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ color: '#087A3D', fontWeight: 600, mb: 1 }}>
+            <Typography variant="body2" sx={{ color: '#16C47F', fontWeight: 600, mb: 1 }}>
               Executing import for {rawRows.length} records...
             </Typography>
-            <LinearProgress sx={{ borderRadius: 1, height: 6, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#087A3D' } }} />
+            <LinearProgress sx={{ borderRadius: 1, height: 6, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#16C47F' } }} />
           </Box>
         )}
 
@@ -342,7 +342,7 @@ export default function UniversalImportModal({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             sx={{
-              border: `2px dashed ${isDragOver ? '#087A3D' : '#cbd5e1'}`,
+              border: `2px dashed ${isDragOver ? '#16C47F' : '#cbd5e1'}`,
               borderRadius: 3,
               p: 6,
               textAlign: 'center',
@@ -360,7 +360,7 @@ export default function UniversalImportModal({
               accept=".csv, .xlsx, .xls"
               style={{ display: 'none' }}
             />
-            <Upload size={48} style={{ color: '#087A3D', margin: '0 auto 16px' }} />
+            <Upload size={48} style={{ color: '#16C47F', margin: '0 auto 16px' }} />
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
               Drag & drop CSV or Excel file here
             </Typography>
@@ -369,7 +369,7 @@ export default function UniversalImportModal({
             </Typography>
             <Button
               variant="outlined"
-              sx={{ textTransform: 'none', borderColor: '#087A3D', color: '#087A3D', fontWeight: 600, px: 4, py: 1, '&:hover': { bgcolor: '#f0fdf4' } }}
+              sx={{ textTransform: 'none', borderColor: '#16C47F', color: '#16C47F', fontWeight: 600, px: 4, py: 1, '&:hover': { bgcolor: '#f0fdf4' } }}
             >
               Browse File
             </Button>
@@ -382,7 +382,7 @@ export default function UniversalImportModal({
             {/* Summary File Card */}
             <Paper elevation={0} sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc', mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <FileText size={24} style={{ color: '#087A3D' }} />
+                <FileText size={24} style={{ color: '#16C47F' }} />
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a' }}>
                     {selectedFile.name}
@@ -506,7 +506,7 @@ export default function UniversalImportModal({
                         return (
                           <TableCell key={erpKey} sx={{ fontWeight: 700, color: '#334155', bgcolor: '#f1f5f9', py: 1 }}>
                             <Box>
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#087A3D', display: 'block' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#16C47F', display: 'block' }}>
                                 {erpLabel}
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 10 }}>
@@ -545,9 +545,9 @@ export default function UniversalImportModal({
                   value={duplicateOption}
                   onChange={(e) => setDuplicateOption(e.target.value as any)}
                 >
-                  <FormControlLabel value="SKIP" control={<Radio size="small" sx={{ color: '#087A3D', '&.Mui-checked': { color: '#087A3D' } }} />} label={<Typography variant="body2">Skip Duplicate Records</Typography>} />
-                  <FormControlLabel value="UPDATE" control={<Radio size="small" sx={{ color: '#087A3D', '&.Mui-checked': { color: '#087A3D' } }} />} label={<Typography variant="body2">Update Existing Records</Typography>} />
-                  <FormControlLabel value="CREATE" control={<Radio size="small" sx={{ color: '#087A3D', '&.Mui-checked': { color: '#087A3D' } }} />} label={<Typography variant="body2">Create as New Record</Typography>} />
+                  <FormControlLabel value="SKIP" control={<Radio size="small" sx={{ color: '#16C47F', '&.Mui-checked': { color: '#16C47F' } }} />} label={<Typography variant="body2">Skip Duplicate Records</Typography>} />
+                  <FormControlLabel value="UPDATE" control={<Radio size="small" sx={{ color: '#16C47F', '&.Mui-checked': { color: '#16C47F' } }} />} label={<Typography variant="body2">Update Existing Records</Typography>} />
+                  <FormControlLabel value="CREATE" control={<Radio size="small" sx={{ color: '#16C47F', '&.Mui-checked': { color: '#16C47F' } }} />} label={<Typography variant="body2">Create as New Record</Typography>} />
                 </RadioGroup>
               </FormControl>
             </Paper>
@@ -557,7 +557,7 @@ export default function UniversalImportModal({
         {/* STEP 3: FINAL CONFIRMATION */}
         {activeStep === 3 && selectedFile && (
           <Box sx={{ textAlign: 'center', py: 2 }}>
-            <CheckCircle2 size={56} style={{ color: '#087A3D', margin: '0 auto 16px' }} />
+            <CheckCircle2 size={56} style={{ color: '#16C47F', margin: '0 auto 16px' }} />
             <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a', mb: 1 }}>
               Ready to Import {rawRows.length} {entityName} Records
             </Typography>
@@ -575,7 +575,7 @@ export default function UniversalImportModal({
               <Grid item xs={6}>
                 <Paper elevation={0} sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc' }}>
                   <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>MAPPED FIELDS</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#087A3D', mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#16C47F', mt: 0.5 }}>
                     {Object.values(fieldMapping).filter((k) => k !== '__IGNORE__').length} Fields Mapped
                   </Typography>
                 </Paper>
@@ -605,7 +605,7 @@ export default function UniversalImportModal({
               onClick={handleNextFromMapping}
               variant="contained"
               endIcon={<ArrowRight size={18} />}
-              sx={{ bgcolor: '#087A3D', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#066231' } }}
+              sx={{ bgcolor: '#16C47F', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#12A66C' } }}
             >
               Preview & Validate
             </Button>
@@ -616,7 +616,7 @@ export default function UniversalImportModal({
               onClick={() => setActiveStep(3)}
               variant="contained"
               endIcon={<ArrowRight size={18} />}
-              sx={{ bgcolor: '#087A3D', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#066231' } }}
+              sx={{ bgcolor: '#16C47F', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#12A66C' } }}
             >
               Proceed to Confirmation
             </Button>
@@ -628,7 +628,7 @@ export default function UniversalImportModal({
               disabled={isImporting}
               variant="contained"
               startIcon={<CheckCircle2 size={18} />}
-              sx={{ bgcolor: '#087A3D', textTransform: 'none', fontWeight: 700, px: 4, py: 1, '&:hover': { bgcolor: '#066231' } }}
+              sx={{ bgcolor: '#16C47F', textTransform: 'none', fontWeight: 700, px: 4, py: 1, '&:hover': { bgcolor: '#12A66C' } }}
             >
               Import {rawRows.length} Records
             </Button>

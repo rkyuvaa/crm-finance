@@ -124,7 +124,7 @@ export default function AccessAuditLogPage() {
                         fontSize: 11,
                         fontWeight: 700,
                         background: l.action_type.includes('DELETED') || l.action_type.includes('FAILED') ? '#FEE2E2' : '#EAF6E8',
-                        color: l.action_type.includes('DELETED') || l.action_type.includes('FAILED') ? '#DC2626' : '#087A3D',
+                        color: l.action_type.includes('DELETED') || l.action_type.includes('FAILED') ? '#DC2626' : '#16C47F',
                       }}
                     >
                       {l.action_type}
@@ -138,7 +138,7 @@ export default function AccessAuditLogPage() {
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <button
                       onClick={() => setSelectedLog(l)}
-                      style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#087A3D' }}
+                      style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#16C47F' }}
                     >
                       <Eye size={15} />
                     </button>
@@ -158,7 +158,7 @@ export default function AccessAuditLogPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: '#7A8B80' }}>Action Event</label>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#087A3D' }}>{selectedLog.action_type}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#16C47F' }}>{selectedLog.action_type}</div>
               </div>
 
               <div>
@@ -176,7 +176,7 @@ export default function AccessAuditLogPage() {
               </div>
 
               <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={() => setSelectedLog(null)} style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button onClick={() => setSelectedLog(null)} style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Close
                 </button>
               </div>

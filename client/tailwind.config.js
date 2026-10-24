@@ -8,11 +8,11 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#087A3D',
-          dark: '#04552B',
-          deep: '#023020',
-          light: '#EAF6E8',
-          lighter: '#F2FAF0',
+          DEFAULT: '#16C47F',
+          dark: '#12A66C',
+          deep: '#203020',
+          light: '#E8FAF3',
+          lighter: '#F0FDF8',
         },
         page: '#F7F9F5',
       },

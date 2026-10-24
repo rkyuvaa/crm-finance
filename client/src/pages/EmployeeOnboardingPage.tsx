@@ -119,7 +119,7 @@ export default function EmployeeOnboardingPage() {
           <Button variant="outlined" onClick={() => navigate('/hr?tab=onboarding')} sx={{ borderColor: '#E4EBE1', color: '#44584C', borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
             Cancel
           </Button>
-          <Button variant="contained" sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
+          <Button variant="contained" sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
             Save & Submit
           </Button>
         </Stack>
@@ -137,8 +137,8 @@ export default function EmployeeOnboardingPage() {
                 scrollButtons="auto"
                 sx={{
                   '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: '0.95rem' },
-                  '& .Mui-selected': { color: '#087A3D !important' },
-                  '& .MuiTabs-indicator': { backgroundColor: '#087A3D' },
+                  '& .Mui-selected': { color: '#16C47F !important' },
+                  '& .MuiTabs-indicator': { backgroundColor: '#16C47F' },
                 }}
               >
                 <Tab label="Personal Details" />
@@ -294,8 +294,8 @@ export default function EmployeeOnboardingPage() {
                               </Typography>
                               {doc ? (
                                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                                  <CheckCircle2 size={14} color="#087A3D" style={{ marginRight: 4 }} />
-                                  <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 600 }}>Uploaded: {doc.name}</Typography>
+                                  <CheckCircle2 size={14} color="#16C47F" style={{ marginRight: 4 }} />
+                                  <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 600 }}>Uploaded: {doc.name}</Typography>
                                 </Box>
                               ) : (
                                 <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 500 }}>Pending Verification</Typography>
@@ -355,7 +355,7 @@ export default function EmployeeOnboardingPage() {
                   <Grid item xs={12} sm={6} md={3}><TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Issue date" size="small" /></Grid>
                   <Grid item xs={12} sm={6} md={3}><TextField fullWidth label="Condition at issue" size="small" /></Grid>
                   <Grid item xs={12}>
-                    <Button variant="contained" sx={{ mt: 1, bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' } }}>Add Asset</Button>
+                    <Button variant="contained" sx={{ mt: 1, bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' } }}>Add Asset</Button>
                   </Grid>
                 </Grid>
               </TabPanel>

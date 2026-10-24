@@ -52,7 +52,7 @@ export default function TaskBoardView({
 }: TaskBoardViewProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const brandAccent = isDark ? '#5FCF87' : '#203020';
+  const brandAccent = isDark ? '#16C47F' : '#203020';
   const brandSurface = isDark ? '#2A402A' : '#203020';
   const subtaskCardBg = isDark ? '#141D14' : '#F8FAFC';
   const { data: statusDefs = [] } = useGetStatusDefinitionsQuery();

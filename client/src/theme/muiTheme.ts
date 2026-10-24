@@ -7,9 +7,9 @@ export const brandColors = {
   primaryLight: '#EAF0EA',
   primaryLighter: '#F3F7F3',
   primaryAccent: '#3D5A3D',
-  primaryVibrant: '#5FCF87', // High-contrast green accent for dark mode & status indicators
+  primaryVibrant: '#16C47F', // High-contrast green accent for dark mode & status indicators
   focusRing: 'rgba(32, 48, 32, 0.25)',
-  focusRingDark: 'rgba(95, 207, 135, 0.35)',
+  focusRingDark: 'rgba(22, 196, 127, 0.35)',
 };
 
 export const darkSurfaces = {
@@ -108,7 +108,7 @@ export const getMuiTheme = (mode: 'light' | 'dark') => {
               transform: 'scale(0.98)',
             },
             '&:focus-visible': {
-              outline: isDark ? '2px solid #5FCF87' : '2px solid #203020',
+              outline: isDark ? '2px solid #16C47F' : '2px solid #203020',
               outlineOffset: '2px',
             },
           },
@@ -127,8 +127,8 @@ export const getMuiTheme = (mode: 'light' | 'dark') => {
             color: isDark ? '#F3F5F7' : brandColors.primary,
             borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(32, 48, 32, 0.25)',
             '&:hover': {
-              backgroundColor: isDark ? 'rgba(95, 207, 135, 0.08)' : 'rgba(32, 48, 32, 0.04)',
-              borderColor: isDark ? '#5FCF87' : brandColors.primary,
+              backgroundColor: isDark ? 'rgba(22, 196, 127, 0.08)' : 'rgba(32, 48, 32, 0.04)',
+              borderColor: isDark ? '#16C47F' : brandColors.primary,
             },
           },
         },
@@ -206,7 +206,7 @@ export const getMuiTheme = (mode: 'light' | 'dark') => {
               borderColor: isDark ? '#475569' : brandColors.primary,
             },
             '&.Mui-focused fieldset': {
-              borderColor: isDark ? '#5FCF87' : brandColors.primary,
+              borderColor: isDark ? '#16C47F' : brandColors.primary,
               borderWidth: '1.5px',
             },
           },

@@ -125,8 +125,8 @@ export default function AutoSaveStatusBadge({
   }
 
   // Saved or Idle
-  const savedColor = isDark ? '#5FCF87' : '#16A34A';
-  const savedBg = isDark ? 'rgba(95, 207, 135, 0.12)' : 'rgba(22, 163, 74, 0.08)';
+  const savedColor = isDark ? '#16C47F' : '#16A34A';
+  const savedBg = isDark ? 'rgba(22, 196, 127, 0.12)' : 'rgba(22, 163, 74, 0.08)';
 
   if (!showIdleMessage && status === 'idle') {
     return null;

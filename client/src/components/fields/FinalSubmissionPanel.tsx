@@ -93,14 +93,14 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
               />
             </Box>
             <Typography variant="body2" sx={{ color: '#7A8B80', mt: 0.5 }}>
-              Lead Reference: <b style={{ color: '#087A3D' }}>{leadReferenceNumber}</b>
+              Lead Reference: <b style={{ color: '#16C47F' }}>{leadReferenceNumber}</b>
             </Typography>
           </div>
 
           {/* Financier Card */}
           <Paper sx={{ p: 1.5, border: '1px solid #C9E0C6', borderRadius: '8px', background: '#F8FAF8', minWidth: 260 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <Building2 size={16} color="#087A3D" />
+              <Building2 size={16} color="#16C47F" />
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#16231B' }}>
                 {financier.name}
               </Typography>
@@ -129,7 +129,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <CheckCircle2 size={18} color="#087A3D" />
+              <CheckCircle2 size={18} color="#16C47F" />
               <div>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: '#023020' }}>
                   Last Sent to {lastSend.sentToName} ({lastSend.sentToEmail})
@@ -143,7 +143,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
               label={`Accessed ${lastSend.accessCount} times`}
               size="small"
               variant="outlined"
-              sx={{ fontWeight: 700, fontSize: 10.5, borderColor: '#087A3D', color: '#087A3D' }}
+              sx={{ fontWeight: 700, fontSize: 10.5, borderColor: '#16C47F', color: '#16C47F' }}
             />
           </Box>
         )}
@@ -156,7 +156,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
           <Typography variant="h6" sx={{ fontWeight: 800, color: '#16231B' }}>{counts.total}</Typography>
         </Paper>
         <Paper sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '8px' }}>
-          <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 600 }}>Mandatory</Typography>
+          <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 600 }}>Mandatory</Typography>
           <Typography variant="h6" sx={{ fontWeight: 800, color: '#04552B' }}>{counts.mandatory}</Typography>
         </Paper>
         <Paper sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '8px', background: counts.pendingUpload > 0 ? '#FFF5F5' : '#FFFFFF' }}>
@@ -166,13 +166,13 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
           </Typography>
         </Paper>
         <Paper sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '8px', background: counts.qualityFailed > 0 ? '#FFF5F5' : '#FFFFFF' }}>
-          <Typography variant="caption" sx={{ color: counts.qualityFailed > 0 ? '#D32F2F' : '#087A3D', fontWeight: 600 }}>Quality Approved</Typography>
+          <Typography variant="caption" sx={{ color: counts.qualityFailed > 0 ? '#D32F2F' : '#16C47F', fontWeight: 600 }}>Quality Approved</Typography>
           <Typography variant="h6" sx={{ fontWeight: 800, color: counts.qualityFailed > 0 ? '#D32F2F' : '#04552B' }}>
             {counts.qualityApproved} / {counts.uploaded}
           </Typography>
         </Paper>
         <Paper sx={{ p: 1.5, border: '1px solid #E4EBE1', borderRadius: '8px', background: counts.pendingVerification > 0 ? '#FFFDF5' : '#F4F9F2' }}>
-          <Typography variant="caption" sx={{ color: counts.pendingVerification > 0 ? '#B45309' : '#087A3D', fontWeight: 600 }}>Verified</Typography>
+          <Typography variant="caption" sx={{ color: counts.pendingVerification > 0 ? '#B45309' : '#16C47F', fontWeight: 600 }}>Verified</Typography>
           <Typography variant="h6" sx={{ fontWeight: 800, color: counts.pendingVerification > 0 ? '#92400E' : '#04552B' }}>
             {counts.verified} / {counts.uploaded}
           </Typography>
@@ -227,7 +227,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
                 <TableRow key={doc.id} sx={{ background: rowBg, '&:hover': { background: '#FAFDF9' } }}>
                   <TableCell sx={{ fontWeight: 700, fontSize: 12.5, color: '#16231B' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <FileText size={16} color="#087A3D" />
+                      <FileText size={16} color="#16C47F" />
                       {doc.name}
                     </Box>
                   </TableCell>
@@ -331,7 +331,7 @@ export default function FinalSubmissionPanel({ applicationId }: Props) {
           <Typography variant="caption" sx={{ color: '#7A8B80', display: 'block', mb: 1.5 }}>
             The financier will be able to view only the uploaded documents for this lead. They will not be able to access any other lead information or application tabs.
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#087A3D', fontSize: 12, fontWeight: 700 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#16C47F', fontSize: 12, fontWeight: 700 }}>
             <Clock size={15} />
             <span>Link expiry: 14 days (secure token authorization)</span>
           </Box>

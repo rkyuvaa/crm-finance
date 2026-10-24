@@ -246,8 +246,8 @@ export default function DependencyModal({
               width: 32,
               height: 32,
               borderRadius: '8px',
-              bgcolor: isDark ? 'rgba(95, 207, 135, 0.15)' : '#EAF6E8',
-              color: isDark ? '#5FCF87' : '#203020',
+              bgcolor: isDark ? 'rgba(22, 196, 127, 0.15)' : '#EAF6E8',
+              color: isDark ? '#16C47F' : '#203020',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -343,18 +343,18 @@ export default function DependencyModal({
                     sx={{
                       p: 1.5,
                       border: '1.5px solid',
-                      borderColor: isSelected ? (isDark ? '#5FCF87' : '#203020') : 'divider',
+                      borderColor: isSelected ? (isDark ? '#16C47F' : '#203020') : 'divider',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       bgcolor: isSelected
                         ? isDark
-                          ? 'rgba(95, 207, 135, 0.12)'
+                          ? 'rgba(22, 196, 127, 0.12)'
                           : 'rgba(32, 48, 32, 0.05)'
                         : 'background.paper',
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        borderColor: isDark ? '#5FCF87' : '#203020',
-                        bgcolor: isDark ? 'rgba(95, 207, 135, 0.08)' : 'rgba(32, 48, 32, 0.02)',
+                        borderColor: isDark ? '#16C47F' : '#203020',
+                        bgcolor: isDark ? 'rgba(22, 196, 127, 0.08)' : 'rgba(32, 48, 32, 0.02)',
                       },
                     }}
                   >
@@ -368,7 +368,7 @@ export default function DependencyModal({
                             fontSize: '0.68rem',
                             fontWeight: 800,
                             fontFamily: 'monospace',
-                            bgcolor: isSelected ? (isDark ? '#5FCF87' : '#203020') : 'action.hover',
+                            bgcolor: isSelected ? (isDark ? '#16C47F' : '#203020') : 'action.hover',
                             color: isSelected ? '#FFFFFF' : 'text.primary',
                           }}
                         />
@@ -490,7 +490,7 @@ export default function DependencyModal({
             onClick={handleSave}
             disabled={isSaving || !selectedPredecessor}
             sx={{
-              bgcolor: isDark ? '#5FCF87' : '#203020',
+              bgcolor: isDark ? '#16C47F' : '#203020',
               color: isDark ? '#141D14' : '#FFFFFF',
               '&:hover': { bgcolor: isDark ? '#4DB873' : '#2A402A' },
               textTransform: 'none',

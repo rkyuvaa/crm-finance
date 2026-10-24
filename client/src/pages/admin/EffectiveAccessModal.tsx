@@ -47,7 +47,7 @@ export default function EffectiveAccessModal({
         <div
           style={{
             padding: '20px 24px',
-            background: 'linear-gradient(135deg, #023020 0%, #087A3D 100%)',
+            background: 'linear-gradient(135deg, #023020 0%, #16C47F 100%)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
@@ -105,7 +105,7 @@ export default function EffectiveAccessModal({
                   <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {data.roles.length > 0 ? (
                       data.roles.map((r) => (
-                        <span key={r} style={{ padding: '3px 10px', background: '#EAF6E8', color: '#087A3D', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                        <span key={r} style={{ padding: '3px 10px', background: '#EAF6E8', color: '#16C47F', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                           {r}
                         </span>
                       ))
@@ -156,7 +156,7 @@ export default function EffectiveAccessModal({
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           {p.granted ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#087A3D', fontWeight: 700, fontSize: 12 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#16C47F', fontWeight: 700, fontSize: 12 }}>
                               <CheckCircle size={14} /> Granted
                             </span>
                           ) : (

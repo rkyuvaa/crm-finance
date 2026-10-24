@@ -652,12 +652,12 @@ export default function RecruitmentManagement() {
             variant={activeTab === 'kanban' ? 'contained' : 'outlined'}
             onClick={() => setActiveTab('kanban')}
             sx={{
-              bgcolor: activeTab === 'kanban' ? '#087A3D' : 'transparent',
-              borderColor: '#087A3D',
-              color: activeTab === 'kanban' ? '#fff' : '#087A3D',
+              bgcolor: activeTab === 'kanban' ? '#16C47F' : 'transparent',
+              borderColor: '#16C47F',
+              color: activeTab === 'kanban' ? '#fff' : '#16C47F',
               textTransform: 'none',
               borderRadius: 2,
-              '&:hover': { bgcolor: activeTab === 'kanban' ? '#066231' : 'rgba(8,122,61,0.08)' },
+              '&:hover': { bgcolor: activeTab === 'kanban' ? '#12A66C' : 'rgba(8,122,61,0.08)' },
             }}
           >
             Kanban Pipeline
@@ -666,12 +666,12 @@ export default function RecruitmentManagement() {
             variant={activeTab === 'candidates' ? 'contained' : 'outlined'}
             onClick={() => setActiveTab('candidates')}
             sx={{
-              bgcolor: activeTab === 'candidates' ? '#087A3D' : 'transparent',
-              borderColor: '#087A3D',
-              color: activeTab === 'candidates' ? '#fff' : '#087A3D',
+              bgcolor: activeTab === 'candidates' ? '#16C47F' : 'transparent',
+              borderColor: '#16C47F',
+              color: activeTab === 'candidates' ? '#fff' : '#16C47F',
               textTransform: 'none',
               borderRadius: 2,
-              '&:hover': { bgcolor: activeTab === 'candidates' ? '#066231' : 'rgba(8,122,61,0.08)' },
+              '&:hover': { bgcolor: activeTab === 'candidates' ? '#12A66C' : 'rgba(8,122,61,0.08)' },
             }}
           >
             Candidate List
@@ -680,12 +680,12 @@ export default function RecruitmentManagement() {
             variant={activeTab === 'requisitions' ? 'contained' : 'outlined'}
             onClick={() => setActiveTab('requisitions')}
             sx={{
-              bgcolor: activeTab === 'requisitions' ? '#087A3D' : 'transparent',
-              borderColor: '#087A3D',
-              color: activeTab === 'requisitions' ? '#fff' : '#087A3D',
+              bgcolor: activeTab === 'requisitions' ? '#16C47F' : 'transparent',
+              borderColor: '#16C47F',
+              color: activeTab === 'requisitions' ? '#fff' : '#16C47F',
               textTransform: 'none',
               borderRadius: 2,
-              '&:hover': { bgcolor: activeTab === 'requisitions' ? '#066231' : 'rgba(8,122,61,0.08)' },
+              '&:hover': { bgcolor: activeTab === 'requisitions' ? '#12A66C' : 'rgba(8,122,61,0.08)' },
             }}
           >
             Job Requisitions ({requisitions.length})
@@ -713,7 +713,7 @@ export default function RecruitmentManagement() {
               setCandForm(EMPTY_CAND_FORM);
               setCreateCandidateDialog(true);
             }}
-            sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+            sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, textTransform: 'none', borderRadius: 2 }}
           >
             Add Candidate
           </Button>
@@ -890,7 +890,7 @@ export default function RecruitmentManagement() {
                           transition: 'all 0.15s ease',
                           '&:hover': {
                             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                            borderColor: '#087A3D',
+                            borderColor: '#16C47F',
                           },
                         }}
                       >
@@ -906,7 +906,7 @@ export default function RecruitmentManagement() {
                             />
                           </Box>
 
-                          <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 600, display: 'block' }}>
+                          <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 600, display: 'block' }}>
                             {cand.job_title || 'General Pool'}
                           </Typography>
 
@@ -969,7 +969,7 @@ export default function RecruitmentManagement() {
                                   e.stopPropagation();
                                   handleResumeCandidate(cand.id);
                                 }}
-                                sx={{ height: 22, fontSize: 10, bgcolor: '#087A3D', textTransform: 'none', px: 1 }}
+                                sx={{ height: 22, fontSize: 10, bgcolor: '#16C47F', textTransform: 'none', px: 1 }}
                               >
                                 Resume
                               </Button>
@@ -1060,7 +1060,7 @@ export default function RecruitmentManagement() {
                         <Typography variant="caption" sx={{ color: '#64748b' }}>{cand.candidate_code}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#087A3D' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#16C47F' }}>
                           {cand.job_title || 'General Pool'}
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#64748b' }}>
@@ -1101,7 +1101,7 @@ export default function RecruitmentManagement() {
                                 setSelectedCandidate(cand);
                                 setDrawerOpen(true);
                               }}
-                              sx={{ color: '#087A3D' }}
+                              sx={{ color: '#16C47F' }}
                             >
                               <Eye size={16} />
                             </IconButton>
@@ -1234,7 +1234,7 @@ export default function RecruitmentManagement() {
                               setSelectedRequisition(req);
                               setReqDrawerOpen(true);
                             }}
-                            sx={{ color: '#087A3D' }}
+                            sx={{ color: '#16C47F' }}
                           >
                             <Eye size={16} />
                           </IconButton>
@@ -1332,7 +1332,7 @@ export default function RecruitmentManagement() {
                       variant="contained"
                       startIcon={<Play size={14} />}
                       onClick={() => handleResumeCandidate(selectedCandidate.id)}
-                      sx={{ bgcolor: '#087A3D', textTransform: 'none', whiteSpace: 'nowrap' }}
+                      sx={{ bgcolor: '#16C47F', textTransform: 'none', whiteSpace: 'nowrap' }}
                     >
                       Resume
                     </Button>
@@ -1438,7 +1438,7 @@ export default function RecruitmentManagement() {
                     <Paper key={hist.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: '#f8fafc' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                         <Typography variant="caption" sx={{ fontWeight: 700, color: '#0f172a' }}>
-                          {hist.previous_stage || 'Created'} → <span style={{ color: '#087A3D' }}>{hist.new_stage}</span>
+                          {hist.previous_stage || 'Created'} → <span style={{ color: '#16C47F' }}>{hist.new_stage}</span>
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#64748b' }}>
                           {formatDateTime(hist.changed_at)}
@@ -1573,7 +1573,7 @@ export default function RecruitmentManagement() {
                           setSelectedCandidate(c);
                           setDrawerOpen(true);
                         }}
-                        sx={{ p: 1.5, borderRadius: 2, cursor: 'pointer', '&:hover': { borderColor: '#087A3D' } }}
+                        sx={{ p: 1.5, borderRadius: 2, cursor: 'pointer', '&:hover': { borderColor: '#16C47F' } }}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
@@ -1709,7 +1709,7 @@ export default function RecruitmentManagement() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateReqDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveRequisition} variant="contained" sx={{ bgcolor: '#087A3D' }}>
+          <Button onClick={handleSaveRequisition} variant="contained" sx={{ bgcolor: '#16C47F' }}>
             {editingReq ? 'Save Changes' : 'Submit Requisition'}
           </Button>
         </DialogActions>
@@ -1830,7 +1830,7 @@ export default function RecruitmentManagement() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setCreateCandidateDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveCandidate} variant="contained" sx={{ bgcolor: '#087A3D' }}>
+          <Button onClick={handleSaveCandidate} variant="contained" sx={{ bgcolor: '#16C47F' }}>
             {editingCand ? 'Save Changes' : 'Add Candidate'}
           </Button>
         </DialogActions>
@@ -1879,7 +1879,7 @@ export default function RecruitmentManagement() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setStageTransitionDialog(false)}>Cancel</Button>
-          <Button onClick={handleConfirmStageTransition} variant="contained" sx={{ bgcolor: '#087A3D' }}>
+          <Button onClick={handleConfirmStageTransition} variant="contained" sx={{ bgcolor: '#16C47F' }}>
             Confirm Transition
           </Button>
         </DialogActions>
@@ -1926,7 +1926,7 @@ export default function RecruitmentManagement() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setInterviewDialog(false)}>Cancel</Button>
-          <Button onClick={handleScheduleInterviewSubmit} variant="contained" sx={{ bgcolor: '#087A3D' }}>
+          <Button onClick={handleScheduleInterviewSubmit} variant="contained" sx={{ bgcolor: '#16C47F' }}>
             Schedule & Move to Interview
           </Button>
         </DialogActions>
@@ -1974,7 +1974,7 @@ export default function RecruitmentManagement() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setOfferDialog(false)}>Cancel</Button>
-          <Button onClick={handleUpdateOfferSubmit} variant="contained" sx={{ bgcolor: '#087A3D' }}>
+          <Button onClick={handleUpdateOfferSubmit} variant="contained" sx={{ bgcolor: '#16C47F' }}>
             Update Offer Status
           </Button>
         </DialogActions>

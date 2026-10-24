@@ -28,7 +28,7 @@ export default function TeamWorkloadView({ tasks }: TeamWorkloadViewProps) {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-          <Users size={22} color={isDark ? '#5FCF87' : '#203020'} />
+          <Users size={22} color={isDark ? '#16C47F' : '#203020'} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
             Team Workload & Capacity Overview
           </Typography>

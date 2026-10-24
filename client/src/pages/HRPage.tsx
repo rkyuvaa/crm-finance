@@ -378,7 +378,7 @@ export default function HRPage() {
                 variant="contained"
                 startIcon={<Plus size={18} />}
                 onClick={() => navigate('/hr/onboarding/new')}
-                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+                sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, textTransform: 'none', borderRadius: 2 }}
               >
                 New On/Offboarding
               </Button>
@@ -398,7 +398,7 @@ export default function HRPage() {
                 variant="contained"
                 startIcon={<Plus size={18} />}
                 onClick={() => setAttendanceDialog(true)}
-                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+                sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, textTransform: 'none', borderRadius: 2 }}
               >
                 Log Attendance
               </Button>
@@ -418,7 +418,7 @@ export default function HRPage() {
                 variant="contained"
                 startIcon={<Plus size={18} />}
                 onClick={() => setLeaveDialog(true)}
-                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+                sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, textTransform: 'none', borderRadius: 2 }}
               >
                 New Leave Request
               </Button>
@@ -438,7 +438,7 @@ export default function HRPage() {
                 variant="contained"
                 startIcon={<Plus size={18} />}
                 onClick={() => setPayrollDialog(true)}
-                sx={{ bgcolor: '#087A3D', '&:hover': { bgcolor: '#066231' }, textTransform: 'none', borderRadius: 2 }}
+                sx={{ bgcolor: '#16C47F', '&:hover': { bgcolor: '#12A66C' }, textTransform: 'none', borderRadius: 2 }}
               >
                 Generate Payroll
               </Button>
@@ -482,7 +482,7 @@ export default function HRPage() {
               <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0' }}>
                 <CardContent sx={{ py: 2 }}>
                   <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>COMPLETED THIS MONTH</Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#087A3D', mt: 0.5 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#16C47F', mt: 0.5 }}>
                     {onboardingList.filter(o => o.status === 'Completed').length + 3}
                   </Typography>
                 </CardContent>
@@ -519,7 +519,7 @@ export default function HRPage() {
                   <TableRow key={item.id} hover>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar sx={{ width: 34, height: 34, bgcolor: item.type === 'ONBOARDING' ? '#087A3D' : '#d97706', fontSize: 14 }}>
+                        <Avatar sx={{ width: 34, height: 34, bgcolor: item.type === 'ONBOARDING' ? '#16C47F' : '#d97706', fontSize: 14 }}>
                           {item.name.charAt(0)}
                         </Avatar>
                         <Box>
@@ -552,7 +552,7 @@ export default function HRPage() {
                         <LinearProgress
                           variant="determinate"
                           value={item.progress}
-                          sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#087A3D' } }}
+                          sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#16C47F' } }}
                         />
                         <Typography variant="caption" sx={{ fontWeight: 600 }}>{item.progress}%</Typography>
                       </Box>
@@ -610,7 +610,7 @@ export default function HRPage() {
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ py: 2 }}>
                   <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>PRESENT TODAY</Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#087A3D', mt: 0.5 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#16C47F', mt: 0.5 }}>
                     {attendanceRecords.filter((a) => a.status === 'PRESENT').length}
                   </Typography>
                 </CardContent>
@@ -705,7 +705,7 @@ export default function HRPage() {
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ py: 2 }}>
                   <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>APPROVED LEAVES</Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#087A3D', mt: 0.5 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#16C47F', mt: 0.5 }}>
                     {leaveRequests.filter(l => l.status === 'APPROVED').length}
                   </Typography>
                 </CardContent>
@@ -819,7 +819,7 @@ export default function HRPage() {
                       <TableCell align="right">₹{record.base_salary.toLocaleString()}</TableCell>
                       <TableCell align="right">₹{record.allowances.toLocaleString()}</TableCell>
                       <TableCell align="right">₹{record.deductions.toLocaleString()}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: '#087A3D' }}>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: '#16C47F' }}>
                         ₹{record.net_salary.toLocaleString()}
                       </TableCell>
                       <TableCell>
@@ -839,7 +839,7 @@ export default function HRPage() {
                             size="small"
                             variant="outlined"
                             onClick={() => handleUpdatePayrollStatus(record.id, 'PAID')}
-                            sx={{ textTransform: 'none', borderRadius: 1.5, borderColor: '#087A3D', color: '#087A3D' }}
+                            sx={{ textTransform: 'none', borderRadius: 1.5, borderColor: '#16C47F', color: '#16C47F' }}
                           >
                             Mark Paid
                           </Button>
@@ -860,7 +860,7 @@ export default function HRPage() {
             <Grid item xs={12} md={4}>
               <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                  <Avatar sx={{ width: 72, height: 72, bgcolor: '#087A3D', margin: '0 auto', mb: 2, fontSize: 28, fontWeight: 700 }}>
+                  <Avatar sx={{ width: 72, height: 72, bgcolor: '#16C47F', margin: '0 auto', mb: 2, fontSize: 28, fontWeight: 700 }}>
                     ME
                   </Avatar>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>Employee Self-Service Portal</Typography>
@@ -876,7 +876,7 @@ export default function HRPage() {
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="caption" sx={{ color: '#64748b' }}>Leave Balance:</Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#087A3D' }}>18 Days Available</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#16C47F' }}>18 Days Available</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="caption" sx={{ color: '#64748b' }}>Attendance (This Month):</Typography>
@@ -899,7 +899,7 @@ export default function HRPage() {
                         variant="contained"
                         startIcon={<Clock size={18} />}
                         onClick={() => showToast('Clocked in successfully at ' + formatDateTime(new Date()), 'success')}
-                        sx={{ bgcolor: '#087A3D', py: 1.5, textTransform: 'none', borderRadius: 2 }}
+                        sx={{ bgcolor: '#16C47F', py: 1.5, textTransform: 'none', borderRadius: 2 }}
                       >
                         Clock In Now
                       </Button>
@@ -910,7 +910,7 @@ export default function HRPage() {
                         variant="outlined"
                         startIcon={<Calendar size={18} />}
                         onClick={() => setLeaveDialog(true)}
-                        sx={{ py: 1.5, textTransform: 'none', borderRadius: 2, borderColor: '#087A3D', color: '#087A3D' }}
+                        sx={{ py: 1.5, textTransform: 'none', borderRadius: 2, borderColor: '#16C47F', color: '#16C47F' }}
                       >
                         Request Leave
                       </Button>
@@ -996,10 +996,10 @@ export default function HRPage() {
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Attendance Summary</Typography>
                   <Typography variant="body2" sx={{ color: '#64748b', mb: 3 }}>Monthly average attendance and punctuality metrics</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
-                    <Typography variant="h3" sx={{ fontWeight: 800, color: '#087A3D' }}>94.2%</Typography>
-                    <Typography variant="body2" sx={{ color: '#087A3D', fontWeight: 600 }}>+2.1% from last month</Typography>
+                    <Typography variant="h3" sx={{ fontWeight: 800, color: '#16C47F' }}>94.2%</Typography>
+                    <Typography variant="body2" sx={{ color: '#16C47F', fontWeight: 600 }}>+2.1% from last month</Typography>
                   </Box>
-                  <LinearProgress variant="determinate" value={94.2} sx={{ height: 8, borderRadius: 4, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#087A3D' } }} />
+                  <LinearProgress variant="determinate" value={94.2} sx={{ height: 8, borderRadius: 4, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#16C47F' } }} />
                 </CardContent>
               </Card>
             </Grid>
@@ -1112,7 +1112,7 @@ export default function HRPage() {
                     } catch {}
                     showToast('HR Configuration updated successfully', 'success');
                   }}
-                  sx={{ bgcolor: '#087A3D', textTransform: 'none', borderRadius: 2 }}
+                  sx={{ bgcolor: '#16C47F', textTransform: 'none', borderRadius: 2 }}
                 >
                   Save Settings
                 </Button>
@@ -1182,7 +1182,7 @@ export default function HRPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setAttendanceDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveAttendance} variant="contained" sx={{ bgcolor: '#087A3D' }}>Save</Button>
+          <Button onClick={handleSaveAttendance} variant="contained" sx={{ bgcolor: '#16C47F' }}>Save</Button>
         </DialogActions>
       </Dialog>
 
@@ -1238,7 +1238,7 @@ export default function HRPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setLeaveDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveLeave} variant="contained" sx={{ bgcolor: '#087A3D' }}>Submit Request</Button>
+          <Button onClick={handleSaveLeave} variant="contained" sx={{ bgcolor: '#16C47F' }}>Submit Request</Button>
         </DialogActions>
       </Dialog>
 
@@ -1295,7 +1295,7 @@ export default function HRPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setPayrollDialog(false)}>Cancel</Button>
-          <Button onClick={handleSavePayroll} variant="contained" sx={{ bgcolor: '#087A3D' }}>Generate</Button>
+          <Button onClick={handleSavePayroll} variant="contained" sx={{ bgcolor: '#16C47F' }}>Generate</Button>
         </DialogActions>
       </Dialog>
 
@@ -1352,7 +1352,7 @@ export default function HRPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setOnboardingDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveOnboarding} variant="contained" sx={{ bgcolor: '#087A3D' }}>Initiate Process</Button>
+          <Button onClick={handleSaveOnboarding} variant="contained" sx={{ bgcolor: '#16C47F' }}>Initiate Process</Button>
         </DialogActions>
       </Dialog>
 

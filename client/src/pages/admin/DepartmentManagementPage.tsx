@@ -82,7 +82,7 @@ export default function DepartmentManagementPage() {
           boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
         }}
       >
-        <Building2 size={18} color="#087A3D" />
+        <Building2 size={18} color="#16C47F" />
         <span style={{ fontWeight: 700, color: '#023020', fontSize: 13.5 }}>{node.name}</span>
         <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#7A8B80' }}>({node.code})</span>
         <span style={{ marginLeft: 'auto', padding: '2px 8px', background: '#EAF6E8', color: '#04552B', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
@@ -112,7 +112,7 @@ export default function DepartmentManagementPage() {
             alignItems: 'center',
             gap: 8,
             padding: '10px 18px',
-            background: '#087A3D',
+            background: '#16C47F',
             color: '#FFFFFF',
             borderRadius: 10,
             fontWeight: 700,
@@ -243,7 +243,7 @@ export default function DepartmentManagementPage() {
                 <button type="button" onClick={() => { setIsCreateOpen(false); setEditingDept(null); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Save Department
                 </button>
               </div>

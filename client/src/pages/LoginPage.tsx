@@ -114,7 +114,7 @@ export default function LoginPage() {
                 width: 36,
                 height: 36,
                 borderRadius: 2,
-                background: '#087A3D',
+                background: '#16C47F',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -124,7 +124,7 @@ export default function LoginPage() {
               <FileText size={20} />
             </Box>
             <Typography sx={{ fontWeight: 800, color: '#023020' }}>
-              CRM<span style={{ color: '#087A3D' }}>FINANCE</span>
+              CRM<span style={{ color: '#16C47F' }}>FINANCE</span>
             </Typography>
           </Box>
 

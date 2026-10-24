@@ -212,7 +212,7 @@ export default function UserManagementPage() {
             alignItems: 'center',
             gap: 8,
             padding: '10px 18px',
-            background: '#087A3D',
+            background: '#16C47F',
             color: '#FFFFFF',
             borderRadius: 10,
             fontWeight: 700,
@@ -320,7 +320,7 @@ export default function UserManagementPage() {
                           width: 34,
                           height: 34,
                           borderRadius: '50%',
-                          background: '#087A3D',
+                          background: '#16C47F',
                           color: '#FFF',
                           fontWeight: 700,
                           fontSize: 12,
@@ -342,7 +342,7 @@ export default function UserManagementPage() {
                   <td style={{ padding: '12px 16px', color: '#44584C' }}>{u.designation || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      <span style={{ padding: '2px 8px', background: '#EAF6E8', color: '#087A3D', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                      <span style={{ padding: '2px 8px', background: '#EAF6E8', color: '#16C47F', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
                         {u.role}
                       </span>
                       {u.assigned_roles?.map((r) => (
@@ -490,8 +490,8 @@ export default function UserManagementPage() {
                           height: 32,
                           padding: '0 6px',
                           borderRadius: 6,
-                          border: p === page ? '1px solid #087A3D' : '1px solid #D8E2D5',
-                          background: p === page ? '#087A3D' : '#FFF',
+                          border: p === page ? '1px solid #16C47F' : '1px solid #D8E2D5',
+                          background: p === page ? '#16C47F' : '#FFF',
                           color: p === page ? '#FFF' : '#44584C',
                           fontWeight: p === page ? 700 : 500,
                           fontSize: 12,
@@ -565,7 +565,7 @@ export default function UserManagementPage() {
           }}
           sx={{ fontSize: 13, gap: 1.5, py: 1 }}
         >
-          <Shield size={15} color="#087A3D" />
+          <Shield size={15} color="#16C47F" />
           <span>Effective Access Inspection</span>
         </MenuItem>
 
@@ -670,7 +670,7 @@ export default function UserManagementPage() {
                 <button type="button" onClick={() => setIsCreateOpen(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Save User
                 </button>
               </div>
@@ -704,9 +704,9 @@ export default function UserManagementPage() {
                     padding: '8px 14px',
                     border: 'none',
                     background: 'transparent',
-                    borderBottom: editTab === tab ? '2px solid #087A3D' : 'none',
+                    borderBottom: editTab === tab ? '2px solid #16C47F' : 'none',
                     fontWeight: editTab === tab ? 700 : 500,
-                    color: editTab === tab ? '#087A3D' : '#7A8B80',
+                    color: editTab === tab ? '#16C47F' : '#7A8B80',
                     fontSize: 13,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
@@ -827,7 +827,7 @@ export default function UserManagementPage() {
                     <select
                       value={editForm.primary_role || selectedUser.role}
                       onChange={(e) => setEditForm({ ...editForm, primary_role: e.target.value as any })}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, fontWeight: 700, color: '#087A3D' }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, fontWeight: 700, color: '#16C47F' }}
                     >
                       <option value="ADMIN">ADMIN (Super Administrator)</option>
                       <option value="SALES_MANAGER">SALES_MANAGER</option>
@@ -902,7 +902,7 @@ export default function UserManagementPage() {
                     <button
                       type="button"
                       onClick={() => setInspectUserId(selectedUser.id)}
-                      style={{ padding: '8px 14px', background: '#087A3D', color: '#FFF', borderRadius: 8, fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      style={{ padding: '8px 14px', background: '#16C47F', color: '#FFF', borderRadius: 8, fontWeight: 700, fontSize: 12, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
                       <Shield size={16} /> Open Inspector
                     </button>
@@ -925,7 +925,7 @@ export default function UserManagementPage() {
                 <button type="button" onClick={() => setSelectedUser(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Close
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Save Changes
                 </button>
               </div>

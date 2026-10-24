@@ -74,7 +74,7 @@ export default function PublicFinancierDocumentView() {
                   width: 38,
                   height: 38,
                   borderRadius: '10px',
-                  background: '#087A3D',
+                  background: '#16C47F',
                   color: '#FFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -97,7 +97,7 @@ export default function PublicFinancierDocumentView() {
 
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="caption" sx={{ color: '#7A8B80', display: 'block' }}>Lead Reference</Typography>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#087A3D', fontFamily: 'monospace' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#16C47F', fontFamily: 'monospace' }}>
                 {leadReferenceNumber}
               </Typography>
             </Box>
@@ -118,7 +118,7 @@ export default function PublicFinancierDocumentView() {
               label={`Expires: ${expiresAt}`}
               color="primary"
               variant="outlined"
-              sx={{ fontWeight: 700, fontSize: 11.5, borderColor: '#087A3D', color: '#087A3D' }}
+              sx={{ fontWeight: 700, fontSize: 11.5, borderColor: '#16C47F', color: '#16C47F' }}
             />
           </Box>
         </Paper>
@@ -149,7 +149,7 @@ export default function PublicFinancierDocumentView() {
                   <TableRow key={doc.id} sx={{ '&:hover': { background: '#FAFDF9' } }}>
                     <TableCell sx={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <FileText size={17} color="#087A3D" />
+                        <FileText size={17} color="#16C47F" />
                         {doc.name}
                       </Box>
                     </TableCell>
@@ -172,7 +172,7 @@ export default function PublicFinancierDocumentView() {
 
                     <TableCell sx={{ fontSize: 12, color: '#44584C' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <ShieldCheck size={14} color="#087A3D" />
+                        <ShieldCheck size={14} color="#16C47F" />
                         <span>{doc.verifiedBy}</span>
                       </Box>
                     </TableCell>

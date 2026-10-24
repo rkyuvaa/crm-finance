@@ -234,7 +234,7 @@ export default function LeadsPage() {
   const kanbanColumns = useMemo(() => {
     return pipelineStages.map((col) => {
       const meta = statusMeta(col.status as ApplicationStatus);
-      const color = col.color || meta.dot || '#087A3D';
+      const color = col.color || meta.dot || '#16C47F';
       return {
         key: col.key,
         status: col.status as ApplicationStatus,
@@ -516,7 +516,7 @@ export default function LeadsPage() {
                 gap: '6px',
                 '&.Mui-selected': {
                   background: '#FFFFFF',
-                  color: '#087A3D',
+                  color: '#16C47F',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                 },
               },
@@ -872,7 +872,7 @@ export default function LeadsPage() {
                           >
                             {/* Card Top: App ID & Aging */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <span style={{ fontWeight: 700, fontSize: 12.5, color: '#087A3D' }}>{app.app_no}</span>
+                              <span style={{ fontWeight: 700, fontSize: 12.5, color: '#16C47F' }}>{app.app_no}</span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Tooltip title="Aging duration">
                                   <span

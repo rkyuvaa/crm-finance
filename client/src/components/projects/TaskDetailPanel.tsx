@@ -755,11 +755,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 fontSize: 12,
                 py: 0.25,
                 px: 1,
-                color: isDark ? '#5FCF87' : '#203020',
+                color: isDark ? '#16C47F' : '#203020',
                 fontWeight: 700,
-                bgcolor: isDark ? 'rgba(95, 207, 135, 0.12)' : 'rgba(32, 48, 32, 0.08)',
+                bgcolor: isDark ? 'rgba(22, 196, 127, 0.12)' : 'rgba(32, 48, 32, 0.08)',
                 '&:hover': {
-                  bgcolor: isDark ? 'rgba(95, 207, 135, 0.2)' : 'rgba(32, 48, 32, 0.14)',
+                  bgcolor: isDark ? 'rgba(22, 196, 127, 0.2)' : 'rgba(32, 48, 32, 0.14)',
                 },
               }}
             >
@@ -775,8 +775,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             label={currentTask?.priority || 'NORMAL'}
             size="small"
             sx={{
-              bgcolor: currentTask?.priority === 'URGENT' ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : currentTask?.priority === 'HIGH' ? (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : (isDark ? 'rgba(95, 207, 135, 0.15)' : '#203020'),
-              color: currentTask?.priority === 'URGENT' ? '#EF4444' : currentTask?.priority === 'HIGH' ? '#F59E0B' : (isDark ? '#5FCF87' : '#FFFFFF'),
+              bgcolor: currentTask?.priority === 'URGENT' ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : currentTask?.priority === 'HIGH' ? (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7') : (isDark ? 'rgba(22, 196, 127, 0.15)' : '#203020'),
+              color: currentTask?.priority === 'URGENT' ? '#EF4444' : currentTask?.priority === 'HIGH' ? '#F59E0B' : (isDark ? '#16C47F' : '#FFFFFF'),
               fontWeight: 700,
             }}
           />
@@ -799,11 +799,11 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
               px: 1.5,
               py: 0.5,
               borderRadius: '20px',
-              bgcolor: isTimerRunning ? (isDark ? 'rgba(95, 207, 135, 0.12)' : '#F0FDF4') : 'background.paper',
-              borderColor: isTimerRunning ? (isDark ? '#5FCF87' : '#203020') : 'divider',
+              bgcolor: isTimerRunning ? (isDark ? 'rgba(22, 196, 127, 0.12)' : '#F0FDF4') : 'background.paper',
+              borderColor: isTimerRunning ? (isDark ? '#16C47F' : '#203020') : 'divider',
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: isTimerRunning ? (isDark ? '#5FCF87' : '#203020') : 'text.primary' }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', color: isTimerRunning ? (isDark ? '#16C47F' : '#203020') : 'text.primary' }}>
               {formatTimer(timerSeconds)}
             </Typography>
             <Button
@@ -907,7 +907,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ListTree size={18} color={isDark ? '#5FCF87' : '#203020'} />
+                <ListTree size={18} color={isDark ? '#16C47F' : '#203020'} />
                 <Typography variant="h6" sx={{ fontSize: '1.05rem', fontWeight: 700 }}>
                   Subtasks & Work Breakdown
                 </Typography>
@@ -920,7 +920,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
             <LinearProgress
               variant="determinate"
               value={currentTask.progress_percentage || 0}
-              sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: isDark ? '#5FCF87' : '#203020' } }}
+              sx={{ mb: 2, height: 6, borderRadius: 3, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: isDark ? '#16C47F' : '#203020' } }}
             />
 
             {((currentTask as any).nested_subtasks || currentTask.subtasks || []).length > 0 && (
@@ -938,7 +938,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       borderRadius: '8px',
                       bgcolor: sub.is_completed ? 'action.hover' : 'background.default',
                       transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#5FCF87' : '#203020' },
+                      '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#16C47F' : '#203020' },
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, overflow: 'hidden' }}>
@@ -949,7 +949,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                           e.stopPropagation();
                           handleToggleSubtask(sub.id);
                         }}
-                        style={{ cursor: 'pointer', width: 17, height: 17, accentColor: isDark ? '#5FCF87' : '#203020' }}
+                        style={{ cursor: 'pointer', width: 17, height: 17, accentColor: isDark ? '#16C47F' : '#203020' }}
                       />
                       <Chip
                         label={sub.task_number ? sub.task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${sub.id}`}
@@ -969,7 +969,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                           textDecoration: sub.is_completed ? 'line-through' : 'none',
                           color: sub.is_completed ? 'text.secondary' : 'text.primary',
                           transition: 'color 0.15s ease',
-                          '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' },
+                          '&:hover': { color: isDark ? '#16C47F' : '#203020', textDecoration: 'underline' },
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -995,7 +995,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                       )}
                       <Tooltip title="Open subtask">
                         <IconButton size="small" onClick={() => setActiveTaskId(sub.id)}>
-                          <ArrowRight size={15} color={isDark ? '#5FCF87' : '#203020'} />
+                          <ArrowRight size={15} color={isDark ? '#16C47F' : '#203020'} />
                         </IconButton>
                       </Tooltip>
                       <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteSubtask(sub.id); }}>
@@ -1156,7 +1156,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
-                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#16C47F' : '#203020', textDecoration: 'underline' } }}
                         >
                           {dep.depends_on_task_title}
                         </Typography>
@@ -1222,8 +1222,8 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         borderRadius: '8px',
-                        bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.1)' : '#F0FDF4') : (isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2'),
-                        borderColor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.25)' : '#BBF7D0') : (isDark ? 'rgba(239, 68, 68, 0.25)' : '#FECACA'),
+                        bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(22, 196, 127, 0.1)' : '#F0FDF4') : (isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2'),
+                        borderColor: dep.depends_on_is_completed ? (isDark ? 'rgba(22, 196, 127, 0.25)' : '#BBF7D0') : (isDark ? 'rgba(239, 68, 68, 0.25)' : '#FECACA'),
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -1234,15 +1234,15 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                             height: 18,
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(95, 207, 135, 0.2)' : '#DCFCE7') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2'),
-                            color: dep.depends_on_is_completed ? (isDark ? '#5FCF87' : '#166534') : '#DC2626',
+                            bgcolor: dep.depends_on_is_completed ? (isDark ? 'rgba(22, 196, 127, 0.2)' : '#DCFCE7') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2'),
+                            color: dep.depends_on_is_completed ? (isDark ? '#16C47F' : '#166534') : '#DC2626',
                           }}
                         />
                         <Chip label={dep.depends_on_task_number ? dep.depends_on_task_number.replace(/0+([1-9]\d*)$/, '$1') : `TASK-${dep.depends_on_task_id}`} size="small" sx={{ height: 18, fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 700 }} />
                         <Typography
                           variant="body2"
                           onClick={() => setActiveTaskId(dep.depends_on_task_id)}
-                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#5FCF87' : '#203020', textDecoration: 'underline' } }}
+                          sx={{ cursor: 'pointer', fontWeight: 600, color: 'text.primary', transition: 'color 0.15s ease', '&:hover': { color: isDark ? '#16C47F' : '#203020', textDecoration: 'underline' } }}
                         >
                           {dep.depends_on_task_title}
                         </Typography>
@@ -1310,7 +1310,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                 {attachments.map((file) => (
                   <Paper key={file.id} variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <FileText size={18} color={isDark ? '#5FCF87' : '#203020'} />
+                      <FileText size={18} color={isDark ? '#16C47F' : '#203020'} />
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{file.filename}</Typography>
                     </Box>
                     <IconButton size="small" onClick={() => handleRemoveAttachment(file.id)}>
@@ -1894,7 +1894,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   Variance (₹)
                 </Typography>
                 <Box sx={{ height: 36, display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: ((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)) < 0 ? '#DC2626' : (isDark ? '#5FCF87' : '#16A34A') }}>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: ((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)) < 0 ? '#DC2626' : (isDark ? '#16C47F' : '#16A34A') }}>
                     ₹{((currentTask.estimated_cost || 0) - (currentTask.actual_cost || 0)).toLocaleString('en-IN')}
                   </Typography>
                 </Box>
@@ -2219,7 +2219,7 @@ export default function TaskDetailPanel({ open, onClose, task, initialEditingDep
                   justifyContent: 'space-between',
                   cursor: 'pointer',
                   borderRadius: '8px',
-                  '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#5FCF87' : '#203020' },
+                  '&:hover': { bgcolor: 'action.hover', borderColor: isDark ? '#16C47F' : '#203020' },
                 }}
               >
                 <Box>

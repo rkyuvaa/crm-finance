@@ -397,9 +397,9 @@ export default function Sidebar({
           transform: scale(0.99);
         }
         .sb-sub-item.active {
-          color: #5fcf87 !important;
-          background: rgba(95, 207, 135, 0.12) !important;
-          border-left: 3px solid #5fcf87 !important;
+          color: #16C47F !important;
+          background: rgba(22, 196, 127, 0.12) !important;
+          border-left: 3px solid #16C47F !important;
           font-weight: 600 !important;
         }
         .sb-submenu {
@@ -422,8 +422,8 @@ export default function Sidebar({
         }
         .sb-search-input:focus {
           background: rgba(255, 255, 255, 0.09);
-          border-color: #5fcf87;
-          box-shadow: 0 0 0 2px rgba(95, 207, 135, 0.2);
+          border-color: #16C47F;
+          box-shadow: 0 0 0 2px rgba(22, 196, 127, 0.2);
         }
         .sb-search-input::placeholder {
           color: rgba(255, 255, 255, 0.40);
@@ -446,7 +446,7 @@ export default function Sidebar({
           {!collapsed && (
             <div style={{ lineHeight: 1.2, overflow: 'hidden' }}>
               <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.2, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
-                KIM <span style={{ color: '#5fcf87' }}>ERP</span>
+                KIM <span style={{ color: '#16C47F' }}>ERP</span>
               </div>
               <div
                 style={{
@@ -588,7 +588,7 @@ export default function Sidebar({
                         <span style={{ display: 'flex', flexShrink: 0 }}>
                           <Icon
                             size={17}
-                            color={isExpanded || isAnyChildActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                            color={isExpanded || isAnyChildActive ? '#16C47F' : 'rgba(255, 255, 255, 0.70)'}
                             style={{ flexShrink: 0 }}
                           />
                         </span>
@@ -636,7 +636,7 @@ export default function Sidebar({
                                   <span style={{ display: 'flex', flexShrink: 0 }}>
                                     <ChildIcon
                                       size={15}
-                                      color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                                      color={isActive ? '#16C47F' : 'rgba(255, 255, 255, 0.70)'}
                                     />
                                   </span>
                                   {!collapsed && <span style={{ flex: 1 }}>{child.label}</span>}
@@ -645,8 +645,8 @@ export default function Sidebar({
                                       style={{
                                         fontSize: 10,
                                         fontWeight: 700,
-                                        background: 'rgba(95, 207, 135, 0.20)',
-                                        color: '#5fcf87',
+                                        background: 'rgba(22, 196, 127, 0.20)',
+                                        color: '#16C47F',
                                         padding: '2px 7px',
                                         borderRadius: 20,
                                         minWidth: 20,
@@ -690,7 +690,7 @@ export default function Sidebar({
                         <span style={{ display: 'flex', flexShrink: 0 }}>
                           <Icon
                             size={17}
-                            color={isActive ? '#5fcf87' : 'rgba(255, 255, 255, 0.70)'}
+                            color={isActive ? '#16C47F' : 'rgba(255, 255, 255, 0.70)'}
                             style={{ flexShrink: 0 }}
                           />
                         </span>
@@ -700,8 +700,8 @@ export default function Sidebar({
                             style={{
                               fontSize: 10,
                               fontWeight: 700,
-                              background: 'rgba(95, 207, 135, 0.20)',
-                              color: '#5fcf87',
+                              background: 'rgba(22, 196, 127, 0.20)',
+                              color: '#16C47F',
                               padding: '2px 7px',
                               borderRadius: 20,
                               minWidth: 20,
@@ -740,7 +740,7 @@ export default function Sidebar({
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: '#087A3D',
+            background: '#16C47F',
             color: '#fff',
             fontSize: 12.5,
             fontWeight: 700,

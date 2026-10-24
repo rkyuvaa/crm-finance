@@ -43,7 +43,7 @@ export default function ProjectTeamView({ projectId }: ProjectTeamViewProps) {
 
       {members.length === 0 ? (
         <Paper elevation={0} sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: '12px' }}>
-          <Users size={32} color={theme.palette.mode === 'dark' ? '#5FCF87' : '#203020'} style={{ marginBottom: 8 }} />
+          <Users size={32} color={theme.palette.mode === 'dark' ? '#16C47F' : '#203020'} style={{ marginBottom: 8 }} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>No Team Members Assigned Yet</Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
             Assign personnel to tasks in this project workspace to see workload distribution here.

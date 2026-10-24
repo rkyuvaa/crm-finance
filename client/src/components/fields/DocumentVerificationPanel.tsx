@@ -37,7 +37,7 @@ interface Props {
 }
 
 function MiniScoreGauge({ score }: { score: number }) {
-  const color = score >= 80 ? '#087A3D' : score >= 50 ? '#D97706' : '#DC2626';
+  const color = score >= 80 ? '#16C47F' : score >= 50 ? '#D97706' : '#DC2626';
   const label = score >= 80 ? 'Excellent' : score >= 50 ? 'Moderate' : 'Low';
 
   return (
@@ -122,7 +122,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
           gap: 1.5,
         }}
       >
-        <Info size={20} color="#087A3D" style={{ marginTop: 2, flexShrink: 0 }} />
+        <Info size={20} color="#16C47F" style={{ marginTop: 2, flexShrink: 0 }} />
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#023020' }}>
             Document Synchronization & Verification System
@@ -141,7 +141,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
           <Typography variant="h5" sx={{ fontWeight: 800, color: '#16231B', mt: 0.5 }}>{totalCount}</Typography>
         </Paper>
         <Paper sx={{ p: 1.8, border: '1px solid #E4EBE1', borderRadius: '10px', background: '#F4F9F2' }}>
-          <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 600 }}>Verified (OFF → ON)</Typography>
+          <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 600 }}>Verified (OFF → ON)</Typography>
           <Typography variant="h5" sx={{ fontWeight: 800, color: '#04552B', mt: 0.5 }}>{verifiedCount} / {totalCount}</Typography>
         </Paper>
         <Paper sx={{ p: 1.8, border: '1px solid #E4EBE1', borderRadius: '10px', background: '#FFFDF5' }}>
@@ -152,7 +152,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
           <Typography variant="caption" sx={{ color: '#7A8B80', fontWeight: 600 }}>Avg OCR Quality Score</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#16231B' }}>{avgScore}/100</Typography>
-            <Sparkles size={16} color="#087A3D" />
+            <Sparkles size={16} color="#16C47F" />
           </Box>
         </Paper>
       </Box>
@@ -160,7 +160,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
       {/* Verification Document List */}
       {documents.length === 0 ? (
         <Paper sx={{ p: 5, textAlign: 'center', background: '#F8FAF8', border: '1px dashed #C9E0C6', borderRadius: 3 }}>
-          <ShieldCheck size={40} color="#087A3D" style={{ margin: '0 auto 12px' }} />
+          <ShieldCheck size={40} color="#16C47F" style={{ margin: '0 auto 12px' }} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#16231B' }}>No Documents Uploaded Yet</Typography>
           <Typography variant="body2" sx={{ color: '#7A8B80', mt: 0.5 }}>
             Upload Aadhaar, PAN Card, or Bank Statements in the <b>Documents Upload</b> tab. They will automatically synchronize here for quality scoring and manual verification.
@@ -188,7 +188,7 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
                   <TableRow key={doc.id} sx={{ '&:hover': { background: '#FAFDF9' } }}>
                     <TableCell sx={{ maxWidth: 220 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, minWidth: 0 }}>
-                        <FileText size={18} color="#087A3D" style={{ flexShrink: 0 }} />
+                        <FileText size={18} color="#16C47F" style={{ flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, fontWeight: 700, color: '#16231B' }}>{doc.field_label}</div>
                           <div style={{ fontSize: 10.5, color: '#7A8B80', wordBreak: 'break-all' }}>
@@ -262,8 +262,8 @@ export default function DocumentVerificationPanel({ applicationId }: Props) {
                             border: '1px solid #C9E0C6',
                             borderRadius: '8px',
                             p: 0.7,
-                            color: '#087A3D',
-                            '&:hover': { background: '#EAF6E8', borderColor: '#087A3D' },
+                            color: '#16C47F',
+                            '&:hover': { background: '#EAF6E8', borderColor: '#16C47F' },
                           }}
                         >
                           <Eye size={15} />

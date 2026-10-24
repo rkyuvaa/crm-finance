@@ -44,7 +44,7 @@ export default function PermissionRegistryPage() {
             alignItems: 'center',
             gap: 8,
             padding: '10px 18px',
-            background: '#087A3D',
+            background: '#16C47F',
             color: '#FFFFFF',
             borderRadius: 10,
             fontWeight: 700,
@@ -65,7 +65,7 @@ export default function PermissionRegistryPage() {
           registry?.map((mod) => (
             <div key={mod.id} style={{ background: '#FFFFFF', borderRadius: 14, border: '1px solid #E4EBE1', overflow: 'hidden' }}>
               <div style={{ padding: '14px 20px', background: '#F8FAF8', borderBottom: '1px solid #E4EBE1', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Folder size={20} color="#087A3D" />
+                <Folder size={20} color="#16C47F" />
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#023020' }}>{mod.name}</h3>
                 <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#7A8B80' }}>({mod.code})</span>
               </div>
@@ -80,7 +80,7 @@ export default function PermissionRegistryPage() {
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {res.actions.map((act) => (
-                        <span key={act.id} style={{ padding: '4px 10px', background: '#EAF6E8', color: '#087A3D', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                        <span key={act.id} style={{ padding: '4px 10px', background: '#EAF6E8', color: '#16C47F', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
                           {act.name} <span style={{ opacity: 0.7, fontSize: 10 }}>({act.code})</span>
                         </span>
                       ))}
@@ -141,7 +141,7 @@ export default function PermissionRegistryPage() {
                 <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Register Action
                 </button>
               </div>

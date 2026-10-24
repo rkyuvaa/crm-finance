@@ -214,7 +214,7 @@ export default function ProjectsPage() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: isDark ? '#5FCF87' : '#203020' }}>
+              <Box sx={{ p: 1, borderRadius: '8px', backgroundColor: 'action.hover', color: isDark ? '#16C47F' : '#203020' }}>
                 <Briefcase size={20} />
               </Box>
               <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
@@ -303,7 +303,7 @@ export default function ProjectsPage() {
         <Box sx={{ p: 3 }}>
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-              <CircularProgress size={32} sx={{ color: isDark ? '#5FCF87' : '#203020' }} />
+              <CircularProgress size={32} sx={{ color: isDark ? '#16C47F' : '#203020' }} />
             </Box>
           ) : isError ? (
             <Box sx={{ textAlignment: 'center', py: 6 }}>
@@ -393,7 +393,7 @@ export default function ProjectsPage() {
                         <LinearProgress
                           variant="determinate"
                           value={project.progress}
-                          sx={{ height: 6, borderRadius: 3, backgroundColor: 'divider', '& .MuiLinearProgress-bar': { backgroundColor: '#087A3D' } }}
+                          sx={{ height: 6, borderRadius: 3, backgroundColor: 'divider', '& .MuiLinearProgress-bar': { backgroundColor: '#16C47F' } }}
                         />
                       </Box>
 

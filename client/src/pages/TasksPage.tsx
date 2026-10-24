@@ -232,14 +232,14 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
               sx={{
                 bgcolor: taskScope === 'my' ? '#203020' : 'transparent',
                 borderColor: taskScope === 'my' ? '#203020' : (isDark ? 'rgba(255,255,255,0.15)' : 'divider'),
-                color: taskScope === 'my' ? '#fff' : (isDark ? '#5FCF87' : '#203020'),
+                color: taskScope === 'my' ? '#fff' : (isDark ? '#16C47F' : '#203020'),
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: 2,
                 height: 36,
                 '&:hover': {
-                  bgcolor: taskScope === 'my' ? '#2A402A' : (isDark ? 'rgba(95,207,135,0.08)' : 'rgba(32,48,32,0.08)'),
-                  borderColor: isDark ? '#5FCF87' : '#203020',
+                  bgcolor: taskScope === 'my' ? '#2A402A' : (isDark ? 'rgba(22, 196, 127,0.08)' : 'rgba(32,48,32,0.08)'),
+                  borderColor: isDark ? '#16C47F' : '#203020',
                 },
               }}
             >
@@ -252,14 +252,14 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
               sx={{
                 bgcolor: taskScope === 'all' ? '#203020' : 'transparent',
                 borderColor: taskScope === 'all' ? '#203020' : (isDark ? 'rgba(255,255,255,0.15)' : 'divider'),
-                color: taskScope === 'all' ? '#fff' : (isDark ? '#5FCF87' : '#203020'),
+                color: taskScope === 'all' ? '#fff' : (isDark ? '#16C47F' : '#203020'),
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: 2,
                 height: 36,
                 '&:hover': {
-                  bgcolor: taskScope === 'all' ? '#2A402A' : (isDark ? 'rgba(95,207,135,0.08)' : 'rgba(32,48,32,0.08)'),
-                  borderColor: isDark ? '#5FCF87' : '#203020',
+                  bgcolor: taskScope === 'all' ? '#2A402A' : (isDark ? 'rgba(22, 196, 127,0.08)' : 'rgba(32,48,32,0.08)'),
+                  borderColor: isDark ? '#16C47F' : '#203020',
                 },
               }}
             >
@@ -279,8 +279,8 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
                 minHeight: 40,
                 color: 'text.secondary',
               },
-              '& .Mui-selected': { color: isDark ? '#5FCF87' : '#203020' },
-              '& .MuiTabs-indicator': { bgcolor: isDark ? '#5FCF87' : '#203020', height: 3 },
+              '& .Mui-selected': { color: isDark ? '#16C47F' : '#203020' },
+              '& .MuiTabs-indicator': { bgcolor: isDark ? '#16C47F' : '#203020', height: 3 },
             }}
           >
             <Tab value="list" label="List View" icon={<List size={16} />} iconPosition="start" />
@@ -333,7 +333,7 @@ export default function TasksPage({ defaultView = 'list', defaultScope = 'all' }
       {/* Main Content View Container */}
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress size={40} sx={{ color: isDark ? '#5FCF87' : '#203020' }} />
+          <CircularProgress size={40} sx={{ color: isDark ? '#16C47F' : '#203020' }} />
         </Box>
       ) : isError ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>

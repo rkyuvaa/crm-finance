@@ -67,7 +67,7 @@ export default function TaskCalendarView({ tasks, onOpenTaskDetail }: TaskCalend
       {/* Header Controls */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <CalendarIcon size={20} color={theme.palette.mode === 'dark' ? '#5FCF87' : '#203020'} />
+          <CalendarIcon size={20} color={theme.palette.mode === 'dark' ? '#16C47F' : '#203020'} />
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
             {monthNames[month]} {year}
           </Typography>

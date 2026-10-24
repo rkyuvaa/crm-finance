@@ -285,7 +285,7 @@ export default function LeadDetailPage() {
                 fontSize: 11.5,
                 fontWeight: 700,
                 background: '#F0F4EE',
-                color: '#087A3D',
+                color: '#16C47F',
                 border: '1px solid #C2E2BE',
                 boxShadow: '0 1px 2px rgba(2, 48, 32, 0.06)',
                 whiteSpace: 'nowrap',
@@ -296,7 +296,7 @@ export default function LeadDetailPage() {
                   width: 7,
                   height: 7,
                   borderRadius: '50%',
-                  background: '#087A3D',
+                  background: '#16C47F',
                   boxShadow: '0 0 0 2.5px #E6F3EA, 0 0 6px rgba(8, 122, 61, 0.5)',
                   flexShrink: 0,
                 }}
@@ -496,7 +496,7 @@ export default function LeadDetailPage() {
                     style={{
                       fontSize: 16,
                       fontWeight: 800,
-                      color: '#087A3D',
+                      color: '#16C47F',
                       background: '#FFFFFF',
                       padding: '4px 12px',
                       borderRadius: '6px',
@@ -634,9 +634,9 @@ export default function LeadDetailPage() {
                           <Button
                             size="small"
                             variant="text"
-                            startIcon={<CheckCircle2 size={14} color="#087A3D" />}
+                            startIcon={<CheckCircle2 size={14} color="#16C47F" />}
                             onClick={() => markCompleted(act.id)}
-                            sx={{ textTransform: 'none', fontSize: 11, color: '#087A3D', p: 0 }}
+                            sx={{ textTransform: 'none', fontSize: 11, color: '#16C47F', p: 0 }}
                           >
                             Complete
                           </Button>
@@ -695,7 +695,7 @@ export default function LeadDetailPage() {
                         )}
                         {log.old_value && log.new_value && <span style={{ margin: '0 6px' }}>&rarr;</span>}
                         {log.new_value && (
-                          <span style={{ color: '#087A3D', fontWeight: 600 }}>{log.new_value}</span>
+                          <span style={{ color: '#16C47F', fontWeight: 600 }}>{log.new_value}</span>
                         )}
                       </div>
                       {log.actor_name && (

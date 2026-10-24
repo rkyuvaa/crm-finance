@@ -428,10 +428,10 @@ export default function EmployeeMaster() {
             sx={{
               textTransform: 'none',
               fontWeight: 600,
-              bgcolor: '#087A3D',
+              bgcolor: '#16C47F',
               borderRadius: 2,
               px: 2.5,
-              '&:hover': { bgcolor: '#066231' },
+              '&:hover': { bgcolor: '#12A66C' },
             }}
           >
             Add Employee
@@ -477,14 +477,14 @@ export default function EmployeeMaster() {
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 1.5,
-            border: '1px solid #087A3D',
+            border: '1px solid #16C47F',
           }}
         >
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Chip
               label={`${selectedEmpIds.length} Selected`}
               size="small"
-              sx={{ bgcolor: '#087A3D', color: '#FFF', fontWeight: 700, fontSize: 12 }}
+              sx={{ bgcolor: '#16C47F', color: '#FFF', fontWeight: 700, fontSize: 12 }}
             />
             <Button
               size="small"
@@ -595,7 +595,7 @@ export default function EmployeeMaster() {
                 fontWeight: 600,
                 fontSize: 12.5,
                 bgcolor: '#233827',
-                '&:hover': { bgcolor: '#2C442E', borderColor: '#087A3D' },
+                '&:hover': { bgcolor: '#2C442E', borderColor: '#16C47F' },
               }}
             >
               Export Selected
@@ -636,7 +636,7 @@ export default function EmployeeMaster() {
                   }
                   onChange={handleSelectAll}
                   size="small"
-                  sx={{ color: '#64748b', '&.Mui-checked': { color: '#087A3D' }, '&.MuiCheckbox-indeterminate': { color: '#087A3D' } }}
+                  sx={{ color: '#64748b', '&.Mui-checked': { color: '#16C47F' }, '&.MuiCheckbox-indeterminate': { color: '#16C47F' } }}
                 />
               </TableCell>
               <ErpSortHeaderCell variant="mui" field="emp_id" label="EMP ID" sortState={sortState} onSort={handleSort} sx={{ fontSize: 12, color: '#475569' }} />
@@ -664,10 +664,10 @@ export default function EmployeeMaster() {
                       checked={selectedEmpIds.includes(emp.id)}
                       onChange={() => handleSelectOne(emp.id)}
                       size="small"
-                      sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#087A3D' } }}
+                      sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#16C47F' } }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: '#087A3D', fontSize: 13 }}>
+                  <TableCell sx={{ fontWeight: 700, color: '#16C47F', fontSize: 13 }}>
                     {emp.emp_id}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#0f172a', fontSize: 13.5 }}>
@@ -703,7 +703,7 @@ export default function EmployeeMaster() {
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.5} justifyContent="center">
                       <Tooltip title="Edit Employee">
-                        <IconButton size="small" onClick={() => handleOpenEdit(emp)} sx={{ color: '#64748b', '&:hover': { color: '#087A3D', bgcolor: '#f0fdf4' } }}>
+                        <IconButton size="small" onClick={() => handleOpenEdit(emp)} sx={{ color: '#64748b', '&:hover': { color: '#16C47F', bgcolor: '#f0fdf4' } }}>
                           <Edit2 size={16} />
                         </IconButton>
                       </Tooltip>
@@ -958,7 +958,7 @@ export default function EmployeeMaster() {
           <Button
             onClick={handleSaveEmployee}
             variant="contained"
-            sx={{ bgcolor: '#087A3D', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#066231' } }}
+            sx={{ bgcolor: '#16C47F', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: '#12A66C' } }}
           >
             {editingId ? 'Save Changes' : 'Add Employee'}
           </Button>

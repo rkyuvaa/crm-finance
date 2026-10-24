@@ -185,7 +185,7 @@ export default function PlmPage() {
     Concept: { bg: '#EFF6FF', color: '#2563EB' },
     Prototype: { bg: '#F3E8FF', color: '#7C3AED' },
     Testing: { bg: '#FEF3C7', color: '#D97706' },
-    'Mass Production': { bg: '#EAF6E8', color: '#087A3D' },
+    'Mass Production': { bg: '#EAF6E8', color: '#16C47F' },
     'Phase Out': { bg: '#FFE4E6', color: '#E11D48' },
   };
 
@@ -193,7 +193,7 @@ export default function PlmPage() {
     Draft: { bg: '#F3F4F6', color: '#4B5563' },
     'Under Review': { bg: '#FEF3C7', color: '#D97706' },
     Approved: { bg: '#EFF6FF', color: '#2563EB' },
-    Implemented: { bg: '#EAF6E8', color: '#087A3D' },
+    Implemented: { bg: '#EAF6E8', color: '#16C47F' },
   };
 
   const filteredModels = models.filter(
@@ -230,7 +230,7 @@ export default function PlmPage() {
           variant="outlined"
           startIcon={<GitBranch size={16} />}
           onClick={() => setOpenNewEco(true)}
-          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, borderColor: '#087A3D', color: '#087A3D' }}
+          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, borderColor: '#16C47F', color: '#16C47F' }}
         >
           Raise ECO Request
         </Button>
@@ -238,7 +238,7 @@ export default function PlmPage() {
           variant="contained"
           startIcon={<Plus size={16} />}
           onClick={() => setOpenNewModel(true)}
-          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, backgroundColor: '#087A3D', '&:hover': { backgroundColor: '#023020' } }}
+          sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, backgroundColor: '#16C47F', '&:hover': { backgroundColor: '#023020' } }}
         >
           Add New Vehicle Model
         </Button>
@@ -252,12 +252,12 @@ export default function PlmPage() {
               <Typography variant="caption" sx={{ fontWeight: 700, color: '#7A8B80', textTransform: 'uppercase' }}>
                 Active Vehicle Models
               </Typography>
-              <Cpu size={20} color="#087A3D" />
+              <Cpu size={20} color="#16C47F" />
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 800, color: '#023020' }}>
               {models.length} Models
             </Typography>
-            <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 600 }}>
+            <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 600 }}>
               1 in Mass Production
             </Typography>
           </Paper>
@@ -344,11 +344,11 @@ export default function PlmPage() {
             const stTheme = stageColors[mod.stage];
             return (
               <Grid item xs={12} md={4} key={mod.id}>
-                <Card sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', boxShadow: 'none', transition: 'all 0.2s', '&:hover': { borderColor: '#087A3D', boxShadow: '0 4px 14px rgba(8,122,61,0.08)' } }}>
+                <Card sx={{ border: '1px solid #E4EBE1', borderRadius: '14px', boxShadow: 'none', transition: 'all 0.2s', '&:hover': { borderColor: '#16C47F', boxShadow: '0 4px 14px rgba(8,122,61,0.08)' } }}>
                   <CardContent sx={{ p: 2.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                       <div>
-                        <Chip label={mod.code} size="small" sx={{ fontWeight: 800, fontSize: 11, background: '#EAF6E8', color: '#087A3D', mb: 0.5 }} />
+                        <Chip label={mod.code} size="small" sx={{ fontWeight: 800, fontSize: 11, background: '#EAF6E8', color: '#16C47F', mb: 0.5 }} />
                         <Typography variant="h6" sx={{ fontWeight: 800, color: '#023020', fontSize: 16 }}>
                           {mod.name}
                         </Typography>
@@ -383,7 +383,7 @@ export default function PlmPage() {
                       <Typography variant="caption" sx={{ color: '#44584C', fontWeight: 600 }}>
                         BOM Parts: <strong>{mod.bomComponentsCount} items</strong>
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#087A3D', fontWeight: 800 }}>
+                      <Typography variant="caption" sx={{ color: '#16C47F', fontWeight: 800 }}>
                         Est. Cost: {mod.unitCostEst}
                       </Typography>
                     </Box>
@@ -414,7 +414,7 @@ export default function PlmPage() {
               <TableBody>
                 {sortedBoms.map((b) => (
                   <TableRow key={b.id} hover>
-                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace', color: '#087A3D' }}>{b.partNo}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace', color: '#16C47F' }}>{b.partNo}</TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#16231B' }}>{b.name}</TableCell>
                     <TableCell><Chip label={b.category} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} /></TableCell>
                     <TableCell sx={{ color: '#44584C' }}>{b.supplier}</TableCell>
@@ -427,7 +427,7 @@ export default function PlmPage() {
                         sx={{
                           fontWeight: 700,
                           background: b.compliance === 'Certified' ? '#EAF6E8' : '#FEF3C7',
-                          color: b.compliance === 'Certified' ? '#087A3D' : '#D97706',
+                          color: b.compliance === 'Certified' ? '#16C47F' : '#D97706',
                         }}
                       />
                     </TableCell>
@@ -459,9 +459,9 @@ export default function PlmPage() {
                   const ecoSt = ecoStatusColors[eco.status];
                   return (
                     <TableRow key={eco.id} hover>
-                      <TableCell sx={{ fontWeight: 800, fontFamily: 'monospace', color: '#087A3D' }}>{eco.id}</TableCell>
+                      <TableCell sx={{ fontWeight: 800, fontFamily: 'monospace', color: '#16C47F' }}>{eco.id}</TableCell>
                       <TableCell sx={{ fontWeight: 700, color: '#16231B' }}>{eco.title}</TableCell>
-                      <TableCell><Chip label={eco.modelCode} size="small" sx={{ fontWeight: 700, background: '#EAF6E8', color: '#087A3D' }} /></TableCell>
+                      <TableCell><Chip label={eco.modelCode} size="small" sx={{ fontWeight: 700, background: '#EAF6E8', color: '#16C47F' }} /></TableCell>
                       <TableCell>
                         <Chip
                           label={eco.priority}
@@ -547,7 +547,7 @@ export default function PlmPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setOpenNewModel(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateModel} sx={{ backgroundColor: '#087A3D', '&:hover': { backgroundColor: '#023020' } }}>
+          <Button variant="contained" onClick={handleCreateModel} sx={{ backgroundColor: '#16C47F', '&:hover': { backgroundColor: '#023020' } }}>
             Add Model
           </Button>
         </DialogActions>
@@ -601,7 +601,7 @@ export default function PlmPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setOpenNewEco(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateEco} sx={{ backgroundColor: '#087A3D', '&:hover': { backgroundColor: '#023020' } }}>
+          <Button variant="contained" onClick={handleCreateEco} sx={{ backgroundColor: '#16C47F', '&:hover': { backgroundColor: '#023020' } }}>
             Submit ECO
           </Button>
         </DialogActions>

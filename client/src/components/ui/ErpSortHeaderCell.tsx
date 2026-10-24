@@ -50,10 +50,10 @@ export const ErpSortHeaderCell: React.FC<ErpSortHeaderCellProps> = ({
     if (!sortable || !field) return null;
 
     if (direction === 'asc') {
-      return <ArrowUp size={14} style={{ color: '#087A3D', strokeWidth: 2.5, flexShrink: 0 }} />;
+      return <ArrowUp size={14} style={{ color: '#16C47F', strokeWidth: 2.5, flexShrink: 0 }} />;
     }
     if (direction === 'desc') {
-      return <ArrowDown size={14} style={{ color: '#087A3D', strokeWidth: 2.5, flexShrink: 0 }} />;
+      return <ArrowDown size={14} style={{ color: '#16C47F', strokeWidth: 2.5, flexShrink: 0 }} />;
     }
 
     // Inactive / default state: show ChevronsUpDown icon (↕) softly on hover or neutral
@@ -61,7 +61,7 @@ export const ErpSortHeaderCell: React.FC<ErpSortHeaderCellProps> = ({
       <ChevronsUpDown
         size={14}
         style={{
-          color: isHovered ? '#087A3D' : '#94A3B8',
+          color: isHovered ? '#16C47F' : '#94A3B8',
           opacity: isHovered ? 0.9 : 0.45,
           transition: 'opacity 0.15s ease, color 0.15s ease',
           flexShrink: 0,
@@ -96,7 +96,7 @@ export const ErpSortHeaderCell: React.FC<ErpSortHeaderCellProps> = ({
         title={getTooltip()}
         sx={{
           fontWeight: 700,
-          color: isActive ? '#087A3D' : '#44584C',
+          color: isActive ? '#16C47F' : '#44584C',
           cursor: sortable && field ? 'pointer' : 'default',
           transition: 'background 0.15s ease, color 0.15s ease',
           '&:hover': sortable && field ? { bgcolor: 'rgba(8, 122, 61, 0.04)' } : {},
@@ -120,7 +120,7 @@ export const ErpSortHeaderCell: React.FC<ErpSortHeaderCellProps> = ({
         background: isActive ? 'var(--primary-light, rgba(8, 122, 61, 0.08))' : 'var(--primary-lighter, #F8FAF8)',
         fontSize: 10,
         fontWeight: 700,
-        color: isActive ? '#087A3D' : 'var(--text-muted, #64748B)',
+        color: isActive ? '#16C47F' : 'var(--text-muted, #64748B)',
         textTransform: 'uppercase',
         letterSpacing: 0.6,
         textAlign: align,

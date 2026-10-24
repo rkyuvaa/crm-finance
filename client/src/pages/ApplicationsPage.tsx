@@ -146,12 +146,12 @@ export default function ApplicationsPage() {
                 flex: 1,
                 padding: '10px 14px',
                 border: 'none',
-                background: tab === t.key ? '#087A3D' : 'transparent',
+                background: tab === t.key ? '#16C47F' : 'transparent',
                 color: tab === t.key ? '#fff' : '#7A8B80',
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: 'pointer',
-                borderBottom: tab === t.key ? '2px solid #087A3D' : 'transparent',
+                borderBottom: tab === t.key ? '2px solid #16C47F' : 'transparent',
               }}
             >
               {t.label} ({tabs[t.key as keyof typeof tabs] ?? 0})

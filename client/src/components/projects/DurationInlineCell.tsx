@@ -97,7 +97,7 @@ export default function DurationInlineCell({ task, onUpdate, disabled = false }:
   const tTokens = {
     inputBgHover: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
     inputBgFocus: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
-    inputBorderFocus: isDark ? '#5FCF87' : '#203020',
+    inputBorderFocus: isDark ? '#16C47F' : '#203020',
   };
 
   const initialDays = task.duration_working_days !== undefined && task.duration_working_days !== null

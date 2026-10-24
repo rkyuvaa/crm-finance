@@ -295,7 +295,7 @@ export default function DynamicFieldEngine({
                     <Paper sx={{ p: 1.5, border: '1px solid #C9E0C6', background: '#F8FAF8', borderRadius: 2, minWidth: 0, overflow: 'hidden' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: '1 1 180px', overflow: 'hidden' }}>
-                          <FileText size={18} color="#087A3D" style={{ flexShrink: 0 }} />
+                          <FileText size={18} color="#16C47F" style={{ flexShrink: 0 }} />
                           <div style={{ minWidth: 0, overflow: 'hidden' }}>
                             <div style={{ fontSize: 12.5, fontWeight: 700, color: '#16231B', wordBreak: 'break-all' }}>{fileMeta.file_name}</div>
                             <div style={{ fontSize: 10.5, color: '#7A8B80' }}>

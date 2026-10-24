@@ -166,7 +166,7 @@ export default function RecentApplications() {
                 padding: '10px 14px',
                 fontSize: 13,
                 fontWeight: 600,
-                color: tab === key ? '#087A3D' : '#7A8B80',
+                color: tab === key ? '#16C47F' : '#7A8B80',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -181,7 +181,7 @@ export default function RecentApplications() {
                     bottom: -1,
                     height: 2,
                     borderRadius: '2px 2px 0 0',
-                    background: '#087A3D',
+                    background: '#16C47F',
                   }}
                 />
               )}
@@ -491,7 +491,7 @@ function pageBtnStyle(disabled: boolean, active = false): React.CSSProperties {
     height: 32,
     padding: '0 9px',
     border: '1px solid #E4EBE1',
-    background: active ? '#087A3D' : '#fff',
+    background: active ? '#16C47F' : '#fff',
     color: active ? '#fff' : '#44584C',
     borderRadius: 8,
     fontSize: 12.5,

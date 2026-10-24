@@ -227,7 +227,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
             size="small"
             startIcon={<Plus size={16} />}
             onClick={() => setCreateOpen(true)}
-            sx={{ color: isDark ? '#5FCF87' : '#203020', borderColor: isDark ? '#5FCF87' : '#203020', textTransform: 'none', fontWeight: 600 }}
+            sx={{ color: isDark ? '#16C47F' : '#203020', borderColor: isDark ? '#16C47F' : '#203020', textTransform: 'none', fontWeight: 600 }}
           >
             Create First Milestone
           </Button>
@@ -270,7 +270,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                     <IconButton size="small" onClick={() => toggleExpand(m.id)}>
                       {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </IconButton>
-                    <Flag size={20} color={isDark ? '#5FCF87' : '#203020'} fill={isDark ? '#5FCF87' : '#203020'} />
+                    <Flag size={20} color={isDark ? '#16C47F' : '#203020'} fill={isDark ? '#16C47F' : '#203020'} />
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -297,7 +297,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem' }}>
                           Progress
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: isDark ? '#5FCF87' : '#203020', fontSize: '0.75rem' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: isDark ? '#16C47F' : '#203020', fontSize: '0.75rem' }}>
                           {progressPct}%
                         </Typography>
                       </Box>
@@ -309,7 +309,7 @@ export default function ProjectMilestonesList({ projectId }: ProjectMilestonesLi
                           borderRadius: 4,
                           bgcolor: isDark ? '#262E36' : '#E2E8F0',
                           '& .MuiLinearProgress-bar': {
-                            bgcolor: isDark ? '#5FCF87' : '#203020',
+                            bgcolor: isDark ? '#16C47F' : '#203020',
                             borderRadius: 4,
                           },
                         }}

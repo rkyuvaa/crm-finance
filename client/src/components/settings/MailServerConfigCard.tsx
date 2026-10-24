@@ -165,7 +165,7 @@ export default function MailServerConfigCard() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
         <div>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Server size={20} color="#087A3D" />
+            <Server size={20} color="#16C47F" />
             <Typography variant="h6" sx={{ fontWeight: 800, color: '#023020' }}>
               Mail Server Configuration (SMTP)
             </Typography>
@@ -183,14 +183,14 @@ export default function MailServerConfigCard() {
               color="success"
             />
           }
-          label={<span style={{ fontWeight: 700, fontSize: 13, color: isEnabled ? '#087A3D' : '#7A8B80' }}>{isEnabled ? 'Mail Service Enabled' : 'Service Disabled'}</span>}
+          label={<span style={{ fontWeight: 700, fontSize: 13, color: isEnabled ? '#16C47F' : '#7A8B80' }}>{isEnabled ? 'Mail Service Enabled' : 'Service Disabled'}</span>}
         />
       </Box>
 
       {/* Quick Provider Presets */}
       <Box sx={{ mb: 2.5, p: 2, backgroundColor: '#F8FAF7', borderRadius: '10px', border: '1px solid #E4EBE1' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Zap size={14} color="#087A3D" />
+          <Zap size={14} color="#16C47F" />
           <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#023020', textTransform: 'uppercase' }}>
             Quick Presets (1-Click Provider Setup)
           </Typography>
@@ -231,7 +231,7 @@ export default function MailServerConfigCard() {
 
       {hostVal?.toLowerCase().includes('gmail') ? (
         <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
-          <strong>Google Gmail Setup:</strong> Google requires a 16-character <strong>App Password</strong> (normal login passwords will fail with 535 error). Turn on 2-Step Verification on your Google account and generate an App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>myaccount.google.com/apppasswords</a>.
+          <strong>Google Gmail Setup:</strong> Google requires a 16-character <strong>App Password</strong> (normal login passwords will fail with 535 error). Turn on 2-Step Verification on your Google account and generate an App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#16C47F' }}>myaccount.google.com/apppasswords</a>.
         </Alert>
       ) : hostVal?.toLowerCase().includes('zoho') ? (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
@@ -241,7 +241,7 @@ export default function MailServerConfigCard() {
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
           <strong>Microsoft 365 / Outlook Setup:</strong><br />
           • <strong>Business / Work Account:</strong> Host <code>smtp.office365.com</code>, Port <code>587</code> (TLS). Ensure <em>Authenticated SMTP</em> is enabled for your mailbox in M365 Admin Center.<br />
-          • <strong>Personal Outlook (@outlook.com / @hotmail.com):</strong> Host <code>smtp-mail.outlook.com</code>, Port <code>587</code> (TLS). If 2FA is enabled on your Microsoft Account, generate an App Password at <a href="https://account.live.com/proofs/AppPassword" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#087A3D' }}>account.live.com/proofs/AppPassword</a>.
+          • <strong>Personal Outlook (@outlook.com / @hotmail.com):</strong> Host <code>smtp-mail.outlook.com</code>, Port <code>587</code> (TLS). If 2FA is enabled on your Microsoft Account, generate an App Password at <a href="https://account.live.com/proofs/AppPassword" target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: '#16C47F' }}>account.live.com/proofs/AppPassword</a>.
         </Alert>
       ) : (
         <Alert severity="info" sx={{ mb: 2.5, borderRadius: '10px', '& .MuiAlert-message': { fontSize: 13, lineHeight: 1.5 } }}>
@@ -344,8 +344,8 @@ export default function MailServerConfigCard() {
             }}
             startIcon={<Send size={16} />}
             sx={{
-              borderColor: '#087A3D',
-              color: '#087A3D',
+              borderColor: '#16C47F',
+              color: '#16C47F',
               '&:hover': { borderColor: '#023020', backgroundColor: '#EAF6E8' },
               fontWeight: 700,
               textTransform: 'none',
@@ -376,7 +376,7 @@ export default function MailServerConfigCard() {
       {/* Test Connection Modal */}
       <Dialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 800, color: '#023020' }}>
-          <Mail size={22} color="#087A3D" />
+          <Mail size={22} color="#16C47F" />
           Send Test Email
         </DialogTitle>
         <DialogContent>
@@ -400,7 +400,7 @@ export default function MailServerConfigCard() {
             >
               {testResult.message}
               {testResult.success && (
-                <Typography variant="caption" sx={{ display: 'block', mt: 1, fontWeight: 700, color: '#087A3D' }}>
+                <Typography variant="caption" sx={{ display: 'block', mt: 1, fontWeight: 700, color: '#16C47F' }}>
                   📌 Note: Click "Save Mail Server Settings" at the bottom of the page so your lead document emails use these credentials!
                 </Typography>
               )}
@@ -417,7 +417,7 @@ export default function MailServerConfigCard() {
             disabled={isTesting}
             startIcon={isTesting ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
             sx={{
-              backgroundColor: '#087A3D',
+              backgroundColor: '#16C47F',
               '&:hover': { backgroundColor: '#023020' },
               fontWeight: 700,
               textTransform: 'none',

@@ -364,7 +364,7 @@ export default function StageAutomovePanel() {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Zap size={18} color="#087A3D" />
+              <Zap size={18} color="#16C47F" />
               <span style={{ fontSize: 14, fontWeight: 700, color: '#16231B' }}>
                 Stage Auto-Move Rules
               </span>

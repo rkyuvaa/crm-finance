@@ -124,7 +124,7 @@ export default function RoleManagementPage() {
             alignItems: 'center',
             gap: 8,
             padding: '10px 18px',
-            background: '#087A3D',
+            background: '#16C47F',
             color: '#FFFFFF',
             borderRadius: 10,
             fontWeight: 700,
@@ -170,7 +170,7 @@ export default function RoleManagementPage() {
                 <tr key={r.id} style={{ borderBottom: '1px solid #F0F4F0' }}>
                   <td style={{ padding: '12px 16px', fontWeight: 700, color: '#023020' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Shield size={16} color="#087A3D" /> {r.name}
+                      <Shield size={16} color="#16C47F" /> {r.name}
                       {r.is_system && (
                         <span style={{ fontSize: 10, padding: '2px 6px', background: '#FEF3C7', color: '#B45309', borderRadius: 4, fontWeight: 700 }}>
                           SYSTEM
@@ -203,7 +203,7 @@ export default function RoleManagementPage() {
                           setDuplicateRoleId(r.id);
                           setDupForm({ new_name: `${r.name} (Copy)`, new_code: `${r.code}_copy`, description: r.description || '' });
                         }}
-                        style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#087A3D' }}
+                        style={{ padding: 6, borderRadius: 6, border: '1px solid #D8E2D5', background: '#FFF', cursor: 'pointer', color: '#16C47F' }}
                       >
                         <Copy size={15} />
                       </button>
@@ -282,7 +282,7 @@ export default function RoleManagementPage() {
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: '#023020', margin: 0 }}>Dynamic Permission Matrix</h3>
-                  <span style={{ fontSize: 12, color: '#087A3D', fontWeight: 700 }}>
+                  <span style={{ fontSize: 12, color: '#16C47F', fontWeight: 700 }}>
                     {selectedPermIds.length} Permissions Selected
                   </span>
                 </div>
@@ -308,7 +308,7 @@ export default function RoleManagementPage() {
                                       checked={isChecked}
                                       onChange={() => permId && togglePermission(permId)}
                                     />
-                                    <span style={{ fontWeight: isChecked ? 700 : 500, color: isChecked ? '#087A3D' : '#4B5563' }}>{act.name}</span>
+                                    <span style={{ fontWeight: isChecked ? 700 : 500, color: isChecked ? '#16C47F' : '#4B5563' }}>{act.name}</span>
                                   </label>
                                 );
                               })}
@@ -325,7 +325,7 @@ export default function RoleManagementPage() {
                 <button type="button" onClick={() => { setIsCreateOpen(false); setEditingRole(null); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Save Role
                 </button>
               </div>
@@ -364,7 +364,7 @@ export default function RoleManagementPage() {
                 <button type="button" onClick={() => setDuplicateRoleId(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E2D5', background: '#FFF' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#087A3D', color: '#FFF', fontWeight: 700, border: 'none' }}>
+                <button type="submit" style={{ padding: '8px 20px', borderRadius: 8, background: '#16C47F', color: '#FFF', fontWeight: 700, border: 'none' }}>
                   Duplicate
                 </button>
               </div>

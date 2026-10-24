@@ -70,7 +70,7 @@ export default function DashboardPage() {
                 <KpiCard
                   icon={<LayoutGrid size={20} />}
                   iconBg="#E6F3EA"
-                  iconColor="#087A3D"
+                  iconColor="#16C47F"
                   label="Total Applications"
                   value={data?.kpis.total_applications.value ?? 0}
                   sub={data?.kpis.total_applications.sub ?? ''}
@@ -222,7 +222,7 @@ const linkStyle: React.CSSProperties = {
   gap: 4,
   fontSize: 12,
   fontWeight: 600,
-  color: '#087A3D',
+  color: '#16C47F',
   background: 'none',
   border: 'none',
   padding: 4,

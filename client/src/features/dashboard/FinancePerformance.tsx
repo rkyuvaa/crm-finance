@@ -3,7 +3,7 @@ import { BarChart3 } from 'lucide-react';
 import { useDashboardQuery } from '@/api/dashboardApi';
 import EmptyState from '@/components/ui/EmptyState';
 
-const BAR_COLORS = ['#087A3D', '#2563EB', '#D97706'];
+const BAR_COLORS = ['#16C47F', '#2563EB', '#D97706'];
 
 export default function FinancePerformance() {
   const { data } = useDashboardQuery();
@@ -39,7 +39,7 @@ export default function FinancePerformance() {
             gap: 8,
           }}
         >
-          <BarChart3 size={15} color="#087A3D" />
+          <BarChart3 size={15} color="#16C47F" />
           Finance Company Performance
         </span>
         <span style={{ fontSize: 11, color: '#7A8B80', fontWeight: 500 }}>This month</span>
@@ -79,7 +79,7 @@ export default function FinancePerformance() {
                     {c.name}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 12.5 }}>{c.total_apps}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#087A3D', fontWeight: 600 }}>
+                  <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#16C47F', fontWeight: 600 }}>
                     {c.approved}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#DC2626' }}>{c.rejected}</td>

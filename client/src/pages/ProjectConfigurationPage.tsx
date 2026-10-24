@@ -510,7 +510,7 @@ export default function ProjectConfigurationPage() {
                 px: 2.5,
                 '&.Mui-selected': { color: 'primary.main', fontWeight: 700 },
               },
-              '& .MuiTabs-indicator': { backgroundColor: isDark ? '#5FCF87' : '#203020', height: 3 },
+              '& .MuiTabs-indicator': { backgroundColor: isDark ? '#16C47F' : '#203020', height: 3 },
             }}
           >
             <Tab icon={<Sliders size={15} />} iconPosition="start" label="1. Workflow Statuses" />
@@ -1031,7 +1031,7 @@ export default function ProjectConfigurationPage() {
                           }}
                           variant="outlined"
                           size="small"
-                          sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: isDark ? '#5FCF87' : '#203020', color: isDark ? '#5FCF87' : '#203020' }}
+                          sx={{ fontWeight: 600, fontSize: 12, bgcolor: 'background.paper', borderColor: isDark ? '#16C47F' : '#203020', color: isDark ? '#16C47F' : '#203020' }}
                         />
                       ))}
                     </Box>
@@ -1120,7 +1120,7 @@ export default function ProjectConfigurationPage() {
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Zap size={20} color={isDark ? '#5FCF87' : '#203020'} />
+                      <Zap size={20} color={isDark ? '#16C47F' : '#203020'} />
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                           {rule.trigger}

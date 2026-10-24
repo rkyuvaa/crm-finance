@@ -62,7 +62,7 @@ export default function WaitingOn() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: "'SF Mono', 'Consolas', monospace", fontSize: 11.5, fontWeight: 700, color: '#087A3D' }}>
+              <div style={{ fontFamily: "'SF Mono', 'Consolas', monospace", fontSize: 11.5, fontWeight: 700, color: '#16C47F' }}>
                 {item.app_no}
               </div>
               <div style={{ fontSize: 12, color: '#44584C', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -93,7 +93,7 @@ export default function WaitingOn() {
             gap: 4,
             fontSize: 12,
             fontWeight: 600,
-            color: '#087A3D',
+            color: '#16C47F',
             background: 'none',
             border: 'none',
             padding: '10px 16px',

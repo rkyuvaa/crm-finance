@@ -94,7 +94,7 @@ export default function NotificationsPage() {
                     height: 34,
                     borderRadius: '50%',
                     background: n.is_read ? '#EEF1EE' : '#E6F3EA',
-                    color: n.is_read ? '#6B7A6F' : '#087A3D',
+                    color: n.is_read ? '#6B7A6F' : '#16C47F',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

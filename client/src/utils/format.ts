@@ -13,10 +13,10 @@ const STATUS_META: Record<ApplicationStatus, StatusMeta> = {
   VERIFICATION: { label: 'Verification', bg: '#EAF1FD', color: '#2563EB', dot: '#2563EB' },
   FINANCE: { label: 'Processing', bg: '#EAF1FD', color: '#2563EB', dot: '#2563EB' },
   QUERY: { label: 'Query', bg: '#FCE9DE', color: '#C2410C', dot: '#C2410C' },
-  SANCTIONED: { label: 'Sanctioned', bg: '#E6F3EA', color: '#087A3D', dot: '#087A3D' },
+  SANCTIONED: { label: 'Sanctioned', bg: '#E6F3EA', color: '#16C47F', dot: '#16C47F' },
   DELIVERY: { label: 'Delivery', bg: '#F0EAFE', color: '#7C3AED', dot: '#7C3AED' },
   DISBURSEMENT: { label: 'Disbursement', bg: '#FDEBEB', color: '#DC2626', dot: '#DC2626' },
-  COMPLETED: { label: 'Completed', bg: '#E6F3EA', color: '#087A3D', dot: '#087A3D' },
+  COMPLETED: { label: 'Completed', bg: '#E6F3EA', color: '#16C47F', dot: '#16C47F' },
   REJECTED: { label: 'Rejected', bg: '#FDEBEB', color: '#DC2626', dot: '#DC2626' },
 };
 
@@ -25,7 +25,7 @@ export function statusMeta(status: ApplicationStatus): StatusMeta {
 }
 
 const AGING_COLORS: Record<string, string> = {
-  neutral: '#087A3D',
+  neutral: '#16C47F',
   medium: '#D97706',
   high: '#DC2626',
 };

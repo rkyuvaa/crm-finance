@@ -92,7 +92,7 @@ export default function KpiCard({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: subTone === 'up' ? '#087A3D' : '#7A8B80',
+              color: subTone === 'up' ? '#16C47F' : '#7A8B80',
               fontWeight: subTone === 'up' ? 600 : 400,
             }}
           >

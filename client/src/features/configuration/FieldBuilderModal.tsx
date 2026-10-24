@@ -271,7 +271,7 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle sx={{ fontWeight: 800, color: '#023020', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Settings2 size={22} color="#087A3D" />
+          <Settings2 size={22} color="#16C47F" />
           <span>Dynamic Field Builder: {tabName}</span>
         </Box>
         {!isFormOpen && (
@@ -288,7 +288,7 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
               <Typography sx={{ p: 4, textAlign: 'center', color: '#7A8B80' }}>Loading fields...</Typography>
             ) : fields.length === 0 ? (
               <Paper sx={{ p: 6, textAlign: 'center', background: '#F8FAF8', border: '1px dashed #C9E0C6', borderRadius: 3 }}>
-                <Layers size={36} color="#087A3D" style={{ margin: '0 auto 12px' }} />
+                <Layers size={36} color="#16C47F" style={{ margin: '0 auto 12px' }} />
                 <Typography variant="h6" sx={{ fontWeight: 700, color: '#16231B' }}>No Custom Fields Configured</Typography>
                 <Typography variant="body2" sx={{ color: '#7A8B80', mt: 0.5, mb: 2 }}>
                   Click "Add Custom Field" to create dynamic form controls, dropdowns, and file upload fields for this tab.
@@ -311,11 +311,11 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
                         justify: 'space-between',
                         border: '1px solid #E4EBE1',
                         borderRadius: '10px',
-                        '&:hover': { borderColor: '#087A3D', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
+                        '&:hover': { borderColor: '#16C47F', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ p: 1.2, background: '#EAF6E8', borderRadius: 2, color: '#087A3D', display: 'flex' }}>
+                        <Box sx={{ p: 1.2, background: '#EAF6E8', borderRadius: 2, color: '#16C47F', display: 'flex' }}>
                           <IconComp size={20} />
                         </Box>
                         <div>
@@ -397,7 +397,7 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
                             sx={{
                               p: 1.5,
                               cursor: 'pointer',
-                              border: isSel ? '2px solid #087A3D' : '1px solid #E4EBE1',
+                              border: isSel ? '2px solid #16C47F' : '1px solid #E4EBE1',
                               background: isSel ? '#F4F9F2' : '#FFFFFF',
                               borderRadius: 2,
                               display: 'flex',
@@ -405,7 +405,7 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
                               alignItems: 'flex-start',
                             }}
                           >
-                            <IconC size={20} color={isSel ? '#087A3D' : '#7A8B80'} />
+                            <IconC size={20} color={isSel ? '#16C47F' : '#7A8B80'} />
                             <div>
                               <div style={{ fontWeight: 700, fontSize: 13, color: '#16231B' }}>{t.label}</div>
                               <div style={{ fontSize: 11, color: '#7A8B80' }}>{t.desc}</div>
@@ -579,8 +579,8 @@ export default function FieldBuilderModal({ open, tabId, tabName, onClose }: Pro
                   </Select>
                 )}
                 {fieldType === 'file' && (
-                  <Box sx={{ p: 2, border: '1px dashed #087A3D', borderRadius: 2, background: '#FFFFFF', textAlign: 'center' }}>
-                    <Upload size={20} color="#087A3D" style={{ margin: '0 auto 4px' }} />
+                  <Box sx={{ p: 2, border: '1px dashed #16C47F', borderRadius: 2, background: '#FFFFFF', textAlign: 'center' }}>
+                    <Upload size={20} color="#16C47F" style={{ margin: '0 auto 4px' }} />
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: '#16231B' }}>Upload {label || 'File'}</div>
                     <div style={{ fontSize: 10, color: '#7A8B80' }}>Allowed: {allowedExtensions} (Max {maxSizeMb}MB)</div>
                   </Box>

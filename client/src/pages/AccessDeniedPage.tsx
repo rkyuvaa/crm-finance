@@ -65,7 +65,7 @@ export default function AccessDeniedPage() {
           alignItems: 'center',
           gap: 8,
           padding: '10px 20px',
-          background: '#087A3D',
+          background: '#16C47F',
           color: '#FFFFFF',
           borderRadius: 8,
           fontWeight: 700,

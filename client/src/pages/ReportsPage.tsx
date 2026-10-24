@@ -21,14 +21,14 @@ import { PageLoader, ErrorState } from '@/components/ui/PageState';
 
 const STAGE_COLORS: Record<string, string> = {
   leads: '#7A8B80',
-  applications: '#087A3D',
+  applications: '#16C47F',
   verification: '#2563EB',
   finance: '#2563EB',
   query: '#C2410C',
   sanctioned: '#7C3AED',
   delivery: '#7C3AED',
   disburse: '#DC2626',
-  completed: '#087A3D',
+  completed: '#16C47F',
 };
 
 export default function ReportsPage() {
@@ -39,7 +39,7 @@ export default function ReportsPage() {
       (data?.pipeline ?? []).map((s) => ({
         name: s.label,
         value: s.count,
-        color: STAGE_COLORS[s.key] ?? '#087A3D',
+        color: STAGE_COLORS[s.key] ?? '#16C47F',
       })),
     [data],
   );
@@ -95,7 +95,7 @@ export default function ReportsPage() {
               <Tooltip />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                 {(data?.pipeline ?? []).map((s) => (
-                  <Cell key={s.key} fill={STAGE_COLORS[s.key] ?? '#087A3D'} />
+                  <Cell key={s.key} fill={STAGE_COLORS[s.key] ?? '#16C47F'} />
                 ))}
               </Bar>
             </BarChart>
@@ -126,7 +126,7 @@ export default function ReportsPage() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Approved" fill="#087A3D" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="Approved" fill="#16C47F" radius={[6, 6, 0, 0]} />
               <Bar dataKey="Rejected" fill="#DC2626" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -140,7 +140,7 @@ export default function ReportsPage() {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Line type="monotone" dataKey="count" stroke="#087A3D" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="count" stroke="#16C47F" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </Paper>

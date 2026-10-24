@@ -64,7 +64,7 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {isImage ? <ImageIcon size={22} color="#087A3D" /> : <FileText size={22} color="#087A3D" />}
+          {isImage ? <ImageIcon size={22} color="#16C47F" /> : <FileText size={22} color="#16C47F" />}
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#023020' }}>
               {file.field_label || fileName}
@@ -117,7 +117,7 @@ export default function DocumentPreviewDialog({ open, file, onClose }: Props) {
           </Box>
         ) : (
           <Paper sx={{ p: 5, textAlign: 'center', background: '#FFFFFF', border: '1px solid #E4EBE1', borderRadius: '16px', maxWidth: 420 }}>
-            <FileText size={48} color="#087A3D" style={{ margin: '0 auto 16px' }} />
+            <FileText size={48} color="#16C47F" style={{ margin: '0 auto 16px' }} />
             <Typography variant="h6" sx={{ fontWeight: 800, color: '#16231B', mb: 1 }}>
               {fileName}
             </Typography>

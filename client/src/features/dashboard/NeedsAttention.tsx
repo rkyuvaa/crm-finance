@@ -21,7 +21,7 @@ export default function NeedsAttention() {
   if (isError) {
     return (
       <div className="panel">
-        <PanelHead icon={<AlertTriangle size={15} color="#087A3D" />} title="Needs Attention" />
+        <PanelHead icon={<AlertTriangle size={15} color="#16C47F" />} title="Needs Attention" />
         <button onClick={refetch} style={retryStyle}>
           Retry
         </button>
@@ -62,7 +62,7 @@ export default function NeedsAttention() {
             gap: 8,
           }}
         >
-          <AlertTriangle size={15} color="#087A3D" />
+          <AlertTriangle size={15} color="#16C47F" />
           Needs Attention
         </span>
         <span
@@ -139,7 +139,7 @@ export default function NeedsAttention() {
                   gap: 5,
                   fontSize: 11.5,
                   fontWeight: 700,
-                  color: '#087A3D',
+                  color: '#16C47F',
                   background: '#EAF6E8',
                   padding: '4px 9px',
                   border: 'none',
@@ -166,7 +166,7 @@ export default function NeedsAttention() {
             gap: 4,
             fontSize: 12,
             fontWeight: 600,
-            color: '#087A3D',
+            color: '#16C47F',
             background: 'none',
             border: 'none',
             padding: '10px 16px',
