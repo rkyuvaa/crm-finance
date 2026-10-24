@@ -35,9 +35,11 @@ from app.schemas.rbac import (
     DepartmentTreeNode,
     DepartmentUpdate,
     EffectiveAccessSummary,
+    ModuleCreate,
     ModuleOut,
     PaginatedResponse,
     PermissionOut,
+    ResourceCreate,
     ResourceOut,
     RoleCreate,
     RoleDuplicateInput,
@@ -999,6 +1001,104 @@ def get_permissions_registry(
         result.append(mod_dict)
 
     return result
+
+
+@router.post("/modules", response_model=ModuleOut, status_code=201)
+def create_module(
+    payload: ModuleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new system module dynamically."""
+    if not can_user(db, current_user, "create", "permissions"):
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    if db.query(Module).filter(or_(Module.code == payload.code, Module.name == payload.name)).first():
+        raise HTTPException(status_code=400, detail="Module with this code or name already exists")
+
+    mod = Module(
+        name=payload.name,
+        code=payload.code,
+        description=payload.description,
+        display_order=payload.display_order,
+        icon=payload.icon or "Folder",
+        status=PermissionStatus.ACTIVE,
+    )
+    db.add(mod)
+    db.commit()
+    db.refresh(mod)
+    return ModuleOut.model_validate(mod)
+
+
+@router.post("/resources", response_model=ResourceOut, status_code=201)
+def create_resource(
+    payload: ResourceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new resource under a module and automatically generate standard actions and permissions."""
+    if not can_user(db, current_user, "create", "permissions"):
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    mod = db.get(Module, payload.module_id)
+    if not mod:
+        raise HTTPException(status_code=404, detail="Module not found")
+
+    if db.query(Resource).filter(Resource.module_id == mod.id, Resource.code == payload.code).first():
+        raise HTTPException(status_code=400, detail="Resource code already exists in this module")
+
+    res = Resource(
+        module_id=mod.id,
+        name=payload.name,
+        code=payload.code,
+        description=payload.description,
+        display_order=payload.display_order,
+        status=PermissionStatus.ACTIVE,
+    )
+    db.add(res)
+    db.flush()
+
+    standard_actions = [
+        {"name": "View", "code": "view", "display_order": 1},
+        {"name": "Create", "code": "create", "display_order": 2},
+        {"name": "Edit", "code": "edit", "display_order": 3},
+        {"name": "Delete", "code": "delete", "display_order": 4},
+        {"name": "Export", "code": "export", "display_order": 5},
+        {"name": "Import", "code": "import", "display_order": 6},
+        {"name": "Approve", "code": "approve", "display_order": 7},
+    ]
+
+    admin_roles = db.query(Role).filter(Role.code.in_(["super_admin", "admin"])).all()
+
+    for a in standard_actions:
+        act = Action(
+            resource_id=res.id,
+            name=a["name"],
+            code=a["code"],
+            display_order=a["display_order"],
+            status=PermissionStatus.ACTIVE,
+        )
+        db.add(act)
+        db.flush()
+
+        perm_code = f"{mod.code}:{res.code}:{act.code}"
+        perm = Permission(
+            module_id=mod.id,
+            resource_id=res.id,
+            action_id=act.id,
+            code=perm_code,
+            description=f"{act.name} permission on {res.name}",
+            status=PermissionStatus.ACTIVE,
+        )
+        db.add(perm)
+        db.flush()
+
+        for r in admin_roles:
+            db.add(RolePermission(role_id=r.id, permission_id=perm.id, granted=True))
+
+    db.commit()
+    db.refresh(res)
+    return ResourceOut.model_validate(res)
 
 
 @router.post("/permissions/custom-action", response_model=ActionOut, status_code=201)

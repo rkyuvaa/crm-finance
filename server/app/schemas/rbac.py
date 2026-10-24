@@ -99,6 +99,22 @@ class PermissionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ModuleCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    code: str = Field(..., min_length=2, max_length=50)
+    description: str | None = None
+    display_order: int = 0
+    icon: str | None = None
+
+
+class ResourceCreate(BaseModel):
+    module_id: int
+    name: str = Field(..., min_length=2, max_length=100)
+    code: str = Field(..., min_length=2, max_length=50)
+    description: str | None = None
+    display_order: int = 0
+
+
 class CustomPermissionCreate(BaseModel):
     resource_id: int
     action_name: str = Field(..., min_length=2, max_length=50)

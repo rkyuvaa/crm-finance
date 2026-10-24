@@ -150,6 +150,22 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
       return can('view', 'leads') || can('view', 'opportunities') || can('view', 'crm_dashboard');
     }
 
+    // Dynamic framework fallback: match path segments against dynamic permissions matrix
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const topSegment = segments[0];
+      const subSegment = segments[1];
+
+      if (subSegment) {
+        const compositeKey = `${topSegment}_${subSegment}`;
+        if (can('view', compositeKey)) return true;
+        if (can('view', subSegment)) return true;
+      }
+
+      if (can('view', topSegment)) return true;
+      if (can('view', topSegment.replace(/-/g, '_'))) return true;
+    }
+
     return false;
   };
 
@@ -168,6 +184,16 @@ export const AuthPermissionProvider: React.FC<{ children: React.ReactNode }> = (
     if (can('view', 'req_material') || can('view', 'req_it')) return '/requirements/material';
     if (can('view', 'compliance_policies')) return '/compliance/policies';
     if (can('view', 'users') || can('view', 'roles')) return '/admin/users';
+
+    // Dynamic framework fallback: first granted view resource
+    if (effectiveData?.permissions) {
+      for (const p of effectiveData.permissions) {
+        if (p.granted && p.action_code === 'view' && p.resource_code) {
+          return `/${p.resource_code.replace(/_/g, '-')}`;
+        }
+      }
+    }
+
     return '/notifications';
   };
 
