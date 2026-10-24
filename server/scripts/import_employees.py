@@ -1,42 +1,148 @@
 """
-Bulk Import Employees from Excel into CRMFinance KIM database.
+Bulk Import Employees into CRMFinance KIM database using SQLAlchemy.
+Works seamlessly across SQLite (local) and PostgreSQL (Docker / production).
+
+Usage:
+  In Docker (production):
+    docker compose exec api python -m scripts.import_employees --password "Kim@2026"
+
+  Or from host / local:
+    python server/scripts/import_employees.py --password "Kim@2026"
 """
 import argparse
 import os
 import sys
-from datetime import datetime, timezone
-import openpyxl
-import argon2
 
-# Adjust path to find server app if needed
-SERVER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if SERVER_DIR not in sys.path:
-    sys.path.insert(0, SERVER_DIR)
+# Setup Python paths so both 'python -m scripts.import_employees' (inside /app)
+# and 'python server/scripts/import_employees.py' (from repo root) work
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+REPO_ROOT = os.path.abspath(os.path.join(SERVER_DIR, ".."))
 
-import sqlite3
+for p in [SERVER_DIR, CURRENT_DIR, REPO_ROOT]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from app.db.session import SessionLocal
+from app.models.user import User, UserStatus
+from app.models.enums import UserRole
+from app.models.rbac import (
+    Department,
+    DepartmentUser,
+    Role,
+    UserRole as RbacUserRole,
+    PermissionStatus,
+)
+from app.core.security import hash_password
 
 
+# Department mapping configuration
 DEPARTMENT_CONFIG = {
-    "Management": {"code": "MANAGEMENT", "name": "Management", "parent_code": "COMPANY", "rbac_role": "admin", "user_role": "ADMIN"},
-    "NPD": {"code": "NPD", "name": "New Product Development", "parent_code": "COMPANY", "rbac_role": "employee", "user_role": "SALES_EXECUTIVE"},
-    "Service": {"code": "SERVICE", "name": "Service", "parent_code": "COMPANY", "rbac_role": "delivery_team", "user_role": "DELIVERY_TEAM"},
-    "Stores": {"code": "STORES", "name": "Stores", "parent_code": "OPERATIONS", "rbac_role": "employee", "user_role": "SALES_EXECUTIVE"},
-    "Accounts": {"code": "ACCOUNTS", "name": "Accounts & Finance", "parent_code": "FINANCE", "rbac_role": "finance_officer", "user_role": "FINANCE_OFFICER"},
-    "Production": {"code": "PRODUCTION", "name": "Production", "parent_code": "OPERATIONS", "rbac_role": "employee", "user_role": "SALES_EXECUTIVE"},
-    "Sales": {"code": "SALES", "name": "Sales", "parent_code": "COMPANY", "rbac_role": "sales_executive", "user_role": "SALES_EXECUTIVE"},
-    "IT": {"code": "IT", "name": "IT & Systems", "parent_code": "COMPANY", "rbac_role": "admin", "user_role": "ADMIN"},
+    "Management": {
+        "code": "MANAGEMENT",
+        "name": "Management",
+        "parent_code": "COMPANY",
+        "rbac_role": "admin",
+        "user_role": UserRole.ADMIN,
+    },
+    "NPD": {
+        "code": "NPD",
+        "name": "New Product Development",
+        "parent_code": "COMPANY",
+        "rbac_role": "employee",
+        "user_role": UserRole.SALES_EXECUTIVE,
+    },
+    "Service": {
+        "code": "SERVICE",
+        "name": "Service",
+        "parent_code": "COMPANY",
+        "rbac_role": "delivery_team",
+        "user_role": UserRole.DELIVERY_TEAM,
+    },
+    "Stores": {
+        "code": "STORES",
+        "name": "Stores",
+        "parent_code": "OPERATIONS",
+        "rbac_role": "employee",
+        "user_role": UserRole.SALES_EXECUTIVE,
+    },
+    "Accounts": {
+        "code": "ACCOUNTS",
+        "name": "Accounts & Finance",
+        "parent_code": "FINANCE",
+        "rbac_role": "finance_officer",
+        "user_role": UserRole.FINANCE_OFFICER,
+    },
+    "Production": {
+        "code": "PRODUCTION",
+        "name": "Production",
+        "parent_code": "OPERATIONS",
+        "rbac_role": "employee",
+        "user_role": UserRole.SALES_EXECUTIVE,
+    },
+    "Sales": {
+        "code": "SALES",
+        "name": "Sales",
+        "parent_code": "COMPANY",
+        "rbac_role": "sales_executive",
+        "user_role": UserRole.SALES_EXECUTIVE,
+    },
+    "IT": {
+        "code": "IT",
+        "name": "IT & Systems",
+        "parent_code": "COMPANY",
+        "rbac_role": "admin",
+        "user_role": UserRole.ADMIN,
+    },
 }
 
+# 28 Employees exported from Konwert India Motors master list
+DEFAULT_EMPLOYEES = [
+    {"full_name": "Nickendra M", "email": "nm@konwertindiamotors.com", "department": "Management"},
+    {"full_name": "Akshay Jith P P", "email": "aj@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Three Vishnu", "email": "three.vishnu@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Edwin Ezhilarasu", "email": "ee@konwertindiamotors.com", "department": "Management"},
+    {"full_name": "Yuvanesh Kumar", "email": "yuvanesh.k@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Satishkumar M", "email": "sathish.k@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Suthith RaviChandran", "email": "suthith.r@konwertindiamotors.com", "department": "Service"},
+    {"full_name": "Vinoth S", "email": "vinoth.s@konwertindiamotors.com", "department": "Stores"},
+    {"full_name": "Naveen Raman", "email": "naveen.r@konwertindiamotors.com", "department": "Accounts"},
+    {"full_name": "Kanishk KS", "email": "kanishk.ks@konwertindiamotors.com", "department": "Production"},
+    {"full_name": "Nahul Prasath S", "email": "nahul.p@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Harish A", "email": "harish.a@konwertindiamotors.com", "department": "Sales"},
+    {"full_name": "Ramesh Kumar Y", "email": "rk@konwertindiamotors.com", "department": "IT"},
+    {"full_name": "Sans Batsha", "email": "sansbatsha.s@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Viswanand", "email": "viswanad.m@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Vijay Naik", "email": "vn@konwertindiamotors.com", "department": "Sales"},
+    {"full_name": "Charan K", "email": "charan.k@konwertindiamotors.com", "department": "Sales"},
+    {"full_name": "Ramakrishnaa", "email": "rn2312001@gmail.com", "department": "Sales"},
+    {"full_name": "Karthik Prabhulingam", "email": "karthick.p@konwertindiamotors.com", "department": "Service"},
+    {"full_name": "Muthu N", "email": "mn@konwertindiamotors.com", "department": "Accounts"},
+    {"full_name": "Supreetha Kumari", "email": "supreetha.s@konwertindiamotors.com", "department": "Sales"},
+    {"full_name": "Medhun Krishna", "email": "medhun.k@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Phavithran Sundararajan", "email": "phavithran.s@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Sanjith D", "email": "sanjith.d@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Sri Prenesh V", "email": "prenesh.v@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Sanjiv Balasubramaniyan", "email": "sanjiv.b@konwertindiamotors.com", "department": "NPD"},
+    {"full_name": "Thrisanth S", "email": "thrisanth.s@konwertindiamotors.com", "department": "Stores"},
+    {"full_name": "Baskar B", "email": "baskar.b@konwertindiamotors.com", "department": "Accounts"},
+]
 
-def parse_excel(file_path: str):
+
+def load_from_excel(file_path: str) -> list[dict]:
+    try:
+        import openpyxl
+    except ImportError:
+        print("[!] openpyxl is not installed. To parse Excel files, install openpyxl or rely on embedded records.")
+        return []
+
     wb = openpyxl.load_workbook(file_path, data_only=True)
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
         return []
-    
+
     header = [str(c).strip().lower() if c else "" for c in rows[0]]
-    # Find column indices
     name_idx = next((i for i, h in enumerate(header) if "name" in h), 0)
     email_idx = next((i for i, h in enumerate(header) if "email" in h), 1)
     dept_idx = next((i for i, h in enumerate(header) if "dept" in h or "department" in h), 2)
@@ -61,146 +167,136 @@ def parse_excel(file_path: str):
     return records
 
 
-def import_to_db(db_path: str, records: list, default_password: str = "Kim@2025", dry_run: bool = False):
-    print(f"\nProcessing database: {db_path} (dry_run={dry_run})")
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
+def run_import(records: list[dict], default_password: str = "Kim@2026", dry_run: bool = False):
+    db = SessionLocal()
+    try:
+        print(f"\nConnected to database via SQLAlchemy. dry_run={dry_run}")
+        default_pwd_hash = hash_password(default_password)
 
-    ph = argon2.PasswordHasher()
-    default_pwd_hash = ph.hash(default_password)
+        # 1. Ensure all departments exist
+        existing_depts = {d.code: d for d in db.query(Department).all()}
+        root_company = existing_depts.get("COMPANY")
+        root_id = root_company.id if root_company else None
 
-    # 1. Fetch existing departments
-    cur.execute("SELECT id, code, name FROM departments")
-    existing_depts = {row[1]: (row[0], row[2]) for row in cur.fetchall()}
-
-    # Fetch root company dept if exists
-    root_id = existing_depts.get("COMPANY", (None, None))[0]
-
-    # 2. Ensure all needed departments exist
-    for dept_key, cfg in DEPARTMENT_CONFIG.items():
-        code = cfg["code"]
-        if code not in existing_depts:
-            name = cfg["name"]
-            parent_code = cfg.get("parent_code")
-            parent_id = existing_depts.get(parent_code, (root_id, None))[0]
-            print(f"  + Creating missing department: {name} (code={code})")
-            if not dry_run:
-                cur.execute(
-                    "INSERT INTO departments (name, code, description, parent_id, status) VALUES (?, ?, ?, ?, ?)",
-                    (name, code, f"{name} Department", parent_id, "ACTIVE")
+        for dept_name, cfg in DEPARTMENT_CONFIG.items():
+            code = cfg["code"]
+            if code not in existing_depts:
+                parent_code = cfg.get("parent_code")
+                parent = existing_depts.get(parent_code)
+                parent_id = parent.id if parent else root_id
+                print(f"  + Creating department: {cfg['name']} ({code})")
+                new_dept = Department(
+                    name=cfg["name"],
+                    code=code,
+                    description=f"{cfg['name']} Department",
+                    parent_id=parent_id,
+                    status=PermissionStatus.ACTIVE,
                 )
-                cur.execute("SELECT last_insert_rowid()")
-                new_id = cur.fetchone()[0]
-                existing_depts[code] = (new_id, name)
-            else:
-                existing_depts[code] = (999, name)
+                db.add(new_dept)
+                db.flush()
+                existing_depts[code] = new_dept
 
-    # 3. Fetch existing roles
-    cur.execute("SELECT id, code FROM roles")
-    roles_map = {row[1]: row[0] for row in cur.fetchall()}
+        # 2. Existing roles
+        roles_map = {r.code: r for r in db.query(Role).all()}
 
-    # 4. Fetch existing users
-    cur.execute("SELECT id, email, username FROM users")
-    existing_users = {row[1].lower(): (row[0], row[2]) for row in cur.fetchall()}
-    existing_usernames = {row[2].lower() for row in cur.fetchall() if row[2]}
+        # 3. Existing users
+        existing_users = {u.email.lower(): u for u in db.query(User).all()}
+        existing_unames = {u.username.lower() for u in db.query(User).all() if u.username}
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+        created = 0
+        skipped = 0
 
-    created_count = 0
-    skipped_count = 0
+        for rec in records:
+            email = rec["email"].strip().lower()
+            full_name = rec["full_name"].strip()
+            dept_key = rec["department"]
 
-    for rec in records:
-        email = rec["email"]
-        full_name = rec["full_name"]
-        dept_name = rec["department"]
-        
-        dept_cfg = DEPARTMENT_CONFIG.get(dept_name, DEPARTMENT_CONFIG["Sales"])
-        dept_id = existing_depts.get(dept_cfg["code"], (None, None))[0]
-        rbac_role_code = dept_cfg["rbac_role"]
-        role_id = roles_map.get(rbac_role_code)
-        user_role_enum = dept_cfg["user_role"]
+            if email in existing_users:
+                print(f"  [SKIP] User already exists: {email} ({full_name})")
+                skipped += 1
+                continue
 
-        if email in existing_users:
-            print(f"  [SKIP] User already exists: {email} ({full_name})")
-            skipped_count += 1
-            continue
+            dept_cfg = DEPARTMENT_CONFIG.get(dept_key, DEPARTMENT_CONFIG["Sales"])
+            dept_obj = existing_depts.get(dept_cfg["code"])
+            role_obj = roles_map.get(dept_cfg["rbac_role"])
+            user_role_enum = dept_cfg["user_role"]
 
-        # Generate unique username from email
-        uname_base = email.split("@")[0].lower()
-        uname = uname_base
-        counter = 1
-        while uname in existing_usernames:
-            uname = f"{uname_base}{counter}"
-            counter += 1
-        existing_usernames.add(uname)
+            # Unique username
+            uname_base = email.split("@")[0].lower()
+            uname = uname_base
+            counter = 1
+            while uname in existing_unames:
+                uname = f"{uname_base}{counter}"
+                counter += 1
+            existing_unames.add(uname)
 
-        pwd_hash = ph.hash(rec["custom_password"]) if rec.get("custom_password") else default_pwd_hash
+            pwd_hash = hash_password(rec["custom_password"]) if rec.get("custom_password") else default_pwd_hash
 
-        print(f"  [CREATE] {full_name:<25} | Email: {email:<32} | Dept: {dept_cfg['code']:<10} | Role: {rbac_role_code}")
+            print(f"  [CREATE] {full_name:<25} | Email: {email:<32} | Dept: {dept_cfg['code']:<10} | Role: {dept_cfg['rbac_role']}")
+
+            if not dry_run:
+                new_user = User(
+                    email=email,
+                    username=uname,
+                    password_hash=pwd_hash,
+                    full_name=full_name,
+                    role=user_role_enum,
+                    status=UserStatus.ACTIVE,
+                    force_password_change=True,
+                    failed_login_attempts=0,
+                )
+                db.add(new_user)
+                db.flush()
+
+                # Assign Department
+                if dept_obj:
+                    db.add(DepartmentUser(
+                        user_id=new_user.id,
+                        department_id=dept_obj.id,
+                        is_primary=True,
+                    ))
+
+                # Assign RBAC Role
+                if role_obj:
+                    db.add(RbacUserRole(
+                        user_id=new_user.id,
+                        role_id=role_obj.id,
+                        is_primary=True,
+                    ))
+
+            created += 1
 
         if not dry_run:
-            cur.execute("""
-                INSERT INTO users (
-                    email, username, password_hash, full_name, role, status,
-                    force_password_change, failed_login_attempts, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                email, uname, pwd_hash, full_name, user_role_enum, "ACTIVE",
-                1, 0, now_iso, now_iso
-            ))
-            cur.execute("SELECT last_insert_rowid()")
-            user_id = cur.fetchone()[0]
+            db.commit()
+            print(f"\n[DONE] Successfully committed {created} users (skipped {skipped} existing).")
+        else:
+            db.rollback()
+            print(f"\n[DRY RUN] Would create {created} users (skipped {skipped} existing).")
 
-            # Assign Department
-            if dept_id:
-                cur.execute("""
-                    INSERT INTO department_users (user_id, department_id, is_primary, assigned_at)
-                    VALUES (?, ?, ?, ?)
-                """, (user_id, dept_id, 1, now_iso))
-
-            # Assign RBAC Role
-            if role_id:
-                cur.execute("""
-                    INSERT INTO user_roles (user_id, role_id, is_primary, assigned_at)
-                    VALUES (?, ?, ?, ?)
-                """, (user_id, role_id, 1, now_iso))
-
-        created_count += 1
-
-    if not dry_run:
-        conn.commit()
-        print(f"\n[DONE] Committed {created_count} users to {db_path} (skipped {skipped_count})")
-    else:
-        print(f"\n[DRY RUN] Would create {created_count} users in {db_path} (skipped {skipped_count})")
-    conn.close()
+    finally:
+        db.close()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import users from Excel file")
-    parser.add_argument("--file", default=r"C:\Users\Ramesh\Downloads\employees_export_2026-10-23.xlsx", help="Path to Excel file")
-    parser.add_argument("--password", default="Kim@2025", help="Default password for new users")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without making changes")
+    parser = argparse.ArgumentParser(description="Bulk Import Employees into CRMFinance KIM database")
+    parser.add_argument("--file", default=None, help="Optional path to Excel file (.xlsx)")
+    parser.add_argument("--password", default="Kim@2026", help="Default initial password (default: Kim@2026)")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate import without committing changes")
     args = parser.parse_args()
 
-    if not os.path.exists(args.file):
-        print(f"Error: File not found at {args.file}")
-        sys.exit(1)
+    records = []
+    if args.file and os.path.exists(args.file):
+        print(f"Loading employees from file: {args.file}")
+        records = load_from_excel(args.file)
+    else:
+        if args.file:
+            print(f"Note: Specified file '{args.file}' not found. Falling back to embedded list of 28 employees.")
+        else:
+            print("Using embedded list of 28 Konwert India Motors employees.")
+        records = DEFAULT_EMPLOYEES
 
-    records = parse_excel(args.file)
-    print(f"Found {len(records)} employee records in {args.file}")
-
-    # Check both dev.db locations if present
-    db_paths = []
-    for candidate in [
-        os.path.join(SERVER_DIR, "dev.db"),
-        os.path.join(SERVER_DIR, "..", "dev.db"),
-    ]:
-        cand_norm = os.path.abspath(candidate)
-        if os.path.exists(cand_norm) and cand_norm not in db_paths:
-            db_paths.append(cand_norm)
-
-    for db_path in db_paths:
-        import_to_db(db_path, records, default_password=args.password, dry_run=args.dry_run)
+    print(f"Prepared {len(records)} employee records.")
+    run_import(records, default_password=args.password, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
