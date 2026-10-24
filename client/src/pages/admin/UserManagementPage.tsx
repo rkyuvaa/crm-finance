@@ -10,6 +10,8 @@ import {
   UserX,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Menu, MenuItem, Divider } from '@mui/material';
 import {
@@ -44,6 +46,7 @@ export default function UserManagementPage() {
   const [deptFilter, setDeptFilter] = useState<number | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [inspectUserId, setInspectUserId] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<{ anchorEl: HTMLElement; user: UserDetail } | null>(null);
@@ -73,7 +76,9 @@ export default function UserManagementPage() {
       force_password_change: u.force_password_change || false,
       role_ids: u.assigned_roles?.map((r) => r.id) || [],
       department_ids: u.departments?.map((d) => d.id) || [],
+      password: '',
     });
+    setShowResetPassword(false);
   };
 
   const handleToggleStatus = async (user: UserDetail) => {
@@ -164,15 +169,25 @@ export default function UserManagementPage() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      const payload = {
-        ...editForm,
+      const payload: any = {
         full_name: editForm.full_name?.trim(),
         email: editForm.email?.trim(),
-        username: editForm.email?.trim().toLowerCase(),
+        username: editForm.username?.trim() || undefined,
+        mobile: editForm.mobile?.trim() || undefined,
+        employee_id: editForm.employee_id?.trim() || undefined,
         designation: editForm.designation?.trim() || undefined,
+        status: editForm.status,
+        primary_role: editForm.primary_role,
+        primary_department_id: editForm.primary_department_id || undefined,
+        reporting_manager_id: editForm.reporting_manager_id || undefined,
+        force_password_change: editForm.force_password_change ?? false,
         department_ids: editForm.department_ids?.filter((id) => Boolean(id) && !isNaN(id)),
         role_ids: editForm.role_ids?.filter((id) => Boolean(id) && !isNaN(id)),
       };
+
+      if (editForm.password && editForm.password.trim()) {
+        payload.password = editForm.password.trim();
+      }
 
       await updateUser({ id: selectedUser.id, data: payload }).unwrap();
       setSelectedUser(null);
@@ -792,13 +807,23 @@ export default function UserManagementPage() {
 
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Reset Password (Leave blank to keep existing)</label>
-                    <input
-                      type="password"
-                      placeholder="Enter new password..."
-                      value={editForm.password || ''}
-                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
-                    />
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showResetPassword ? 'text' : 'password'}
+                        placeholder="Enter new password..."
+                        value={editForm.password || ''}
+                        onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                        style={{ width: '100%', padding: '8px 36px 8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPassword(!showResetPassword)}
+                        style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#7A8B80', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        title={showResetPassword ? "Hide password" : "Show password"}
+                      >
+                        {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', marginTop: 6 }}>

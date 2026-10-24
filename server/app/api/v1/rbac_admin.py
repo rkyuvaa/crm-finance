@@ -2,6 +2,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import get_current_user, get_db, require_roles
 from app.core.security import hash_password
@@ -272,57 +273,106 @@ def update_user_admin(
     old_data = {"email": u.email, "full_name": u.full_name, "status": u.status, "role": u.role}
 
     if payload.email is not None:
-        u.email = str(payload.email).lower().strip()
-        if payload.username is None:
-            u.username = u.email
-    if payload.full_name is not None:
+        clean_email = str(payload.email).lower().strip()
+        existing_email_user = db.query(User).filter(User.email.ilike(clean_email), User.id != u.id).first()
+        if existing_email_user:
+            raise HTTPException(status_code=400, detail="Email is already in use by another user")
+        u.email = clean_email
+
+    if payload.full_name is not None and payload.full_name.strip():
         u.full_name = payload.full_name.strip()
+
     if payload.username is not None:
-        u.username = payload.username.lower().strip()
+        clean_uname = payload.username.lower().strip()
+        if clean_uname:
+            existing_uname = db.query(User).filter(User.username.ilike(clean_uname), User.id != u.id).first()
+            if existing_uname:
+                raise HTTPException(status_code=400, detail="Username is already taken")
+            u.username = clean_uname
+        else:
+            u.username = None
+
     if payload.mobile is not None:
-        u.mobile = payload.mobile
+        u.mobile = payload.mobile.strip() if payload.mobile and payload.mobile.strip() else None
+
     if payload.employee_id is not None:
-        u.employee_id = payload.employee_id
+        clean_emp_id = payload.employee_id.strip() if payload.employee_id and payload.employee_id.strip() else None
+        if clean_emp_id:
+            existing_emp = db.query(User).filter(User.employee_id.ilike(clean_emp_id), User.id != u.id).first()
+            if existing_emp:
+                raise HTTPException(status_code=400, detail="Employee ID is already in use")
+        u.employee_id = clean_emp_id
+
     if payload.designation is not None:
-        u.designation = payload.designation
+        u.designation = payload.designation.strip() if payload.designation and payload.designation.strip() else None
+
     if payload.primary_role is not None:
         u.role = payload.primary_role
+
     if payload.status is not None:
         u.status = payload.status
+
     if payload.force_password_change is not None:
         u.force_password_change = payload.force_password_change
+
     if payload.reporting_manager_id is not None:
-        u.reporting_manager_id = payload.reporting_manager_id
-    if payload.password:
-        u.password_hash = hash_password(payload.password)
+        u.reporting_manager_id = payload.reporting_manager_id if payload.reporting_manager_id != 0 else None
 
-    # Update role assignments
+    if payload.password and payload.password.strip():
+        u.password_hash = hash_password(payload.password.strip())
+        u.failed_login_attempts = 0
+        u.locked_until = None
+
+    # Update role assignments safely without constraint violation
     if payload.role_ids is not None:
-        db.query(RbacUserRole).filter(RbacUserRole.user_id == u.id).delete()
-        for r_id in payload.role_ids:
-            db.add(RbacUserRole(user_id=u.id, role_id=r_id, assigned_by=current_user.id))
+        existing_role_ids = {ur.role_id for ur in u.user_roles}
+        new_role_ids = set(payload.role_ids)
+        for ur in list(u.user_roles):
+            if ur.role_id not in new_role_ids:
+                db.delete(ur)
+        for r_id in new_role_ids:
+            if r_id not in existing_role_ids:
+                db.add(RbacUserRole(user_id=u.id, role_id=r_id, assigned_by=current_user.id))
 
-    # Update department assignments
+    # Update department assignments safely without constraint violation
     if payload.department_ids is not None:
-        db.query(DepartmentUser).filter(DepartmentUser.user_id == u.id).delete()
-        for d_id in payload.department_ids:
+        existing_dept_ids = {du.department_id for du in u.department_users}
+        new_dept_ids = set(payload.department_ids)
+        for du in list(u.department_users):
+            if du.department_id not in new_dept_ids:
+                db.delete(du)
+        for d_id in new_dept_ids:
             is_prim = (d_id == payload.primary_department_id) if payload.primary_department_id else False
-            db.add(DepartmentUser(user_id=u.id, department_id=d_id, is_primary=is_prim, assigned_by=current_user.id))
+            existing_du = next((du for du in u.department_users if du.department_id == d_id), None)
+            if existing_du:
+                existing_du.is_primary = is_prim
+            else:
+                db.add(DepartmentUser(user_id=u.id, department_id=d_id, is_primary=is_prim, assigned_by=current_user.id))
 
-    db.commit()
-    db.refresh(u)
+    try:
+        db.commit()
+        db.refresh(u)
+    except IntegrityError as ie:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Database constraint error: {str(ie.orig or ie)}")
+    except Exception as ex:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update user: {str(ex)}")
 
-    log_audit_event(
-        db,
-        action_type=AuditActionType.USER_UPDATED,
-        user_id=current_user.id,
-        module="administration",
-        resource="users",
-        record_id=str(u.id),
-        previous_value=old_data,
-        new_value={"email": u.email, "full_name": u.full_name, "status": u.status, "role": u.role},
-        req=req,
-    )
+    try:
+        log_audit_event(
+            db,
+            action_type=AuditActionType.USER_UPDATED,
+            user_id=current_user.id,
+            module="administration",
+            resource="users",
+            record_id=str(u.id),
+            previous_value=old_data,
+            new_value={"email": u.email, "full_name": u.full_name, "status": u.status, "role": u.role},
+            req=req,
+        )
+    except Exception:
+        pass
 
     return get_user_detail(u.id, db, current_user)
 
