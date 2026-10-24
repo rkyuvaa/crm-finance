@@ -22,14 +22,41 @@ import { setCredentials } from '@/auth/authSlice';
 const loginSchema = z.object({
   email: z
     .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
+    .min(1, 'Email or username is required'),
   password: z
     .string()
     .min(1, 'Password is required'),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
+
+function extractErrorMessage(err: any): string | null {
+  if (!err) return null;
+  const detail = err?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.msg) {
+          const field =
+            Array.isArray(item.loc) && item.loc.length > 1
+              ? `${item.loc[item.loc.length - 1]}: `
+              : '';
+          return `${field}${item.msg}`;
+        }
+        return JSON.stringify(item);
+      })
+      .join(', ');
+  }
+  if (detail && typeof detail === 'object') {
+    if (typeof detail.message === 'string') return detail.message;
+    return JSON.stringify(detail);
+  }
+  if (typeof err?.data?.message === 'string') return err.data.message;
+  if (typeof err?.message === 'string') return err.message;
+  return 'Invalid credentials. Please try again.';
+}
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -80,10 +107,7 @@ export default function LoginPage() {
     }
   };
 
-  const errorMessage =
-    (error as any)?.data?.detail ||
-    (error as any)?.data?.message ||
-    (error ? 'Invalid email or password. Please try again.' : null);
+  const errorMessage = extractErrorMessage(error);
 
   // Left side brand panel with centered KIM ERP on a #203020 gradient
   const brandPanel = (
@@ -210,13 +234,13 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            {/* Email Field with Tab navigation and inline validation */}
+            {/* Username / Email Field with Tab navigation and inline validation */}
             <TextField
               fullWidth
               id="login-email"
-              label="Email"
-              type="email"
-              autoComplete="email"
+              label="Email or Username"
+              type="text"
+              autoComplete="username"
               autoFocus
               tabIndex={1}
               margin="normal"

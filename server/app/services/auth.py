@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.security import verify_password
@@ -10,11 +10,22 @@ from app.services.aging import utcnow
 
 
 def authenticate_user(db, payload: LoginRequest) -> User:
-    user = db.query(User).filter(User.email == payload.email.lower()).first()
+    ident = payload.email.strip()
+    user = (
+        db.query(User)
+        .filter(
+            or_(
+                func.lower(User.email) == ident.lower(),
+                func.lower(User.username) == ident.lower(),
+                func.lower(User.employee_id) == ident.lower(),
+            )
+        )
+        .first()
+    )
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid email, username, or password",
         )
     return user
 
