@@ -48,7 +48,11 @@ function RouteFallback() {
 }
 
 function DefaultLandingRoute() {
-  const { can, getFirstAccessibleRoute } = usePermission();
+  const { can, getFirstAccessibleRoute, isLoading } = usePermission();
+
+  if (isLoading) {
+    return <RouteFallback />;
+  }
 
   if (can('view', 'crm_dashboard')) {
     return <DashboardPage />;
@@ -62,8 +66,12 @@ function DefaultLandingRoute() {
 }
 
 function RequirePermission({ children }: { children: React.ReactNode }) {
-  const { canAccessRoute } = usePermission();
+  const { canAccessRoute, isLoading } = usePermission();
   const location = useLocation();
+
+  if (isLoading) {
+    return <RouteFallback />;
+  }
 
   if (!canAccessRoute(location.pathname)) {
     return <AccessDeniedPage />;

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -32,14 +33,36 @@ def get_current_user(
     return user
 
 
-def require_roles(*roles: UserRole) -> Callable:
-    def dependency(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles and user.role != UserRole.ADMIN:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to perform this action",
-            )
-        return user
+def require_roles(*roles: Any) -> Callable:
+    flat_roles: list[Any] = []
+    for r in roles:
+        if isinstance(r, (list, tuple, set)):
+            flat_roles.extend(r)
+        else:
+            flat_roles.append(r)
+
+    def dependency(
+        db: Session = Depends(get_db),
+        user: User = Depends(get_current_user),
+    ) -> User:
+        if user.role in flat_roles or user.role == UserRole.ADMIN:
+            return user
+
+        from app.services.rbac_service import get_user_active_roles
+        active_roles = get_user_active_roles(db, user)
+        role_codes = {r.code.lower() for r in active_roles if r and r.code}
+
+        if "super_admin" in role_codes or "admin" in role_codes:
+            return user
+
+        target_codes = {r.value.lower() if hasattr(r, "value") else str(r).lower() for r in flat_roles}
+        if role_codes.intersection(target_codes):
+            return user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to perform this action",
+        )
 
     return dependency
 
@@ -62,10 +85,16 @@ def require_permission(action: str, resource: str) -> Callable:
     return dependency
 
 
-def can_access_application(user: User, app: Application) -> bool:
+def can_access_application(user: User, app: Application, db: Session | None = None) -> bool:
     """Check if user can access a specific application based on role and assignment."""
     if user.role == UserRole.ADMIN:
         return True
+
+    if db is not None:
+        from app.services.rbac_service import get_user_active_roles
+        active_roles = get_user_active_roles(db, user)
+        if any(r.code.lower() in ["super_admin", "admin"] for r in active_roles if r and r.code):
+            return True
 
     # Sales executives can access their assigned applications
     if user.role == UserRole.SALES_EXECUTIVE:
@@ -103,7 +132,7 @@ def require_application_access(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
         )
-    if not can_access_application(user, app):
+    if not can_access_application(user, app, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access this application",
