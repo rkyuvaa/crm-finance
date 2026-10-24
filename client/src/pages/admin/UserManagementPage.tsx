@@ -62,6 +62,8 @@ export default function UserManagementPage() {
 
   const handleOpenEdit = (u: UserDetail) => {
     setSelectedUser(u);
+    const assignedRoleIds = u.assigned_roles?.map((r) => r.id) || [];
+    const primaryRole = (u.assigned_roles as any)?.find((r: any) => r.is_primary) || u.assigned_roles?.[0];
     setEditForm({
       full_name: u.full_name,
       email: u.email,
@@ -70,11 +72,12 @@ export default function UserManagementPage() {
       employee_id: u.employee_id || '',
       designation: u.designation || '',
       status: u.status,
-      primary_role: u.role,
+      primary_role: primaryRole?.code || (typeof u.role === 'string' ? u.role : (u.role as any)?.value),
+      primary_role_id: primaryRole?.id || assignedRoleIds[0],
       primary_department_id: u.primary_department_id || undefined,
       reporting_manager_id: u.reporting_manager_id || undefined,
       force_password_change: u.force_password_change || false,
-      role_ids: u.assigned_roles?.map((r) => r.id) || [],
+      role_ids: assignedRoleIds,
       department_ids: u.departments?.map((d) => d.id) || [],
       password: '',
     });
@@ -117,7 +120,8 @@ export default function UserManagementPage() {
     email: '',
     password: '',
     designation: '',
-    primary_role: 'SALES_EXECUTIVE',
+    primary_role: undefined as string | undefined,
+    primary_role_id: undefined as number | undefined,
     role_ids: [] as number[],
     department_ids: [] as number[],
     primary_department_id: undefined as number | undefined,
@@ -127,17 +131,19 @@ export default function UserManagementPage() {
   });
 
   // Edit Form State
-  const [editForm, setEditForm] = useState<Partial<UserDetail> & { password?: string; role_ids?: number[]; department_ids?: number[]; primary_role?: string }>({});
+  const [editForm, setEditForm] = useState<Partial<UserDetail> & { password?: string; role_ids?: number[]; department_ids?: number[]; primary_role?: string; primary_role_id?: number }>({});
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const primaryRoleObj = rolesList?.find((r) => r.id === createForm.primary_role_id) || rolesList?.find((r) => createForm.role_ids.includes(r.id));
       const payload = {
         ...createForm,
         full_name: createForm.full_name.trim(),
         email: createForm.email.trim(),
         username: createForm.email.trim().toLowerCase(),
         designation: createForm.designation.trim() || undefined,
+        primary_role: primaryRoleObj?.code || primaryRoleObj?.name || undefined,
         department_ids: createForm.department_ids.filter((id) => Boolean(id) && !isNaN(id)),
         role_ids: createForm.role_ids.filter((id) => Boolean(id) && !isNaN(id)),
         primary_department_id: createForm.primary_department_id || undefined,
@@ -151,7 +157,8 @@ export default function UserManagementPage() {
         email: '',
         password: '',
         designation: '',
-        primary_role: 'SALES_EXECUTIVE',
+        primary_role: undefined,
+        primary_role_id: undefined,
         role_ids: [],
         department_ids: [],
         primary_department_id: undefined,
@@ -169,6 +176,7 @@ export default function UserManagementPage() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
+      const primaryRoleObj = rolesList?.find((r) => r.id === editForm.primary_role_id) || rolesList?.find((r) => editForm.role_ids?.includes(r.id));
       const payload: any = {
         full_name: editForm.full_name?.trim(),
         email: editForm.email?.trim(),
@@ -177,7 +185,7 @@ export default function UserManagementPage() {
         employee_id: editForm.employee_id?.trim() || undefined,
         designation: editForm.designation?.trim() || undefined,
         status: editForm.status,
-        primary_role: editForm.primary_role,
+        primary_role: primaryRoleObj?.code || primaryRoleObj?.name || undefined,
         primary_department_id: editForm.primary_department_id || undefined,
         reporting_manager_id: editForm.reporting_manager_id || undefined,
         force_password_change: editForm.force_password_change ?? false,
@@ -356,15 +364,30 @@ export default function UserManagementPage() {
                   <td style={{ padding: '12px 16px', color: '#04552B', fontWeight: 600 }}>{u.primary_department_name || '-'}</td>
                   <td style={{ padding: '12px 16px', color: '#44584C' }}>{u.designation || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      <span style={{ padding: '2px 8px', background: '#EAF6E8', color: '#16C47F', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
-                        {u.role}
-                      </span>
-                      {u.assigned_roles?.map((r) => (
-                        <span key={r.id} style={{ padding: '2px 8px', background: '#E0F2FE', color: '#0369A1', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                          {r.name}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                      {u.assigned_roles && u.assigned_roles.length > 0 ? (
+                        u.assigned_roles.map((r, idx) => (
+                          <span
+                            key={r.id}
+                            style={{
+                              padding: '3px 9px',
+                              background: idx === 0 ? '#EAF6E8' : '#F0F4F8',
+                              color: idx === 0 ? '#04552B' : '#334155',
+                              border: idx === 0 ? '1px solid #A3E635' : '1px solid #CBD5E1',
+                              borderRadius: 14,
+                              fontSize: 11,
+                              fontWeight: idx === 0 ? 700 : 500,
+                            }}
+                          >
+                            {r.name}
+                            {idx === 0 && <span style={{ marginLeft: 4, fontSize: 10, opacity: 0.8 }}>★</span>}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ padding: '3px 9px', background: '#EAF6E8', color: '#04552B', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>
+                          {u.role}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
@@ -667,6 +690,29 @@ export default function UserManagementPage() {
               </div>
 
               <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Primary Role</label>
+                <select
+                  value={createForm.primary_role_id || ''}
+                  onChange={(e) => {
+                    const rId = Number(e.target.value);
+                    setCreateForm({
+                      ...createForm,
+                      primary_role_id: rId || undefined,
+                      role_ids: rId ? [rId] : [],
+                    });
+                  }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13 }}
+                >
+                  <option value="">Select Role</option>
+                  {rolesList?.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Department</label>
                 <select
                   onChange={(e) => setCreateForm({ ...createForm, department_ids: [Number(e.target.value)], primary_department_id: Number(e.target.value) })}
@@ -846,50 +892,97 @@ export default function UserManagementPage() {
 
               {/* TAB 3: ROLES */}
               {editTab === 'roles' && (
-                <>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C' }}>Primary User Role</label>
-                    <select
-                      value={editForm.primary_role || selectedUser.role}
-                      onChange={(e) => setEditForm({ ...editForm, primary_role: e.target.value as any })}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #D8E2D5', fontSize: 13, fontWeight: 700, color: '#16C47F' }}
-                    >
-                      <option value="ADMIN">ADMIN (Super Administrator)</option>
-                      <option value="SALES_MANAGER">SALES_MANAGER</option>
-                      <option value="SALES_EXECUTIVE">SALES_EXECUTIVE</option>
-                      <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
-                      <option value="DELIVERY_TEAM">DELIVERY_TEAM</option>
-                      <option value="HR_MANAGER">HR_MANAGER</option>
-                      <option value="EMPLOYEE">EMPLOYEE</option>
-                    </select>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#023020' }}>Assigned System Roles</div>
+                      <div style={{ fontSize: 11, color: '#7A8B80' }}>Select dynamic roles for this user and designate one as Primary.</div>
+                    </div>
+                    {editForm.role_ids && editForm.role_ids.length > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#16C47F', background: '#EAF6E8', padding: '3px 10px', borderRadius: 12 }}>
+                        {editForm.role_ids.length} Selected
+                      </span>
+                    )}
                   </div>
 
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: '#44584C', marginBottom: 8, display: 'block' }}>Additional Dynamic Roles</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
-                      {rolesList?.map((r) => {
-                        const isChecked = editForm.role_ids?.includes(r.id);
-                        return (
-                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: isChecked ? '#EAF6E8' : '#F9FAFB', border: `1px solid ${isChecked ? '#A3E635' : '#E5E7EB'}`, borderRadius: 8, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
+                    {rolesList?.map((r) => {
+                      const isChecked = editForm.role_ids?.includes(r.id);
+                      const isPrimary = (editForm.primary_role_id === r.id) || (!editForm.primary_role_id && editForm.role_ids?.[0] === r.id);
+                      return (
+                        <div
+                          key={r.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            background: isChecked ? '#F0FAF0' : '#F9FAFB',
+                            border: `1.5px solid ${isChecked ? '#16C47F' : '#E5E7EB'}`,
+                            borderRadius: 10,
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}>
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={(e) => {
                                 const current = editForm.role_ids || [];
-                                if (e.target.checked) setEditForm({ ...editForm, role_ids: [...current, r.id] });
-                                else setEditForm({ ...editForm, role_ids: current.filter((id) => id !== r.id) });
+                                if (e.target.checked) {
+                                  const next = [...current, r.id];
+                                  setEditForm({
+                                    ...editForm,
+                                    role_ids: next,
+                                    primary_role_id: editForm.primary_role_id || r.id,
+                                  });
+                                } else {
+                                  const next = current.filter((id) => id !== r.id);
+                                  setEditForm({
+                                    ...editForm,
+                                    role_ids: next,
+                                    primary_role_id: editForm.primary_role_id === r.id ? (next[0] || undefined) : editForm.primary_role_id,
+                                  });
+                                }
                               }}
+                              style={{ width: 17, height: 17, accentColor: '#16C47F', cursor: 'pointer' }}
                             />
                             <div>
-                              <div style={{ fontWeight: 700, color: '#023020', fontSize: 13 }}>{r.name}</div>
-                              <div style={{ color: '#7A8B80', fontSize: 11 }}>{r.description || 'No description'}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontWeight: 700, color: '#023020', fontSize: 13.5 }}>{r.name}</span>
+                                {r.is_system && (
+                                  <span style={{ fontSize: 10, padding: '1px 6px', background: '#FEF3C7', color: '#B45309', borderRadius: 4, fontWeight: 700 }}>
+                                    SYSTEM
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ color: '#7A8B80', fontSize: 11, marginTop: 2 }}>{r.description || r.code}</div>
                             </div>
                           </label>
-                        );
-                      })}
-                    </div>
+
+                          {isChecked && (
+                            <button
+                              type="button"
+                              onClick={() => setEditForm({ ...editForm, primary_role_id: r.id })}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: 20,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                border: isPrimary ? '1px solid #16C47F' : '1px solid #D8E2D5',
+                                background: isPrimary ? '#16C47F' : '#FFFFFF',
+                                color: isPrimary ? '#FFFFFF' : '#44584C',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {isPrimary ? '★ Primary Role' : 'Set as Primary'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                </>
+                </div>
               )}
 
               {/* TAB 4: DEPARTMENT */}

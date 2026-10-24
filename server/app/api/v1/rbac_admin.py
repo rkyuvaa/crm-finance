@@ -117,6 +117,11 @@ def list_users(
         primary_dept = next((d for d in departments if any(du.is_primary for du in u.department_users if du.department_id == d.id)), departments[0] if departments else None)
         manager_name = u.reporting_manager.full_name if u.reporting_manager else None
 
+        prim_role = next((ur.role for ur in u.user_roles if ur.is_primary and ur.role), None)
+        if not prim_role and assigned_roles:
+            prim_role = assigned_roles[0]
+        role_display = prim_role.name if prim_role else (u.role.value if hasattr(u.role, 'value') else str(u.role))
+
         result_items.append(
             UserDetailOut(
                 id=u.id,
@@ -126,7 +131,7 @@ def list_users(
                 mobile=u.mobile,
                 employee_id=u.employee_id,
                 designation=u.designation,
-                role=u.role,
+                role=role_display,
                 status=u.status,
                 force_password_change=u.force_password_change,
                 last_login_at=u.last_login_at,
@@ -167,6 +172,22 @@ def create_user_admin(
     if existing_by_uname and existing_by_uname.email.lower() != email_clean:
         raise HTTPException(status_code=400, detail="Username is already taken")
 
+    roles_objs = db.query(Role).filter(Role.id.in_(payload.role_ids)).all() if payload.role_ids else []
+    primary_role_id = None
+    if payload.primary_role:
+        for r in roles_objs:
+            if str(r.id) == str(payload.primary_role) or r.code.lower() == str(payload.primary_role).lower() or r.name.lower() == str(payload.primary_role).lower():
+                primary_role_id = r.id
+                break
+    if not primary_role_id and payload.role_ids:
+        primary_role_id = payload.role_ids[0]
+
+    base_role = UserRole.SALES_EXECUTIVE
+    if any(r.code in ["super_admin", "admin"] for r in roles_objs) or (payload.primary_role and str(payload.primary_role).upper() == "ADMIN"):
+        base_role = UserRole.ADMIN
+    elif payload.primary_role and str(payload.primary_role).upper() in UserRole.__members__:
+        base_role = UserRole[str(payload.primary_role).upper()]
+
     user = User(
         email=email_clean,
         username=username_clean,
@@ -175,7 +196,7 @@ def create_user_admin(
         mobile=payload.mobile.strip() if payload.mobile else None,
         employee_id=payload.employee_id.strip() if payload.employee_id else None,
         designation=payload.designation.strip() if payload.designation else None,
-        role=payload.primary_role,
+        role=base_role,
         status=payload.status,
         force_password_change=payload.force_password_change,
         reporting_manager_id=payload.reporting_manager_id,
@@ -186,7 +207,12 @@ def create_user_admin(
     # Assign roles
     if payload.role_ids:
         for r_id in payload.role_ids:
-            db.add(RbacUserRole(user_id=user.id, role_id=r_id, assigned_by=current_user.id))
+            db.add(RbacUserRole(
+                user_id=user.id,
+                role_id=r_id,
+                is_primary=(r_id == primary_role_id),
+                assigned_by=current_user.id
+            ))
 
     # Assign departments
     if payload.department_ids:
@@ -230,6 +256,11 @@ def get_user_detail(
     primary_dept = next((d for d in departments if any(du.is_primary for du in u.department_users if du.department_id == d.id)), departments[0] if departments else None)
     manager_name = u.reporting_manager.full_name if u.reporting_manager else None
 
+    prim_role = next((ur.role for ur in u.user_roles if ur.is_primary and ur.role), None)
+    if not prim_role and assigned_roles:
+        prim_role = assigned_roles[0]
+    role_display = prim_role.name if prim_role else (u.role.value if hasattr(u.role, 'value') else str(u.role))
+
     return UserDetailOut(
         id=u.id,
         email=u.email,
@@ -238,7 +269,7 @@ def get_user_detail(
         mobile=u.mobile,
         employee_id=u.employee_id,
         designation=u.designation,
-        role=u.role,
+        role=role_display,
         status=u.status,
         force_password_change=u.force_password_change,
         last_login_at=u.last_login_at,
@@ -308,9 +339,6 @@ def update_user_admin(
     if payload.designation is not None:
         u.designation = payload.designation.strip() if payload.designation and payload.designation.strip() else None
 
-    if payload.primary_role is not None:
-        u.role = payload.primary_role
-
     if payload.status is not None:
         u.status = payload.status
 
@@ -327,14 +355,44 @@ def update_user_admin(
 
     # Update role assignments safely without constraint violation
     if payload.role_ids is not None:
+        roles_objs = db.query(Role).filter(Role.id.in_(payload.role_ids)).all() if payload.role_ids else []
+        primary_id = None
+        if payload.primary_role:
+            for r in roles_objs:
+                if str(r.id) == str(payload.primary_role) or r.code.lower() == str(payload.primary_role).lower() or r.name.lower() == str(payload.primary_role).lower():
+                    primary_id = r.id
+                    break
+        if not primary_id and payload.role_ids:
+            existing_prim = next((ur.role_id for ur in u.user_roles if ur.is_primary and ur.role_id in payload.role_ids), None)
+            primary_id = existing_prim or payload.role_ids[0]
+
+        if any(r.code in ["super_admin", "admin"] for r in roles_objs) or (payload.primary_role and str(payload.primary_role).upper() == "ADMIN"):
+            u.role = UserRole.ADMIN
+        elif payload.primary_role and str(payload.primary_role).upper() in UserRole.__members__:
+            u.role = UserRole[str(payload.primary_role).upper()]
+        elif u.role not in [UserRole.ADMIN, UserRole.SALES_EXECUTIVE, UserRole.FINANCE_OFFICER, UserRole.DELIVERY_TEAM]:
+            u.role = UserRole.SALES_EXECUTIVE
+
         existing_role_ids = {ur.role_id for ur in u.user_roles}
         new_role_ids = set(payload.role_ids)
         for ur in list(u.user_roles):
             if ur.role_id not in new_role_ids:
                 db.delete(ur)
+            else:
+                ur.is_primary = (ur.role_id == primary_id)
         for r_id in new_role_ids:
             if r_id not in existing_role_ids:
-                db.add(RbacUserRole(user_id=u.id, role_id=r_id, assigned_by=current_user.id))
+                db.add(RbacUserRole(
+                    user_id=u.id,
+                    role_id=r_id,
+                    is_primary=(r_id == primary_id),
+                    assigned_by=current_user.id
+                ))
+    elif payload.primary_role is not None:
+        if str(payload.primary_role).upper() == "ADMIN":
+            u.role = UserRole.ADMIN
+        elif str(payload.primary_role).upper() in UserRole.__members__:
+            u.role = UserRole[str(payload.primary_role).upper()]
 
     # Update department assignments safely without constraint violation
     if payload.department_ids is not None:
@@ -655,10 +713,15 @@ def update_role(
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
 
-    if payload.name is not None:
-        role.name = payload.name
+    if payload.name is not None and payload.name.strip():
+        role.name = payload.name.strip()
+    if payload.code is not None and payload.code.strip() and role.code != "super_admin":
+        clean_code = payload.code.strip()
+        existing_with_code = db.query(Role).filter(Role.code.ilike(clean_code), Role.id != role.id).first()
+        if not existing_with_code:
+            role.code = clean_code
     if payload.description is not None:
-        role.description = payload.description
+        role.description = payload.description.strip() if payload.description else None
     if payload.status is not None:
         role.status = payload.status
 

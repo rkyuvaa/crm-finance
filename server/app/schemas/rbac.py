@@ -196,7 +196,7 @@ class UserCreateAdmin(BaseModel):
     mobile: str | None = None
     employee_id: str | None = None
     designation: str | None = None
-    primary_role: UserRole = UserRole.SALES_EXECUTIVE
+    primary_role: str | None = None
     role_ids: list[int] = []
     department_ids: list[int] = []
     primary_department_id: int | None = None
@@ -212,7 +212,7 @@ class UserUpdateAdmin(BaseModel):
     mobile: str | None = None
     employee_id: str | None = None
     designation: str | None = None
-    primary_role: UserRole | None = None
+    primary_role: str | None = None
     role_ids: list[int] | None = None
     department_ids: list[int] | None = None
     primary_department_id: int | None = None
@@ -236,7 +236,7 @@ class UserDetailOut(BaseModel):
     mobile: str | None = None
     employee_id: str | None = None
     designation: str | None = None
-    role: UserRole
+    role: str
     status: UserStatus
     force_password_change: bool
     last_login_at: datetime | None = None
